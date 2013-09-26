@@ -1,0 +1,4 @@
+../src/litegraph.js
+../src/nodes/basicnodes.js
+../src/nodes/uinodes.js
+../src/nodes/imagenodes.js

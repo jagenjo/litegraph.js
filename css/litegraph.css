@@ -1,0 +1,42 @@
+/* this CSS contains only the basic CSS needed to run the app and use it */
+
+.lgraphcanvas {
+	cursor: crosshair;
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+}
+
+.litecontextualmenu {
+	padding: 4px;
+	min-width: 100px;
+}
+
+.litemenu-entry {
+	padding-left: 20px;
+	user-select: none;
+	-moz-user-select: none;
+	-webkit-user-select: none;
+}
+
+.litemenu-entry.disabled {
+	opacity: 0.3;
+}
+
+.litemenu-entry.submenu {
+	border-right: 2px solid #EEE;
+}
+
+
+.litemenu-entry:hover {
+	background-color: #555;
+}
+
+.litemenu-entry.separator {
+	background-color: #111;
+	border-bottom: 1px solid #666;
+	height: 1px;
+	width: calc( 100% - 20px );
+	-moz-width: calc( 100% - 20px );
+	-webkit-width: calc( 100% - 20px );
+}

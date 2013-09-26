@@ -1,0 +1,387 @@
+html,body {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+}
+
+body {
+	background-color: #333;
+	color: #EEE;
+	font: 14px Tahoma;
+}
+
+h1 {
+	font-family: "Metro Light",Tahoma;
+	color: #DDD;
+	font-size: 28px;
+	padding-left: 10px;
+	/*text-shadow: 0 1px 1px #333, 0 -1px 1px #777;*/
+	margin: 0;
+	font-weight: normal;
+}
+
+h1 span {
+	font-family: "Arial";
+	font-size: 14px;
+	font-weight: normal;
+	color: #AAA;
+}
+
+h2 {
+	font-family: "Metro Light";
+	padding: 5px;
+	margin-left: 10px;
+}
+
+#main {
+	width: 1000px;
+	min-height: 540px;
+	margin: auto;
+	background-color: #222;
+	/*border-radius: 10px;*/
+}
+
+#main.fullscreen {
+	width: 100%;
+	height: 100%;
+}
+
+#header, #footer {
+	position: relative;
+	height: 40px;
+	background-color: #333;
+	/*border-radius: 10px 10px 0 0;*/
+}
+
+.tools, #tools-left, #tools-right {
+	position: absolute;
+	top: 2px;
+	right: 0px;
+	vertical-align: top;
+
+	margin: 2px 5px 0 0px;
+}
+
+#header button {
+	height: 32px;
+	vertical-align: top;
+}
+
+#footer button {
+	/*font-size: 16px;*/
+}
+
+#tools-left {
+	right: auto;
+	left: 4px;
+}
+
+
+#footer {
+	height: 40px;
+	position: relative;
+	/*border-radius: 0 0 10px 10px;*/
+}
+
+#status {
+	position: absolute;
+	top: 10px;
+	right: 10px;
+	color: #FAA;
+	font-size: 18px;
+	padding: 5px;
+	/*border-radius: 5px;*/
+	width: -moz-calc( 50% - 30px);
+	min-height: 30px;
+	overflow: hidden;
+	background-color: #644;
+}
+
+#help-message {
+	padding: 2px;
+	font-size: 0.8em;
+	background-color: #464;
+	/*border-radius: 2px;*/
+}
+
+#content {
+	position: relative;
+	min-height: 500px;
+	overflow: hidden;
+}
+
+.fullscreen #content {
+	min-height: -moz-calc(100% - 80px);
+	min-height: -webkit-calc(100% - 80px);
+	min-height: calc(100% - 80px);
+}
+
+.info-section p {
+	padding-left: 20px;
+	margin: 2px;
+}
+
+.info-section strong {
+	color: #FEA;
+}
+
+#visual {
+	position: absolute;
+	top: 0;
+	left: 0;
+	background-color: black;
+	width: 100%;
+	height: 100%;
+}
+
+button {
+	/*font-family: "Metro Light";*/
+	color: #CCC;
+	font-size: 20px;
+	min-width: 30px;
+	/*border-radius: 0.3em;*/
+	border: 0 solid #666;
+	background-color: #3F3F3F;
+	/*box-shadow: 0 0 3px black;*/
+	padding: 4px 10px;
+	line-height: 20px;
+	cursor: pointer;
+	transition: all 1s;
+	-moz-transition: all 1s;
+	-webkit-transition: all 0.4s;
+}
+
+button:hover {
+	background-color: #999;
+	color: #FFF;
+	transition: all 1s;
+	-moz-transition: all 1s;
+	-webkit-transition: all 0.4s;
+}
+
+button:active {
+	background-color: white;
+}
+
+button.fixed {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	font-size: 1.2em;
+}
+
+button img {
+	margin: -4px;
+	vertical-align: top;
+}
+
+#play_button {
+	background-color: #446;
+	margin-right: 30px;
+}
+
+#play_button:hover {
+	background-color: #AAF;
+}
+
+.item-list .item {
+	margin: 5px;
+	padding: 5px;
+	font-size: 1.2em;
+
+	background-color: transparent;
+	color: #999;
+	padding-left: 5px;
+	transition: background-color 300ms, color 300ms, padding-left 300ms;
+	-moz-transition: background-color 300ms, color 300ms, padding-left 300ms;
+	-webkit-transition: background-color 300ms, color 300ms, padding-left 300ms;
+}
+
+.item-list .item:hover {
+	background-color: #33A;
+	/*border-radius: 4px;*/
+	color: white;
+	padding-left: 15px;
+	transition: background-color 300ms, color 300ms, padding-left 300ms;
+	-moz-transition: background-color 300ms, color 300ms, padding-left 300ms;
+	-webkit-transition: background-color 300ms, color 300ms, padding-left 300ms;
+	cursor: pointer;
+}
+
+#gallery .item-list .item:hover {
+	background-color: #A83;
+}
+
+.item-list .item strong {
+	display: inline-block;
+	width: 200px;
+}
+
+.form label {
+	font-size: 1.2em;
+	width: 200px;
+	display: inline-block;
+	text-align: right;
+}
+
+label {
+	font-weight: bold;
+	color: #AAF;
+}
+
+input,textarea { 
+	color: #EEE;
+	background-color: #555;
+	font-size: 1.2em;
+	border: 1px solid black;
+	/*border-radius: 4px;*/
+	padding: 2px;
+	/*box-shadow: inset 0 0 3px #333; */
+	font-family: Verdana;
+	width: 250px;
+}
+
+textarea {
+	vertical-align: top;
+}
+
+#block-app {
+	width:100%;
+	height:100%;
+	position: absolute;
+	top: 0;
+	left: 0;
+	background-color: rgba(0,0,0,0.5);
+	text-align: center;
+	z-index: 6;
+}
+
+#block-app span {
+	display: block;
+	font-size: 30px;
+	margin: auto;
+	margin-top: 300px;
+}
+
+#block-app span a {
+	display: inline-block;
+	/*border-radius: 4px;*/
+	text-decoration: none;
+	color: black;
+	background-color: red;
+	padding: 0 4px 0 4px;
+}
+
+::-webkit-scrollbar {
+    height: 12px;
+	width: 6px;
+	background: #222;
+}
+::-webkit-scrollbar-thumb {
+    background: rgba(200,200,200,0.4);
+}
+::-webkit-scrollbar-corner {
+    background: #766;
+}
+
+#editor {
+	position: relative;
+	width: 50%;
+	height: 100%;
+	display: inline-block;
+	margin: 0;
+	padding: 0;
+}
+
+#editor .toolsbar {
+	width: 100%;
+	height: 30px;
+	background-color: #262626;
+	margin: 0;
+	padding: 0;
+}
+
+#editor .toolsbar button {
+	padding: 2px;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin: 3px 0 0 3px;
+}
+
+#editor .toolsbar button.enabled {
+	background-color: #66A;
+}
+
+#world {
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 50%;
+	height: 100%;
+}
+
+#worldcanvas {
+	background-color: #343;
+}
+
+.popup {
+	position: absolute;
+	top: 0;
+	background-color: rgba(50,50,90,0.8);
+	width: 100%;
+	height: 100%;
+}
+
+.popup .header, .nodepanel .header {
+	width: 100%;
+	height: 30px;
+	font-size: 20px;
+	padding: 2px;
+}
+
+#help {
+	color: #eee;
+}
+
+#help p {
+	margin: 10px;
+}
+
+#loadmeter {
+	font-family: "Tahoma";
+	display: inline-block;
+	position: absolute;
+	top: 0;
+	left: 300px;
+	color: #AAA;
+	font-size: 12px;
+	border-radius: 2px;
+	width: 130px;
+	margin: 3px;
+	padding: 2px;
+	vertical-align: top;
+}
+
+#loadmeter strong {
+	vertical-align: top;
+	padding: 3px;
+	width: 30px;
+	display: inline-block;
+	line-height: 8px;
+}
+
+#cpuload .bgload, #gpuload .bgload {
+	display: inline-block;
+	width: 90px;
+	height: 15px;
+	background-image: url('imgs/load-progress-empty.png');
+}
+
+#cpuload .fgload, #gpuload .fgload  {
+	display: inline-block;
+	width: 4px;
+	height: 15px;
+	max-width: 90px;
+	background-image: url('imgs/load-progress-full.png');
+}
