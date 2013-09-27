@@ -3,6 +3,12 @@
 //   LiteGraph CLASS                                     *******
 // *************************************************************
 
+/**
+* The Global Scope. It contains all the registered node classes.
+*
+* @class LiteGraph
+* @constructor
+*/
 
 var LiteGraph = {
 
@@ -23,6 +29,13 @@ var LiteGraph = {
 	debug: false,
 	registered_node_types: {},
 	graphs: [],
+
+	/**
+	* Register a node class so it can be listed when the user wants to create a new one
+	* @method registerNodeType
+	* @param {String} type name of the node and path
+	* @param {Class} base_class class containing the structure of a node
+	*/
 
 	registerNodeType: function(type, base_class)
 	{
@@ -50,6 +63,14 @@ var LiteGraph = {
 
 		this.registered_node_types[type] = base_class;
 	},
+
+	/**
+	* Create a node of a given type with a name. The node is not attached to any graph yet.
+	* @method createNode
+	* @param {String} type full name of the node class. p.e. "math/sin"
+	* @param {String} name a name to distinguish from other nodes
+	* @param {Object} options to set options
+	*/
 
 	createNode: function(type,name, options)
 	{
@@ -119,11 +140,25 @@ var LiteGraph = {
 		return node;
 	},
 
+	/**
+	* Returns a registered node type with a given name
+	* @method getNodeType
+	* @param {String} type full name of the node class. p.e. "math/sin"
+	* @return {Class} the node class
+	*/
 
 	getNodeType: function(type)
 	{
 		return this.registered_node_types[type];
 	},
+
+
+	/**
+	* Returns a list of node types matching one category
+	* @method getNodeType
+	* @param {String} category category name
+	* @return {Array} array with all the node classes
+	*/
 
 	getNodeTypesInCategory: function(category)
 	{
@@ -139,6 +174,12 @@ var LiteGraph = {
 
 		return r;
 	},
+
+	/**
+	* Returns a list with all the node type categories
+	* @method getNodeTypesCategories
+	* @return {Array} array with all the names of the categories 
+	*/
 
 	getNodeTypesCategories: function()
 	{
@@ -258,6 +299,13 @@ var LiteGraph = {
 // LGraph CLASS                                  
 //*********************************************************************************
 
+/**
+* LGraph is the class that contain a full graph. We instantiate one and add nodes to it, and then we can run the execution loop.
+*
+* @class LGraph
+* @constructor
+*/
+
 function LGraph()
 {
 	if (LiteGraph.debug)
@@ -269,6 +317,11 @@ function LGraph()
 
 LGraph.STATUS_STOPPED = 1;
 LGraph.STATUS_RUNNING = 2;
+
+/**
+* Removes all nodes from this graph
+* @method clear
+*/
 
 LGraph.prototype.clear = function()
 {
@@ -308,7 +361,13 @@ LGraph.prototype.clear = function()
 		this.canvas.clear();
 }
 
-LGraph.prototype.run = function(interval)
+/**
+* Starts running this graph every interval milliseconds.
+* @method start
+* @param {number} interval amount of milliseconds between executions, default is 1
+*/
+
+LGraph.prototype.start = function(interval)
 {
 	if(this.status == LGraph.STATUS_RUNNING) return;
 	this.status = LGraph.STATUS_RUNNING;
@@ -320,20 +379,19 @@ LGraph.prototype.run = function(interval)
 
 	//launch
 	this.starttime = new Date().getTime();
-	interval = interval || 1000;
+	interval = interval || 1;
 	var that = this;	
 
 	this.execution_timer_id = setInterval( function() { 
 		//execute
 		that.runStep(1); 
-		//redraw
-		/*
-		if(that.canvas && that.canvas.rendering_timer_id == null  && (that.canvas.dirty_canvas || that.canvas.dirty_bgcanvas))
-			that.canvas.draw();
-		*/
-
 	},interval);
 }
+
+/**
+* Stops the execution loop of the graph
+* @method stop
+*/
 
 LGraph.prototype.stop = function()
 {
@@ -351,6 +409,12 @@ LGraph.prototype.stop = function()
 
 	this.sendEventToAllNodes("onStop");
 }
+
+/**
+* Run N steps (cycles) of the graph
+* @method runStep
+* @param {number} num number of steps to run, default is 1
+*/
 
 LGraph.prototype.runStep = function(num)
 {
@@ -390,6 +454,18 @@ LGraph.prototype.runStep = function(num)
 	this.iteration += 1;
 }
 
+/**
+* Updates the graph execution order according to relevance of the nodes (nodes with only outputs have more relevance than
+* nodes with only inputs.
+* @method updateExecutionOrder
+*/
+	
+LGraph.prototype.updateExecutionOrder = function()
+{
+	this.nodes_in_order = this.computeExecutionOrder();
+}
+
+//This is more internal, it computes the order and returns it
 LGraph.prototype.computeExecutionOrder = function()
 {
 	var L = [];
@@ -473,20 +549,47 @@ LGraph.prototype.computeExecutionOrder = function()
 	return L;
 }
 
+
+/**
+* Returns the amount of time the graph has been running in milliseconds
+* @method getTime
+* @return {number} number of milliseconds the graph has been running
+*/
+
 LGraph.prototype.getTime = function()
 {
 	return this.globaltime;
 }
+
+/**
+* Returns the amount of time accumulated using the fixedtime_lapse var. This is used in context where the time increments should be constant
+* @method getFixedTime
+* @return {number} number of milliseconds the graph has been running
+*/
 
 LGraph.prototype.getFixedTime = function()
 {
 	return this.fixedtime;
 }
 
+/**
+* Returns the amount of time it took to compute the latest iteration. Take into account that this number could be not correct
+* if the nodes are using graphical actions
+* @method getElapsedTime
+* @return {number} number of milliseconds it took the last cycle
+*/
+
 LGraph.prototype.getElapsedTime = function()
 {
 	return this.elapsed_time;
 }
+
+/**
+* Sends an event to all the nodes, useful to trigger stuff
+* @method sendEventToAllNodes
+* @param {String} eventname the name of the event
+* @param {Object} param an object containing the info
+*/
 
 LGraph.prototype.sendEventToAllNodes = function(eventname, param)
 {
@@ -496,13 +599,19 @@ LGraph.prototype.sendEventToAllNodes = function(eventname, param)
 			M[j][eventname](param);
 }
 
+/**
+* Adds a new node instasnce to this graph
+* @method add
+* @param {LGraphNode} node the instance of the node
+*/
+
 LGraph.prototype.add = function(node)
 {
 	if(!node || (node.id != -1 && this.nodes_by_id[node.id] != null))
 		return; //already added
 
 	if(this.nodes.length >= LiteGraph.MAX_NUMBER_OF_NODES)
-		throw("LiteGraph: max number of nodes attached");
+		throw("LiteGraph: max number of nodes in a graph reached");
 
 	//give him an id
 	if(node.id == null || node.id == -1)
@@ -534,6 +643,12 @@ LGraph.prototype.add = function(node)
 
 	return node; //to chain actions
 }
+
+/**
+* Removes a node from the graph
+* @method remove
+* @param {LGraphNode} node the instance of the node
+*/
 
 LGraph.prototype.remove = function(node)
 {
@@ -587,12 +702,25 @@ LGraph.prototype.remove = function(node)
 	this.updateExecutionOrder();
 }
 
+/**
+* Returns a node by its id.
+* @method getNodeById
+* @param {String} id
+*/
+
 LGraph.prototype.getNodeById = function(id)
 {
 	if(id==null) return null;
 	return this.nodes_by_id[id];
 }
 
+
+/**
+* Returns a list of nodes that matches a type
+* @method findNodesByType
+* @param {String} type the name of the node type
+* @return {Array} a list with all the nodes of this type
+*/
 
 LGraph.prototype.findNodesByType = function(type)
 {
@@ -603,6 +731,13 @@ LGraph.prototype.findNodesByType = function(type)
 	return r;
 }
 
+/**
+* Returns a list of nodes that matches a name
+* @method findNodesByName
+* @param {String} name the name of the node to search
+* @return {Array} a list with all the nodes with this name
+*/
+
 LGraph.prototype.findNodesByName = function(name)
 {
 	var result = [];
@@ -611,6 +746,15 @@ LGraph.prototype.findNodesByName = function(name)
 			result.push(name);
 	return result;
 }
+
+/**
+* Returns the top-most node in this position of the canvas
+* @method getNodeOnPos
+* @param {number} x the x coordinate in canvas space
+* @param {number} y the y coordinate in canvas space
+* @param {Array} nodes_list a list with all the nodes to search from, by default is all the nodes in the graph
+* @return {Array} a list with all the nodes that intersect this coordinate
+*/
 
 LGraph.prototype.getNodeOnPos = function(x,y, nodes_list)
 {
@@ -624,12 +768,27 @@ LGraph.prototype.getNodeOnPos = function(x,y, nodes_list)
 	return null;
 }
 
+/**
+* Assigns a value to all the nodes that matches this name. This is used to create global variables of the node that
+* can be easily accesed from the outside of the graph
+* @method setInputData
+* @param {String} name the name of the node
+* @param {*} value value to assign to this node
+*/
+
 LGraph.prototype.setInputData = function(name,value)
 {
 	var m = this.findNodesByName(name);
 	for(var i in m)
 		m[i].setValue(value);
 }
+
+/**
+* Returns the value of the first node with this name. This is used to access global variables of the graph from the outside
+* @method setInputData
+* @param {String} name the name of the node
+* @return {*} value of the node
+*/
 
 LGraph.prototype.getOutputData = function(name)
 {
@@ -638,6 +797,8 @@ LGraph.prototype.getOutputData = function(name)
 		return m[0].getValue();
 	return null;
 }
+
+//This feature is not finished yet, is to create graphs where nodes are not executed unless a trigger message is received
 
 LGraph.prototype.triggerInput = function(name,value)
 {
@@ -660,11 +821,6 @@ LGraph.prototype.onConnectionChange = function()
 {
 	this.updateExecutionOrder();
 }
-	
-LGraph.prototype.updateExecutionOrder = function()
-{
-	this.nodes_in_order = this.computeExecutionOrder();
-}
 
 LGraph.prototype.isLive = function()
 {
@@ -681,6 +837,11 @@ LGraph.prototype.change = function()
 }
 
 //save and recover app state ***************************************
+/**
+* Creates a JSON String containing all the info about this graph
+* @method serialize
+* @return {String} value of the node
+*/
 LGraph.prototype.serialize = function()
 {
 	var nodes_info = [];
@@ -702,6 +863,11 @@ LGraph.prototype.serialize = function()
 	return JSON.stringify(data);
 }
 
+/**
+* Configure a graph from a JSON string 
+* @method unserialize
+* @param {String} str configure a graph from a JSON string
+*/
 LGraph.prototype.unserialize = function(str, keep_old)
 {
 	if(!keep_old)
@@ -775,6 +941,11 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 		+ onDeselected
 */
 
+/**
+* Base Class for all the node type classes
+* @class LGraphNode
+* @param {String} name a name for the node
+*/
 
 function LGraphNode(name)
 {
