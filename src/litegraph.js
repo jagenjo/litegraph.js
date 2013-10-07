@@ -655,6 +655,9 @@ LGraph.prototype.remove = function(node)
 	if(this.nodes_by_id[node.id] == null)
 		return; //not found
 
+	if(node.ignore_remove) 
+		return; //cannot be removed
+
 	//disconnect inputs
 	if(node.inputs)
 		for(var i = 0; i < node.inputs.length; i++)
@@ -743,7 +746,7 @@ LGraph.prototype.findNodesByName = function(name)
 	var result = [];
 	for (var i in this.nodes)
 		if(this.nodes[i].name == name)
-			result.push(name);
+			result.push(this.nodes[i]);
 	return result;
 }
 
@@ -1190,6 +1193,8 @@ LGraphNode.prototype.findOutputSlot = function(name)
 //connect this node output to the input of another node
 LGraphNode.prototype.connect = function(slot, node, target_slot)
 {
+	target_slot = target_slot || 0;
+
 	//seek for the output slot
 	if( slot.constructor === String )
 	{
