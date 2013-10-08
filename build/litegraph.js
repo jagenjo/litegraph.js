@@ -1055,6 +1055,12 @@ LGraphNode.prototype.getInputData = function(slot)
 	return null;
 }
 
+LGraphNode.prototype.isInputConnected = function(slot)
+{
+	if(!this.inputs) return null;
+	return (slot < this.inputs.length && this.inputs[slot].link != null);
+}
+
 LGraphNode.prototype.getInputInfo = function(slot)
 {
 	if(!this.inputs) return null;
@@ -1070,6 +1076,12 @@ LGraphNode.prototype.getOutputInfo = function(slot)
 	if(slot < this.outputs.length)
 		return this.outputs[slot];
 	return null;
+}
+
+LGraphNode.prototype.isOutputConnected = function(slot)
+{
+	if(!this.outputs) return null;
+	return (slot < this.outputs.length && this.outputs[slot].links && this.outputs[slot].links.length);
 }
 
 LGraphNode.prototype.getOutputNodes = function(slot)
@@ -1796,6 +1808,8 @@ LGraphNode.prototype.trace = function(msg)
 	if(!this.console)
 		this.console = [];
 	this.console.push(msg);
+	if(this.console.length > LGraphNode.MAX_CONSOLE)
+		this.console.shift();
 
 	this.graph.onNodeTrace(this,msg);
 }
