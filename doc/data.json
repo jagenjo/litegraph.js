@@ -1,0 +1,450 @@
+{
+    "project": {},
+    "files": {
+        "../src/litegraph.js": {
+            "name": "../src/litegraph.js",
+            "modules": {},
+            "classes": {
+                "LiteGraph": 1,
+                "LGraph": 1,
+                "LGraphNode": 1
+            },
+            "fors": {},
+            "namespaces": {}
+        }
+    },
+    "modules": {},
+    "classes": {
+        "LiteGraph": {
+            "name": "LiteGraph",
+            "shortname": "LiteGraph",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "file": "../src/litegraph.js",
+            "line": 6,
+            "description": "The Global Scope. It contains all the registered node classes.",
+            "is_constructor": 1
+        },
+        "LGraph": {
+            "name": "LGraph",
+            "shortname": "LGraph",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "file": "../src/litegraph.js",
+            "line": 302,
+            "description": "LGraph is the class that contain a full graph. We instantiate one and add nodes to it, and then we can run the execution loop.",
+            "is_constructor": 1
+        },
+        "LGraphNode": {
+            "name": "LGraphNode",
+            "shortname": "LGraphNode",
+            "classitems": [],
+            "plugins": [],
+            "extensions": [],
+            "plugin_for": [],
+            "extension_for": [],
+            "file": "../src/litegraph.js",
+            "line": 947,
+            "description": "Base Class for all the node type classes",
+            "params": [
+                {
+                    "name": "name",
+                    "description": "a name for the node",
+                    "type": "String"
+                }
+            ]
+        }
+    },
+    "classitems": [
+        {
+            "file": "../src/litegraph.js",
+            "line": 33,
+            "description": "Register a node class so it can be listed when the user wants to create a new one",
+            "itemtype": "method",
+            "name": "registerNodeType",
+            "params": [
+                {
+                    "name": "type",
+                    "description": "name of the node and path",
+                    "type": "String"
+                },
+                {
+                    "name": "base_class",
+                    "description": "class containing the structure of a node",
+                    "type": "Class"
+                }
+            ],
+            "class": "LiteGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 67,
+            "description": "Create a node of a given type with a name. The node is not attached to any graph yet.",
+            "itemtype": "method",
+            "name": "createNode",
+            "params": [
+                {
+                    "name": "type",
+                    "description": "full name of the node class. p.e. \"math/sin\"",
+                    "type": "String"
+                },
+                {
+                    "name": "name",
+                    "description": "a name to distinguish from other nodes",
+                    "type": "String"
+                },
+                {
+                    "name": "options",
+                    "description": "to set options",
+                    "type": "Object"
+                }
+            ],
+            "class": "LiteGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 143,
+            "description": "Returns a registered node type with a given name",
+            "itemtype": "method",
+            "name": "getNodeType",
+            "params": [
+                {
+                    "name": "type",
+                    "description": "full name of the node class. p.e. \"math/sin\"",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "the node class",
+                "type": "Class"
+            },
+            "class": "LiteGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 156,
+            "description": "Returns a list of node types matching one category",
+            "itemtype": "method",
+            "name": "getNodeType",
+            "params": [
+                {
+                    "name": "category",
+                    "description": "category name",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "array with all the node classes",
+                "type": "Array"
+            },
+            "class": "LiteGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 178,
+            "description": "Returns a list with all the node type categories",
+            "itemtype": "method",
+            "name": "getNodeTypesCategories",
+            "return": {
+                "description": "array with all the names of the categories",
+                "type": "Array"
+            },
+            "class": "LiteGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 321,
+            "description": "Removes all nodes from this graph",
+            "itemtype": "method",
+            "name": "clear",
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 364,
+            "description": "Starts running this graph every interval milliseconds.",
+            "itemtype": "method",
+            "name": "start",
+            "params": [
+                {
+                    "name": "interval",
+                    "description": "amount of milliseconds between executions, default is 1",
+                    "type": "Number"
+                }
+            ],
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 391,
+            "description": "Stops the execution loop of the graph",
+            "itemtype": "method",
+            "name": "stop",
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 413,
+            "description": "Run N steps (cycles) of the graph",
+            "itemtype": "method",
+            "name": "runStep",
+            "params": [
+                {
+                    "name": "num",
+                    "description": "number of steps to run, default is 1",
+                    "type": "Number"
+                }
+            ],
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 457,
+            "description": "Updates the graph execution order according to relevance of the nodes (nodes with only outputs have more relevance than\nnodes with only inputs.",
+            "itemtype": "method",
+            "name": "updateExecutionOrder",
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 553,
+            "description": "Returns the amount of time the graph has been running in milliseconds",
+            "itemtype": "method",
+            "name": "getTime",
+            "return": {
+                "description": "number of milliseconds the graph has been running",
+                "type": "Number"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 564,
+            "description": "Returns the amount of time accumulated using the fixedtime_lapse var. This is used in context where the time increments should be constant",
+            "itemtype": "method",
+            "name": "getFixedTime",
+            "return": {
+                "description": "number of milliseconds the graph has been running",
+                "type": "Number"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 575,
+            "description": "Returns the amount of time it took to compute the latest iteration. Take into account that this number could be not correct\nif the nodes are using graphical actions",
+            "itemtype": "method",
+            "name": "getElapsedTime",
+            "return": {
+                "description": "number of milliseconds it took the last cycle",
+                "type": "Number"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 587,
+            "description": "Sends an event to all the nodes, useful to trigger stuff",
+            "itemtype": "method",
+            "name": "sendEventToAllNodes",
+            "params": [
+                {
+                    "name": "eventname",
+                    "description": "the name of the event",
+                    "type": "String"
+                },
+                {
+                    "name": "param",
+                    "description": "an object containing the info",
+                    "type": "Object"
+                }
+            ],
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 602,
+            "description": "Adds a new node instasnce to this graph",
+            "itemtype": "method",
+            "name": "add",
+            "params": [
+                {
+                    "name": "node",
+                    "description": "the instance of the node",
+                    "type": "LGraphNode"
+                }
+            ],
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 647,
+            "description": "Removes a node from the graph",
+            "itemtype": "method",
+            "name": "remove",
+            "params": [
+                {
+                    "name": "node",
+                    "description": "the instance of the node",
+                    "type": "LGraphNode"
+                }
+            ],
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 708,
+            "description": "Returns a node by its id.",
+            "itemtype": "method",
+            "name": "getNodeById",
+            "params": [
+                {
+                    "name": "id",
+                    "description": "",
+                    "type": "String"
+                }
+            ],
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 721,
+            "description": "Returns a list of nodes that matches a type",
+            "itemtype": "method",
+            "name": "findNodesByType",
+            "params": [
+                {
+                    "name": "type",
+                    "description": "the name of the node type",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "a list with all the nodes of this type",
+                "type": "Array"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 737,
+            "description": "Returns a list of nodes that matches a name",
+            "itemtype": "method",
+            "name": "findNodesByName",
+            "params": [
+                {
+                    "name": "name",
+                    "description": "the name of the node to search",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "a list with all the nodes with this name",
+                "type": "Array"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 753,
+            "description": "Returns the top-most node in this position of the canvas",
+            "itemtype": "method",
+            "name": "getNodeOnPos",
+            "params": [
+                {
+                    "name": "x",
+                    "description": "the x coordinate in canvas space",
+                    "type": "Number"
+                },
+                {
+                    "name": "y",
+                    "description": "the y coordinate in canvas space",
+                    "type": "Number"
+                },
+                {
+                    "name": "nodes_list",
+                    "description": "a list with all the nodes to search from, by default is all the nodes in the graph",
+                    "type": "Array"
+                }
+            ],
+            "return": {
+                "description": "a list with all the nodes that intersect this coordinate",
+                "type": "Array"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 774,
+            "description": "Assigns a value to all the nodes that matches this name. This is used to create global variables of the node that\ncan be easily accesed from the outside of the graph",
+            "itemtype": "method",
+            "name": "setInputData",
+            "params": [
+                {
+                    "name": "name",
+                    "description": "the name of the node",
+                    "type": "String"
+                },
+                {
+                    "name": "value",
+                    "description": "value to assign to this node",
+                    "type": "*"
+                }
+            ],
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 789,
+            "description": "Returns the value of the first node with this name. This is used to access global variables of the graph from the outside",
+            "itemtype": "method",
+            "name": "setInputData",
+            "params": [
+                {
+                    "name": "name",
+                    "description": "the name of the node",
+                    "type": "String"
+                }
+            ],
+            "return": {
+                "description": "value of the node",
+                "type": "*"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 843,
+            "description": "Creates a JSON String containing all the info about this graph",
+            "itemtype": "method",
+            "name": "serialize",
+            "return": {
+                "description": "value of the node",
+                "type": "String"
+            },
+            "class": "LGraph"
+        },
+        {
+            "file": "../src/litegraph.js",
+            "line": 869,
+            "description": "Configure a graph from a JSON string",
+            "itemtype": "method",
+            "name": "unserialize",
+            "params": [
+                {
+                    "name": "str",
+                    "description": "configure a graph from a JSON string",
+                    "type": "String"
+                }
+            ],
+            "class": "LGraph"
+        }
+    ],
+    "warnings": []
+}

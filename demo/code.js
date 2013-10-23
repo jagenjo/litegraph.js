@@ -18,7 +18,7 @@ $(window).load(function() {
 		if(graph.status == LGraph.STATUS_STOPPED)
 		{
 			$(this).html("<img src='imgs/icon-stop.png'/> Stop");
-			graph.run(1); 
+			graph.start(1); 
 		}
 		else
 		{
