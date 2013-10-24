@@ -1,2 +1,2 @@
-python builder.py deploy_files.txt -o ../build/litescene.min.js -o2 ../build/litescene.js --nomin
+python builder.py deploy_files.txt -o ../build/litegraph.min.js -o2 ../build/litegraph.js --nomin
 chmod a+rw ../build/* 

@@ -117,7 +117,7 @@ var LiteGraph = {
 					if( prototype[i].concat ) //array
 						node[i] = prototype[i].concat();
 					else if (typeof(prototype[i]) == 'object')
-						node[i] = jQuery.extend({}, prototype[i]);
+						node[i] = LiteGraph.cloneObject(prototype[i]); //slow but safe
 					else
 						node[i] = prototype[i];
 				}
@@ -249,6 +249,12 @@ var LiteGraph = {
 
 		if(LiteGraph.debug)
 			console.log("Nodes reloaded");
+	},
+	
+	//separated just to improve if it doesnt work
+	cloneObject: function(obj)
+	{
+		return JSON.parse( JSON.stringify( obj ) );
 	}
 
 	/*
@@ -986,8 +992,8 @@ LGraphNode.prototype.objectivize = function()
 		pos: this.pos,
 		size: this.size,
 		data: this.data,
-		properties: jQuery.extend({}, this.properties),
-		flags: jQuery.extend({}, this.flags),
+		properties: LiteGraph.cloneObject(this.properties),
+		flags: LiteGraph.cloneObject(this.flags),
 		inputs: this.inputs,
 		outputs: this.outputs
 	};
@@ -1437,7 +1443,7 @@ LGraphNode.prototype.copyFromObject = function(info, ignore_connections)
 		else if( info[j].concat ) //array
 			this[j] = info[j].concat();
 		else if (typeof(info[j]) == 'object') //object
-			this[j] = jQuery.extend({}, info[j]);
+			this[j] = LiteGraph.cloneObject(info[j]);
 		else //value
 			this[j] = info[j];
 	}
@@ -3425,7 +3431,7 @@ LGraphCanvas.onMenuNodeColors = function(node, e, prev_menu)
 
 LGraphCanvas.onMenuNodeShapes = function(node,e)
 {
-	LiteGraph.createContextualMenu(["box","round","circle"], {event: e, callback: inner_clicked});
+	LiteGraph.createContextualMenu(["box","round"], {event: e, callback: inner_clicked});
 
 	function inner_clicked(v)
 	{
