@@ -79,7 +79,7 @@
 			ctx.textAlign = "left";
 		},
 
-		onDrawBackground: function(ctx)
+		onDrawForeground: function(ctx)
 		{
 			this.onDrawImageKnob(ctx);
 		},
@@ -227,7 +227,7 @@
 			ctx.drawImage(this.imgfg, 2+(this.size[0]-4)*this.value - this.imgfg.width*0.5,-this.imgfg.height*0.5 + 10);
 		},
 
-		onDrawBackground: function(ctx)
+		onDrawForeground: function(ctx)
 		{
 			this.onDrawImage(ctx);
 		},
@@ -451,7 +451,7 @@
 			ctx.textAlign = "left";
 		},
 
-		onDrawBackground: function(ctx)
+		onDrawForeground: function(ctx)
 		{
 			this.drawBevelShape(ctx);
 		},
@@ -515,7 +515,7 @@
 			if( v != undefined )
 				this.properties["value"] = v;
 		},
-		onDrawBackground: function(ctx)
+		onDrawForeground: function(ctx)
 		{
 			//border
 			ctx.lineWidth = 1;
@@ -535,7 +535,7 @@
 		inputs: [["",0]],
 		properties:{value:"...",font:"Arial", fontsize:18, color:"#AAA", align:"left", glowSize:0, decimals:1},
 
-		onDrawBackground: function(ctx)
+		onDrawForeground: function(ctx)
 		{
 			//ctx.fillStyle="#000";
 			//ctx.fillRect(0,0,100,60);
@@ -645,7 +645,7 @@
 			this.lineargradient.addColorStop(1,this.properties["bgcolorBottom"]);
 		},
 
-		onDrawBackground: function(ctx)
+		onDrawForeground: function(ctx)
 		{
 			if(this.lineargradient == null)
 				this.createGradient(ctx);

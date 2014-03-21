@@ -1,0 +1,187 @@
+.litegraph-editor {
+	width: 100%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+
+	background-color: #333;
+	color: #EEE;
+	font: 14px Tahoma;
+
+	position: relative;
+}
+
+.litegraph-editor h1 {
+	font-family: "Metro Light",Tahoma;
+	color: #DDD;
+	font-size: 28px;
+	padding-left: 10px;
+	/*text-shadow: 0 1px 1px #333, 0 -1px 1px #777;*/
+	margin: 0;
+	font-weight: normal;
+}
+
+.litegraph-editor h1 span {
+	font-family: "Arial";
+	font-size: 14px;
+	font-weight: normal;
+	color: #AAA;
+}
+
+.litegraph-editor h2 {
+	font-family: "Metro Light";
+	padding: 5px;
+	margin-left: 10px;
+}
+
+
+.litegraph-editor * {
+	box-sizing: border-box;
+	-moz-box-sizing: border-box;
+}
+
+.litegraph-editor .content {
+	position: relative;
+	width: 100%;
+	height: calc( 100% - 80px );
+	background-color: #292929;
+}
+
+.litegraph-editor .header, .litegraph-editor .footer {
+	position: relative;
+	height: 40px;
+	background-color: #333;
+	/*border-radius: 10px 10px 0 0;*/
+}
+
+.litegraph-editor .tools, .litegraph-editor .tools-left, .litegraph-editor .tools-right {
+	position: absolute;
+	top: 2px;
+	right: 0px;
+	vertical-align: top;
+
+	margin: 2px 5px 0 0px;
+}
+
+.litegraph-editor .tools-left {
+	right: auto;
+	left: 4px;
+}
+
+.litegraph-editor .footer {
+	height: 40px;
+	position: relative;
+	/*border-radius: 0 0 10px 10px;*/
+}
+
+.litegraph-editor .miniwindow {
+	background-color: #333;
+	border: 1px solid #111;
+}
+
+.litegraph-editor .miniwindow .corner-button {
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	font-family: "Tahoma";
+	font-size: 14px;
+	color: #AAA;
+	cursor: pointer;
+}
+
+
+/* BUTTONS **********************/
+
+.litegraph-editor button {
+	/*font-family: "Metro Light";*/
+	color: #CCC;
+	font-size: 20px;
+	min-width: 30px;
+	/*border-radius: 0.3em;*/
+	border: 0 solid #666;
+	background-color: #3F3F3F;
+	/*box-shadow: 0 0 3px black;*/
+	padding: 4px 10px;
+	line-height: 20px;
+	cursor: pointer;
+	transition: all 1s;
+	-moz-transition: all 1s;
+	-webkit-transition: all 0.4s;
+}
+
+.litegraph-editor button:hover {
+	background-color: #999;
+	color: #FFF;
+	transition: all 1s;
+	-moz-transition: all 1s;
+	-webkit-transition: all 0.4s;
+}
+
+.litegraph-editor button:active {
+	background-color: white;
+}
+
+.litegraph-editor button.fixed {
+	position: absolute;
+	top: 5px;
+	right: 5px;
+	font-size: 1.2em;
+}
+
+.litegraph-editor button img {
+	margin: -4px;
+	vertical-align: top;
+}
+
+.litegraph-editor .header button {
+	height: 32px;
+	vertical-align: top;
+}
+
+.litegraph-editor .footer button {
+	/*font-size: 16px;*/
+}
+
+.litegraph-editor .toolbar-widget {
+	display: inline-block;
+}
+
+.litegraph-editor .editor-area {
+	width: 100%;
+	height: 100%;
+}
+
+/* METER *********************/
+
+.litegraph-editor .loadmeter {
+	font-family: "Tahoma";
+	color: #AAA;
+	font-size: 12px;
+	border-radius: 2px;
+	width: 130px;
+	vertical-align: top;
+}
+
+.litegraph-editor  .strong {
+	vertical-align: top;
+	padding: 3px;
+	width: 30px;
+	display: inline-block;
+	line-height: 8px;
+}
+
+.litegraph-editor .cpuload .bgload, .litegraph-editor .gpuload .bgload {
+	display: inline-block;
+	width: 90px;
+	height: 15px;
+	background-image: url('../demo/imgs/load-progress-empty.png');
+}
+
+.litegraph-editor .cpuload .fgload, .litegraph-editor .gpuload .fgload  {
+	display: inline-block;
+	width: 4px;
+	height: 15px;
+	max-width: 90px;
+	background-image: url('../demo/imgs/load-progress-full.png');
+}
+

@@ -13,76 +13,18 @@ body {
 
 h1 {
 	font-family: "Metro Light",Tahoma;
-	color: #DDD;
-	font-size: 28px;
-	padding-left: 10px;
-	/*text-shadow: 0 1px 1px #333, 0 -1px 1px #777;*/
-	margin: 0;
-	font-weight: normal;
-}
-
-h1 span {
-	font-family: "Arial";
-	font-size: 14px;
-	font-weight: normal;
-	color: #AAA;
 }
 
 h2 {
 	font-family: "Metro Light";
-	padding: 5px;
-	margin-left: 10px;
 }
 
 #main {
-	width: 1000px;
-	min-height: 540px;
-	margin: auto;
-	background-color: #222;
-	/*border-radius: 10px;*/
-}
-
-#main.fullscreen {
 	width: 100%;
 	height: 100%;
+	background-color: #222;
 }
 
-#header, #footer {
-	position: relative;
-	height: 40px;
-	background-color: #333;
-	/*border-radius: 10px 10px 0 0;*/
-}
-
-.tools, #tools-left, #tools-right {
-	position: absolute;
-	top: 2px;
-	right: 0px;
-	vertical-align: top;
-
-	margin: 2px 5px 0 0px;
-}
-
-#header button {
-	height: 32px;
-	vertical-align: top;
-}
-
-#footer button {
-	/*font-size: 16px;*/
-}
-
-#tools-left {
-	right: auto;
-	left: 4px;
-}
-
-
-#footer {
-	height: 40px;
-	position: relative;
-	/*border-radius: 0 0 10px 10px;*/
-}
 
 #status {
 	position: absolute;
@@ -135,55 +77,6 @@ h2 {
 	height: 100%;
 }
 
-button {
-	/*font-family: "Metro Light";*/
-	color: #CCC;
-	font-size: 20px;
-	min-width: 30px;
-	/*border-radius: 0.3em;*/
-	border: 0 solid #666;
-	background-color: #3F3F3F;
-	/*box-shadow: 0 0 3px black;*/
-	padding: 4px 10px;
-	line-height: 20px;
-	cursor: pointer;
-	transition: all 1s;
-	-moz-transition: all 1s;
-	-webkit-transition: all 0.4s;
-}
-
-button:hover {
-	background-color: #999;
-	color: #FFF;
-	transition: all 1s;
-	-moz-transition: all 1s;
-	-webkit-transition: all 0.4s;
-}
-
-button:active {
-	background-color: white;
-}
-
-button.fixed {
-	position: absolute;
-	top: 5px;
-	right: 5px;
-	font-size: 1.2em;
-}
-
-button img {
-	margin: -4px;
-	vertical-align: top;
-}
-
-#play_button {
-	background-color: #446;
-	margin-right: 30px;
-}
-
-#play_button:hover {
-	background-color: #AAF;
-}
 
 .item-list .item {
 	margin: 5px;
@@ -348,40 +241,3 @@ textarea {
 	margin: 10px;
 }
 
-#loadmeter {
-	font-family: "Tahoma";
-	display: inline-block;
-	position: absolute;
-	top: 0;
-	left: 300px;
-	color: #AAA;
-	font-size: 12px;
-	border-radius: 2px;
-	width: 130px;
-	margin: 3px;
-	padding: 2px;
-	vertical-align: top;
-}
-
-#loadmeter strong {
-	vertical-align: top;
-	padding: 3px;
-	width: 30px;
-	display: inline-block;
-	line-height: 8px;
-}
-
-#cpuload .bgload, #gpuload .bgload {
-	display: inline-block;
-	width: 90px;
-	height: 15px;
-	background-image: url('imgs/load-progress-empty.png');
-}
-
-#cpuload .fgload, #gpuload .fgload  {
-	display: inline-block;
-	width: 4px;
-	height: 15px;
-	max-width: 90px;
-	background-image: url('imgs/load-progress-full.png');
-}

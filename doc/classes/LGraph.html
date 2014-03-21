@@ -43,6 +43,8 @@
             
                 <li><a href="../classes/LGraph.html">LGraph</a></li>
             
+                <li><a href="../classes/LGraphCanvas.html">LGraphCanvas</a></li>
+            
                 <li><a href="../classes/LGraphNode.html">LGraphNode</a></li>
             
                 <li><a href="../classes/LiteGraph.html">LiteGraph</a></li>
@@ -94,7 +96,7 @@
 
     
         <div class="foundat">
-            Defined in: <a href="../files/.._src_litegraph.js.html#l302"><code>..&#x2F;src&#x2F;litegraph.js:302</code></a>
+            Defined in: <a href="../files/.._src_litegraph.js.html#l299"><code>..&#x2F;src&#x2F;litegraph.js:299</code></a>
         </div>
     
 
@@ -145,7 +147,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l302"><code>..&#x2F;src&#x2F;litegraph.js:302</code></a>
+        <a href="../files/.._src_litegraph.js.html#l299"><code>..&#x2F;src&#x2F;litegraph.js:299</code></a>
         
         </p>
 
@@ -199,7 +201,28 @@
                             </li>
                         
                             <li class="index-item method">
+                                <a href="#method_attachCanvas">attachCanvas</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
                                 <a href="#method_clear">clear</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
+                                <a href="#method_configure">configure</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
+                                <a href="#method_detachCanvas">detachCanvas</a>
 
                                 
                                 
@@ -255,6 +278,13 @@
                             </li>
                         
                             <li class="index-item method">
+                                <a href="#method_isLive">isLive</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
                                 <a href="#method_remove">remove</a>
 
                                 
@@ -304,14 +334,7 @@
                             </li>
                         
                             <li class="index-item method">
-                                <a href="#method_stop">stop</a>
-
-                                
-                                
-                            </li>
-                        
-                            <li class="index-item method">
-                                <a href="#method_unserialize">unserialize</a>
+                                <a href="#method_stop execution">stop execution</a>
 
                                 
                                 
@@ -382,7 +405,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l602"><code>..&#x2F;src&#x2F;litegraph.js:602</code></a>
+        <a href="../files/.._src_litegraph.js.html#l645"><code>..&#x2F;src&#x2F;litegraph.js:645</code></a>
         
         </p>
 
@@ -414,6 +437,94 @@
                     <div class="param-description">
                         <p>the instance of the node</p>
 
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+
+    
+</div>
+
+                
+                    <div id="method_attachCanvas" class="method item">
+    <h3 class="name"><code>attachCanvas</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>graph_canvas</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l361"><code>..&#x2F;src&#x2F;litegraph.js:361</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Attach Canvas to this graph</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">graph_canvas</code>
+                        <span class="type">GraphCanvas</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
                     </div>
 
                     
@@ -461,7 +572,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l321"><code>..&#x2F;src&#x2F;litegraph.js:321</code></a>
+        <a href="../files/.._src_litegraph.js.html#l317"><code>..&#x2F;src&#x2F;litegraph.js:317</code></a>
         
         </p>
 
@@ -476,6 +587,183 @@
 
     </div>
 
+    
+
+    
+
+    
+</div>
+
+                
+                    <div id="method_configure" class="method item">
+    <h3 class="name"><code>configure</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>str</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l920"><code>..&#x2F;src&#x2F;litegraph.js:920</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Configure a graph from a JSON string</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">str</code>
+                        <span class="type">String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>configure a graph from a JSON string</p>
+
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+
+    
+</div>
+
+                
+                    <div id="method_detachCanvas" class="method item">
+    <h3 class="name"><code>detachCanvas</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>graph_canvas</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l380"><code>..&#x2F;src&#x2F;litegraph.js:380</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>Detach Canvas from this graph</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">graph_canvas</code>
+                        <span class="type">GraphCanvas</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
     
 
     
@@ -530,7 +818,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l737"><code>..&#x2F;src&#x2F;litegraph.js:737</code></a>
+        <a href="../files/.._src_litegraph.js.html#l780"><code>..&#x2F;src&#x2F;litegraph.js:780</code></a>
         
         </p>
 
@@ -637,7 +925,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l721"><code>..&#x2F;src&#x2F;litegraph.js:721</code></a>
+        <a href="../files/.._src_litegraph.js.html#l764"><code>..&#x2F;src&#x2F;litegraph.js:764</code></a>
         
         </p>
 
@@ -734,7 +1022,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l575"><code>..&#x2F;src&#x2F;litegraph.js:575</code></a>
+        <a href="../files/.._src_litegraph.js.html#l605"><code>..&#x2F;src&#x2F;litegraph.js:605</code></a>
         
         </p>
 
@@ -808,7 +1096,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l564"><code>..&#x2F;src&#x2F;litegraph.js:564</code></a>
+        <a href="../files/.._src_litegraph.js.html#l594"><code>..&#x2F;src&#x2F;litegraph.js:594</code></a>
         
         </p>
 
@@ -887,7 +1175,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l708"><code>..&#x2F;src&#x2F;litegraph.js:708</code></a>
+        <a href="../files/.._src_litegraph.js.html#l751"><code>..&#x2F;src&#x2F;litegraph.js:751</code></a>
         
         </p>
 
@@ -991,7 +1279,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l753"><code>..&#x2F;src&#x2F;litegraph.js:753</code></a>
+        <a href="../files/.._src_litegraph.js.html#l796"><code>..&#x2F;src&#x2F;litegraph.js:796</code></a>
         
         </p>
 
@@ -1120,7 +1408,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l553"><code>..&#x2F;src&#x2F;litegraph.js:553</code></a>
+        <a href="../files/.._src_litegraph.js.html#l583"><code>..&#x2F;src&#x2F;litegraph.js:583</code></a>
         
         </p>
 
@@ -1151,6 +1439,61 @@ if the nodes are using graphical actions</p>
                 
             </div>
         </div>
+    
+
+    
+</div>
+
+                
+                    <div id="method_isLive" class="method item">
+    <h3 class="name"><code>isLive</code></h3>
+
+    
+        <span class="paren">()</span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l869"><code>..&#x2F;src&#x2F;litegraph.js:869</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>returns if the graph is in live mode</p>
+
+    </div>
+
+    
+
     
 
     
@@ -1199,7 +1542,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l647"><code>..&#x2F;src&#x2F;litegraph.js:647</code></a>
+        <a href="../files/.._src_litegraph.js.html#l690"><code>..&#x2F;src&#x2F;litegraph.js:690</code></a>
         
         </p>
 
@@ -1288,7 +1631,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l413"><code>..&#x2F;src&#x2F;litegraph.js:413</code></a>
+        <a href="../files/.._src_litegraph.js.html#l443"><code>..&#x2F;src&#x2F;litegraph.js:443</code></a>
         
         </p>
 
@@ -1383,7 +1726,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l587"><code>..&#x2F;src&#x2F;litegraph.js:587</code></a>
+        <a href="../files/.._src_litegraph.js.html#l617"><code>..&#x2F;src&#x2F;litegraph.js:617</code></a>
         
         </p>
 
@@ -1455,7 +1798,7 @@ if the nodes are using graphical actions</p>
 
     
         <span class="returns-inline">
-            <span class="type">String</span>
+            <span class="type">Object</span>
         </span>
     
 
@@ -1482,7 +1825,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l843"><code>..&#x2F;src&#x2F;litegraph.js:843</code></a>
+        <a href="../files/.._src_litegraph.js.html#l893"><code>..&#x2F;src&#x2F;litegraph.js:893</code></a>
         
         </p>
 
@@ -1493,7 +1836,7 @@ if the nodes are using graphical actions</p>
     </div>
 
     <div class="description">
-        <p>Creates a JSON String containing all the info about this graph</p>
+        <p>Creates a Object containing all the info about this graph, it can be serialized</p>
 
     </div>
 
@@ -1506,7 +1849,7 @@ if the nodes are using graphical actions</p>
             <div class="returns-description">
                 
                     
-                        <span class="type">String</span>:
+                        <span class="type">Object</span>:
                     
                     <p>value of the node</p>
 
@@ -1567,7 +1910,7 @@ if the nodes are using graphical actions</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l774"><code>..&#x2F;src&#x2F;litegraph.js:774</code></a>
+        <a href="../files/.._src_litegraph.js.html#l817"><code>..&#x2F;src&#x2F;litegraph.js:817</code></a>
         
         </p>
 
@@ -1677,7 +2020,7 @@ can be easily accesed from the outside of the graph</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l789"><code>..&#x2F;src&#x2F;litegraph.js:789</code></a>
+        <a href="../files/.._src_litegraph.js.html#l832"><code>..&#x2F;src&#x2F;litegraph.js:832</code></a>
         
         </p>
 
@@ -1780,7 +2123,7 @@ can be easily accesed from the outside of the graph</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l364"><code>..&#x2F;src&#x2F;litegraph.js:364</code></a>
+        <a href="../files/.._src_litegraph.js.html#l394"><code>..&#x2F;src&#x2F;litegraph.js:394</code></a>
         
         </p>
 
@@ -1827,8 +2170,8 @@ can be easily accesed from the outside of the graph</p>
 </div>
 
                 
-                    <div id="method_stop" class="method item">
-    <h3 class="name"><code>stop</code></h3>
+                    <div id="method_stop execution" class="method item">
+    <h3 class="name"><code>stop execution</code></h3>
 
     
         <span class="paren">()</span>
@@ -1859,7 +2202,7 @@ can be easily accesed from the outside of the graph</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l391"><code>..&#x2F;src&#x2F;litegraph.js:391</code></a>
+        <a href="../files/.._src_litegraph.js.html#l421"><code>..&#x2F;src&#x2F;litegraph.js:421</code></a>
         
         </p>
 
@@ -1874,95 +2217,6 @@ can be easily accesed from the outside of the graph</p>
 
     </div>
 
-    
-
-    
-
-    
-</div>
-
-                
-                    <div id="method_unserialize" class="method item">
-    <h3 class="name"><code>unserialize</code></h3>
-
-    
-        <div class="args">
-            <span class="paren">(</span><ul class="args-list inline commas">
-            
-                <li class="arg">
-                    
-                        <code>str</code>
-                    
-                </li>
-            
-            </ul><span class="paren">)</span>
-        </div>
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    
-
-    <div class="meta">
-        
-            
-                
-                <p>
-                
-                Defined in
-                
-            
-        
-        
-        <a href="../files/.._src_litegraph.js.html#l869"><code>..&#x2F;src&#x2F;litegraph.js:869</code></a>
-        
-        </p>
-
-
-        
-
-        
-    </div>
-
-    <div class="description">
-        <p>Configure a graph from a JSON string</p>
-
-    </div>
-
-    
-        <div class="params">
-            <h4>Parameters:</h4>
-
-            <ul class="params-list">
-            
-                <li class="param">
-                    
-                        <code class="param-name">str</code>
-                        <span class="type">String</span>
-                    
-
-                    
-
-                    <div class="param-description">
-                        <p>configure a graph from a JSON string</p>
-
-                    </div>
-
-                    
-                </li>
-            
-            </ul>
-        </div>
     
 
     
@@ -2003,7 +2257,7 @@ can be easily accesed from the outside of the graph</p>
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l457"><code>..&#x2F;src&#x2F;litegraph.js:457</code></a>
+        <a href="../files/.._src_litegraph.js.html#l487"><code>..&#x2F;src&#x2F;litegraph.js:487</code></a>
         
         </p>
 
