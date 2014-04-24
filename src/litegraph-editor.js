@@ -21,6 +21,8 @@ function Editor(container_id, options)
 	graph.onAfterExecute = function() { graphcanvas.draw(true) };
 
 	//add stuff
+	this.addToolsButton("loadsession_button","Load","imgs/icon-load.png", this.onLoadButton.bind(this), ".tools-left" );
+	this.addToolsButton("savesession_button","Save","imgs/icon-save.png", this.onSaveButton.bind(this), ".tools-left" );
 	this.addLoadCounter();
 	this.addToolsButton("playnode_button","Play","imgs/icon-play.png", this.onPlayButton.bind(this), ".tools-right" );
 	this.addToolsButton("playstepnode_button","Step","imgs/icon-playstep.png", this.onPlayStepButton.bind(this), ".tools-right" );
@@ -64,30 +66,51 @@ Editor.prototype.addToolsButton = function(id,name,icon_url, callback, container
 {
 	if(!container) container = ".tools";
 
-	var button = document.createElement("button");
+	var button = this.createButton(name, icon_url);
 	button.id = id;
-	button.innerHTML = "<img src='"+icon_url+"'/> "+name+"";
 	button.addEventListener("click", callback);
 
 	this.root.querySelector(container).appendChild(button);
-
 }
 
-Editor.prototype.goFullscreen = function()
-{
-	if(this.root.requestFullscreen)
-		this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-	else if(this.root.mozRequestFullscreen)
-		this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-	else if(this.root.webkitRequestFullscreen)
-		this.root.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-	else
-		throw("Fullscreen not supported");
 
-	var self = this;
-	setTimeout(function() {
-		self.graphcanvas.resize();
-	},100);
+Editor.prototype.createPanel = function(title, options)
+{
+
+	var root = document.createElement("div");
+	root.className = "dialog";
+	root.innerHTML = "<div class='dialog-header'><span class='dialog-title'>"+title+"</span></div><div class='dialog-content'></div><div class='dialog-footer'></div>";
+	root.header = root.querySelector(".dialog-header");
+	root.content = root.querySelector(".dialog-content");
+	root.footer = root.querySelector(".dialog-footer");
+
+
+	return root;
+}
+
+Editor.prototype.createButton = function(name, icon_url)
+{
+	var button = document.createElement("button");
+	if(icon_url)
+		button.innerHTML = "<img src='"+icon_url+"'/> ";
+	button.innerHTML += name;
+	return button;
+}
+
+Editor.prototype.onLoadButton = function()  
+{
+	var panel = this.createPanel("Load session");
+	var close = this.createButton("Close");
+	close.style.float = "right";
+	close.addEventListener("click", function() { panel.parentNode.removeChild( panel ); });
+	panel.header.appendChild(close);
+	panel.content.innerHTML = "test";
+
+	this.root.appendChild(panel);
+}
+
+Editor.prototype.onSaveButton = function()
+{
 }
 
 Editor.prototype.onPlayButton = function()
@@ -122,6 +145,23 @@ Editor.prototype.onLiveButton = function()
 	var url = this.graphcanvas.live_mode ? "imgs/gauss_bg_medium.jpg" : "imgs/gauss_bg.jpg";
 	var button = this.root.querySelector("#livemode_button");
 	button.innerHTML = !is_live_mode ? "<img src='imgs/icon-record.png'/> Live" : "<img src='imgs/icon-gear.png'/> Edit" ;
+}
+
+Editor.prototype.goFullscreen = function()
+{
+	if(this.root.requestFullscreen)
+		this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+	else if(this.root.mozRequestFullscreen)
+		this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+	else if(this.root.webkitRequestFullscreen)
+		this.root.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+	else
+		throw("Fullscreen not supported");
+
+	var self = this;
+	setTimeout(function() {
+		self.graphcanvas.resize();
+	},100);
 }
 
 Editor.prototype.onFullscreenButton = function()

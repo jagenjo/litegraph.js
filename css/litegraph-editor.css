@@ -102,7 +102,6 @@
 	background-color: #3F3F3F;
 	/*box-shadow: 0 0 3px black;*/
 	padding: 4px 10px;
-	line-height: 20px;
 	cursor: pointer;
 	transition: all 1s;
 	-moz-transition: all 1s;
@@ -131,6 +130,12 @@
 .litegraph-editor button img {
 	margin: -4px;
 	vertical-align: top;
+	opacity: 0.8;
+	transition: all 1s;
+}
+
+.litegraph-editor button:hover img {
+	opacity: 1;
 }
 
 .litegraph-editor .header button {
@@ -185,3 +190,35 @@
 	background-image: url('../demo/imgs/load-progress-full.png');
 }
 
+.litegraph-editor .dialog {
+	position: absolute;
+    top: 50%;
+    left: 50%;
+    margin-top: -150px;
+    margin-left: -200px;
+
+	background-color: #151515;
+
+	min-width: 400px;
+	min-height: 300px;
+	box-shadow: 0 0 2px black; 
+}
+
+.litegraph-editor .dialog .dialog-header, .litegraph-editor .dialog .dialog-footer{
+	height: 40px;
+}
+
+.litegraph-editor .dialog .dialog-header .dialog-title {
+	font: 20px 'Arial';
+	margin: 4px;
+	padding: 4px 10px;
+	display:inline-block;
+}
+
+.litegraph-editor .dialog .dialog-content {
+	height: calc( 100% - 40px );
+	width: calc( 100% - 10px );
+	background-color: black;
+	margin: 4px;
+	display:inline-block;
+}

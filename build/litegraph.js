@@ -25,7 +25,7 @@ var LiteGraph = {
 	NODE_DEFAULT_BOXCOLOR: "#AEF",
 	NODE_DEFAULT_SHAPE: "box",
 	MAX_NUMBER_OF_NODES: 1000, //avoid infinite loops
-	DEFAULT_POSITION: [100,100],
+	DEFAULT_POSITION: [100,100],//default node position
 	node_images_path: "",
 
 	debug: false,
@@ -86,45 +86,6 @@ var LiteGraph = {
 		title = title || base_class.title || type;
 
 		var node = new base_class( name );
-
-		/*
-		if (base_class.prototype) //is a class
-		{
-			node = new base_class(name);
-		}
-		else
-		{
-			node = new LGraphNode(name);
-			node.inputs = [];
-			node.outputs = [];
-
-			//add inputs and outputs
-			for (var i in prototype)
-			{
-				if(i == "inputs")
-				{
-					for(var j in prototype[i])
-						node.addInput( prototype[i][j][0],prototype[i][j][1], prototype[i][j][2] );
-				}
-				else if(i == "outputs")
-				{
-					for(var j in prototype[i])
-						node.addOutput( prototype[i][j][0],prototype[i][j][1], prototype[i][j][2] );
-				}
-				else
-				{
-					if( prototype[i].concat ) //array
-						node[i] = prototype[i].concat();
-					else if (typeof(prototype[i]) == 'object')
-						node[i] = LiteGraph.cloneObject(prototype[i]); //slow but safe
-					else
-						node[i] = prototype[i];
-				}
-			}
-			//set size
-			if(base_class.size) node.size = base_class.size.concat(); //save size
-		}
-		*/
 
 		node.type = type;
 		if(!node.title) node.title = title;
@@ -299,7 +260,7 @@ LGraph.prototype.clear = function()
 
 	//links
 	this.last_link_id = 0;
-	this.links = {};
+	this.links = {}; //container with all the links
 
 	//iterations
 	this.iteration = 0;
@@ -513,20 +474,22 @@ LGraph.prototype.computeExecutionOrder = function()
 				//for every connection
 				for(var j = 0; j < output.links.length; j++)
 				{
-					var link = output.links[j];
+					var link_id = output.links[j];
+					var link = this.links[link_id];
+					if(!link) continue;
 
 					//already visited link (ignore it)
-					if(visited_links[ link[0] ])
+					if(visited_links[ link.id ])
 						continue;
 
-					var target_node = this.getNodeById( link[3] );
+					var target_node = this.getNodeById( link.target_id );
 					if(target_node == null)
 					{
-						visited_links[ link[0] ] = true;
+						visited_links[ link.id ] = true;
 						continue;
 					}
 
-					visited_links[link[0]] = true; //mark as visited
+					visited_links[link.id] = true; //mark as visited
 					remaining_links[target_node.id] -= 1; //reduce the number of links remaining
 					if (remaining_links[target_node.id] == 0)
 						S.push(target_node); //if no more links, then add to Starters array
@@ -617,7 +580,7 @@ LGraph.prototype.sendActionToCanvas = function(action, params)
 * @param {LGraphNode} node the instance of the node
 */
 
-LGraph.prototype.add = function(node)
+LGraph.prototype.add = function(node, skip_compute_order)
 {
 	if(!node || (node.id != -1 && this._nodes_by_id[node.id] != null))
 		return; //already added
@@ -645,8 +608,9 @@ LGraph.prototype.add = function(node)
 
 	if(this.config.align_to_grid)
 		node.alignToGrid();
-		
-	this.updateExecutionOrder();
+
+	if(!skip_compute_order)
+		this.updateExecutionOrder();
 
 	if(this.onNodeAdded)
 		this.onNodeAdded(node);
@@ -928,6 +892,11 @@ LGraph.prototype.serialize = function()
 	for (var i in this._nodes)
 		nodes_info.push( this._nodes[i].serialize() );
 
+	//remove data from links, we dont want to store it
+	for (var i in this.links)
+		this.links[i].data = null;
+
+
 	var data = {
 		graph: this.graph,
 
@@ -935,6 +904,7 @@ LGraph.prototype.serialize = function()
 		frame: this.frame,
 		last_node_id: this.last_node_id,
 		last_link_id: this.last_link_id,
+		links: LiteGraph.cloneObject( this.links ),
 
 		config: this.config,
 		nodes: nodes_info
@@ -967,8 +937,8 @@ LGraph.prototype.configure = function(data, keep_old)
 	for (var i in nodes)
 	{
 		var n_info = nodes[i]; //stored info
-		var n = LiteGraph.createNode( n_info.type, n_info.title );
-		if(!n)
+		var node = LiteGraph.createNode( n_info.type, n_info.title );
+		if(!node)
 		{
 			if(LiteGraph.debug)
 				console.log("Node not found: " + n_info.type);
@@ -976,10 +946,12 @@ LGraph.prototype.configure = function(data, keep_old)
 			continue;
 		}
 
-		n.configure(n_info);
-		this.add(n);
+		node.id = n_info.id; //id it or it will create a new id
+		this.add(node, true); //add before configure, otherwise configure cannot create links
+		node.configure(n_info);
 	}
 
+	this.updateExecutionOrder();
 	this.setDirtyCanvas(true,true);
 	return error;
 }
@@ -1050,7 +1022,7 @@ function LGraphNode(title)
 }
 
 /**
-* configure a node from an object 
+* configure a node from an object containing the serialized info
 * @method configure
 */
 LGraphNode.prototype.configure = function(info)
@@ -1061,39 +1033,38 @@ LGraphNode.prototype.configure = function(info)
 
 		if(info[j] == null)
 			continue;
-		else if( info[j].concat ) //array
-			this[j] = info[j].concat();
 		else if (typeof(info[j]) == 'object') //object
 			this[j] = LiteGraph.cloneObject(info[j], this[j] || {} );
 		else //value
 			this[j] = info[j];
 	}
-}
 
-/* Copy all the info from one object to this node (used for serialization) */
-LGraphNode.prototype.copyFromObject = function(info, ignore_connections)
-{
-	var outputs = null;
-	var inputs = null;
-	var properties = null;
-	var local_data = null;
-
-	for (var j in info)
+	//FOR LEGACY, PLEASE REMOVE ON NEXT VERSION
+	for(var i in this.inputs)
 	{
-		if(ignore_connections && (j == "outputs" || j == "inputs"))
+		var input = this.inputs[i];
+		if(!input.link || !input.link.length )
 			continue;
-
-		if(j == "console") continue;
-
-		if(info[j] == null)
+		var link = input.link;
+		if(typeof(link) != "object")
 			continue;
-		else if( info[j].concat ) //array
-			this[j] = info[j].concat();
-		else if (typeof(info[j]) == 'object') //object
-			this[j] = LiteGraph.cloneObject(info[j]);
-		else //value
-			this[j] = info[j];
+		input.link = link[0];
+		this.graph.links[ link[0] ] = { id: link[0], origin_id: link[1], origin_slot: link[2], target_id: link[3], target_slot: link[4] };
 	}
+	for(var i in this.outputs)
+	{
+		var output = this.outputs[i];
+		if(!output.links || output.links.length == 0)
+			continue;
+		for(var j in output.links)
+		{
+			var link = output.links[j];
+			if(typeof(link) != "object")
+				continue;
+			output.links[j] = link[0];
+		}
+	}
+
 }
 
 /**
@@ -1194,7 +1165,10 @@ LGraphNode.prototype.setOutputData = function(slot,data)
 	if(slot > -1 && slot < this.outputs.length && this.outputs[slot] && this.outputs[slot].links != null)
 	{
 		for(var i = 0; i < this.outputs[slot].links.length; i++)
-			this.graph.links[ this.outputs[slot].links[i][0] ] = data;
+		{
+			var link_id = this.outputs[slot].links[i];
+			this.graph.links[ link_id ].data = data;
+		}
 	}
 }
 
@@ -1208,7 +1182,7 @@ LGraphNode.prototype.getInputData = function(slot)
 {
 	if(!this.inputs) return null;
 	if(slot < this.inputs.length && this.inputs[slot].link != null)
-		return this.graph.links[ this.inputs[slot].link[0] ];
+		return this.graph.links[ this.inputs[slot].link ].data;
 	return null;
 }
 
@@ -1280,7 +1254,7 @@ LGraphNode.prototype.getOutputNodes = function(slot)
 		var output = this.outputs[slot];
 		var r = [];
 		for(var i = 0; i < output.length; i++)
-			r.push( this.graph.getNodeById( output.links[i][3] ));
+			r.push( this.graph.getNodeById( output.links[i].target_id ));
 		return r;
 	}
 	return null;
@@ -1453,7 +1427,7 @@ LGraphNode.prototype.getBounding = function()
 */
 LGraphNode.prototype.isPointInsideNode = function(x,y)
 {
-	var margin_top = this.graph.isLive() ? 0 : 20;
+	var margin_top = this.graph && this.graph.isLive() ? 0 : 20;
 	if(this.flags.collapsed)
 	{
 		//if ( distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
@@ -1552,12 +1526,14 @@ LGraphNode.prototype.connect = function(slot, node, target_slot)
 			output.type == node.inputs[target_slot].type) //same type
 	{
 		//info: link structure => [ 0:link_id, 1:start_node_id, 2:start_slot, 3:end_node_id, 4:end_slot ]
-		var link = [ this.graph.last_link_id++, this.id, slot, node.id, target_slot ];
+		//var link = [ this.graph.last_link_id++, this.id, slot, node.id, target_slot ];
+		var link = { id: this.graph.last_link_id++, origin_id: this.id, origin_slot: slot, target_id: node.id, target_slot: target_slot };
+		this.graph.links[ link.id ] = link;
 
 		//connect
 		if( output.links == null )	output.links = [];
-		output.links.push(link);
-		node.inputs[target_slot].link = link;
+		output.links.push( link.id );
+		node.inputs[target_slot].link = link.id;
 
 		this.setDirtyCanvas(false,true);
 		this.graph.onConnectionChange();
@@ -1600,13 +1576,15 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 	{
 		for(var i = 0, l = output.links.length; i < l; i++)
 		{
-			var link = output.links[i];
+			var link_id = output.links[i];
+			var link_info = this.graph.links[ link_id ];
+
 			//is the link we are searching for...
-			if( link[3] == target_node.id )
+			if( link_info.target_id == target_node.id )
 			{
 				output.links.splice(i,1); //remove here
-				target_node.inputs[ link[4] ].link = null; //remove there
-				delete this.graph.links[link[0]]; //remove the link from the links pool
+				target_node.inputs[ link_info.target_slot ].link = null; //remove there
+				delete this.graph.links[ link_id ]; //remove the link from the links pool
 				break;
 			}
 		}
@@ -1615,10 +1593,12 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 	{
 		for(var i = 0, l = output.links.length; i < l; i++)
 		{
-			var link = output.links[i];
-			var target_node = this.graph.getNodeById( link[3] );
+			var link_id = output.links[i];
+			var link_info = this.graph.links[ link_id ];
+
+			var target_node = this.graph.getNodeById( link_info.target_id );
 			if(target_node)
-				target_node.inputs[ link[4] ].link = null; //remove other side link
+				target_node.inputs[ link_info.target_slot ].link = null; //remove other side link
 		}
 		output.links = null;
 	}
@@ -1656,21 +1636,24 @@ LGraphNode.prototype.disconnectInput = function(slot)
 
 	var input = this.inputs[slot];
 	if(!input) return false;
-	var link = this.inputs[slot].link;
+	var link_id = this.inputs[slot].link;
 	this.inputs[slot].link = null;
 
 	//remove other side
-	var node = this.graph.getNodeById( link[1] );
+	var link_info = this.graph.links[ link_id ];
+	var node = this.graph.getNodeById( link_info.origin_id );
 	if(!node) return false;
 
-	var output = node.outputs[ link[2] ];
+	var output = node.outputs[ link_info.origin_slot ];
 	if(!output || !output.links || output.links.length == 0) 
 		return false;
 
+	//check outputs
 	for(var i = 0, l = output.links.length; i < l; i++)
 	{
-		var link = output.links[i];
-		if( link[3] == this.id )
+		var link_id = output.links[i];
+		var link_info = this.graph.links[ link_id ];
+		if( link_info.target_id == this.id )
 		{
 			output.links.splice(i,1);
 			break;
@@ -3438,12 +3421,15 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 			for(var i in node.inputs)
 			{
 				var input = node.inputs[i];
-				if(!input || !input.link ) continue;
-				var link = input.link;
+				if(!input || input.link == null) 
+					continue;
+				var link_id = input.link;
+				var link = this.graph.links[ link_id ];
+				if(!link) continue;
 
-				var start_node = this.graph.getNodeById( link[1] );
+				var start_node = this.graph.getNodeById( link.origin_id );
 				if(start_node == null) continue;
-				var start_node_slot = link[2];
+				var start_node_slot = link.origin_slot;
 				var start_node_slotpos = null;
 
 				if(start_node_slot == -1)
