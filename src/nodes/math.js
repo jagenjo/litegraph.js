@@ -255,10 +255,9 @@ LiteGraph.registerNodeType("math/compare",MathCompare);
 //Math Trigonometry
 function MathTrigonometry()
 {
-	this.addInputs("v","number");
-	this.addOutputs("sin","number");
+	this.addInput("v","number");
+	this.addOutput("sin","number");
 	this.properties = {amplitude:1.0};
-	this.size = [100,20];
 	this.bgImageUrl = "nodes/imgs/icon-sin.png";
 }
 

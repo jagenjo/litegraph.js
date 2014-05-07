@@ -211,6 +211,12 @@ var LiteGraph = {
 	}
 };
 
+if(typeof(performance) != "undefined")
+  LiteGraph.getTime = function getTime() { return performance.now(); }
+else
+  LiteGraph.getTime = function getTime() { return Date.now(); }
+
+
 
 
  
@@ -338,7 +344,7 @@ LGraph.prototype.start = function(interval)
 	this.sendEventToAllNodes("onStart");
 
 	//launch
-	this.starttime = window.performance.now();
+	this.starttime = LiteGraph.getTime();
 	interval = interval || 1;
 	var that = this;	
 
@@ -380,7 +386,7 @@ LGraph.prototype.runStep = function(num)
 {
 	num = num || 1;
 
-	var start = window.performance.now();
+	var start = LiteGraph.getTime();
 	this.globaltime = 0.001 * (start - this.starttime);
 
 	try
@@ -407,7 +413,7 @@ LGraph.prototype.runStep = function(num)
 		this.stop();
 	}
 
-	var elapsed = window.performance.now() - start;
+	var elapsed = LiteGraph.getTime() - start;
 	if (elapsed == 0) elapsed = 1;
 	this.elapsed_time = 0.001 * elapsed;
 	this.globaltime += 0.001 * elapsed;
@@ -1034,7 +1040,7 @@ LGraphNode.prototype.configure = function(info)
 		if(info[j] == null)
 			continue;
 		else if (typeof(info[j]) == 'object') //object
-			this[j] = LiteGraph.cloneObject(info[j], this[j] || {} );
+			this[j] = LiteGraph.cloneObject(info[j], this[j]);
 		else //value
 			this[j] = info[j];
 	}
@@ -2225,7 +2231,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				var block_drag_node = false;
 
 				//double clicking
-				var now = window.performance.now();
+				var now = LiteGraph.getTime();
 				if ((now - this.last_mouseclick) < 300 && this.selected_nodes[n.id])
 				{
 					//double click node
@@ -2280,7 +2286,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 	this.last_mouse[0] = e.localX;
 	this.last_mouse[1] = e.localY;
-	this.last_mouseclick = window.performance.now();
+	this.last_mouseclick = LiteGraph.getTime();
 	this.canvas_mouse = [e.canvasX, e.canvasY];
 
 	/*
@@ -2832,7 +2838,7 @@ LGraphCanvas.prototype.computeVisibleNodes = function()
 LGraphCanvas.prototype.draw = function(force_canvas, force_bgcanvas)
 {
 	//fps counting
-	var now = window.performance.now();
+	var now = LiteGraph.getTime();
 	this.render_time = (now - this.last_draw_time)*0.001;
 	this.last_draw_time = now;
 
@@ -3863,10 +3869,19 @@ LGraphCanvas.prototype.getNodeMenuOptions = function(node)
 	if( node.removable == false )
 		options[9].disabled = true;
 
-	if(node.onGetInputs && node.onGetInputs().length )
-		options[0].disabled = false;
-	if(node.onGetOutputs && node.onGetOutputs().length )
-		options[1].disabled = false;
+	if(node.onGetInputs)
+	{
+		var inputs = node.onGetInputs();
+		if(inputs && inputs.length)
+			options[0].disabled = false;
+	}
+
+	if(node.onGetOutputs)
+	{
+		var outputs = node.onGetOutputs();
+		if(outputs && outputs.length )
+			options[1].disabled = false;
+	}
 
 	return options;
 }
@@ -5523,10 +5538,9 @@ LiteGraph.registerNodeType("math/compare",MathCompare);
 //Math Trigonometry
 function MathTrigonometry()
 {
-	this.addInputs("v","number");
-	this.addOutputs("sin","number");
+	this.addInput("v","number");
+	this.addOutput("sin","number");
 	this.properties = {amplitude:1.0};
-	this.size = [100,20];
 	this.bgImageUrl = "nodes/imgs/icon-sin.png";
 }
 
