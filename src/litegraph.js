@@ -1445,6 +1445,12 @@ LGraphNode.prototype.isPointInsideNode = function(x,y)
 	return false;
 }
 
+/**
+* returns the input slot with a given name (used for dynamic slots), -1 if not found
+* @method findInputSlot
+* @param {string} name the name of the slot 
+* @return {number} the slot (-1 if not found)
+*/
 LGraphNode.prototype.findInputSlot = function(name)
 {
 	if(!this.inputs) return -1;
@@ -1454,6 +1460,12 @@ LGraphNode.prototype.findInputSlot = function(name)
 	return -1;
 }
 
+/**
+* returns the output slot with a given name (used for dynamic slots), -1 if not found
+* @method findOutputSlot
+* @param {string} name the name of the slot 
+* @return {number} the slot (-1 if not found)
+*/
 LGraphNode.prototype.findOutputSlot = function(name)
 {
 	if(!this.outputs) return -1;
@@ -1870,8 +1882,8 @@ LGraphNode.prototype.localToScreen = function(x,y, graphcanvas)
 *
 * @class LGraphCanvas
 * @constructor
-* @param {HTMLCanvas} canvas the canvas where you want to render (it accepts a selector in string format)
-* @param {LGraph} graph
+* @param {HTMLCanvas} canvas the canvas where you want to render (it accepts a selector in string format or the canvas itself)
+* @param {LGraph} graph [optional]
 */
 function LGraphCanvas(canvas, graph)
 {
@@ -1896,6 +1908,12 @@ function LGraphCanvas(canvas, graph)
 
 LGraphCanvas.link_type_colors = {'number':"#AAC",'node':"#DCA"};
 
+
+/**
+* clears all the data inside
+*
+* @method clear
+*/
 LGraphCanvas.prototype.clear = function()
 {
 	this.frame = 0;
@@ -1945,6 +1963,12 @@ LGraphCanvas.prototype.clear = function()
 	//this.UIinit();
 }
 
+/**
+* assigns a graph, you can reasign graphs to the same canvas
+*
+* @method setGraph
+* @param {LGraph} assigns a graph
+*/
 LGraphCanvas.prototype.setGraph = function(graph)
 {
 	if(this.graph == graph) return;
@@ -1967,6 +1991,12 @@ LGraphCanvas.prototype.setGraph = function(graph)
 	this.setDirty(true,true);
 }
 
+/**
+* assigns a canvas
+*
+* @method setCanvas
+* @param {Canvas} assigns a canvas
+*/
 LGraphCanvas.prototype.setCanvas = function(canvas)
 {
 	var that = this;
@@ -2005,7 +2035,7 @@ LGraphCanvas.prototype.setCanvas = function(canvas)
 	this._mousemove_callback = this.processMouseMove.bind(this);
 	this._mouseup_callback = this.processMouseUp.bind(this);
 
-	this.canvas.addEventListener("mousedown", this.processMouseDown.bind(this) ); //down do not need to store the binded
+	this.canvas.addEventListener("mousedown", this.processMouseDown.bind(this), true ); //down do not need to store the binded
 	this.canvas.addEventListener("mousemove", this._mousemove_callback);
 
 	this.canvas.addEventListener("contextmenu", function(e) { e.preventDefault(); return false; });
@@ -2083,6 +2113,14 @@ LGraphCanvas.prototype.UIinit = function()
 }
 */
 
+/**
+* marks as dirty the canvas, this way it will be rendered again 
+*
+* @class LGraphCanvas
+* @method setDirty
+* @param {bool} fgcanvas if the foreground canvas is dirty (the one containing the nodes)
+* @param {bool} bgcanvas if the background canvas is dirty (the one containing the wires)
+*/
 LGraphCanvas.prototype.setDirty = function(fgcanvas,bgcanvas)
 {
 	if(fgcanvas)
@@ -2091,13 +2129,23 @@ LGraphCanvas.prototype.setDirty = function(fgcanvas,bgcanvas)
 		this.dirty_bgcanvas = true;
 }
 
-//Used to attach the canvas in a popup
+/**
+* Used to attach the canvas in a popup
+*
+* @method getCanvasWindow
+* @return {window} returns the window where the canvas is attached (the DOM root node)
+*/
 LGraphCanvas.prototype.getCanvasWindow = function()
 {
 	var doc = this.canvas.ownerDocument;
 	return doc.defaultView || doc.parentWindow;
 }
 
+/**
+* starts rendering the content of the canvas when needed
+*
+* @method startRendering
+*/
 LGraphCanvas.prototype.startRendering = function()
 {
 	if(this.is_rendering) return; //already rendering
@@ -2124,6 +2172,11 @@ LGraphCanvas.prototype.startRendering = function()
 	*/
 }
 
+/**
+* stops rendering the content of the canvas (to save resources)
+*
+* @method stopRendering
+*/
 LGraphCanvas.prototype.stopRendering = function()
 {
 	this.is_rendering = false;
@@ -2148,8 +2201,8 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	var document = ref_window.document;
 
 	this.canvas.removeEventListener("mousemove", this._mousemove_callback );
-	ref_window.document.addEventListener("mousemove", this._mousemove_callback ); //catch for the entire window
-	ref_window.document.addEventListener("mouseup", this._mouseup_callback );
+	ref_window.document.addEventListener("mousemove", this._mousemove_callback, true ); //catch for the entire window
+	ref_window.document.addEventListener("mouseup", this._mouseup_callback, true );
 
 	var n = this.graph.getNodeOnPos(e.canvasX, e.canvasY, this.visible_nodes);
 	var skip_dragging = false;

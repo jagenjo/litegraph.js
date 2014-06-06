@@ -96,7 +96,7 @@
 
     
         <div class="foundat">
-            Defined in: <a href="../files/.._src_litegraph.js.html#l997"><code>..&#x2F;src&#x2F;litegraph.js:997</code></a>
+            Defined in: <a href="../files/.._src_litegraph.js.html#l1000"><code>..&#x2F;src&#x2F;litegraph.js:1000</code></a>
         </div>
     
 
@@ -151,7 +151,21 @@
                             </li>
                         
                             <li class="index-item method">
+                                <a href="#method_addInputs">addInputs</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
                                 <a href="#method_addOutput">addOutput</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
+                                <a href="#method_addOutputs">addOutputs</a>
 
                                 
                                 
@@ -200,6 +214,20 @@
                             </li>
                         
                             <li class="index-item method">
+                                <a href="#method_findInputSlot">findInputSlot</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
+                                <a href="#method_findOutputSlot">findOutputSlot</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
                                 <a href="#method_getBounding">getBounding</a>
 
                                 
@@ -236,6 +264,13 @@
                         
                             <li class="index-item method">
                                 <a href="#method_getOutputNodes">getOutputNodes</a>
+
+                                
+                                
+                            </li>
+                        
+                            <li class="index-item method">
+                                <a href="#method_getTitle">getTitle</a>
 
                                 
                                 
@@ -380,7 +415,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1320"><code>..&#x2F;src&#x2F;litegraph.js:1320</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1385"><code>..&#x2F;src&#x2F;litegraph.js:1385</code></a>
         
         </p>
 
@@ -528,7 +563,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1289"><code>..&#x2F;src&#x2F;litegraph.js:1289</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1331"><code>..&#x2F;src&#x2F;litegraph.js:1331</code></a>
         
         </p>
 
@@ -606,6 +641,95 @@
 </div>
 
                 
+                    <div id="method_addInputs" class="method item">
+    <h3 class="name"><code>addInputs</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>array</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l1350"><code>..&#x2F;src&#x2F;litegraph.js:1350</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>add several new input slots in this node</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">array</code>
+                        <span class="type">Array</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>of triplets like [[name,type,extra_info],[...]]</p>
+
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+
+    
+</div>
+
+                
                     <div id="method_addOutput" class="method item">
     <h3 class="name"><code>addOutput</code></h3>
 
@@ -660,7 +784,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1258"><code>..&#x2F;src&#x2F;litegraph.js:1258</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1277"><code>..&#x2F;src&#x2F;litegraph.js:1277</code></a>
         
         </p>
 
@@ -738,6 +862,95 @@
 </div>
 
                 
+                    <div id="method_addOutputs" class="method item">
+    <h3 class="name"><code>addOutputs</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>array</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l1296"><code>..&#x2F;src&#x2F;litegraph.js:1296</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>add a new output slot to use in this node</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">array</code>
+                        <span class="type">Array</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>of triplets like [[name,type,extra_info],[...]]</p>
+
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+
+    
+</div>
+
+                
                     <div id="method_collapse" class="method item">
     <h3 class="name"><code>collapse</code></h3>
 
@@ -770,7 +983,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1756"><code>..&#x2F;src&#x2F;litegraph.js:1756</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1842"><code>..&#x2F;src&#x2F;litegraph.js:1842</code></a>
         
         </p>
 
@@ -839,7 +1052,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1333"><code>..&#x2F;src&#x2F;litegraph.js:1333</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1398"><code>..&#x2F;src&#x2F;litegraph.js:1398</code></a>
         
         </p>
 
@@ -931,7 +1144,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1026"><code>..&#x2F;src&#x2F;litegraph.js:1026</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1029"><code>..&#x2F;src&#x2F;litegraph.js:1029</code></a>
         
         </p>
 
@@ -942,7 +1155,7 @@
     </div>
 
     <div class="description">
-        <p>configure a node from an object</p>
+        <p>configure a node from an object containing the serialized info</p>
 
     </div>
 
@@ -1012,7 +1225,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1401"><code>..&#x2F;src&#x2F;litegraph.js:1401</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1478"><code>..&#x2F;src&#x2F;litegraph.js:1478</code></a>
         
         </p>
 
@@ -1151,7 +1364,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1545"><code>..&#x2F;src&#x2F;litegraph.js:1545</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1628"><code>..&#x2F;src&#x2F;litegraph.js:1628</code></a>
         
         </p>
 
@@ -1264,7 +1477,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1482"><code>..&#x2F;src&#x2F;litegraph.js:1482</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1561"><code>..&#x2F;src&#x2F;litegraph.js:1561</code></a>
         
         </p>
 
@@ -1341,6 +1554,220 @@
 </div>
 
                 
+                    <div id="method_findInputSlot" class="method item">
+    <h3 class="name"><code>findInputSlot</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>name</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+        <span class="returns-inline">
+            <span class="type">Number</span>
+        </span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l1448"><code>..&#x2F;src&#x2F;litegraph.js:1448</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>returns the input slot with a given name (used for dynamic slots), -1 if not found</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>the name of the slot</p>
+
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                
+                    
+                        <span class="type">Number</span>:
+                    
+                    <p>the slot (-1 if not found)</p>
+
+                
+            </div>
+        </div>
+    
+
+    
+</div>
+
+                
+                    <div id="method_findOutputSlot" class="method item">
+    <h3 class="name"><code>findOutputSlot</code></h3>
+
+    
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+            
+                <li class="arg">
+                    
+                        <code>name</code>
+                    
+                </li>
+            
+            </ul><span class="paren">)</span>
+        </div>
+    
+
+    
+        <span class="returns-inline">
+            <span class="type">Number</span>
+        </span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l1463"><code>..&#x2F;src&#x2F;litegraph.js:1463</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>returns the output slot with a given name (used for dynamic slots), -1 if not found</p>
+
+    </div>
+
+    
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+            
+                <li class="param">
+                    
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+                    
+
+                    
+
+                    <div class="param-description">
+                        <p>the name of the slot</p>
+
+                    </div>
+
+                    
+                </li>
+            
+            </ul>
+        </div>
+    
+
+    
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                
+                    
+                        <span class="type">Number</span>:
+                    
+                    <p>the slot (-1 if not found)</p>
+
+                
+            </div>
+        </div>
+    
+
+    
+</div>
+
+                
                     <div id="method_getBounding" class="method item">
     <h3 class="name"><code>getBounding</code></h3>
 
@@ -1377,7 +1804,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1351"><code>..&#x2F;src&#x2F;litegraph.js:1351</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1416"><code>..&#x2F;src&#x2F;litegraph.js:1416</code></a>
         
         </p>
 
@@ -1466,7 +1893,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1599"><code>..&#x2F;src&#x2F;litegraph.js:1599</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1685"><code>..&#x2F;src&#x2F;litegraph.js:1685</code></a>
         
         </p>
 
@@ -1589,7 +2016,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1161"><code>..&#x2F;src&#x2F;litegraph.js:1161</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1180"><code>..&#x2F;src&#x2F;litegraph.js:1180</code></a>
         
         </p>
 
@@ -1695,7 +2122,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1187"><code>..&#x2F;src&#x2F;litegraph.js:1187</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1206"><code>..&#x2F;src&#x2F;litegraph.js:1206</code></a>
         
         </p>
 
@@ -1799,7 +2226,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1202"><code>..&#x2F;src&#x2F;litegraph.js:1202</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1221"><code>..&#x2F;src&#x2F;litegraph.js:1221</code></a>
         
         </p>
 
@@ -1903,7 +2330,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1229"><code>..&#x2F;src&#x2F;litegraph.js:1229</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1248"><code>..&#x2F;src&#x2F;litegraph.js:1248</code></a>
         
         </p>
 
@@ -1961,6 +2388,61 @@
 </div>
 
                 
+                    <div id="method_getTitle" class="method item">
+    <h3 class="name"><code>getTitle</code></h3>
+
+    
+        <span class="paren">()</span>
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    
+
+    <div class="meta">
+        
+            
+                
+                <p>
+                
+                Defined in
+                
+            
+        
+        
+        <a href="../files/.._src_litegraph.js.html#l1148"><code>..&#x2F;src&#x2F;litegraph.js:1148</code></a>
+        
+        </p>
+
+
+        
+
+        
+    </div>
+
+    <div class="description">
+        <p>get the title string</p>
+
+    </div>
+
+    
+
+    
+
+    
+</div>
+
+                
                     <div id="method_isInputConnected" class="method item">
     <h3 class="name"><code>isInputConnected</code></h3>
 
@@ -2007,7 +2489,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1175"><code>..&#x2F;src&#x2F;litegraph.js:1175</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1194"><code>..&#x2F;src&#x2F;litegraph.js:1194</code></a>
         
         </p>
 
@@ -2111,7 +2593,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1217"><code>..&#x2F;src&#x2F;litegraph.js:1217</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1236"><code>..&#x2F;src&#x2F;litegraph.js:1236</code></a>
         
         </p>
 
@@ -2221,7 +2703,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1361"><code>..&#x2F;src&#x2F;litegraph.js:1361</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1426"><code>..&#x2F;src&#x2F;litegraph.js:1426</code></a>
         
         </p>
 
@@ -2326,7 +2808,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1769"><code>..&#x2F;src&#x2F;litegraph.js:1769</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1855"><code>..&#x2F;src&#x2F;litegraph.js:1855</code></a>
         
         </p>
 
@@ -2391,7 +2873,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1308"><code>..&#x2F;src&#x2F;litegraph.js:1308</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1373"><code>..&#x2F;src&#x2F;litegraph.js:1373</code></a>
         
         </p>
 
@@ -2479,7 +2961,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1277"><code>..&#x2F;src&#x2F;litegraph.js:1277</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1319"><code>..&#x2F;src&#x2F;litegraph.js:1319</code></a>
         
         </p>
 
@@ -2557,7 +3039,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1073"><code>..&#x2F;src&#x2F;litegraph.js:1073</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1075"><code>..&#x2F;src&#x2F;litegraph.js:1075</code></a>
         
         </p>
 
@@ -2628,7 +3110,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1145"><code>..&#x2F;src&#x2F;litegraph.js:1145</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1161"><code>..&#x2F;src&#x2F;litegraph.js:1161</code></a>
         
         </p>
 
@@ -2721,7 +3203,7 @@
             
         
         
-        <a href="../files/.._src_litegraph.js.html#l1132"><code>..&#x2F;src&#x2F;litegraph.js:1132</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1136"><code>..&#x2F;src&#x2F;litegraph.js:1136</code></a>
         
         </p>
 

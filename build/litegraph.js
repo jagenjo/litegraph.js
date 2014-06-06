@@ -1446,6 +1446,12 @@ LGraphNode.prototype.isPointInsideNode = function(x,y)
 	return false;
 }
 
+/**
+* returns the input slot with a given name (used for dynamic slots), -1 if not found
+* @method findInputSlot
+* @param {string} name the name of the slot 
+* @return {number} the slot (-1 if not found)
+*/
 LGraphNode.prototype.findInputSlot = function(name)
 {
 	if(!this.inputs) return -1;
@@ -1455,6 +1461,12 @@ LGraphNode.prototype.findInputSlot = function(name)
 	return -1;
 }
 
+/**
+* returns the output slot with a given name (used for dynamic slots), -1 if not found
+* @method findOutputSlot
+* @param {string} name the name of the slot 
+* @return {number} the slot (-1 if not found)
+*/
 LGraphNode.prototype.findOutputSlot = function(name)
 {
 	if(!this.outputs) return -1;
@@ -1871,8 +1883,8 @@ LGraphNode.prototype.localToScreen = function(x,y, graphcanvas)
 *
 * @class LGraphCanvas
 * @constructor
-* @param {HTMLCanvas} canvas the canvas where you want to render (it accepts a selector in string format)
-* @param {LGraph} graph
+* @param {HTMLCanvas} canvas the canvas where you want to render (it accepts a selector in string format or the canvas itself)
+* @param {LGraph} graph [optional]
 */
 function LGraphCanvas(canvas, graph)
 {
@@ -1897,6 +1909,12 @@ function LGraphCanvas(canvas, graph)
 
 LGraphCanvas.link_type_colors = {'number':"#AAC",'node':"#DCA"};
 
+
+/**
+* clears all the data inside
+*
+* @method clear
+*/
 LGraphCanvas.prototype.clear = function()
 {
 	this.frame = 0;
@@ -1946,6 +1964,12 @@ LGraphCanvas.prototype.clear = function()
 	//this.UIinit();
 }
 
+/**
+* assigns a graph, you can reasign graphs to the same canvas
+*
+* @method setGraph
+* @param {LGraph} assigns a graph
+*/
 LGraphCanvas.prototype.setGraph = function(graph)
 {
 	if(this.graph == graph) return;
@@ -1968,6 +1992,12 @@ LGraphCanvas.prototype.setGraph = function(graph)
 	this.setDirty(true,true);
 }
 
+/**
+* assigns a canvas
+*
+* @method setCanvas
+* @param {Canvas} assigns a canvas
+*/
 LGraphCanvas.prototype.setCanvas = function(canvas)
 {
 	var that = this;
@@ -2006,7 +2036,7 @@ LGraphCanvas.prototype.setCanvas = function(canvas)
 	this._mousemove_callback = this.processMouseMove.bind(this);
 	this._mouseup_callback = this.processMouseUp.bind(this);
 
-	this.canvas.addEventListener("mousedown", this.processMouseDown.bind(this) ); //down do not need to store the binded
+	this.canvas.addEventListener("mousedown", this.processMouseDown.bind(this), true ); //down do not need to store the binded
 	this.canvas.addEventListener("mousemove", this._mousemove_callback);
 
 	this.canvas.addEventListener("contextmenu", function(e) { e.preventDefault(); return false; });
@@ -2084,6 +2114,14 @@ LGraphCanvas.prototype.UIinit = function()
 }
 */
 
+/**
+* marks as dirty the canvas, this way it will be rendered again 
+*
+* @class LGraphCanvas
+* @method setDirty
+* @param {bool} fgcanvas if the foreground canvas is dirty (the one containing the nodes)
+* @param {bool} bgcanvas if the background canvas is dirty (the one containing the wires)
+*/
 LGraphCanvas.prototype.setDirty = function(fgcanvas,bgcanvas)
 {
 	if(fgcanvas)
@@ -2092,13 +2130,23 @@ LGraphCanvas.prototype.setDirty = function(fgcanvas,bgcanvas)
 		this.dirty_bgcanvas = true;
 }
 
-//Used to attach the canvas in a popup
+/**
+* Used to attach the canvas in a popup
+*
+* @method getCanvasWindow
+* @return {window} returns the window where the canvas is attached (the DOM root node)
+*/
 LGraphCanvas.prototype.getCanvasWindow = function()
 {
 	var doc = this.canvas.ownerDocument;
 	return doc.defaultView || doc.parentWindow;
 }
 
+/**
+* starts rendering the content of the canvas when needed
+*
+* @method startRendering
+*/
 LGraphCanvas.prototype.startRendering = function()
 {
 	if(this.is_rendering) return; //already rendering
@@ -2125,6 +2173,11 @@ LGraphCanvas.prototype.startRendering = function()
 	*/
 }
 
+/**
+* stops rendering the content of the canvas (to save resources)
+*
+* @method stopRendering
+*/
 LGraphCanvas.prototype.stopRendering = function()
 {
 	this.is_rendering = false;
@@ -2149,8 +2202,8 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	var document = ref_window.document;
 
 	this.canvas.removeEventListener("mousemove", this._mousemove_callback );
-	ref_window.document.addEventListener("mousemove", this._mousemove_callback ); //catch for the entire window
-	ref_window.document.addEventListener("mouseup", this._mouseup_callback );
+	ref_window.document.addEventListener("mousemove", this._mousemove_callback, true ); //catch for the entire window
+	ref_window.document.addEventListener("mouseup", this._mouseup_callback, true );
 
 	var n = this.graph.getNodeOnPos(e.canvasX, e.canvasY, this.visible_nodes);
 	var skip_dragging = false;
@@ -5429,7 +5482,6 @@ function MathOperation()
 	this.addInput("A","number");
 	this.addInput("B","number");
 	this.addOutput("A+B","number");
-	this.size = [80,20];
 	this.properties = {A:1.0, B:1.0};
 }
 
@@ -5535,12 +5587,34 @@ MathCompare.prototype.onGetOutputs = function()
 
 LiteGraph.registerNodeType("math/compare",MathCompare);
 
+function MathAccumulate()
+{
+	this.addInput("inc","number");
+	this.addOutput("total","number");
+	this.properties = { increment: 0, value: 0 };
+}
+
+MathAccumulate.title = "Accumulate";
+MathAccumulate.desc = "Increments a value every time";
+
+MathAccumulate.prototype.onExecute = function()
+{
+	var inc = this.getInputData(0);
+	if(inc !== null)
+		this.properties.value += inc;
+	else
+		this.properties.value += this.properties.increment;
+	this.setOutputData(0, this.properties.value );
+}
+
+LiteGraph.registerNodeType("math/accumulate", MathAccumulate);
+
 //Math Trigonometry
 function MathTrigonometry()
 {
 	this.addInput("v","number");
 	this.addOutput("sin","number");
-	this.properties = {amplitude:1.0};
+	this.properties = {amplitude:1.0, offset: 0};
 	this.bgImageUrl = "nodes/imgs/icon-sin.png";
 }
 
@@ -5550,7 +5624,15 @@ MathTrigonometry.desc = "Sin Cos Tan";
 MathTrigonometry.prototype.onExecute = function()
 {
 	var v = this.getInputData(0);
-	var amp = this.properties["amplitude"];
+	var amplitude = this.properties["amplitude"];
+	var slot = this.findInputSlot("amplitude");
+	if(slot != -1)
+		amplitude = this.getInputData(slot);
+	var offset = this.properties["offset"];
+	slot = this.findInputSlot("offset");
+	if(slot != -1)
+		offset = this.getInputData(slot);
+
 	for(var i = 0, l = this.outputs.length; i < l; ++i)
 	{
 		var output = this.outputs[i];
@@ -5563,9 +5645,15 @@ MathTrigonometry.prototype.onExecute = function()
 			case "acos": value = Math.acos(v); break;
 			case "atan": value = Math.atan(v); break;
 		}
-		this.setOutputData(i, amp * value );
+		this.setOutputData(i, amplitude * value + offset);
 	}
 }
+
+MathTrigonometry.prototype.onGetInputs = function()
+{
+	return [["v","number"],["amplitude","number"],["offset","number"]];
+}
+
 
 MathTrigonometry.prototype.onGetOutputs = function()
 {
@@ -5656,6 +5744,7 @@ if(window.glMatrix)
 	{
 		this.addInputs([["x","number"],["y","number"],["z","number"]]);
 		this.addOutput("vec3","vec3");
+		this.properties = {x:0, y:0, z:0};
 	}
 
 	Math3DXYZToVec3.title = "XYZ->Vec3";
@@ -5664,11 +5753,11 @@ if(window.glMatrix)
 	Math3DXYZToVec3.prototype.onExecute = function()
 	{
 		var x = this.getInputData(0);
-		if(x == null) x = 0;
+		if(x == null) x = this.properties.x;
 		var y = this.getInputData(1);
-		if(y == null) y = 0;
+		if(y == null) y = this.properties.y;
 		var z = this.getInputData(2);
-		if(z == null) z = 0;
+		if(z == null) z = this.properties.z;
 
 		this.setOutputData( 0, vec3.fromValues(x,y,z) );
 	}

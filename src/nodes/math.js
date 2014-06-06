@@ -146,7 +146,6 @@ function MathOperation()
 	this.addInput("A","number");
 	this.addInput("B","number");
 	this.addOutput("A+B","number");
-	this.size = [80,20];
 	this.properties = {A:1.0, B:1.0};
 }
 
@@ -252,12 +251,34 @@ MathCompare.prototype.onGetOutputs = function()
 
 LiteGraph.registerNodeType("math/compare",MathCompare);
 
+function MathAccumulate()
+{
+	this.addInput("inc","number");
+	this.addOutput("total","number");
+	this.properties = { increment: 0, value: 0 };
+}
+
+MathAccumulate.title = "Accumulate";
+MathAccumulate.desc = "Increments a value every time";
+
+MathAccumulate.prototype.onExecute = function()
+{
+	var inc = this.getInputData(0);
+	if(inc !== null)
+		this.properties.value += inc;
+	else
+		this.properties.value += this.properties.increment;
+	this.setOutputData(0, this.properties.value );
+}
+
+LiteGraph.registerNodeType("math/accumulate", MathAccumulate);
+
 //Math Trigonometry
 function MathTrigonometry()
 {
 	this.addInput("v","number");
 	this.addOutput("sin","number");
-	this.properties = {amplitude:1.0};
+	this.properties = {amplitude:1.0, offset: 0};
 	this.bgImageUrl = "nodes/imgs/icon-sin.png";
 }
 
@@ -267,7 +288,15 @@ MathTrigonometry.desc = "Sin Cos Tan";
 MathTrigonometry.prototype.onExecute = function()
 {
 	var v = this.getInputData(0);
-	var amp = this.properties["amplitude"];
+	var amplitude = this.properties["amplitude"];
+	var slot = this.findInputSlot("amplitude");
+	if(slot != -1)
+		amplitude = this.getInputData(slot);
+	var offset = this.properties["offset"];
+	slot = this.findInputSlot("offset");
+	if(slot != -1)
+		offset = this.getInputData(slot);
+
 	for(var i = 0, l = this.outputs.length; i < l; ++i)
 	{
 		var output = this.outputs[i];
@@ -280,9 +309,15 @@ MathTrigonometry.prototype.onExecute = function()
 			case "acos": value = Math.acos(v); break;
 			case "atan": value = Math.atan(v); break;
 		}
-		this.setOutputData(i, amp * value );
+		this.setOutputData(i, amplitude * value + offset);
 	}
 }
+
+MathTrigonometry.prototype.onGetInputs = function()
+{
+	return [["v","number"],["amplitude","number"],["offset","number"]];
+}
+
 
 MathTrigonometry.prototype.onGetOutputs = function()
 {
@@ -373,6 +408,7 @@ if(window.glMatrix)
 	{
 		this.addInputs([["x","number"],["y","number"],["z","number"]]);
 		this.addOutput("vec3","vec3");
+		this.properties = {x:0, y:0, z:0};
 	}
 
 	Math3DXYZToVec3.title = "XYZ->Vec3";
@@ -381,11 +417,11 @@ if(window.glMatrix)
 	Math3DXYZToVec3.prototype.onExecute = function()
 	{
 		var x = this.getInputData(0);
-		if(x == null) x = 0;
+		if(x == null) x = this.properties.x;
 		var y = this.getInputData(1);
-		if(y == null) y = 0;
+		if(y == null) y = this.properties.y;
 		var z = this.getInputData(2);
-		if(z == null) z = 0;
+		if(z == null) z = this.properties.z;
 
 		this.setOutputData( 0, vec3.fromValues(x,y,z) );
 	}
