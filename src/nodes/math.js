@@ -41,6 +41,7 @@ function MathClamp()
 
 MathClamp.title = "Clamp";
 MathClamp.desc = "Clamp number between min and max";
+MathClamp.filter = "shader";
 
 MathClamp.prototype.onExecute = function()
 {
@@ -49,6 +50,14 @@ MathClamp.prototype.onExecute = function()
 	v = Math.max(this.properties.min,v);
 	v = Math.min(this.properties.max,v);
 	this.setOutputData(0, v );
+}
+
+MathClamp.prototype.getCode = function(lang)
+{
+	var code = "";
+	if(this.isInputConnected(0))
+		code += "clamp({{0}}," + this.properties.min + "," + this.properties.max + ")";
+	return code;
 }
 
 LiteGraph.registerNodeType("math/clamp", MathClamp );
@@ -90,7 +99,7 @@ MathFloor.prototype.onExecute = function()
 {
 	var v = this.getInputData(0);
 	if(v == null) return;
-	this.setOutputData(0, v|1 );
+	this.setOutputData(0, Math.floor(v) );
 }
 
 LiteGraph.registerNodeType("math/floor", MathFloor );
@@ -284,6 +293,7 @@ function MathTrigonometry()
 
 MathTrigonometry.title = "Trigonometry";
 MathTrigonometry.desc = "Sin Cos Tan";
+MathTrigonometry.filter = "shader";
 
 MathTrigonometry.prototype.onExecute = function()
 {

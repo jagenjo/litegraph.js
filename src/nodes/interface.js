@@ -3,8 +3,8 @@
 
 	function WidgetKnob()
 	{
-		this.size = [64,84];
 		this.addOutput("",'number');
+		this.size = [64,84];
 		this.properties = {min:0,max:1,value:0.5,wcolor:"#7AF",size:50};
 	}
 
@@ -42,12 +42,14 @@
 
 		ctx.restore();
 
-		ctx.font = "bold 16px Criticized,Tahoma";
-		ctx.fillStyle="rgba(100,100,100,0.8)";
-		ctx.textAlign = "center";
-
-		ctx.fillText(this.name.toUpperCase(), this.size[0] * 0.5, 18 );
-		ctx.textAlign = "left";
+		if(this.title)
+		{
+			ctx.font = "bold 16px Criticized,Tahoma";
+			ctx.fillStyle="rgba(100,100,100,0.8)";
+			ctx.textAlign = "center";
+			ctx.fillText(this.title.toUpperCase(), this.size[0] * 0.5, 18 );
+			ctx.textAlign = "left";
+		}
 	}
 
 	WidgetKnob.prototype.onDrawVectorKnob = function(ctx)

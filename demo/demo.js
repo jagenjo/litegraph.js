@@ -45,7 +45,7 @@ function multiConnection()
 	var node_const_A = LiteGraph.createNode("basic/const");
 	node_const_A.pos = [200,200];
 	graph.add(node_const_A);
-	node_const_A.setValue(4);
+	node_const_A.setValue(4.5);
 
 	var node_const_B = LiteGraph.createNode("basic/const");
 	node_const_B.pos = [200,300];

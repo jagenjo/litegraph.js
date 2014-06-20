@@ -286,7 +286,7 @@ LGraph.prototype.clear = function()
 	this.global_inputs = {};
 	this.global_outputs = {};
 
-	this.graph = {};
+	//this.graph = {};
 	this.debug = true;
 
 	this.change();
@@ -761,10 +761,18 @@ LGraph.prototype.getNodeOnPos = function(x,y, nodes_list)
 	return null;
 }
 
+// ********** GLOBALS *****************
+
 //Tell this graph has a global input of this type
 LGraph.prototype.addGlobalInput = function(name, type, value)
 {
-	this.global_inputs[name] = { type: type, value: value };
+	this.global_inputs[name] = { name: name, type: type, value: value };
+
+	if(this.onGlobalInputAdded)
+		this.onGlobalInputAdded(name, type);
+
+	if(this.onGlobalsChange)
+		this.onGlobalsChange();
 }
 
 //assign a data to the global input
@@ -776,29 +784,117 @@ LGraph.prototype.setGlobalInputData = function(name, data)
 	input.value = data;
 }
 
+//assign a data to the global input
+LGraph.prototype.getGlobalInputData = function(name)
+{
+	var input = this.global_inputs[name];
+	if (!input)
+		return null;
+	return input.value;
+}
+
 //rename the global input
 LGraph.prototype.renameGlobalInput = function(old_name, name, data)
 {
+	if(!this.global_inputs[old_name])
+		return false;
+
+	if(this.global_inputs[name])
+	{
+		console.error("there is already one input with that name");
+		return false;
+	}
+
+	this.global_inputs[name] = this.global_inputs[old_name];
+	delete this.global_inputs[old_name];
+
+	if(this.onGlobalInputRenamed)
+		this.onGlobalInputRenamed(old_name, name);
+
+	if(this.onGlobalsChange)
+		this.onGlobalsChange();
+}
+
+LGraph.prototype.removeGlobalInput = function(name)
+{
+	if(!this.global_inputs[name])
+		return false;
+
+	delete this.global_inputs[name];
+
+	if(this.onGlobalInputRemoved)
+		this.onGlobalInputRemoved(name);
+
+	if(this.onGlobalsChange)
+		this.onGlobalsChange();
+	return true;
 }
 
 
 LGraph.prototype.addGlobalOutput = function(name, type, value)
 {
-	this.global_outputs[name] = { type: type, value: value };
+	this.global_outputs[name] = { name: name, type: type, value: value };
+
+	if(this.onGlobalOutputAdded)
+		this.onGlobalOutputAdded(name, type);
+
+	if(this.onGlobalsChange)
+		this.onGlobalsChange();
 }
 
 //assign a data to the global output
-LGraph.prototype.setGlobalOutputData = function(name, data)
+LGraph.prototype.setGlobalOutputData = function(name, value)
 {
 	var output = this.global_outputs[ name ];
 	if (!output)
 		return;
-	output.value = data;
+	output.value = value;
 }
+
+//assign a data to the global input
+LGraph.prototype.getGlobalOutputData = function(name)
+{
+	var output = this.global_outputs[name];
+	if (!output)
+		return null;
+	return output.value;
+}
+
 
 //rename the global output
 LGraph.prototype.renameGlobalOutput = function(old_name, name, data)
 {
+	if(!this.global_outputs[old_name])
+		return false;
+
+	if(this.global_outputs[name])
+	{
+		console.error("there is already one output with that name");
+		return false;
+	}
+
+	this.global_outputs[name] = this.global_outputs[old_name];
+	delete this.global_outputs[old_name];
+
+	if(this.onGlobalOutputRenamed)
+		this.onGlobalOutputRenamed(old_name, name);
+
+	if(this.onGlobalsChange)
+		this.onGlobalsChange();
+}
+
+LGraph.prototype.removeGlobalOutput = function(name)
+{
+	if(!this.global_outputs[name])
+		return false;
+	delete this.global_outputs[name];
+
+	if(this.onGlobalOutputRemoved)
+		this.onGlobalOutputRemoved(name);
+
+	if(this.onGlobalsChange)
+		this.onGlobalsChange();
+	return true;
 }
 
 
@@ -904,7 +1000,7 @@ LGraph.prototype.serialize = function()
 
 
 	var data = {
-		graph: this.graph,
+//		graph: this.graph,
 
 		iteration: this.iteration,
 		frame: this.frame,
@@ -1040,7 +1136,12 @@ LGraphNode.prototype.configure = function(info)
 		if(info[j] == null)
 			continue;
 		else if (typeof(info[j]) == 'object') //object
-			this[j] = LiteGraph.cloneObject(info[j], this[j]);
+		{
+			if(this[j] && this[j].configure)
+				this[j].configure( info[j] );
+			else
+				this[j] = LiteGraph.cloneObject(info[j], this[j]);
+		}
 		else //value
 			this[j] = info[j];
 	}
@@ -1111,6 +1212,36 @@ LGraphNode.prototype.serialize = function()
 		this.onSerialize(o);
 
 	return o;
+}
+
+
+/* Creates a clone of this node */
+LGraphNode.prototype.clone = function()
+{
+	var node = LiteGraph.createNode(this.type);
+
+	var data = this.serialize();
+	delete data["id"];
+	node.configure(data);
+
+	/*
+	node.size = this.size.concat();
+	if(this.inputs)
+		for(var i = 0, l = this.inputs.length; i < l; ++i)
+		{
+			if(node.findInputSlot( this.inputs[i].name ) == -1)
+				node.addInput( this.inputs[i].name, this.inputs[i].type );
+		}
+
+	if(this.outputs)
+		for(var i = 0, l = this.outputs.length; i < l; ++i)
+		{
+			if(node.findOutputSlot( this.outputs[i].name ) == -1)
+				node.addOutput( this.outputs[i].name, this.outputs[i].type );
+		}
+	*/
+
+	return node;
 }
 
 //reduced version of objectivize: NOT FINISHED
@@ -1291,6 +1422,8 @@ LGraphNode.prototype.addOutput = function(name,type,extra_info)
 
 	if(!this.outputs) this.outputs = [];
 	this.outputs.push(o);
+	if(this.onOutputAdded)
+		this.onOutputAdded(o);
 	this.size = this.computeSize();
 }
 
@@ -1312,6 +1445,8 @@ LGraphNode.prototype.addOutputs = function(array)
 		if(!this.outputs)
 			this.outputs = [];
 		this.outputs.push(o);
+		if(this.onOutputAdded)
+			this.onOutputAdded(o);
 	}
 
 	this.size = this.computeSize();
@@ -1327,6 +1462,8 @@ LGraphNode.prototype.removeOutput = function(slot)
 	this.disconnectOutput(slot);
 	this.outputs.splice(slot,1);
 	this.size = this.computeSize();
+	if(this.onOutputRemoved)
+		this.onOutputRemoved(slot);
 }
 
 /**
@@ -1346,6 +1483,8 @@ LGraphNode.prototype.addInput = function(name,type,extra_info)
 	if(!this.inputs) this.inputs = [];
 	this.inputs.push(o);
 	this.size = this.computeSize();
+	if(this.onInputAdded)
+		this.onInputAdded(o);
 }
 
 /**
@@ -1366,6 +1505,8 @@ LGraphNode.prototype.addInputs = function(array)
 		if(!this.inputs)
 			this.inputs = [];
 		this.inputs.push(o);
+		if(this.onInputAdded)
+			this.onInputAdded(o);
 	}
 
 	this.size = this.computeSize();
@@ -1381,6 +1522,8 @@ LGraphNode.prototype.removeInput = function(slot)
 	this.disconnectInput(slot);
 	this.inputs.splice(slot,1);
 	this.size = this.computeSize();
+	if(this.onInputRemoved)
+		this.onInputRemoved(slot);
 }
 
 /**
@@ -1723,29 +1866,6 @@ LGraphNode.prototype.alignToGrid = function()
 	this.pos[1] = LiteGraph.CANVAS_GRID_SIZE * Math.round(this.pos[1] / LiteGraph.CANVAS_GRID_SIZE);
 }
 
-/* Creates a clone of this node */
-LGraphNode.prototype.clone = function()
-{
-	var node = LiteGraph.createNode(this.type);
-
-	node.size = this.size.concat();
-	if(this.inputs)
-		for(var i = 0, l = this.inputs.length; i < l; ++i)
-		{
-			if(node.findInputSlot( this.inputs[i].name ) == -1)
-				node.addInput( this.inputs[i].name, this.inputs[i].type );
-		}
-
-	if(this.outputs)
-		for(var i = 0, l = this.outputs.length; i < l; ++i)
-		{
-			if(node.findOutputSlot( this.outputs[i].name ) == -1)
-				node.addOutput( this.outputs[i].name, this.outputs[i].type );
-		}
-
-
-	return node;
-}
 
 /* Console output */
 LGraphNode.prototype.trace = function(msg)
@@ -1968,7 +2088,7 @@ LGraphCanvas.prototype.clear = function()
 * assigns a graph, you can reasign graphs to the same canvas
 *
 * @method setGraph
-* @param {LGraph} assigns a graph
+* @param {LGraph} graph
 */
 LGraphCanvas.prototype.setGraph = function(graph)
 {
@@ -1988,6 +2108,48 @@ LGraphCanvas.prototype.setGraph = function(graph)
 	if(this.graph)
 		this.graph.canvas = this;
 	*/
+	graph.attachCanvas(this);
+	this.setDirty(true,true);
+}
+
+/**
+* opens a graph contained inside a node in the current graph
+*
+* @method openSubgraph
+* @param {LGraph} graph
+*/
+LGraphCanvas.prototype.openSubgraph = function(graph)
+{
+	if(!graph) 
+		throw("graph cannot be null");
+
+	if(this.graph == graph)
+		throw("graph cannot be the same");
+
+	this.clear();
+
+	if(this.graph)
+	{
+		if(!this._graph_stack)
+			this._graph_stack = [];
+		this._graph_stack.push(this.graph);
+	}
+
+	graph.attachCanvas(this);
+	this.setDirty(true,true);
+}
+
+/**
+* closes a subgraph contained inside a node 
+*
+* @method closeSubgraph
+* @param {LGraph} assigns a graph
+*/
+LGraphCanvas.prototype.closeSubgraph = function()
+{
+	if(!this._graph_stack || this._graph_stack.length == 0)
+		return;
+	var graph = this._graph_stack.pop();
 	graph.attachCanvas(this);
 	this.setDirty(true,true);
 }
@@ -3895,32 +4057,59 @@ LGraphCanvas.node_colors = {
 
 LGraphCanvas.prototype.getCanvasMenuOptions = function()
 {
-	return [
-		{content:"Add Node", is_menu: true, callback: LGraphCanvas.onMenuAdd }
-		//{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
-	];
+	var options = null;
+	if(this.getMenuOptions)
+		options = this.getMenuOptions();
+	else
+	{
+		options = [
+			{content:"Add Node", is_menu: true, callback: LGraphCanvas.onMenuAdd }
+			//{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
+		];
+
+		if(this._graph_stack)
+			options = [{content:"Close subgraph", callback: this.closeSubgraph.bind(this) },null].concat(options);
+	}
+
+	if(this.getExtraMenuOptions)
+	{
+		var extra = this.getExtraMenuOptions(this);
+		extra.push(null);
+		options = extra.concat( options );
+	}
+
+	return options;
 }
 
 LGraphCanvas.prototype.getNodeMenuOptions = function(node)
 {
-	var options = [
-		{content:"Inputs", is_menu: true, disabled:true, callback: LGraphCanvas.onMenuNodeInputs },
-		{content:"Outputs", is_menu: true, disabled:true, callback: LGraphCanvas.onMenuNodeOutputs },
-		null,
-		{content:"Collapse", callback: LGraphCanvas.onMenuNodeCollapse },
-		{content:"Pin", callback: LGraphCanvas.onMenuNodePin },
-		{content:"Colors", is_menu: true, callback: LGraphCanvas.onMenuNodeColors },
-		{content:"Shapes", is_menu: true, callback: LGraphCanvas.onMenuNodeShapes },
-		null,
-		{content:"Clone", callback: LGraphCanvas.onMenuNodeClone },
-		null,
-		{content:"Remove", callback: LGraphCanvas.onMenuNodeRemove }
-	];
+	var options = null;
 
-	if( node.clonable == false )
-		options[7].disabled = true;
-	if( node.removable == false )
-		options[9].disabled = true;
+	if(node.getMenuOptions)
+		options = node.getMenuOptions(this);
+	else
+		options = [
+			{content:"Inputs", is_menu: true, disabled:true, callback: LGraphCanvas.onMenuNodeInputs },
+			{content:"Outputs", is_menu: true, disabled:true, callback: LGraphCanvas.onMenuNodeOutputs },
+			null,
+			{content:"Collapse", callback: LGraphCanvas.onMenuNodeCollapse },
+			{content:"Pin", callback: LGraphCanvas.onMenuNodePin },
+			{content:"Colors", is_menu: true, callback: LGraphCanvas.onMenuNodeColors },
+			{content:"Shapes", is_menu: true, callback: LGraphCanvas.onMenuNodeShapes },
+			null
+		];
+
+	if(node.getExtraMenuOptions)
+	{
+		var extra = node.getExtraMenuOptions(this);
+		extra.push(null);
+		options = extra.concat( options );
+	}
+
+	if( node.clonable !== false )
+			options.push({content:"Clone", callback: LGraphCanvas.onMenuNodeClone });
+	if( node.removable !== false )
+			options.push(null,{content:"Remove", callback: LGraphCanvas.onMenuNodeRemove });
 
 	if(node.onGetInputs)
 	{
@@ -4273,15 +4462,32 @@ if( !window["requestAnimationFrame"] )
 //Input for a subgraph
 function GlobalInput()
 {
+	this.title = "Input";
+
+	//random name to avoid problems with other outputs when added
+	var genname = "input_" + (Math.random()*1000).toFixed();
+	this.properties = { name: genname, type: "number" };
 	this.addOutput("value",0);
+}
+
+GlobalInput.title = "Input";
+GlobalInput.desc = "Input of the graph";
+
+GlobalInput.prototype.onAdded = function()
+{
+	this.graph.addGlobalInput( this.properties.name, this.properties.type );
 }
 
 GlobalInput.prototype.onExecute = function()
 {
-	var name = this.title;
-	//read input
-	var	value = node.graph.global_inputs[name];
-	this.setOutputData(0,value);
+	var name = this.properties.name;
+
+	//read from global input
+	var	data = this.graph.global_inputs[name];
+	if(!data) return;
+
+	//put through output
+	this.setOutputData(0,data.value);
 }
 
 LiteGraph.registerNodeType("graph/input", GlobalInput);
@@ -4293,10 +4499,13 @@ function GlobalOutput()
 	this.title = "Output";
 
 	//random name to avoid problems with other outputs when added
-	var genname = "input_" + (Math.random()*1000).toFixed();
+	var genname = "output_" + (Math.random()*1000).toFixed();
 	this.properties = { name: genname, type: "number" };
 	this.addInput("value","number");
 }
+
+GlobalOutput.title = "Ouput";
+GlobalOutput.desc = "Output of the graph";
 
 GlobalOutput.prototype.onAdded = function()
 {
@@ -4305,8 +4514,7 @@ GlobalOutput.prototype.onAdded = function()
 
 GlobalOutput.prototype.onExecute = function()
 {
-	var	value = this.getInputData(0);
-	this.graph.setGlobalOutputData( this.properties.name, value );
+	this.graph.setGlobalOutputData( this.properties.name, this.getInputData(0) );
 }
 
 LiteGraph.registerNodeType("graph/output", GlobalOutput);
@@ -4315,28 +4523,76 @@ LiteGraph.registerNodeType("graph/output", GlobalOutput);
 //Subgraph: a node that contains a graph
 function Subgraph()
 {
+	var that = this;
 	this.subgraph = new LGraph();
+	this.subgraph._subgraph_node = this;
+	this.subgraph._is_subgraph = true;
+	this.subgraph.onGlobalInputAdded = this.onSubgraphNewGlobalInput.bind(this);
+	this.subgraph.onGlobalOutputAdded = this.onSubgraphNewGlobalOutput.bind(this);
+
 	this.bgcolor = "#FA3";
+}
+
+Subgraph.title = "Subgraph";
+Subgraph.desc = "Graph inside a node";
+
+Subgraph.prototype.onSubgraphNewGlobalInput = function(name, type)
+{
+	this.addInput(name, type);
+}
+
+Subgraph.prototype.onSubgraphNewGlobalOutput = function(name, type)
+{
+	this.addOutput(name, type);
+}
+
+Subgraph.prototype.getExtraMenuOptions = function(graphcanvas)
+{
+	var that = this;
+	return [ {content:"Open", callback: 
+		function() { 
+			graphcanvas.openSubgraph( that.subgraph );
+		}
+	}];
 }
 
 Subgraph.prototype.onExecute = function()
 {
 	//send inputs to subgraph global inputs
-	for(var i in this.inputs)
-	{
-		var input = this.inputs[i];
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var value = this.getInputData(i);
+			this.subgraph.setGlobalInputData( input.name, value );
+		}
 
-		//this.subgraph.setGlobalInputData( input.name, input.value );
-	}
+	//execute
+	this.subgraph.runStep();
 
 	//send subgraph global outputs to outputs
+	if(this.outputs)
+		for(var i = 0; i < this.outputs.length; i++)
+		{
+			var output = this.outputs[i];
+			var value = this.subgraph.getGlobalOutputData( output.name );
+			this.setOutputData(i, value);
+		}
 }
 
 Subgraph.prototype.configure = function(o)
 {
-	LGraph.prototype.configure.call(this, o);
-	//after configure, ...
+	LGraphNode.prototype.configure.call(this, o);
+	//this.subgraph.configure(o.graph);
 }
+
+Subgraph.prototype.serialize = function()
+{
+	var data = LGraphNode.prototype.serialize.call(this);
+	data.subgraph = this.subgraph.serialize();
+	return data;
+}
+
 
 LiteGraph.registerNodeType("graph/subgraph", Subgraph);
 
@@ -4619,8 +4875,8 @@ LiteGraph.registerNodeType("network/network_callback",{
 
 	function WidgetKnob()
 	{
-		this.size = [64,84];
 		this.addOutput("",'number');
+		this.size = [64,84];
 		this.properties = {min:0,max:1,value:0.5,wcolor:"#7AF",size:50};
 	}
 
@@ -4658,12 +4914,14 @@ LiteGraph.registerNodeType("network/network_callback",{
 
 		ctx.restore();
 
-		ctx.font = "bold 16px Criticized,Tahoma";
-		ctx.fillStyle="rgba(100,100,100,0.8)";
-		ctx.textAlign = "center";
-
-		ctx.fillText(this.name.toUpperCase(), this.size[0] * 0.5, 18 );
-		ctx.textAlign = "left";
+		if(this.title)
+		{
+			ctx.font = "bold 16px Criticized,Tahoma";
+			ctx.fillStyle="rgba(100,100,100,0.8)";
+			ctx.textAlign = "center";
+			ctx.fillText(this.title.toUpperCase(), this.size[0] * 0.5, 18 );
+			ctx.textAlign = "left";
+		}
 	}
 
 	WidgetKnob.prototype.onDrawVectorKnob = function(ctx)
@@ -5377,6 +5635,7 @@ function MathClamp()
 
 MathClamp.title = "Clamp";
 MathClamp.desc = "Clamp number between min and max";
+MathClamp.filter = "shader";
 
 MathClamp.prototype.onExecute = function()
 {
@@ -5385,6 +5644,14 @@ MathClamp.prototype.onExecute = function()
 	v = Math.max(this.properties.min,v);
 	v = Math.min(this.properties.max,v);
 	this.setOutputData(0, v );
+}
+
+MathClamp.prototype.getCode = function(lang)
+{
+	var code = "";
+	if(this.isInputConnected(0))
+		code += "clamp({{0}}," + this.properties.min + "," + this.properties.max + ")";
+	return code;
 }
 
 LiteGraph.registerNodeType("math/clamp", MathClamp );
@@ -5426,7 +5693,7 @@ MathFloor.prototype.onExecute = function()
 {
 	var v = this.getInputData(0);
 	if(v == null) return;
-	this.setOutputData(0, v|1 );
+	this.setOutputData(0, Math.floor(v) );
 }
 
 LiteGraph.registerNodeType("math/floor", MathFloor );
@@ -5620,6 +5887,7 @@ function MathTrigonometry()
 
 MathTrigonometry.title = "Trigonometry";
 MathTrigonometry.desc = "Sin Cos Tan";
+MathTrigonometry.filter = "shader";
 
 MathTrigonometry.prototype.onExecute = function()
 {

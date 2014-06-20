@@ -5,15 +5,32 @@
 //Input for a subgraph
 function GlobalInput()
 {
+	this.title = "Input";
+
+	//random name to avoid problems with other outputs when added
+	var genname = "input_" + (Math.random()*1000).toFixed();
+	this.properties = { name: genname, type: "number" };
 	this.addOutput("value",0);
+}
+
+GlobalInput.title = "Input";
+GlobalInput.desc = "Input of the graph";
+
+GlobalInput.prototype.onAdded = function()
+{
+	this.graph.addGlobalInput( this.properties.name, this.properties.type );
 }
 
 GlobalInput.prototype.onExecute = function()
 {
-	var name = this.title;
-	//read input
-	var	value = node.graph.global_inputs[name];
-	this.setOutputData(0,value);
+	var name = this.properties.name;
+
+	//read from global input
+	var	data = this.graph.global_inputs[name];
+	if(!data) return;
+
+	//put through output
+	this.setOutputData(0,data.value);
 }
 
 LiteGraph.registerNodeType("graph/input", GlobalInput);
@@ -25,10 +42,13 @@ function GlobalOutput()
 	this.title = "Output";
 
 	//random name to avoid problems with other outputs when added
-	var genname = "input_" + (Math.random()*1000).toFixed();
+	var genname = "output_" + (Math.random()*1000).toFixed();
 	this.properties = { name: genname, type: "number" };
 	this.addInput("value","number");
 }
+
+GlobalOutput.title = "Ouput";
+GlobalOutput.desc = "Output of the graph";
 
 GlobalOutput.prototype.onAdded = function()
 {
@@ -37,8 +57,7 @@ GlobalOutput.prototype.onAdded = function()
 
 GlobalOutput.prototype.onExecute = function()
 {
-	var	value = this.getInputData(0);
-	this.graph.setGlobalOutputData( this.properties.name, value );
+	this.graph.setGlobalOutputData( this.properties.name, this.getInputData(0) );
 }
 
 LiteGraph.registerNodeType("graph/output", GlobalOutput);
@@ -47,28 +66,76 @@ LiteGraph.registerNodeType("graph/output", GlobalOutput);
 //Subgraph: a node that contains a graph
 function Subgraph()
 {
+	var that = this;
 	this.subgraph = new LGraph();
+	this.subgraph._subgraph_node = this;
+	this.subgraph._is_subgraph = true;
+	this.subgraph.onGlobalInputAdded = this.onSubgraphNewGlobalInput.bind(this);
+	this.subgraph.onGlobalOutputAdded = this.onSubgraphNewGlobalOutput.bind(this);
+
 	this.bgcolor = "#FA3";
+}
+
+Subgraph.title = "Subgraph";
+Subgraph.desc = "Graph inside a node";
+
+Subgraph.prototype.onSubgraphNewGlobalInput = function(name, type)
+{
+	this.addInput(name, type);
+}
+
+Subgraph.prototype.onSubgraphNewGlobalOutput = function(name, type)
+{
+	this.addOutput(name, type);
+}
+
+Subgraph.prototype.getExtraMenuOptions = function(graphcanvas)
+{
+	var that = this;
+	return [ {content:"Open", callback: 
+		function() { 
+			graphcanvas.openSubgraph( that.subgraph );
+		}
+	}];
 }
 
 Subgraph.prototype.onExecute = function()
 {
 	//send inputs to subgraph global inputs
-	for(var i in this.inputs)
-	{
-		var input = this.inputs[i];
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var value = this.getInputData(i);
+			this.subgraph.setGlobalInputData( input.name, value );
+		}
 
-		//this.subgraph.setGlobalInputData( input.name, input.value );
-	}
+	//execute
+	this.subgraph.runStep();
 
 	//send subgraph global outputs to outputs
+	if(this.outputs)
+		for(var i = 0; i < this.outputs.length; i++)
+		{
+			var output = this.outputs[i];
+			var value = this.subgraph.getGlobalOutputData( output.name );
+			this.setOutputData(i, value);
+		}
 }
 
 Subgraph.prototype.configure = function(o)
 {
-	LGraph.prototype.configure.call(this, o);
-	//after configure, ...
+	LGraphNode.prototype.configure.call(this, o);
+	//this.subgraph.configure(o.graph);
 }
+
+Subgraph.prototype.serialize = function()
+{
+	var data = LGraphNode.prototype.serialize.call(this);
+	data.subgraph = this.subgraph.serialize();
+	return data;
+}
+
 
 LiteGraph.registerNodeType("graph/subgraph", Subgraph);
 
