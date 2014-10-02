@@ -1,39 +1,3 @@
-/* EXAMPLE ***************************
-reModular.registerModuleType("name", {
-	title: "",
-	desc: "",
-	inputs: [["","type"]],
-	outputs: [["","type"]],
-	properties: {"varname":""},
-	widgets: [{name:"name",text:"text to show",type:"button"}],
-	size: [200,220],
-	onLoad: function()
-	{
-	},
-	onDrawBackground: function(ctx)
-	{
-		if(this.img)
-			ctx.drawImage(this.img, 0,20,this.size[0],this.size[1]-20);
-	},
-
-	onExecute: function()
-	{
-		this.img = this.getInputData(0);
-		reModular.dirty_canvas = true;
-	},
-	onPropertyChange: function(name,value)
-	{
-		this.properties[name] = value;
-		return true; //block default behaviour
-	},
-	onWidget: function(e,widget)
-	{
-		if(widget.name == "resize")
-		{
-		}
-	},
-});
-*/
 
 function demo()
 {

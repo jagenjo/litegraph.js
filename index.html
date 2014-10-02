@@ -38,7 +38,38 @@
 			
 			<h2>Usage</h2>
 
-			<h2>Examples</h2>
+			<p>Include the library</p>
+			<pre>
+&lt;script type="text/javascript" src="../src/litegraph.js"&gt;&lt;/script&gt;</pre>
+
+			<p>Create a graph</p>
+			<pre>
+var graph = new LGraph();</pre>
+
+			<p>Create a canvas renderer</p>
+			<pre>
+var canvas = new LGraphCanvas("#mycanvas");</pre>
+
+			<p>Add some nodes to the graph</p>
+			<pre>
+var node_const = LiteGraph.createNode("basic/const");
+node_const.pos = [200,200];
+graph.add(node_const);
+node_const.setValue(4.5);
+
+var node_watch = LiteGraph.createNode("basic/watch");
+node_watch.pos = [700,200];
+graph.add(node_watch);</pre>
+
+			<p>Connect them</p>
+			<pre>
+node_const.connect(0, node_watch, 0 );</pre>
+
+			<p>Run the graph</p>
+			<pre>
+graph.start();</pre>
+
+			<h2>Example of editor</h2>
 			<ul>
 				<li><a href="demo">Module editor</a></li>
 			</ul>

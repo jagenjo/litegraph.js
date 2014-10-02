@@ -3,3 +3,5 @@
 ../src/nodes/interface.js
 ../src/nodes/math.js
 ../src/nodes/image.js
+../src/nodes/gltextures.js
+../src/nodes/glfx.js

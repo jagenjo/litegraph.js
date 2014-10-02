@@ -1,6 +1,105 @@
 (function(){
 
 
+
+
+function GraphicsImage()
+{
+	this.inputs = [];
+	this.addOutput("frame","image");
+	this.properties = {"url":""};
+}
+
+GraphicsImage.title = "Image";
+GraphicsImage.desc = "Image loader";
+GraphicsImage.widgets = [{name:"load",text:"Load",type:"button"}];
+
+
+GraphicsImage.prototype.onAdded = function()
+{
+	if(this.properties["url"] != "" && this.img == null)
+	{
+		this.loadImage(this.properties["url"]);
+	}
+}
+
+GraphicsImage.prototype.onDrawBackground = function(ctx)
+{
+	if(this.img && this.size[0] > 5 && this.size[1] > 5)
+		ctx.drawImage(this.img, 0,0,this.size[0],this.size[1]);
+}
+
+
+GraphicsImage.prototype.onExecute = function()
+{
+	if(!this.img)
+		this.boxcolor = "#000";
+	if(this.img && this.img.width)
+		this.setOutputData(0,this.img);
+	else
+		this.setOutputData(0,null);
+	if(this.img && this.img.dirty)
+		this.img.dirty = false;
+}
+
+GraphicsImage.prototype.onPropertyChange = function(name,value)
+{
+	this.properties[name] = value;
+	if (name == "url" && value != "")
+		this.loadImage(value);
+
+	return true;
+}
+
+GraphicsImage.prototype.onDropFile = function(file, filename)
+{
+	var img = new Image();
+	img.src = file;
+	this.img = img;
+}
+
+GraphicsImage.prototype.loadImage = function(url)
+{
+	if(url == "")
+	{
+		this.img = null;
+		return;
+	}
+
+	this.trace("loading image...");
+	this.img = document.createElement("img");
+
+	var url = name;
+	if(url.substr(0,7) == "http://")
+	{
+		if(LiteGraph.proxy) //proxy external files
+			url = LiteGraph.proxy + url.substr(7);
+	}
+
+	this.img.src = url;
+	this.boxcolor = "#F95";
+	var that = this;
+	this.img.onload = function()
+	{
+		that.trace("Image loaded, size: " + that.img.width + "x" + that.img.height );
+		this.dirty = true;
+		that.boxcolor = "#9F9";
+		that.setDirtyCanvas(true);
+	}
+}
+
+GraphicsImage.prototype.onWidget = function(e,widget)
+{
+	if(widget.name == "load")
+	{
+		this.loadImage(this.properties["url"]);
+	}
+}
+
+LiteGraph.registerNodeType("graphics/image", GraphicsImage);
+
+
+
 function ColorPalette()
 {
 	this.addInput("f","number");
@@ -261,81 +360,6 @@ ImageFade.prototype.onExecute = function()
 }
 
 LiteGraph.registerNodeType("graphics/imagefade", ImageFade);
-
-
-function GraphicsImage()
-{
-	this.inputs = [];
-	this.addOutput("frame","image");
-	this.properties = {"url":""};
-}
-
-GraphicsImage.title = "Image";
-GraphicsImage.desc = "Image loader";
-GraphicsImage.widgets = [{name:"load",text:"Load",type:"button"}];
-
-
-GraphicsImage.prototype.onAdded = function()
-{
-	if(this.properties["url"] != "" && this.img == null)
-	{
-		this.loadImage(this.properties["url"]);
-	}
-}
-
-
-GraphicsImage.prototype.onExecute = function()
-{
-	if(!this.img)
-		this.boxcolor = "#000";
-	if(this.img && this.img.width)
-		this.setOutputData(0,this.img);
-	else
-		this.setOutputData(0,null);
-	if(this.img.dirty)
-		this.img.dirty = false;
-}
-
-GraphicsImage.prototype.onPropertyChange = function(name,value)
-{
-	this.properties[name] = value;
-	if (name == "url" && value != "")
-		this.loadImage(value);
-
-	return true;
-}
-
-GraphicsImage.prototype.loadImage = function(url)
-{
-	if(url == "")
-	{
-		this.img = null;
-		return;
-	}
-
-	this.trace("loading image...");
-	this.img = document.createElement("img");
-	this.img.src = "miniproxy.php?url=" + url;
-	this.boxcolor = "#F95";
-	var that = this;
-	this.img.onload = function()
-	{
-		that.trace("Image loaded, size: " + that.img.width + "x" + that.img.height );
-		this.dirty = true;
-		that.boxcolor = "#9F9";
-		that.setDirtyCanvas(true);
-	}
-}
-
-GraphicsImage.prototype.onWidget = function(e,widget)
-{
-	if(widget.name == "load")
-	{
-		this.loadImage(this.properties["url"]);
-	}
-}
-
-LiteGraph.registerNodeType("graphics/image", GraphicsImage);
 
 
 
