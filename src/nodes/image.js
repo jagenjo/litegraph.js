@@ -66,7 +66,6 @@ GraphicsImage.prototype.loadImage = function(url)
 		return;
 	}
 
-	this.trace("loading image...");
 	this.img = document.createElement("img");
 
 	var url = name;
@@ -622,10 +621,20 @@ ImageWebcam.prototype.openStream = function()
 
 	var that = this;
 	function onFailSoHard(e) {
-		trace('Webcam rejected', e);
+		console.log('Webcam rejected', e);
 		that._webcam_stream = false;
 		that.box_color = "red";
 	};
+}
+
+ImageWebcam.prototype.onRemoved = function()
+{
+	if(this._webcam_stream)
+	{
+		this._webcam_stream.stop();
+		this._webcam_stream = null;
+		this._video = null;
+	}
 }
 
 ImageWebcam.prototype.streamReady = function(localMediaStream)
@@ -647,8 +656,6 @@ ImageWebcam.prototype.streamReady = function(localMediaStream)
 			console.log(e);
 		};
 	}
-
-
 },
 
 ImageWebcam.prototype.onExecute = function()
@@ -659,8 +666,33 @@ ImageWebcam.prototype.onExecute = function()
 	if(!this._video || !this._video.videoWidth) return;
 
 	this._video.width = this._video.videoWidth;
-	this._video.hieght = this._video.videoHeight;
+	this._video.height = this._video.videoHeight;
 	this.setOutputData(0, this._video);
+}
+
+ImageWebcam.prototype.getExtraMenuOptions = function(graphcanvas)
+{
+	var that = this;
+	var txt = !that.properties.show ? "Show Frame" : "Hide Frame";
+	return [ {content: txt, callback: 
+		function() { 
+			that.properties.show = !that.properties.show;
+		}
+	}];
+}
+
+ImageWebcam.prototype.onDrawBackground = function(ctx)
+{
+	if(this.flags.collapsed || this.size[1] <= 20 || !this.properties.show)
+		return;
+
+	if(!this._video)
+		return;
+
+	//render to graph canvas
+	ctx.save();
+	ctx.drawImage(this._video, 0, 0, this.size[0], this.size[1]);
+	ctx.restore();
 }
 
 LiteGraph.registerNodeType("graphics/webcam", ImageWebcam );

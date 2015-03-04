@@ -558,16 +558,23 @@ LGraph.prototype.getElapsedTime = function()
 /**
 * Sends an event to all the nodes, useful to trigger stuff
 * @method sendEventToAllNodes
-* @param {String} eventname the name of the event
-* @param {Object} param an object containing the info
+* @param {String} eventname the name of the event (function to be called)
+* @param {Array} params parameters in array format
 */
 
-LGraph.prototype.sendEventToAllNodes = function(eventname, param)
+LGraph.prototype.sendEventToAllNodes = function(eventname, params)
 {
 	var M = this._nodes_in_order ? this._nodes_in_order : this._nodes;
 	for(var j in M)
 		if(M[j][eventname])
-			M[j][eventname](param);
+		{
+			if(params === undefined)
+				M[j][eventname]();
+			else if(params && params.constructor === Array)
+				M[j][eventname].apply(M[j], params);
+			else
+				M[j][eventname](params);
+		}
 }
 
 LGraph.prototype.sendActionToCanvas = function(action, params)
@@ -1965,8 +1972,6 @@ LGraphNode.prototype.captureInput = function(v)
 
 		//change
 		c.node_capturing_input = v ? this : null;
-		if(this.graph.debug)
-			console.log(this.title + ": Capturing input " + (v?"ON":"OFF"));
 	}
 }
 
@@ -2273,7 +2278,7 @@ LGraphCanvas.prototype.setCanvas = function(canvas)
 
 		//read data
 		var type = file.type.split("/")[0];
-		if(type == "text")
+		if(type == "text" || type == "")
 			reader.readAsText(file);
 		else if (type == "image")
 			reader.readAsDataURL(file);
@@ -2737,7 +2742,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 	*/
 
 	e.preventDefault();
-	e.stopPropagation();
+	//e.stopPropagation();
 	return false;
 	//this is not really optimal
 	//this.graph.change();
