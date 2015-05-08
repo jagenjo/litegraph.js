@@ -333,210 +333,34 @@ Watch.prototype.onDrawBackground = function(ctx)
 		if (this.properties["value"].constructor === Number )
 			this.inputs[0].label = this.properties["value"].toFixed(3);
 		else
-			this.inputs[0].label = this.properties["value"];
+		{
+			var str = this.properties["value"];
+			if(str && str.length) //convert typed to array
+				str = Array.prototype.slice.call(str).join(",");
+			this.inputs[0].label = str;
+		}
 	}
 }
 
 LiteGraph.registerNodeType("basic/watch", Watch);
 
 
+//Show value inside the debug console
+function Console()
+{
+	this.size = [60,20];
+	this.addInput("data",0);
+}
 
-/*
-LiteGraph.registerNodeType("math/sinusoid",{
-	title: "Sin",
-	desc: "Sinusoidal value generator",
-	bgImageUrl: "nodes/imgs/icon-sin.png",
+Console.title = "Console";
+Console.desc = "Show value inside the console";
 
-	inputs: [["f",'number'],["q",'number'],["a",'number'],["t",'number']],
-	outputs: [["",'number']],
-	properties: {amplitude:1.0, freq: 1, phase:0},
+Console.prototype.onExecute = function()
+{
+	console.log( this.getInputData(0) );
+}
 
-	onExecute: function()
-	{
-		var f = this.getInputData(0);
-		if(f != null)
-			this.properties["freq"] = f;
-
-		var q = this.getInputData(1);
-		if(q != null)
-			this.properties["phase"] = q;
-
-		var a = this.getInputData(2);
-		if(a != null)
-			this.properties["amplitude"] = a;
-
-		var t = this.graph.getFixedTime();
-		if(this.getInputData(3) != null)
-			t = this.getInputData(3);
-		// t = t/(2*Math.PI); t = (t-Math.floor(t))*(2*Math.PI);
-
-		var v = this.properties["amplitude"] * Math.sin((2*Math.PI) * t * this.properties["freq"] + this.properties["phase"]);
-		this.setOutputData(0, v );
-	},
-
-	onDragBackground: function(ctx)
-	{
-		this.boxcolor = colorToString(v > 0 ? [0.5,0.8,1,0.5] : [0,0,0,0.5]);
-		this.setDirtyCanvas(true);
-	},
-});
-*/
-
-/*
-LiteGraph.registerNodeType("basic/number",{
-	title: "Number",
-
-// System vars *********************************
-
-LiteGraph.registerNodeType("session/info",{
-	title: "Time",
-	desc: "Seconds since start",
-
-	outputs: [["secs",'number']],
-	properties: {scale:1.0},
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.getTime() * this.properties.scale);
-	}
-});
-
-LiteGraph.registerNodeType("system/fixedtime",{
-	title: "F.Time",
-	desc: "Constant time value",
-
-	outputs: [["secs",'number']],
-	properties: {scale:1.0},
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.getFixedTime() * this.properties.scale);
-	}
-});
-
-
-LiteGraph.registerNodeType("system/elapsedtime",{
-	title: "Elapsed",
-	desc: "Seconds elapsed since last execution",
-
-	outputs: [["secs",'number']],
-	properties: {scale:1.0},
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.getElapsedTime() * this.properties.scale);
-	}
-});
-
-LiteGraph.registerNodeType("system/iterations",{
-	title: "Iterations",
-	desc: "Number of iterations (executions)",
-
-	outputs: [["",'number']],
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.iterations );
-	}
-});
-
-LiteGraph.registerNodeType("system/trace",{
-	desc: "Outputs input to browser's console",
-
-	inputs: [["",0]],
-	onExecute: function()
-	{
-		var data = this.getInputData(0);
-		if(data)
-			trace("DATA: "+data);
-	}
-});
-
-/*
-LiteGraph.registerNodeType("math/not",{
-	title: "Not",
-	desc: "0 -> 1 or 0 -> 1",
-	inputs: [["A",'number']],
-	outputs: [["!A",'number']],
-	size: [60,22],
-	onExecute: function()
-	{
-		var v = this.getInputData(0);
-		if(v != null)
-			this.setOutputData(0, v ? 0 : 1);
-	}
-});
-
-
-
-// Nodes for network in and out 
-LiteGraph.registerNodeType("network/general/network_input",{
-	title: "N.Input",
-	desc: "Network Input",
-	outputs: [["",0]],
-	color: "#00ff96",
-	bgcolor: "#004327",
-
-	setValue: function(v)
-	{
-		this.value = v;
-	},
-
-	onExecute: function()
-	{
-		this.setOutputData(0, this.value);
-	}
-});
-
-LiteGraph.registerNodeType("network/general/network_output",{
-	title: "N.Output",
-	desc: "Network output",
-	inputs: [["",0]],
-	color: "#a8ff00",
-	bgcolor: "#293e00",
-
-	properties: {value:null},
-
-	getValue: function()
-	{
-		return this.value;
-	},
-
-	onExecute: function()
-	{
-		this.value = this.getOutputData(0);
-	}
-});
-
-LiteGraph.registerNodeType("network/network_trigger",{
-	title: "N.Trigger",
-	desc: "Network input trigger",
-	outputs: [["",0]],
-	color: "#ff9000",
-	bgcolor: "#522e00",
-
-	onTrigger: function(v)
-	{
-		this.triggerOutput(0,v);
-	},
-});
-
-LiteGraph.registerNodeType("network/network_callback",{
-	title: "N.Callback",
-	desc: "Network callback output.",
-	outputs: [["",0]],
-	color: "#6A6",
-	bgcolor: "#363",
-
-	setTrigger: function(func)
-	{
-		this.callback = func;
-	},
-
-	onTrigger: function(v)
-	{
-		if(this.callback)
-			this.callback(v);
-	},
-});
-
-*/
+LiteGraph.registerNodeType("basic/console", Console );
 
 
 })();

@@ -34,6 +34,7 @@ var LiteGraph = {
 	debug: false,
 	throw_errors: true,
 	registered_node_types: {},
+	Nodes: {},
 
 	/**
 	* Register a node class so it can be listed when the user wants to create a new one
@@ -64,6 +65,8 @@ var LiteGraph = {
 					base_class.prototype[i] = LGraphNode.prototype[i];
 
 		this.registered_node_types[ type ] = base_class;
+		if(base_class.constructor.name)
+			this.Nodes[ base_class.constructor.name ] = base_class;
 	},
 
 	/**
@@ -718,6 +721,21 @@ LGraph.prototype.getNodeById = function(id)
 	return this._nodes_by_id[id];
 }
 
+/**
+* Returns a list of nodes that matches a class
+* @method findNodesByClass
+* @param {Class} classObject the class itself (not an string)
+* @return {Array} a list with all the nodes of this type
+*/
+
+LGraph.prototype.findNodesByClass = function(classObject)
+{
+	var r = [];
+	for(var i in this._nodes)
+		if(this._nodes[i].constructor === classObject)
+			r.push(this._nodes[i]);
+	return r;
+}
 
 /**
 * Returns a list of nodes that matches a type
@@ -1316,7 +1334,9 @@ LGraphNode.prototype.getTitle = function()
 */
 LGraphNode.prototype.setOutputData = function(slot,data)
 {
-	if(!this.outputs) return;
+	if(!this.outputs) 
+		return;
+
 	if(slot > -1 && slot < this.outputs.length && this.outputs[slot] && this.outputs[slot].links != null)
 	{
 		for(var i = 0; i < this.outputs[slot].links.length; i++)
@@ -1328,17 +1348,18 @@ LGraphNode.prototype.setOutputData = function(slot,data)
 }
 
 /**
-* retrieves the input data from one slot
+* retrieves the input data (data traveling through the connection) from one slot
 * @method getInputData
 * @param {number} slot
 * @return {*} data
 */
 LGraphNode.prototype.getInputData = function(slot)
 {
-	if(!this.inputs) return null;
+	if(!this.inputs) 
+		return; //undefined;
 	if(slot < this.inputs.length && this.inputs[slot].link != null)
 		return this.graph.links[ this.inputs[slot].link ].data;
-	return null;
+	return; //undefined;
 }
 
 /**
@@ -1349,7 +1370,8 @@ LGraphNode.prototype.getInputData = function(slot)
 */
 LGraphNode.prototype.isInputConnected = function(slot)
 {
-	if(!this.inputs) return null;
+	if(!this.inputs) 
+		return false;
 	return (slot < this.inputs.length && this.inputs[slot].link != null);
 }
 
@@ -1429,7 +1451,7 @@ LGraphNode.prototype.triggerOutput = function(slot,param)
 * @method addOutput
 * @param {string} name
 * @param {string} type string defining the output type ("vec3","number",...)
-* @param {Object} extra_info this can be used to have special properties of an output (special color, position, etc)
+* @param {Object} extra_info this can be used to have special properties of an output (label, special color, position, etc)
 */
 LGraphNode.prototype.addOutput = function(name,type,extra_info)
 {
@@ -1488,11 +1510,12 @@ LGraphNode.prototype.removeOutput = function(slot)
 * add a new input slot to use in this node
 * @method addInput
 * @param {string} name
-* @param {string} type string defining the input type ("vec3","number",...)
+* @param {string} type string defining the input type ("vec3","number",...), it its a generic one use 0
 * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, etc)
 */
 LGraphNode.prototype.addInput = function(name,type,extra_info)
 {
+	type = type || 0;
 	var o = {name:name,type:type,link:null};
 	if(extra_info)
 		for(var i in extra_info)
@@ -2510,7 +2533,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 						var link_pos = n.getConnectionPos(true,i);
 						if( isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
 						{
-							if(input.link)
+							if(input.link !== null)
 							{
 								n.disconnectInput(i);
 								this.dirty_bgcanvas = true;
@@ -2888,6 +2911,7 @@ LGraphCanvas.prototype.processKeyDown = function(e)
 	if(e.keyCode == 46 || e.keyCode == 8)
 	{
 		this.deleteSelectedNodes();
+		block_default = true;
 	}
 
 	//collapse
@@ -3184,8 +3208,8 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 	if(!ctx) //maybe is using webgl...
 		return;
 
-	if(ctx.start)
-		ctx.start();
+	if(ctx.start2D)
+		ctx.start2D();
 
 	var canvas = this.canvas;
 
@@ -3299,8 +3323,8 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 		//this.dirty_area = null;
 	}
 
-	if(ctx.finish) //this is a function I use in webgl renderer
-		ctx.finish();
+	if(ctx.finish2D) //this is a function I use in webgl renderer
+		ctx.finish2D();
 
 	this.dirty_canvas = false;
 }
@@ -4058,11 +4082,11 @@ LGraphCanvas.onMenuNodeInputs = function(node, e, prev_menu)
 		var entries = [];
 		for (var i in options)
 		{
-			var option = options[i];
-			var label = option[0];
-			if(option[2] && option[2].label)
-				label = option[2].label;
-			entries.push({content: label, value: option});
+			var entry = options[i];
+			var label = entry[0];
+			if(entry[2] && entry[2].label)
+				label = entry[2].label;
+			entries.push({content: label, value: entry});
 		}
 		var menu = LiteGraph.createContextualMenu(entries, {event: e, callback: inner_clicked, from: prev_menu});
 	}
@@ -4088,9 +4112,13 @@ LGraphCanvas.onMenuNodeOutputs = function(node, e, prev_menu)
 		var entries = [];
 		for (var i in options)
 		{
-			if(node.findOutputSlot(options[i][0]) != -1)
+			var entry = options[i];
+			if(node.findOutputSlot(entry[0]) != -1)
 				continue; //skip the ones already on
-			entries.push({content: options[i][0], value: options[i]});
+			var label = entry[0];
+			if(entry[2] && entry[2].label)
+				label = entry[2].label;
+			entries.push({content: label, value: entry});
 		}
 		if(entries.length)
 			var menu = LiteGraph.createContextualMenu(entries, {event: e, callback: inner_clicked, from: prev_menu});
@@ -4098,7 +4126,8 @@ LGraphCanvas.onMenuNodeOutputs = function(node, e, prev_menu)
 
 	function inner_clicked(v)
 	{
-		if(!node) return;
+		if(!node)
+			return;
 
 		var value = v.value[1];
 
@@ -4111,7 +4140,7 @@ LGraphCanvas.onMenuNodeOutputs = function(node, e, prev_menu)
 			return false;
 		}
 		else
-			node.addOutput(v.value[0],v.value[1]);
+			node.addOutput(v.value[0], v.value[1], v.value[2]);
 	}
 
 	return false;
@@ -4424,7 +4453,7 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 		LiteGraph.closeAllContextualMenus();
 
 	var root = ref_window.document.createElement("div");
-	root.className = "litecontextualmenu litemenubar-panel";
+	root.className = "graphcontextualmenu graphmenubar-panel";
 	this.root = root;
 	var style = root.style;
 
@@ -4446,11 +4475,11 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 	{
 		var item = values[i];
 		var element = ref_window.document.createElement("div");
-		element.className = "litemenu-entry";
+		element.className = "graphmenu-entry";
 
 		if(item == null)
 		{
-			element.className = "litemenu-entry separator";
+			element.className = "graphmenu-entry separator";
 			root.appendChild(element);
 			continue;
 		}
@@ -4533,7 +4562,7 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 		if(options.callback)
 		{
 			var ret = options.callback.call(root, this.data, e );
-			if( ret != undefined ) close = ret;
+			if( ret !== undefined ) close = ret;
 		}
 
 		if(close)
@@ -4558,7 +4587,7 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 
 LiteGraph.closeAllContextualMenus = function()
 {
-	var elements = document.querySelectorAll(".litecontextualmenu");
+	var elements = document.querySelectorAll(".graphcontextualmenu");
 	if(!elements.length) return;
 
 	var result = [];
@@ -4954,210 +4983,34 @@ Watch.prototype.onDrawBackground = function(ctx)
 		if (this.properties["value"].constructor === Number )
 			this.inputs[0].label = this.properties["value"].toFixed(3);
 		else
-			this.inputs[0].label = this.properties["value"];
+		{
+			var str = this.properties["value"];
+			if(str && str.length) //convert typed to array
+				str = Array.prototype.slice.call(str).join(",");
+			this.inputs[0].label = str;
+		}
 	}
 }
 
 LiteGraph.registerNodeType("basic/watch", Watch);
 
 
+//Show value inside the debug console
+function Console()
+{
+	this.size = [60,20];
+	this.addInput("data",0);
+}
 
-/*
-LiteGraph.registerNodeType("math/sinusoid",{
-	title: "Sin",
-	desc: "Sinusoidal value generator",
-	bgImageUrl: "nodes/imgs/icon-sin.png",
+Console.title = "Console";
+Console.desc = "Show value inside the console";
 
-	inputs: [["f",'number'],["q",'number'],["a",'number'],["t",'number']],
-	outputs: [["",'number']],
-	properties: {amplitude:1.0, freq: 1, phase:0},
+Console.prototype.onExecute = function()
+{
+	console.log( this.getInputData(0) );
+}
 
-	onExecute: function()
-	{
-		var f = this.getInputData(0);
-		if(f != null)
-			this.properties["freq"] = f;
-
-		var q = this.getInputData(1);
-		if(q != null)
-			this.properties["phase"] = q;
-
-		var a = this.getInputData(2);
-		if(a != null)
-			this.properties["amplitude"] = a;
-
-		var t = this.graph.getFixedTime();
-		if(this.getInputData(3) != null)
-			t = this.getInputData(3);
-		// t = t/(2*Math.PI); t = (t-Math.floor(t))*(2*Math.PI);
-
-		var v = this.properties["amplitude"] * Math.sin((2*Math.PI) * t * this.properties["freq"] + this.properties["phase"]);
-		this.setOutputData(0, v );
-	},
-
-	onDragBackground: function(ctx)
-	{
-		this.boxcolor = colorToString(v > 0 ? [0.5,0.8,1,0.5] : [0,0,0,0.5]);
-		this.setDirtyCanvas(true);
-	},
-});
-*/
-
-/*
-LiteGraph.registerNodeType("basic/number",{
-	title: "Number",
-
-// System vars *********************************
-
-LiteGraph.registerNodeType("session/info",{
-	title: "Time",
-	desc: "Seconds since start",
-
-	outputs: [["secs",'number']],
-	properties: {scale:1.0},
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.getTime() * this.properties.scale);
-	}
-});
-
-LiteGraph.registerNodeType("system/fixedtime",{
-	title: "F.Time",
-	desc: "Constant time value",
-
-	outputs: [["secs",'number']],
-	properties: {scale:1.0},
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.getFixedTime() * this.properties.scale);
-	}
-});
-
-
-LiteGraph.registerNodeType("system/elapsedtime",{
-	title: "Elapsed",
-	desc: "Seconds elapsed since last execution",
-
-	outputs: [["secs",'number']],
-	properties: {scale:1.0},
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.getElapsedTime() * this.properties.scale);
-	}
-});
-
-LiteGraph.registerNodeType("system/iterations",{
-	title: "Iterations",
-	desc: "Number of iterations (executions)",
-
-	outputs: [["",'number']],
-	onExecute: function()
-	{
-		this.setOutputData(0, this.session.iterations );
-	}
-});
-
-LiteGraph.registerNodeType("system/trace",{
-	desc: "Outputs input to browser's console",
-
-	inputs: [["",0]],
-	onExecute: function()
-	{
-		var data = this.getInputData(0);
-		if(data)
-			trace("DATA: "+data);
-	}
-});
-
-/*
-LiteGraph.registerNodeType("math/not",{
-	title: "Not",
-	desc: "0 -> 1 or 0 -> 1",
-	inputs: [["A",'number']],
-	outputs: [["!A",'number']],
-	size: [60,22],
-	onExecute: function()
-	{
-		var v = this.getInputData(0);
-		if(v != null)
-			this.setOutputData(0, v ? 0 : 1);
-	}
-});
-
-
-
-// Nodes for network in and out 
-LiteGraph.registerNodeType("network/general/network_input",{
-	title: "N.Input",
-	desc: "Network Input",
-	outputs: [["",0]],
-	color: "#00ff96",
-	bgcolor: "#004327",
-
-	setValue: function(v)
-	{
-		this.value = v;
-	},
-
-	onExecute: function()
-	{
-		this.setOutputData(0, this.value);
-	}
-});
-
-LiteGraph.registerNodeType("network/general/network_output",{
-	title: "N.Output",
-	desc: "Network output",
-	inputs: [["",0]],
-	color: "#a8ff00",
-	bgcolor: "#293e00",
-
-	properties: {value:null},
-
-	getValue: function()
-	{
-		return this.value;
-	},
-
-	onExecute: function()
-	{
-		this.value = this.getOutputData(0);
-	}
-});
-
-LiteGraph.registerNodeType("network/network_trigger",{
-	title: "N.Trigger",
-	desc: "Network input trigger",
-	outputs: [["",0]],
-	color: "#ff9000",
-	bgcolor: "#522e00",
-
-	onTrigger: function(v)
-	{
-		this.triggerOutput(0,v);
-	},
-});
-
-LiteGraph.registerNodeType("network/network_callback",{
-	title: "N.Callback",
-	desc: "Network callback output.",
-	outputs: [["",0]],
-	color: "#6A6",
-	bgcolor: "#363",
-
-	setTrigger: function(func)
-	{
-		this.callback = func;
-	},
-
-	onTrigger: function(v)
-	{
-		if(this.callback)
-			this.callback(v);
-	},
-});
-
-*/
+LiteGraph.registerNodeType("basic/console", Console );
 
 
 })();
@@ -5898,6 +5751,16 @@ MathRand.desc = "Random number";
 
 MathRand.prototype.onExecute = function()
 {
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var v = this.getInputData(i);
+			if(v === undefined)
+				continue;
+			this.properties[input.name] = v;
+		}
+
 	var min = this.properties.min;
 	var max = this.properties.max;
 	this._last_v = Math.random() * (max-min) + min;
@@ -5911,6 +5774,10 @@ MathRand.prototype.onDrawBackground = function(ctx)
 		this.outputs[0].label = this._last_v.toFixed(3);
 	else
 		this.outputs[0].label = "?";
+}
+
+MathRand.prototype.onGetInputs = function() {
+	return [["min","number"],["max","number"]];
 }
 
 LiteGraph.registerNodeType("math/rand", MathRand);
@@ -6039,18 +5906,19 @@ function MathOperation()
 {
 	this.addInput("A","number");
 	this.addInput("B","number");
-	this.addOutput("A+B","number");
-	this.properties = {A:1.0, B:1.0};
+	this.addOutput("=","number");
+	this.properties = {A:1.0, B:1.0, OP:"+"};
 }
 
 MathOperation.title = "Operation";
 MathOperation.desc = "Easy math operators";
+MathOperation["@OP"] = { type:"enum", title: "operation", values:["+","-","*","/","%","^"]};
+
 
 MathOperation.prototype.setValue = function(v)
 {
 	if( typeof(v) == "string") v = parseFloat(v);
 	this.properties["value"] = v;
-	this.setDirtyCanvas(true);
 }
 
 MathOperation.prototype.onExecute = function()
@@ -6067,41 +5935,35 @@ MathOperation.prototype.onExecute = function()
 	else
 		B = this.properties["B"];
 
-	for(var i = 0, l = this.outputs.length; i < l; ++i)
+	var result = 0;
+	switch(this.properties.OP)
 	{
-		var output = this.outputs[i];
-		if(!output.links || !output.links.length)
-			continue;
-		var value = 0;
-		switch( output.name )
-		{
-			case "A+B": value = A+B; break;
-			case "A-B": value = A-B; break;
-			case "A*B": value = A*B; break;
-			case "A/B": value = A/B; break;
-		}
-		this.setOutputData(i, value );
+		case '+': result = A+B; break;
+		case '-': result = A-B; break;
+		case '/': result = A/B; break;
+		case '%': result = A%B; break;
+		case '^': result = Math.pow(A,B); break;
 	}
+	this.setOutputData(0, result );
 }
 
-MathOperation.prototype.onGetOutputs = function()
+MathOperation.prototype.onDrawBackground = function(ctx)
 {
-	return [["A-B","number"],["A*B","number"],["A/B","number"]];
+	this.outputs[0].label = "A" + this.properties.OP + "B";
 }
 
 LiteGraph.registerNodeType("math/operation", MathOperation );
-
+ 
 
 //Math compare
 function MathCompare()
 {
-	this.addInputs( "A","number" );
-	this.addInputs( "B","number" );
-	this.addOutputs("A==B","number");
-	this.addOutputs("A!=B","number");
+	this.addInput( "A","number" );
+	this.addInput( "B","number" );
+	this.addOutput("A==B","boolean");
+	this.addOutput("A!=B","boolean");
 	this.properties = {A:0,B:0};
 }
-
 
 MathCompare.title = "Compare";
 MathCompare.desc = "compares between two values";
@@ -6110,12 +5972,12 @@ MathCompare.prototype.onExecute = function()
 {
 	var A = this.getInputData(0);
 	var B = this.getInputData(1);
-	if(A!=null)
+	if(A !== undefined)
 		this.properties["A"] = A;
 	else
 		A = this.properties["A"];
 
-	if(B!=null)
+	if(B !== undefined)
 		this.properties["B"] = B;
 	else
 		B = this.properties["B"];
@@ -6140,10 +6002,55 @@ MathCompare.prototype.onExecute = function()
 
 MathCompare.prototype.onGetOutputs = function()
 {
-	return [["A==B","number"],["A!=B","number"],["A>B","number"],["A<B","number"],["A>=B","number"],["A<=B","number"]];
+	return [["A==B","boolean"],["A!=B","boolean"],["A>B","boolean"],["A<B","boolean"],["A>=B","boolean"],["A<=B","boolean"]];
 }
 
 LiteGraph.registerNodeType("math/compare",MathCompare);
+
+function MathCondition()
+{
+	this.addInput("A","number");
+	this.addInput("B","number");
+	this.addOutput("out","boolean");
+	this.properties = { A:0, B:1, OP:">" };
+	this.size = [60,40];
+}
+
+MathCondition["@OP"] = { type:"enum", title: "operation", values:[">","<","==","!=","<=",">="]};
+
+MathCondition.title = "Condition";
+MathCondition.desc = "evaluates condition between A and B";
+
+MathCondition.prototype.onExecute = function()
+{
+	var A = this.getInputData(0);
+	if(A === undefined)
+		A = this.properties.A;
+	else
+		this.properties.A = A;
+
+	var B = this.getInputData(1);
+	if(B === undefined)
+		B = this.properties.B;
+	else
+		this.properties.B = B;
+		
+	var result = true;
+	switch(this.properties.OP)
+	{
+		case ">": result = A>B; break;
+		case "<": result = A<B; break;
+		case "==": result = A==B; break;
+		case "!=": result = A!=B; break;
+		case "<=": result = A<=B; break;
+		case ">=": result = A>=B; break;
+	}
+
+	this.setOutputData(0, result );
+}
+
+LiteGraph.registerNodeType("math/condition", MathCondition);
+
 
 function MathAccumulate()
 {
@@ -6400,6 +6307,44 @@ if(window.glMatrix)
 } //glMatrix
 
 })();
+function Selector()
+{
+	this.addInput("sel","boolean");
+	this.addOutput("value","number");
+	this.properties = { A:0, B:1 };
+	this.size = [60,20];
+}
+
+Selector.title = "Selector";
+Selector.desc = "outputs A if selector is true, B if selector is false";
+
+Selector.prototype.onExecute = function()
+{
+	var cond = this.getInputData(0);
+	if(cond === undefined)
+		return;
+
+	for(var i = 1; i < this.inputs.length; i++)
+	{
+		var input = this.inputs[i];
+		var v = this.getInputData(i);
+		if(v === undefined)
+			continue;
+		this.properties[input.name] = v;
+	}
+
+	var A = this.properties.A;
+	var B = this.properties.B;
+	this.setOutputData(0, cond ? A : B );
+}
+
+Selector.prototype.onGetInputs = function() {
+	return [["A",0],["B",0]];
+}
+
+LiteGraph.registerNodeType("logic/selector", Selector);
+
+
 (function(){
 
 
@@ -7116,7 +7061,6 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphTexture.widgets_info = {"name": { widget:"texture"} };
 
 	//REPLACE THIS TO INTEGRATE WITH YOUR FRAMEWORK
-	LGraphTexture.textures_container = {}; //where to seek for the textures, if not specified it uses gl.textures
 	LGraphTexture.loadTextureCallback = null; //function in charge of loading textures when not present in the container
 	LGraphTexture.image_preview_size = 256;
 
@@ -7137,9 +7081,31 @@ if(typeof(LiteGraph) != "undefined")
 		"default": LGraphTexture.DEFAULT
 	};
 
+	//returns the container where all the loaded textures are stored (overwrite if you have a Resources Manager)
+	LGraphTexture.getTexturesContainer = function()
+	{
+		return gl.textures;
+	}
+
+	//process the loading of a texture (overwrite if you have a Resources Manager)
+	LGraphTexture.loadTexture = function(name, options)
+	{
+		options = options || {};
+		var url = name;
+		if(url.substr(0,7) == "http://")
+		{
+			if(LiteGraph.proxy) //proxy external files
+				url = LiteGraph.proxy + url.substr(7);
+		}
+
+		var container = LGraphTexture.getTexturesContainer();
+		var tex = container[ name ] = GL.Texture.fromURL(url, options);
+		return tex;
+	}
+
 	LGraphTexture.getTexture = function(name)
 	{
-		var container = LGraphTexture.textures_container || gl.textures;
+		var container = this.getTexturesContainer();
 
 		if(!container)
 			throw("Cannot load texture, container of textures not found");
@@ -7147,25 +7113,8 @@ if(typeof(LiteGraph) != "undefined")
 		var tex = container[ name ];
 		if(!tex && name && name[0] != ":")
 		{
-			//texture must be loaded
-			if(LGraphTexture.loadTextureCallback)
-			{
-				//calls the method in charge of loading resources (in LiteScene would be ResourcesManager.load)
-				var loader = LGraphTexture.loadTextureCallback;
-				if(loader)
-					loader( name );
-				return null;
-			}
-			else
-			{
-				var url = name;
-				if(url.substr(0,7) == "http://")
-				{
-					if(LiteGraph.proxy) //proxy external files
-						url = LiteGraph.proxy + url.substr(7);
-				}
-				tex = container[ name ] = GL.Texture.fromURL(url, {});
-			}
+			this.loadTexture(name);
+			return null;
 		}
 
 		return tex;
@@ -7358,7 +7307,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/texture", LGraphTexture );
-	window.LGraphTexture = LGraphTexture;
 
 	//**************************
 	function LGraphTexturePreview()
@@ -7397,7 +7345,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/preview", LGraphTexturePreview );
-	window.LGraphTexturePreview = LGraphTexturePreview;
 
 	//**************************************
 
@@ -7417,13 +7364,15 @@ if(typeof(LiteGraph) != "undefined")
 		if(!tex) return;
 
 		if(this.properties.name)
-			LGraphTexture.textures_container[ this.properties.name ] = tex;
+		{
+			var container = LGraphTexture.getTexturesContainer();
+			container[ this.properties.name ] = tex;
+		}
 
 		this.setOutputData(0, tex);
 	}
 
 	LiteGraph.registerNodeType("texture/save", LGraphTextureSave );
-	window.LGraphTextureSave = LGraphTextureSave;
 
 	//****************************************************
 
@@ -7608,7 +7557,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/operation", LGraphTextureOperation );
-	window.LGraphTextureOperation = LGraphTextureOperation;
 
 	//****************************************************
 
@@ -7698,7 +7646,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/shader", LGraphTextureShader );
-	window.LGraphTextureShader = LGraphTextureShader;
 
 	// Texture to Viewport *****************************************
 	function LGraphTextureToViewport()
@@ -7802,7 +7749,6 @@ if(typeof(LiteGraph) != "undefined")
 
 
 	LiteGraph.registerNodeType("texture/toviewport", LGraphTextureToViewport );
-	window.LGraphTextureToViewport = LGraphTextureToViewport;
 
 
 	// Texture Copy *****************************************
@@ -7868,7 +7814,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/copy", LGraphTextureCopy );
-	window.LGraphTextureCopy = LGraphTextureCopy;
 
 
 	// Texture Copy *****************************************
@@ -7880,7 +7825,7 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LGraphTextureAverage.title = "Average";
-	LGraphTextureAverage.desc = "Compute average of a texture and stores it as a texture";
+	LGraphTextureAverage.desc = "Compute the total average of a texture and stores it as a 1x1 pixel texture";
 
 	LGraphTextureAverage.prototype.onExecute = function()
 	{
@@ -7929,7 +7874,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/average", LGraphTextureAverage );
-	window.LGraphTextureAverage = LGraphTextureAverage;
 
 	// Image To Texture *****************************************
 	function LGraphImageToTexture()
@@ -7977,7 +7921,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/imageToTexture", LGraphImageToTexture );
-	window.LGraphImageToTexture = LGraphImageToTexture;	
 
 
 	// Texture LUT *****************************************
@@ -8070,7 +8013,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/LUT", LGraphTextureLUT );
-	window.LGraphTextureLUT = LGraphTextureLUT;
 
 	// Texture Channels *****************************************
 	function LGraphTextureChannels()
@@ -8146,7 +8088,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/textureChannels", LGraphTextureChannels );
-	window.LGraphTextureChannels = LGraphTextureChannels;
 
 
 	// Texture Channels to Texture *****************************************
@@ -8213,7 +8154,98 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/channelsTexture", LGraphChannelsTexture );
-	window.LGraphChannelsTexture = LGraphChannelsTexture;
+
+	// Texture Channels to Texture *****************************************
+	function LGraphTextureGradient()
+	{
+		this.addInput("A","color");
+		this.addInput("B","color");
+		this.addOutput("Texture","Texture");
+
+		this.properties = { angle: 0, scale: 1, A:[0,0,0], B:[1,1,1], texture_size:32 };
+		if(!LGraphTextureGradient._shader)
+			LGraphTextureGradient._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureGradient.pixel_shader );
+
+		this._uniforms = { u_angle: 0, u_colorA: vec3.create(), u_colorB: vec3.create()};
+	}
+
+	LGraphTextureGradient.title = "Gradient";
+	LGraphTextureGradient.desc = "Generates a gradient";
+	LGraphTextureGradient["@A"] = { type:"color" };
+	LGraphTextureGradient["@B"] = { type:"color" };
+	LGraphTextureGradient["@texture_size"] = { type:"enum", values:[32,64,128,256,512] };
+
+	LGraphTextureGradient.prototype.onExecute = function()
+	{
+		gl.disable( gl.BLEND );
+		gl.disable( gl.DEPTH_TEST );
+
+		var mesh = GL.Mesh.getScreenQuad();
+		var shader = LGraphTextureGradient._shader;
+
+		var A = this.getInputData(0);
+		if(!A)
+			A = this.properties.A;
+		var B = this.getInputData(1);
+		if(!B)
+			B = this.properties.B;
+
+		//angle and scale
+		for(var i = 2; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var v = this.getInputData(i);
+			if(v === undefined)
+				continue;
+			this.properties[ input.name ] = v;
+		}
+
+		var uniforms = this._uniforms;
+		this._uniforms.u_angle = this.properties.angle * DEG2RAD;
+		this._uniforms.u_scale = this.properties.scale;
+		vec3.copy( uniforms.u_colorA, A );
+		vec3.copy( uniforms.u_colorB, B );
+
+		var size = parseInt( this.properties.texture_size );
+		if(!this._tex || this._tex.width != size )
+			this._tex = new GL.Texture( size, size, { format: gl.RGB, filter: gl.LINEAR });
+
+		this._tex.drawTo( function() {
+			shader.uniforms(uniforms).draw(mesh);
+		});
+		this.setOutputData(0, this._tex);
+	}
+
+	LGraphTextureGradient.prototype.onGetInputs = function()
+	{
+		return [["angle","number"],["scale","number"]];
+	}
+
+	LGraphTextureGradient.pixel_shader = "precision highp float;\n\
+			precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform float u_angle;\n\
+			uniform float u_scale;\n\
+			uniform vec3 u_colorA;\n\
+			uniform vec3 u_colorB;\n\
+			\n\
+			vec2 rotate(vec2 v, float angle)\n\
+			{\n\
+				vec2 result;\n\
+				float _cos = cos(angle);\n\
+				float _sin = sin(angle);\n\
+				result.x = v.x * _cos - v.y * _sin;\n\
+				result.y = v.x * _sin + v.y * _cos;\n\
+				return result;\n\
+			}\n\
+			void main() {\n\
+				float f = (rotate(u_scale * (v_coord - vec2(0.5)), u_angle) + vec2(0.5)).x;\n\
+				vec3 color = mix(u_colorA,u_colorB,clamp(f,0.0,1.0));\n\
+			   gl_FragColor = vec4(color,1.0);\n\
+			}\n\
+			";
+
+	LiteGraph.registerNodeType("texture/gradient", LGraphTextureGradient );
 
 	// Texture Mix *****************************************
 	function LGraphTextureMix()
@@ -8281,7 +8313,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/mix", LGraphTextureMix );
-	window.LGraphTextureMix = LGraphTextureMix;
 
 	// Texture Edges detection *****************************************
 	function LGraphTextureEdges()
@@ -8352,7 +8383,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/edges", LGraphTextureEdges );
-	window.LGraphTextureEdges = LGraphTextureEdges;
 
 	// Texture Depth *****************************************
 	function LGraphTextureDepthRange()
@@ -8402,11 +8432,14 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphTextureDepthRange._shader;
+
+		//TODO: this asumes we have LiteScene, change it
 		var camera = Renderer._current_camera;
+		var planes = [Renderer._current_camera.near,Renderer._current_camera.far];
 
 		this._temp_texture.drawTo( function() {
 			tex.bind(0);
-			shader.uniforms({u_texture:0, u_distance: distance, u_range: range, u_camera_planes: [Renderer._current_camera.near,Renderer._current_camera.far] })
+			shader.uniforms({u_texture:0, u_distance: distance, u_range: range, u_camera_planes: planes })
 				.draw(mesh);
 		});
 
@@ -8438,7 +8471,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/depth_range", LGraphTextureDepthRange );
-	window.LGraphTextureDepthRange = LGraphTextureDepthRange;
 
 	// Texture Blur *****************************************
 	function LGraphTextureBlur()
@@ -8552,13 +8584,12 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/blur", LGraphTextureBlur );
-	window.LGraphTextureBlur = LGraphTextureBlur;
 
 	// Texture Webcam *****************************************
 	function LGraphTextureWebcam()
 	{
 		this.addOutput("Webcam","Texture");
-		this.properties = {};
+		this.properties = { texture_name: "" };
 	}
 
 	LGraphTextureWebcam.title = "Webcam";
@@ -8659,14 +8690,20 @@ if(typeof(LiteGraph) != "undefined")
 			this._temp_texture = new GL.Texture( width, height, { format: gl.RGB, filter: gl.LINEAR });
 
 		this._temp_texture.uploadImage( this._video );
+		
+		if(this.properties.texture_name)
+		{
+			var container = LGraphTexture.getTexturesContainer();
+			container[ this.properties.texture_name ] = this._temp_texture;
+		}
+
 		this.setOutputData(0,this._temp_texture);
 	}
 
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
-	window.LGraphTextureWebcam = LGraphTextureWebcam;
 
 
-
+	//Cubemap reader
 	function LGraphCubemap()
 	{
 		this.addOutput("Cubemap","Cubemap");
@@ -8726,8 +8763,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/cubemap", LGraphCubemap );
-	window.LGraphCubemap = LGraphCubemap;
-
 
 } //litegl.js defined
 //Works with Litegl.js to create WebGL nodes

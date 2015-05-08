@@ -13,7 +13,6 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphTexture.widgets_info = {"name": { widget:"texture"} };
 
 	//REPLACE THIS TO INTEGRATE WITH YOUR FRAMEWORK
-	LGraphTexture.textures_container = {}; //where to seek for the textures, if not specified it uses gl.textures
 	LGraphTexture.loadTextureCallback = null; //function in charge of loading textures when not present in the container
 	LGraphTexture.image_preview_size = 256;
 
@@ -34,9 +33,31 @@ if(typeof(LiteGraph) != "undefined")
 		"default": LGraphTexture.DEFAULT
 	};
 
+	//returns the container where all the loaded textures are stored (overwrite if you have a Resources Manager)
+	LGraphTexture.getTexturesContainer = function()
+	{
+		return gl.textures;
+	}
+
+	//process the loading of a texture (overwrite if you have a Resources Manager)
+	LGraphTexture.loadTexture = function(name, options)
+	{
+		options = options || {};
+		var url = name;
+		if(url.substr(0,7) == "http://")
+		{
+			if(LiteGraph.proxy) //proxy external files
+				url = LiteGraph.proxy + url.substr(7);
+		}
+
+		var container = LGraphTexture.getTexturesContainer();
+		var tex = container[ name ] = GL.Texture.fromURL(url, options);
+		return tex;
+	}
+
 	LGraphTexture.getTexture = function(name)
 	{
-		var container = LGraphTexture.textures_container || gl.textures;
+		var container = this.getTexturesContainer();
 
 		if(!container)
 			throw("Cannot load texture, container of textures not found");
@@ -44,25 +65,8 @@ if(typeof(LiteGraph) != "undefined")
 		var tex = container[ name ];
 		if(!tex && name && name[0] != ":")
 		{
-			//texture must be loaded
-			if(LGraphTexture.loadTextureCallback)
-			{
-				//calls the method in charge of loading resources (in LiteScene would be ResourcesManager.load)
-				var loader = LGraphTexture.loadTextureCallback;
-				if(loader)
-					loader( name );
-				return null;
-			}
-			else
-			{
-				var url = name;
-				if(url.substr(0,7) == "http://")
-				{
-					if(LiteGraph.proxy) //proxy external files
-						url = LiteGraph.proxy + url.substr(7);
-				}
-				tex = container[ name ] = GL.Texture.fromURL(url, {});
-			}
+			this.loadTexture(name);
+			return null;
 		}
 
 		return tex;
@@ -255,7 +259,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/texture", LGraphTexture );
-	window.LGraphTexture = LGraphTexture;
 
 	//**************************
 	function LGraphTexturePreview()
@@ -294,7 +297,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/preview", LGraphTexturePreview );
-	window.LGraphTexturePreview = LGraphTexturePreview;
 
 	//**************************************
 
@@ -314,13 +316,15 @@ if(typeof(LiteGraph) != "undefined")
 		if(!tex) return;
 
 		if(this.properties.name)
-			LGraphTexture.textures_container[ this.properties.name ] = tex;
+		{
+			var container = LGraphTexture.getTexturesContainer();
+			container[ this.properties.name ] = tex;
+		}
 
 		this.setOutputData(0, tex);
 	}
 
 	LiteGraph.registerNodeType("texture/save", LGraphTextureSave );
-	window.LGraphTextureSave = LGraphTextureSave;
 
 	//****************************************************
 
@@ -505,7 +509,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/operation", LGraphTextureOperation );
-	window.LGraphTextureOperation = LGraphTextureOperation;
 
 	//****************************************************
 
@@ -595,7 +598,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/shader", LGraphTextureShader );
-	window.LGraphTextureShader = LGraphTextureShader;
 
 	// Texture to Viewport *****************************************
 	function LGraphTextureToViewport()
@@ -699,7 +701,6 @@ if(typeof(LiteGraph) != "undefined")
 
 
 	LiteGraph.registerNodeType("texture/toviewport", LGraphTextureToViewport );
-	window.LGraphTextureToViewport = LGraphTextureToViewport;
 
 
 	// Texture Copy *****************************************
@@ -765,7 +766,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/copy", LGraphTextureCopy );
-	window.LGraphTextureCopy = LGraphTextureCopy;
 
 
 	// Texture Copy *****************************************
@@ -777,7 +777,7 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LGraphTextureAverage.title = "Average";
-	LGraphTextureAverage.desc = "Compute average of a texture and stores it as a texture";
+	LGraphTextureAverage.desc = "Compute the total average of a texture and stores it as a 1x1 pixel texture";
 
 	LGraphTextureAverage.prototype.onExecute = function()
 	{
@@ -826,7 +826,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/average", LGraphTextureAverage );
-	window.LGraphTextureAverage = LGraphTextureAverage;
 
 	// Image To Texture *****************************************
 	function LGraphImageToTexture()
@@ -874,7 +873,6 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/imageToTexture", LGraphImageToTexture );
-	window.LGraphImageToTexture = LGraphImageToTexture;	
 
 
 	// Texture LUT *****************************************
@@ -967,7 +965,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/LUT", LGraphTextureLUT );
-	window.LGraphTextureLUT = LGraphTextureLUT;
 
 	// Texture Channels *****************************************
 	function LGraphTextureChannels()
@@ -1043,7 +1040,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/textureChannels", LGraphTextureChannels );
-	window.LGraphTextureChannels = LGraphTextureChannels;
 
 
 	// Texture Channels to Texture *****************************************
@@ -1110,7 +1106,98 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/channelsTexture", LGraphChannelsTexture );
-	window.LGraphChannelsTexture = LGraphChannelsTexture;
+
+	// Texture Channels to Texture *****************************************
+	function LGraphTextureGradient()
+	{
+		this.addInput("A","color");
+		this.addInput("B","color");
+		this.addOutput("Texture","Texture");
+
+		this.properties = { angle: 0, scale: 1, A:[0,0,0], B:[1,1,1], texture_size:32 };
+		if(!LGraphTextureGradient._shader)
+			LGraphTextureGradient._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureGradient.pixel_shader );
+
+		this._uniforms = { u_angle: 0, u_colorA: vec3.create(), u_colorB: vec3.create()};
+	}
+
+	LGraphTextureGradient.title = "Gradient";
+	LGraphTextureGradient.desc = "Generates a gradient";
+	LGraphTextureGradient["@A"] = { type:"color" };
+	LGraphTextureGradient["@B"] = { type:"color" };
+	LGraphTextureGradient["@texture_size"] = { type:"enum", values:[32,64,128,256,512] };
+
+	LGraphTextureGradient.prototype.onExecute = function()
+	{
+		gl.disable( gl.BLEND );
+		gl.disable( gl.DEPTH_TEST );
+
+		var mesh = GL.Mesh.getScreenQuad();
+		var shader = LGraphTextureGradient._shader;
+
+		var A = this.getInputData(0);
+		if(!A)
+			A = this.properties.A;
+		var B = this.getInputData(1);
+		if(!B)
+			B = this.properties.B;
+
+		//angle and scale
+		for(var i = 2; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var v = this.getInputData(i);
+			if(v === undefined)
+				continue;
+			this.properties[ input.name ] = v;
+		}
+
+		var uniforms = this._uniforms;
+		this._uniforms.u_angle = this.properties.angle * DEG2RAD;
+		this._uniforms.u_scale = this.properties.scale;
+		vec3.copy( uniforms.u_colorA, A );
+		vec3.copy( uniforms.u_colorB, B );
+
+		var size = parseInt( this.properties.texture_size );
+		if(!this._tex || this._tex.width != size )
+			this._tex = new GL.Texture( size, size, { format: gl.RGB, filter: gl.LINEAR });
+
+		this._tex.drawTo( function() {
+			shader.uniforms(uniforms).draw(mesh);
+		});
+		this.setOutputData(0, this._tex);
+	}
+
+	LGraphTextureGradient.prototype.onGetInputs = function()
+	{
+		return [["angle","number"],["scale","number"]];
+	}
+
+	LGraphTextureGradient.pixel_shader = "precision highp float;\n\
+			precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform float u_angle;\n\
+			uniform float u_scale;\n\
+			uniform vec3 u_colorA;\n\
+			uniform vec3 u_colorB;\n\
+			\n\
+			vec2 rotate(vec2 v, float angle)\n\
+			{\n\
+				vec2 result;\n\
+				float _cos = cos(angle);\n\
+				float _sin = sin(angle);\n\
+				result.x = v.x * _cos - v.y * _sin;\n\
+				result.y = v.x * _sin + v.y * _cos;\n\
+				return result;\n\
+			}\n\
+			void main() {\n\
+				float f = (rotate(u_scale * (v_coord - vec2(0.5)), u_angle) + vec2(0.5)).x;\n\
+				vec3 color = mix(u_colorA,u_colorB,clamp(f,0.0,1.0));\n\
+			   gl_FragColor = vec4(color,1.0);\n\
+			}\n\
+			";
+
+	LiteGraph.registerNodeType("texture/gradient", LGraphTextureGradient );
 
 	// Texture Mix *****************************************
 	function LGraphTextureMix()
@@ -1178,7 +1265,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/mix", LGraphTextureMix );
-	window.LGraphTextureMix = LGraphTextureMix;
 
 	// Texture Edges detection *****************************************
 	function LGraphTextureEdges()
@@ -1249,7 +1335,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/edges", LGraphTextureEdges );
-	window.LGraphTextureEdges = LGraphTextureEdges;
 
 	// Texture Depth *****************************************
 	function LGraphTextureDepthRange()
@@ -1299,11 +1384,14 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphTextureDepthRange._shader;
+
+		//TODO: this asumes we have LiteScene, change it
 		var camera = Renderer._current_camera;
+		var planes = [Renderer._current_camera.near,Renderer._current_camera.far];
 
 		this._temp_texture.drawTo( function() {
 			tex.bind(0);
-			shader.uniforms({u_texture:0, u_distance: distance, u_range: range, u_camera_planes: [Renderer._current_camera.near,Renderer._current_camera.far] })
+			shader.uniforms({u_texture:0, u_distance: distance, u_range: range, u_camera_planes: planes })
 				.draw(mesh);
 		});
 
@@ -1335,7 +1423,6 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/depth_range", LGraphTextureDepthRange );
-	window.LGraphTextureDepthRange = LGraphTextureDepthRange;
 
 	// Texture Blur *****************************************
 	function LGraphTextureBlur()
@@ -1449,13 +1536,12 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/blur", LGraphTextureBlur );
-	window.LGraphTextureBlur = LGraphTextureBlur;
 
 	// Texture Webcam *****************************************
 	function LGraphTextureWebcam()
 	{
 		this.addOutput("Webcam","Texture");
-		this.properties = {};
+		this.properties = { texture_name: "" };
 	}
 
 	LGraphTextureWebcam.title = "Webcam";
@@ -1556,14 +1642,20 @@ if(typeof(LiteGraph) != "undefined")
 			this._temp_texture = new GL.Texture( width, height, { format: gl.RGB, filter: gl.LINEAR });
 
 		this._temp_texture.uploadImage( this._video );
+		
+		if(this.properties.texture_name)
+		{
+			var container = LGraphTexture.getTexturesContainer();
+			container[ this.properties.texture_name ] = this._temp_texture;
+		}
+
 		this.setOutputData(0,this._temp_texture);
 	}
 
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
-	window.LGraphTextureWebcam = LGraphTextureWebcam;
 
 
-
+	//Cubemap reader
 	function LGraphCubemap()
 	{
 		this.addOutput("Cubemap","Cubemap");
@@ -1623,7 +1715,5 @@ if(typeof(LiteGraph) != "undefined")
 	}
 
 	LiteGraph.registerNodeType("texture/cubemap", LGraphCubemap );
-	window.LGraphCubemap = LGraphCubemap;
-
 
 } //litegl.js defined

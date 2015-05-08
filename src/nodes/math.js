@@ -13,6 +13,16 @@ MathRand.desc = "Random number";
 
 MathRand.prototype.onExecute = function()
 {
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var v = this.getInputData(i);
+			if(v === undefined)
+				continue;
+			this.properties[input.name] = v;
+		}
+
 	var min = this.properties.min;
 	var max = this.properties.max;
 	this._last_v = Math.random() * (max-min) + min;
@@ -26,6 +36,10 @@ MathRand.prototype.onDrawBackground = function(ctx)
 		this.outputs[0].label = this._last_v.toFixed(3);
 	else
 		this.outputs[0].label = "?";
+}
+
+MathRand.prototype.onGetInputs = function() {
+	return [["min","number"],["max","number"]];
 }
 
 LiteGraph.registerNodeType("math/rand", MathRand);
@@ -154,18 +168,19 @@ function MathOperation()
 {
 	this.addInput("A","number");
 	this.addInput("B","number");
-	this.addOutput("A+B","number");
-	this.properties = {A:1.0, B:1.0};
+	this.addOutput("=","number");
+	this.properties = {A:1.0, B:1.0, OP:"+"};
 }
 
 MathOperation.title = "Operation";
 MathOperation.desc = "Easy math operators";
+MathOperation["@OP"] = { type:"enum", title: "operation", values:["+","-","*","/","%","^"]};
+
 
 MathOperation.prototype.setValue = function(v)
 {
 	if( typeof(v) == "string") v = parseFloat(v);
 	this.properties["value"] = v;
-	this.setDirtyCanvas(true);
 }
 
 MathOperation.prototype.onExecute = function()
@@ -182,41 +197,35 @@ MathOperation.prototype.onExecute = function()
 	else
 		B = this.properties["B"];
 
-	for(var i = 0, l = this.outputs.length; i < l; ++i)
+	var result = 0;
+	switch(this.properties.OP)
 	{
-		var output = this.outputs[i];
-		if(!output.links || !output.links.length)
-			continue;
-		var value = 0;
-		switch( output.name )
-		{
-			case "A+B": value = A+B; break;
-			case "A-B": value = A-B; break;
-			case "A*B": value = A*B; break;
-			case "A/B": value = A/B; break;
-		}
-		this.setOutputData(i, value );
+		case '+': result = A+B; break;
+		case '-': result = A-B; break;
+		case '/': result = A/B; break;
+		case '%': result = A%B; break;
+		case '^': result = Math.pow(A,B); break;
 	}
+	this.setOutputData(0, result );
 }
 
-MathOperation.prototype.onGetOutputs = function()
+MathOperation.prototype.onDrawBackground = function(ctx)
 {
-	return [["A-B","number"],["A*B","number"],["A/B","number"]];
+	this.outputs[0].label = "A" + this.properties.OP + "B";
 }
 
 LiteGraph.registerNodeType("math/operation", MathOperation );
-
+ 
 
 //Math compare
 function MathCompare()
 {
-	this.addInputs( "A","number" );
-	this.addInputs( "B","number" );
-	this.addOutputs("A==B","number");
-	this.addOutputs("A!=B","number");
+	this.addInput( "A","number" );
+	this.addInput( "B","number" );
+	this.addOutput("A==B","boolean");
+	this.addOutput("A!=B","boolean");
 	this.properties = {A:0,B:0};
 }
-
 
 MathCompare.title = "Compare";
 MathCompare.desc = "compares between two values";
@@ -225,12 +234,12 @@ MathCompare.prototype.onExecute = function()
 {
 	var A = this.getInputData(0);
 	var B = this.getInputData(1);
-	if(A!=null)
+	if(A !== undefined)
 		this.properties["A"] = A;
 	else
 		A = this.properties["A"];
 
-	if(B!=null)
+	if(B !== undefined)
 		this.properties["B"] = B;
 	else
 		B = this.properties["B"];
@@ -255,10 +264,55 @@ MathCompare.prototype.onExecute = function()
 
 MathCompare.prototype.onGetOutputs = function()
 {
-	return [["A==B","number"],["A!=B","number"],["A>B","number"],["A<B","number"],["A>=B","number"],["A<=B","number"]];
+	return [["A==B","boolean"],["A!=B","boolean"],["A>B","boolean"],["A<B","boolean"],["A>=B","boolean"],["A<=B","boolean"]];
 }
 
 LiteGraph.registerNodeType("math/compare",MathCompare);
+
+function MathCondition()
+{
+	this.addInput("A","number");
+	this.addInput("B","number");
+	this.addOutput("out","boolean");
+	this.properties = { A:0, B:1, OP:">" };
+	this.size = [60,40];
+}
+
+MathCondition["@OP"] = { type:"enum", title: "operation", values:[">","<","==","!=","<=",">="]};
+
+MathCondition.title = "Condition";
+MathCondition.desc = "evaluates condition between A and B";
+
+MathCondition.prototype.onExecute = function()
+{
+	var A = this.getInputData(0);
+	if(A === undefined)
+		A = this.properties.A;
+	else
+		this.properties.A = A;
+
+	var B = this.getInputData(1);
+	if(B === undefined)
+		B = this.properties.B;
+	else
+		this.properties.B = B;
+		
+	var result = true;
+	switch(this.properties.OP)
+	{
+		case ">": result = A>B; break;
+		case "<": result = A<B; break;
+		case "==": result = A==B; break;
+		case "!=": result = A!=B; break;
+		case "<=": result = A<=B; break;
+		case ">=": result = A>=B; break;
+	}
+
+	this.setOutputData(0, result );
+}
+
+LiteGraph.registerNodeType("math/condition", MathCondition);
+
 
 function MathAccumulate()
 {

@@ -7,12 +7,12 @@
 	-webkit-user-select: none;
 }
 
-.litecontextualmenu {
+.graphcontextualmenu {
 	padding: 4px;
 	min-width: 100px;
 }
 
-.litemenu-entry {
+.graphmenu-entry {
 	box-sizing: border-box;
 	margin: 2px;
 	padding-left: 20px;
@@ -22,20 +22,20 @@
 	transition: * linear 0.5s;
 }
 
-.litemenu-entry.disabled {
+.graphmenu-entry.disabled {
 	opacity: 0.3;
 }
 
-.litemenu-entry.submenu {
+.graphmenu-entry.submenu {
 	border-right: 2px solid #EEE;
 }
 
 
-.litemenu-entry:hover {
+.graphmenu-entry:hover {
 	background-color: #555;
 }
 
-.litemenu-entry.separator {
+.graphmenu-entry.separator {
 	background-color: #111;
 	border-bottom: 1px solid #666;
 	height: 1px;
