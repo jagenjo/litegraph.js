@@ -7087,7 +7087,7 @@ if(typeof(LiteGraph) != "undefined")
 		return gl.textures;
 	}
 
-	//process the loading of a texture (overwrite if you have a Resources Manager)
+	//process the loading of a texture (overwrite it if you have a Resources Manager)
 	LGraphTexture.loadTexture = function(name, options)
 	{
 		options = options || {};
@@ -7930,7 +7930,7 @@ if(typeof(LiteGraph) != "undefined")
 		this.addInput("LUT","Texture");
 		this.addInput("Intensity","number");
 		this.addOutput("","Texture");
-		this.properties = { intensity: 1, precision: LGraphTexture.DEFAULT };
+		this.properties = { intensity: 1, precision: LGraphTexture.DEFAULT, texture: null };
 
 		if(!LGraphTextureLUT._shader)
 			LGraphTextureLUT._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureLUT.pixel_shader );
@@ -7942,6 +7942,7 @@ if(typeof(LiteGraph) != "undefined")
 
 	LGraphTextureLUT.title = "LUT";
 	LGraphTextureLUT.desc = "Apply LUT to Texture";
+	LGraphTextureLUT.widgets_info = {"texture": { widget:"texture"} };
 
 	LGraphTextureLUT.prototype.onExecute = function()
 	{
@@ -7956,11 +7957,16 @@ if(typeof(LiteGraph) != "undefined")
 		if(!tex) return;
 
 		var lut_tex = this.getInputData(1);
+
+		if(!lut_tex)
+			lut_tex = LGraphTexture.getTexture( this.properties.texture );
+
 		if(!lut_tex)
 		{
 			this.setOutputData(0,tex);
 			return;
 		}
+
 		lut_tex.bind(0);
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR );
 		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
