@@ -746,9 +746,10 @@ LGraph.prototype.findNodesByClass = function(classObject)
 
 LGraph.prototype.findNodesByType = function(type)
 {
+	var type = type.toLowerCase();
 	var r = [];
 	for(var i in this._nodes)
-		if(this._nodes[i].type == type)
+		if(this._nodes[i].type.toLowerCase() == type )
 			r.push(this._nodes[i]);
 	return r;
 }
@@ -852,7 +853,7 @@ LGraph.prototype.changeGlobalInputType = function(name, type)
 	if(!this.global_inputs[name])
 		return false;
 
-	if(this.global_inputs[name].type == type)
+	if(this.global_inputs[name].type.toLowerCase() == type.toLowerCase() )
 		return;
 
 	this.global_inputs[name].type = type;
@@ -933,7 +934,7 @@ LGraph.prototype.changeGlobalOutputType = function(name, type)
 	if(!this.global_outputs[name])
 		return false;
 
-	if(this.global_outputs[name].type == type)
+	if(this.global_outputs[name].type.toLowerCase() == type.toLowerCase() )
 		return;
 
 	this.global_outputs[name].type = type;
@@ -1725,7 +1726,7 @@ LGraphNode.prototype.connect = function(slot, node, target_slot)
 	}
 	else if( !output.type ||  //generic output
 			!node.inputs[target_slot].type || //generic input
-			output.type == node.inputs[target_slot].type) //same type
+			output.type.toLowerCase() == node.inputs[target_slot].type.toLowerCase() ) //same type
 	{
 		//info: link structure => [ 0:link_id, 1:start_node_id, 2:start_slot, 3:end_node_id, 4:end_slot ]
 		//var link = [ this.graph.last_link_id++, this.id, slot, node.id, target_slot ];
@@ -2045,16 +2046,13 @@ LGraphNode.prototype.localToScreen = function(x,y, graphcanvas)
 * @param {HTMLCanvas} canvas the canvas where you want to render (it accepts a selector in string format or the canvas itself)
 * @param {LGraph} graph [optional]
 */
-function LGraphCanvas(canvas, graph, skip_render)
+function LGraphCanvas( canvas, graph, skip_render )
 {
 	//if(graph === undefined)
 	//	throw ("No graph assigned");
 
-	if(typeof(canvas) == "string")
-		canvas = document.querySelector(canvas);
-
-	if(!canvas)
-		throw("no canvas found");
+	if(canvas && canvas.constructor === String )
+		canvas = document.querySelector( canvas );
 
 	this.max_zoom = 10;
 	this.min_zoom = 0.1;
@@ -2063,7 +2061,7 @@ function LGraphCanvas(canvas, graph, skip_render)
 	if(graph)
 		graph.attachCanvas(this);
 
-	this.setCanvas(canvas);
+	this.setCanvas( canvas );
 	this.clear();
 
 	if(!skip_render)
@@ -2098,15 +2096,17 @@ LGraphCanvas.prototype.clear = function()
 	this.editor_alpha = 1; //used for transition
 	this.pause_rendering = false;
 	this.render_shadows = true;
-	this.dirty_canvas = true;
-	this.dirty_bgcanvas = true;
-	this.dirty_area = null;
+	this.clear_background = true;
 
 	this.render_only_selected = true;
 	this.live_mode = false;
 	this.show_info = true;
 	this.allow_dragcanvas = true;
 	this.allow_dragnodes = true;
+
+	this.dirty_canvas = true;
+	this.dirty_bgcanvas = true;
+	this.dirty_area = null;
 
 	this.node_in_panel = null;
 
@@ -2133,10 +2133,13 @@ LGraphCanvas.prototype.clear = function()
 * @method setGraph
 * @param {LGraph} graph
 */
-LGraphCanvas.prototype.setGraph = function(graph)
+LGraphCanvas.prototype.setGraph = function( graph, skip_clear )
 {
-	if(this.graph == graph) return;
-	this.clear();
+	if(this.graph == graph)
+		return;
+
+	if(!skip_clear)
+		this.clear();
 
 	if(!graph && this.graph)
 	{
@@ -2203,19 +2206,35 @@ LGraphCanvas.prototype.closeSubgraph = function()
 * @method setCanvas
 * @param {Canvas} assigns a canvas
 */
-LGraphCanvas.prototype.setCanvas = function(canvas)
+LGraphCanvas.prototype.setCanvas = function( canvas, skip_events )
 {
 	var that = this;
 
-	//Canvas association
-	if(typeof(canvas) == "string")
-		canvas = document.getElementById(canvas);
+	if(canvas)
+	{
+		if( canvas.constructor === String )
+		{
+			canvas = document.getElementById(canvas);
+			if(!canvas)
+				throw("Error creating LiteGraph canvas: Canvas not found");
+		}		
+	}
 
-	if(canvas == null)
-		throw("Error creating LiteGraph canvas: Canvas not found");
-	if(canvas == this.canvas) return;
+	if(canvas === this.canvas)
+		return;
+
+	if(!canvas && this.canvas)
+	{
+		//maybe detach events from old_canvas
+		if(!skip_events)
+			this.unbindEvents();
+	}
 
 	this.canvas = canvas;
+
+	if(!canvas)
+		return;
+
 	//this.canvas.tabindex = "1000";
 	canvas.className += " lgraphcanvas";
 	canvas.data = this;
@@ -2245,72 +2264,85 @@ LGraphCanvas.prototype.setCanvas = function(canvas)
 	this._mousemove_callback = this.processMouseMove.bind(this);
 	this._mouseup_callback = this.processMouseUp.bind(this);
 
-	canvas.addEventListener("mousedown", this.processMouseDown.bind(this), true ); //down do not need to store the binded
-	canvas.addEventListener("mousemove", this._mousemove_callback);
+	if(!skip_events)
+		this.bindEvents();
+}
 
-	canvas.addEventListener("contextmenu", function(e) { e.preventDefault(); return false; });
-	
-	canvas.addEventListener("mousewheel", this.processMouseWheel.bind(this), false);
-	canvas.addEventListener("DOMMouseScroll", this.processMouseWheel.bind(this), false);
+//used in some events to capture them
+LGraphCanvas.prototype._doNothing = function doNothing() { return false; };
+
+LGraphCanvas.prototype.bindEvents = function()
+{
+	if(	this._events_binded )
+	{
+		console.warn("LGraphCanvas: events already binded");
+		return;
+	}
+
+	var canvas = this.canvas;
+
+	this._mousedown_callback = this.processMouseDown.bind(this);
+	this._mousewheel_callback = this.processMouseWheel.bind(this);
+
+	canvas.addEventListener("mousedown", this._mousedown_callback, true ); //down do not need to store the binded
+	canvas.addEventListener("mousemove", this._mousemove_callback );
+	canvas.addEventListener("mousewheel", this._mousewheel_callback, false);
+
+	canvas.addEventListener("contextmenu", this._doNothing );
+	canvas.addEventListener("DOMMouseScroll", this._mousewheel_callback, false);
 
 	//touch events
 	//if( 'touchstart' in document.documentElement )
 	{
-		//alert("doo");
 		canvas.addEventListener("touchstart", this.touchHandler, true);
 		canvas.addEventListener("touchmove", this.touchHandler, true);
 		canvas.addEventListener("touchend", this.touchHandler, true);
 		canvas.addEventListener("touchcancel", this.touchHandler, true);    
 	}
 
-	//this.canvas.onselectstart = function () { return false; };
-	canvas.addEventListener("keydown", function(e) { 
-		that.processKeyDown(e); 
-	});
+	//Keyboard ******************
+	this._key_callback = this.processKey.bind(this);
 
-	canvas.addEventListener("keyup", function(e) { 
-		that.processKeyUp(e); 
-	});
+	canvas.addEventListener("keydown", this._key_callback );
+	canvas.addEventListener("keyup", this._key_callback );
 
-	//droping files 
-	canvas.ondragover = function () { console.log('hover'); return false; };
-	canvas.ondragend = function () { console.log('out'); return false; };
-	canvas.ondrop = function (e) {
-		e.preventDefault();
-		that.adjustMouseEvent(e);
+	//Droping Stuff over nodes ************************************
+	this._ondrop_callback = this.processDrop.bind(this);
 
-		var pos = [e.canvasX,e.canvasY];
-		var node = that.graph.getNodeOnPos(pos[0],pos[1]);
-		if(!node)
-			return;
+	canvas.addEventListener("dragover", this._doNothing, false );
+	canvas.addEventListener("dragend", this._doNothing, false );
+	canvas.addEventListener("drop", this._ondrop_callback, false );
 
-		if(!node.onDropFile)
-			return;
+	this._events_binded = true;
+}
 
-		var file = e.dataTransfer.files[0];
-		var filename = file.name;
-		var ext = LGraphCanvas.getFileExtension( filename );
-		//console.log(file);
+LGraphCanvas.prototype.unbindEvents = function()
+{
+	if(	!this._events_binded )
+	{
+		console.warn("LGraphCanvas: no events binded");
+		return;
+	}
 
-		//prepare reader
-		var reader = new FileReader();
-		reader.onload = function (event) {
-			//console.log(event.target);
-			var data = event.target.result;
-			node.onDropFile( data, filename, file );
-		};
+	this.canvas.removeEventListener( "mousedown", this._mousedown_callback );
+	this.canvas.removeEventListener( "mousewheel", this._mousewheel_callback );
+	this.canvas.removeEventListener( "DOMMouseScroll", this._mousewheel_callback );
+	this.canvas.removeEventListener( "keydown", this._key_callback );
+	this.canvas.removeEventListener( "keyup", this._key_callback );
+	this.canvas.removeEventListener( "contextmenu", this._doNothing );
+	this.canvas.removeEventListener( "drop", this._ondrop_callback );
 
-		//read data
-		var type = file.type.split("/")[0];
-		if(type == "text" || type == "")
-			reader.readAsText(file);
-		else if (type == "image")
-			reader.readAsDataURL(file);
-		else
-			reader.readAsArrayBuffer(file);
+	this.canvas.removeEventListener("touchstart", this.touchHandler );
+	this.canvas.removeEventListener("touchmove", this.touchHandler );
+	this.canvas.removeEventListener("touchend", this.touchHandler );
+	this.canvas.removeEventListener("touchcancel", this.touchHandler );
 
-		return false;
-	};
+	this._mousedown_callback = null;
+	this._mousewheel_callback = null;
+	this._key_callback = null;
+	this._ondrop_callback = null;
+
+	this._events_binded = false;
 }
 
 LGraphCanvas.getFileExtension = function (url)
@@ -2467,13 +2499,15 @@ LGraphCanvas.prototype.stopRendering = function()
 
 LGraphCanvas.prototype.processMouseDown = function(e)
 {
-	if(!this.graph) return;
+	if(!this.graph)
+		return;
 
 	this.adjustMouseEvent(e);
 	
 	var ref_window = this.getCanvasWindow();
 	var document = ref_window.document;
 
+	//move mouse move event to the window in case it drags outside of the canvas
 	this.canvas.removeEventListener("mousemove", this._mousemove_callback );
 	ref_window.document.addEventListener("mousemove", this._mousemove_callback, true ); //catch for the entire window
 	ref_window.document.addEventListener("mouseup", this._mouseup_callback, true );
@@ -2699,7 +2733,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 				if(slot != -1 && n.inputs[slot])
 				{	
 					var slot_type = n.inputs[slot].type;
-					if(slot_type == this.connecting_output.type || !slot_type || !this.connecting_output.type )
+					if( !this.connecting_output.type || !slot_type || slot_type.toLowerCase() == this.connecting_output.type.toLowerCase() )
 						this._highlight_input = pos;
 				}
 				else
@@ -2774,11 +2808,13 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 
 LGraphCanvas.prototype.processMouseUp = function(e)
 {
-	if(!this.graph) return;
+	if(!this.graph)
+		return;
 
 	var window = this.getCanvasWindow();
 	var document = window.document;
 
+	//restore the mousemove event back to the canvas
 	document.removeEventListener("mousemove", this._mousemove_callback, true );
 	this.canvas.addEventListener("mousemove", this._mousemove_callback, true);
 	document.removeEventListener("mouseup", this._mouseup_callback, true );
@@ -2815,7 +2851,7 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 					{ //not on top of an input
 						var input = node.getInputInfo(0);
 						//simple connect
-						if(input && !input.link && input.type == this.connecting_output.type)
+						if(input && !input.link && input.type == this.connecting_output.type) //toLowerCase missing
 							this.connecting_node.connect(this.connecting_slot, node, 0);
 					}
 				}
@@ -2879,75 +2915,11 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 	return false;
 }
 
-LGraphCanvas.prototype.isOverNodeInput = function(node, canvasx, canvasy, slot_pos)
-{
-	if(node.inputs)
-		for(var i = 0, l = node.inputs.length; i < l; ++i)
-		{
-			var input = node.inputs[i];
-			var link_pos = node.getConnectionPos(true,i);
-			if( isInsideRectangle(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
-			{
-				if(slot_pos) { slot_pos[0] = link_pos[0]; slot_pos[1] = link_pos[1] };
-				return i;
-			}
-		}
-	return -1;
-}
-
-LGraphCanvas.prototype.processKeyDown = function(e) 
-{
-	if(!this.graph) return;
-	var block_default = false;
-
-	//select all Control A
-	if(e.keyCode == 65 && e.ctrlKey)
-	{
-		this.selectAllNodes();
-		block_default = true;
-	}
-
-	//delete or backspace
-	if(e.keyCode == 46 || e.keyCode == 8)
-	{
-		this.deleteSelectedNodes();
-		block_default = true;
-	}
-
-	//collapse
-	//...
-
-	//TODO
-	if(this.selected_nodes) 
-		for (var i in this.selected_nodes)
-			if(this.selected_nodes[i].onKeyDown)
-				this.selected_nodes[i].onKeyDown(e);
-
-	this.graph.change();
-
-	if(block_default)
-	{
-		e.preventDefault();
-		return false;
-	}
-}
-
-LGraphCanvas.prototype.processKeyUp = function(e) 
-{
-	if(!this.graph) return;
-	//TODO
-	if(this.selected_nodes)
-		for (var i in this.selected_nodes)
-			if(this.selected_nodes[i].onKeyUp)
-				this.selected_nodes[i].onKeyUp(e);
-
-	this.graph.change();
-}
 
 LGraphCanvas.prototype.processMouseWheel = function(e) 
 {
-	if(!this.graph) return;
-	if(!this.allow_dragcanvas) return;
+	if(!this.graph || !this.allow_dragcanvas)
+		return;
 
 	var delta = (e.wheelDeltaY != null ? e.wheelDeltaY : e.detail * -60);
 
@@ -2971,6 +2943,109 @@ LGraphCanvas.prototype.processMouseWheel = function(e)
 
 	e.preventDefault();
 	return false; // prevent default
+}
+
+LGraphCanvas.prototype.isOverNodeInput = function(node, canvasx, canvasy, slot_pos)
+{
+	if(node.inputs)
+		for(var i = 0, l = node.inputs.length; i < l; ++i)
+		{
+			var input = node.inputs[i];
+			var link_pos = node.getConnectionPos(true,i);
+			if( isInsideRectangle(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
+			{
+				if(slot_pos) { slot_pos[0] = link_pos[0]; slot_pos[1] = link_pos[1] };
+				return i;
+			}
+		}
+	return -1;
+}
+
+LGraphCanvas.prototype.processKey = function(e) 
+{
+	if(!this.graph)
+		return;
+
+	var block_default = false;
+
+	if(e.type == "keydown")
+	{
+		//select all Control A
+		if(e.keyCode == 65 && e.ctrlKey)
+		{
+			this.selectAllNodes();
+			block_default = true;
+		}
+
+		//delete or backspace
+		if(e.keyCode == 46 || e.keyCode == 8)
+		{
+			this.deleteSelectedNodes();
+			block_default = true;
+		}
+
+		//collapse
+		//...
+
+		//TODO
+		if(this.selected_nodes) 
+			for (var i in this.selected_nodes)
+				if(this.selected_nodes[i].onKeyDown)
+					this.selected_nodes[i].onKeyDown(e);
+	}
+	else if( e.type == "keyup" )
+	{
+		if(this.selected_nodes)
+			for (var i in this.selected_nodes)
+				if(this.selected_nodes[i].onKeyUp)
+					this.selected_nodes[i].onKeyUp(e);
+	}
+
+	this.graph.change();
+
+	if(block_default)
+	{
+		e.preventDefault();
+		return false;
+	}
+}
+
+LGraphCanvas.prototype.processDrop = function(e)
+{
+	e.preventDefault();
+	this.adjustMouseEvent(e);
+
+	var pos = [e.canvasX,e.canvasY];
+	var node = this.graph.getNodeOnPos(pos[0],pos[1]);
+	if(!node)
+		return;
+
+	if(!node.onDropFile)
+		return;
+
+	var file = e.dataTransfer.files[0];
+	var filename = file.name;
+	var ext = LGraphCanvas.getFileExtension( filename );
+	//console.log(file);
+
+	//prepare reader
+	var reader = new FileReader();
+	reader.onload = function (event) {
+		//console.log(event.target);
+		var data = event.target.result;
+		node.onDropFile( data, filename, file );
+	};
+
+	//read data
+	var type = file.type.split("/")[0];
+	if(type == "text" || type == "")
+		reader.readAsText(file);
+	else if (type == "image")
+		reader.readAsDataURL(file);
+	else
+		reader.readAsArrayBuffer(file);
+
+	return false;
 }
 
 LGraphCanvas.prototype.processNodeSelected = function(n,e)
@@ -3228,7 +3303,8 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 
 	//clear
 	//canvas.width = canvas.width;
-	ctx.clearRect(0,0,canvas.width, canvas.height);
+	if(this.clear_background)
+		ctx.clearRect(0,0,canvas.width, canvas.height);
 
 	//draw bg canvas
 	if(this.bgcanvas == this.canvas)
@@ -3242,19 +3318,7 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 
 	//info widget
 	if(this.show_info)
-	{
-		ctx.font = "10px Arial";
-		ctx.fillStyle = "#888";
-		if(this.graph)
-		{
-			ctx.fillText( "T: " + this.graph.globaltime.toFixed(2)+"s",5,13*1 );
-			ctx.fillText( "I: " + this.graph.iteration,5,13*2 );
-			ctx.fillText( "F: " + this.frame,5,13*3 );
-			ctx.fillText( "FPS:" + this.fps.toFixed(2),5,13*4 );
-		}
-		else
-			ctx.fillText( "No graph selected",5,13*1 );
-	}
+		this.renderInfo(ctx);
 
 	if(this.graph)
 	{
@@ -3329,6 +3393,28 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 	this.dirty_canvas = false;
 }
 
+LGraphCanvas.prototype.renderInfo = function( ctx, x, y )
+{
+	x = x || 0;
+	y = y || 0;
+
+	ctx.save();
+	ctx.translate( x, y );
+
+	ctx.font = "10px Arial";
+	ctx.fillStyle = "#888";
+	if(this.graph)
+	{
+		ctx.fillText( "T: " + this.graph.globaltime.toFixed(2)+"s",5,13*1 );
+		ctx.fillText( "I: " + this.graph.iteration,5,13*2 );
+		ctx.fillText( "F: " + this.frame,5,13*3 );
+		ctx.fillText( "FPS:" + this.fps.toFixed(2),5,13*4 );
+	}
+	else
+		ctx.fillText( "No graph selected",5,13*1 );
+	ctx.restore();
+}
+
 LGraphCanvas.prototype.drawBackCanvas = function()
 {
 	var canvas = this.bgcanvas;
@@ -3339,7 +3425,8 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		ctx.start();
 
 	//clear
-	ctx.clearRect(0,0,canvas.width, canvas.height);
+	if(this.clear_background)
+		ctx.clearRect(0,0,canvas.width, canvas.height);
 
 	//reset in case of error
 	ctx.restore();
@@ -3540,7 +3627,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				var slot = node.inputs[i];
 
 				ctx.globalAlpha = editor_alpha;
-				if (this.connecting_node != null && this.connecting_output.type != 0 && node.inputs[i].type != 0 && this.connecting_output.type != node.inputs[i].type)
+				if (this.connecting_node != null && this.connecting_output.type && node.inputs[i].type && this.connecting_output.type.toLowerCase() != node.inputs[i].type.toLowerCase() )
 					ctx.globalAlpha = 0.4 * editor_alpha;
 
 				ctx.fillStyle = slot.link != null ? "#7F7" : "#AAA";
@@ -4788,7 +4875,7 @@ Subgraph.prototype.clone = function()
 }
 
 
-LiteGraph.registerNodeType("graph/subgraph", Subgraph);
+LiteGraph.registerNodeType("graph/subgraph", Subgraph );
 
 
 //Input for a subgraph
@@ -5734,6 +5821,138 @@ LiteGraph.registerNodeType("basic/console", Console );
 	}
 
 	LiteGraph.registerNodeType("widget/panel", WidgetPanel );
+
+})();
+(function(){
+
+function GamepadInput()
+{
+	this.addOutput("left_x_axis","number");
+	this.addOutput("left_y_axis","number");
+	this.properties = {};
+}
+
+GamepadInput.title = "Gamepad";
+GamepadInput.desc = "gets the input of the gamepad";
+
+GamepadInput.prototype.onExecute = function()
+{
+	//get gamepad
+	var gamepad = this.getGamepad();
+	if(!gamepad)
+		return;
+
+	if(this.outputs)
+	{
+		for(var i = 0; i < this.outputs.length; i++)
+		{
+			var output = this.outputs[i];
+			var v = null;
+			switch( output.name )
+			{
+				case "left_x_axis": v = gamepad.xbox.axes["lx"]; break;
+				case "left_y_axis": v = gamepad.xbox.axes["ly"]; break;
+				case "right_x_axis": v = gamepad.xbox.axes["rx"]; break;
+				case "right_y_axis": v = gamepad.xbox.axes["ry"]; break;
+				case "a_button": v = gamepad.xbox.buttons["a"] ? 1 : 0; break;
+				case "b_button": v = gamepad.xbox.buttons["b"] ? 1 : 0; break;
+				case "x_button": v = gamepad.xbox.buttons["x"] ? 1 : 0; break;
+				case "y_button": v = gamepad.xbox.buttons["y"] ? 1 : 0; break;
+				case "lb_button": v = gamepad.xbox.buttons["lb"] ? 1 : 0; break;
+				case "rb_button": v = gamepad.xbox.buttons["rb"] ? 1 : 0; break;
+				case "ls_button": v = gamepad.xbox.buttons["ls"] ? 1 : 0; break;
+				case "rs_button": v = gamepad.xbox.buttons["rs"] ? 1 : 0; break;
+				case "start_button": v = gamepad.xbox.buttons["start"] ? 1 : 0; break;
+				case "back_button": v = gamepad.xbox.buttons["back"] ? 1 : 0; break;
+				default: break;
+			}
+			this.setOutputData(i,v);
+		}
+	}
+}
+
+GamepadInput.prototype.getGamepad = function()
+{
+	var getGamepads = navigator.getGamepads || navigator.webkitGetGamepads || navigator.mozGetGamepads; 
+	if(!getGamepads)
+		return null;
+	var gamepads = getGamepads.call(navigator);
+	var gamepad = null;
+
+	for(var i = 0; i < 4; i++)
+	{
+		if (gamepads[i])
+		{
+			gamepad = gamepads[i];
+
+			//xbox controller mapping
+			var xbox = this.xbox_mapping;
+			if(!xbox)
+				xbox = this.xbox_mapping = { axes:[], buttons:{}, hat: ""};
+
+			xbox.axes["lx"] = gamepad.axes[0];
+			xbox.axes["ly"] = gamepad.axes[1];
+			xbox.axes["rx"] = gamepad.axes[2];
+			xbox.axes["ry"] = gamepad.axes[3];
+			xbox.axes["triggers"] = gamepad.axes[4];
+
+			for(var i = 0; i < gamepad.buttons.length; i++)
+			{
+				//mapping of XBOX
+				switch(i) //I use a switch to ensure that a player with another gamepad could play
+				{
+					case 0: xbox.buttons["a"] = gamepad.buttons[i].pressed; break;
+					case 1: xbox.buttons["b"] = gamepad.buttons[i].pressed; break;
+					case 2: xbox.buttons["x"] = gamepad.buttons[i].pressed; break;
+					case 3: xbox.buttons["y"] = gamepad.buttons[i].pressed; break;
+					case 4: xbox.buttons["lb"] = gamepad.buttons[i].pressed; break;
+					case 5: xbox.buttons["rb"] = gamepad.buttons[i].pressed; break;
+					case 6: xbox.buttons["lt"] = gamepad.buttons[i].pressed; break;
+					case 7: xbox.buttons["rt"] = gamepad.buttons[i].pressed; break;
+					case 8: xbox.buttons["back"] = gamepad.buttons[i].pressed; break;
+					case 9: xbox.buttons["start"] = gamepad.buttons[i].pressed; break;
+					case 10: xbox.buttons["ls"] = gamepad.buttons[i].pressed; break;
+					case 11: xbox.buttons["rs"] = gamepad.buttons[i].pressed; break;
+					case 12: if( gamepad.buttons[i].pressed) xbox.hat += "up"; break;
+					case 13: if( gamepad.buttons[i].pressed) xbox.hat += "down"; break;
+					case 14: if( gamepad.buttons[i].pressed) xbox.hat += "left"; break;
+					case 15: if( gamepad.buttons[i].pressed) xbox.hat += "right"; break;
+					case 16: xbox.buttons["home"] = gamepad.buttons[i].pressed; break;
+					default:
+				}
+			}
+			gamepad.xbox = xbox;
+			return gamepad;
+		}	
+	}
+}
+
+GamepadInput.prototype.onDrawBackground = function(ctx)
+{
+	//render
+}
+
+GamepadInput.prototype.onGetOutputs = function() {
+	return [
+		["left_x_axis","number"],
+		["left_y_axis","number"],
+		["right_x_axis","number"],
+		["right_y_axis","number"],
+		["trigger","number"],
+		["a_button","number"],
+		["b_button","number"],
+		["x_button","number"],
+		["y_button","number"],
+		["lb_button","number"],
+		["rb_button","number"],
+		["ls_button","number"],
+		["rs_button","number"],
+		["start","number"],
+		["back","number"]
+	];
+}
+
+LiteGraph.registerNodeType("input/gamepad", GamepadInput );
 
 })();
 (function(){

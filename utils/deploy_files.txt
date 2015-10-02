@@ -1,6 +1,7 @@
 ../src/litegraph.js
 ../src/nodes/base.js
 ../src/nodes/interface.js
+../src/nodes/input.js
 ../src/nodes/math.js
 ../src/nodes/logic.js
 ../src/nodes/image.js

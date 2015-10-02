@@ -138,7 +138,7 @@ Subgraph.prototype.clone = function()
 }
 
 
-LiteGraph.registerNodeType("graph/subgraph", Subgraph);
+LiteGraph.registerNodeType("graph/subgraph", Subgraph );
 
 
 //Input for a subgraph
