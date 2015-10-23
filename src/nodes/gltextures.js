@@ -383,6 +383,9 @@ if(typeof(LiteGraph) != "undefined")
 	{
 		var tex = this.getInputData(0);
 
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		if(this.properties.precision === LGraphTexture.PASS_THROUGH)
 		{
 			this.setOutputData(0, tex);
@@ -523,12 +526,15 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphTextureShader.title = "Shader";
 	LGraphTextureShader.desc = "Texture shader";
 	LGraphTextureShader.widgets_info = {
-		"code": { widget:"code" },
+		"code": { type:"code" },
 		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
 	};
 
 	LGraphTextureShader.prototype.onExecute = function()
 	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		//replug 
 		if(this._shader_code != this.properties.code)
 		{
@@ -724,6 +730,9 @@ if(typeof(LiteGraph) != "undefined")
 		if(!tex && !this._temp_texture)
 			return;
 
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		//copy the texture
 		if(tex)
 		{
@@ -782,7 +791,11 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphTextureAverage.prototype.onExecute = function()
 	{
 		var tex = this.getInputData(0);
-		if(!tex) return;
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
 
 		if(!LGraphTextureAverage._shader)
 		{
@@ -842,7 +855,8 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphImageToTexture.prototype.onExecute = function()
 	{
 		var img = this.getInputData(0);
-		if(!img) return;
+		if(!img)
+			return;
 
 		var width = img.videoWidth || img.width;
 		var height = img.videoHeight || img.height;
@@ -898,6 +912,9 @@ if(typeof(LiteGraph) != "undefined")
 
 	LGraphTextureLUT.prototype.onExecute = function()
 	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		var tex = this.getInputData(0);
 
 		if(this.properties.precision === LGraphTexture.PASS_THROUGH )
@@ -1229,6 +1246,9 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphTextureMix.prototype.onExecute = function()
 	{
 		var texA = this.getInputData(0);
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
 		
 		if(this.properties.precision === LGraphTexture.PASS_THROUGH )
 		{
@@ -1278,7 +1298,7 @@ if(typeof(LiteGraph) != "undefined")
 		this.addInput("Tex.","Texture");
 
 		this.addOutput("Edges","Texture");
-		this.properties = { invert: true, precision: LGraphTexture.DEFAULT };
+		this.properties = { invert: true, factor: 1, precision: LGraphTexture.DEFAULT };
 
 		if(!LGraphTextureEdges._shader)
 			LGraphTextureEdges._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureEdges.pixel_shader );
@@ -1293,6 +1313,9 @@ if(typeof(LiteGraph) != "undefined")
 
 	LGraphTextureEdges.prototype.onExecute = function()
 	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		var tex = this.getInputData(0);
 
 		if(this.properties.precision === LGraphTexture.PASS_THROUGH )
@@ -1311,10 +1334,11 @@ if(typeof(LiteGraph) != "undefined")
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphTextureEdges._shader;
 		var invert = this.properties.invert;
+		var factor = this.properties.factor;
 
 		this._tex.drawTo( function() {
 			tex.bind(0);
-			shader.uniforms({u_texture:0, u_isize:[1/tex.width,1/tex.height], u_invert: invert ? 1 : 0}).draw(mesh);
+			shader.uniforms({u_texture:0, u_isize:[1/tex.width,1/tex.height], u_factor: factor, u_invert: invert ? 1 : 0}).draw(mesh);
 		});
 
 		this.setOutputData(0, this._tex);
@@ -1326,6 +1350,7 @@ if(typeof(LiteGraph) != "undefined")
 			uniform sampler2D u_texture;\n\
 			uniform vec2 u_isize;\n\
 			uniform int u_invert;\n\
+			uniform float u_factor;\n\
 			\n\
 			void main() {\n\
 				vec4 center = texture2D(u_texture, v_coord);\n\
@@ -1334,6 +1359,7 @@ if(typeof(LiteGraph) != "undefined")
 				vec4 left = texture2D(u_texture, v_coord + u_isize * vec2(1.0,0.0) );\n\
 				vec4 right = texture2D(u_texture, v_coord + u_isize * vec2(-1.0,0.0) );\n\
 				vec4 diff = abs(center - up) + abs(center - down) + abs(center - left) + abs(center - right);\n\
+				diff *= u_factor;\n\
 				if(u_invert == 1)\n\
 					diff.xyz = vec3(1.0) - diff.xyz;\n\
 			   gl_FragColor = vec4( diff.xyz, center.a );\n\
@@ -1360,6 +1386,9 @@ if(typeof(LiteGraph) != "undefined")
 
 	LGraphTextureDepthRange.prototype.onExecute = function()
 	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		var tex = this.getInputData(0);
 		if(!tex) return;
 
@@ -1451,7 +1480,11 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphTextureBlur.prototype.onExecute = function()
 	{
 		var tex = this.getInputData(0);
-		if(!tex) return;
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
 
 		var temp = this._temp_texture;
 
@@ -1638,7 +1671,8 @@ if(typeof(LiteGraph) != "undefined")
 		if(this._webcam_stream == null && !this._waiting_confirmation)
 			this.openStream();
 
-		if(!this._video || !this._video.videoWidth) return;
+		if(!this._video || !this._video.videoWidth)
+			return;
 
 		var width = this._video.videoWidth;
 		var height = this._video.videoHeight;
