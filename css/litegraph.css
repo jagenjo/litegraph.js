@@ -12,6 +12,15 @@
 	min-width: 100px;
 }
 
+
+.graphcontextualmenu-title {
+	color: #DDE;
+	background-color: #222;	
+	margin: 0;
+	padding: 2px;
+	cursor: default;
+}
+
 .graphmenu-entry {
 	box-sizing: border-box;
 	margin: 2px;

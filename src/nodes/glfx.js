@@ -61,7 +61,7 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphFXLens._shader;
-		var camera = Renderer._current_camera;
+		var camera = LS.Renderer._current_camera;
 
 		this._tex.drawTo( function() {
 			tex.bind(0);
@@ -323,13 +323,16 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphFXGeneric.desc = "applies an FX from a list";
 
 	LGraphFXGeneric.widgets_info = {
-		"fx": { widget:"combo", values:["halftone","pixelate","lowpalette","noise"] },
+		"fx": { widget:"combo", values:["halftone","pixelate","lowpalette","noise","gamma"] },
 		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
 	};
 	LGraphFXGeneric.shaders = {};
 
 	LGraphFXGeneric.prototype.onExecute = function()
 	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		var tex = this.getInputData(0);
 		if(this.properties.precision === LGraphTexture.PASS_THROUGH )
 		{
@@ -337,7 +340,8 @@ if(typeof(LiteGraph) != "undefined")
 			return;
 		}		
 
-		if(!tex) return;
+		if(!tex)
+			return;
 
 		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
 
@@ -371,7 +375,7 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
-		var camera = Renderer._current_camera;
+		var camera = LS.Renderer._current_camera;
 
 		var noise = null;
 		if(fx == "noise")
@@ -382,7 +386,7 @@ if(typeof(LiteGraph) != "undefined")
 			if(fx == "noise")
 				noise.bind(1);
 
-			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: [Renderer._current_camera.near,Renderer._current_camera.far] })
+			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far] })
 				.draw(mesh);
 		});
 
@@ -452,6 +456,17 @@ if(typeof(LiteGraph) != "undefined")
 				vec4 color = texture2D(u_texture, v_coord);\n\
 				vec3 noise = texture2D(u_noise, v_coord * vec2(u_size.x / 512.0, u_size.y / 512.0) + u_rand).xyz - vec3(0.5);\n\
 				gl_FragColor = vec4( color.xyz + noise * u_value1, color.a );\n\
+			}\n";
+
+	LGraphFXGeneric.pixel_shader_gamma = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float u_value1;\n\
+			\n\
+			void main() {\n\
+				vec4 color = texture2D(u_texture, v_coord);\n\
+				float gamma = 1.0 / u_value1;\n\
+				gl_FragColor = vec4( pow( color.xyz, vec3(gamma) ), color.a );\n\
 			}\n";
 
 

@@ -1,5 +1,137 @@
 (function(){
 
+//Converter
+function Converter()
+{
+	this.addInput("in","*");
+	this.size = [60,20];
+}
+
+Converter.title = "Converter";
+Converter.desc = "type A to type B";
+
+Converter.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null)
+		return;
+
+	if(this.outputs)
+		for(var i = 0; i < this.outputs.length; i++)
+		{
+			var output = this.outputs[i];
+			if(!output.links || !output.links.length)
+				continue;
+
+			var result = null;
+			switch( output.name )
+			{
+				case "number": result = v.length ? v[0] : parseFloat(v); break;
+				case "vec2": 
+				case "vec3": 
+				case "vec4": 
+					var result = null;
+					var count = 1;
+					switch(output.name)
+					{
+						case "vec2": count = 2; break;
+						case "vec3": count = 3; break;
+						case "vec4": count = 4; break;
+					}
+
+					var result = new Float32Array( count );
+					if( v.length )
+					{
+						for(var j = 0; j < v.length && j < result.length; j++)
+							result[j] = v[j];
+					}
+					else
+						result[0] = parseFloat(v);
+					break;
+			}
+			this.setOutputData(i, result);
+		}
+}
+
+Converter.prototype.onGetOutputs = function() {
+	return [["number","number"],["vec2","vec2"],["vec3","vec3"],["vec4","vec4"]];
+}
+
+LiteGraph.registerNodeType("math/converter", Converter );
+
+
+//Bypass
+function Bypass()
+{
+	this.addInput("in");
+	this.addOutput("out");
+	this.size = [60,20];
+}
+
+Bypass.title = "Bypass";
+Bypass.desc = "removes the type";
+
+Bypass.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	this.setOutputData(0, v);
+}
+
+LiteGraph.registerNodeType("math/bypass", Bypass );
+
+
+
+function MathRange()
+{
+	this.addInput("in","number",{locked:true});
+	this.addOutput("out","number",{locked:true});
+	this.properties = { "in": 0, in_min:0, in_max:1, out_min: 0, out_max: 1 };
+}
+
+MathRange.title = "Range";
+MathRange.desc = "Convert a number from one range to another";
+
+MathRange.prototype.onExecute = function()
+{
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var v = this.getInputData(i);
+			if(v === undefined)
+				continue;
+			this.properties[ input.name ] = v;
+		}
+
+	var v = this.properties["in"];
+	if(v === undefined || v === null || v.constructor !== Number)
+		v = 0;
+
+	var in_min = this.properties.in_min;
+	var in_max = this.properties.in_max;
+	var out_min = this.properties.out_min;
+	var out_max = this.properties.out_max;
+
+	this._last_v = ((v - in_min) / (in_max - in_min)) * (out_max - out_min) + out_min;
+	this.setOutputData(0, this._last_v );
+}
+
+MathRange.prototype.onDrawBackground = function(ctx)
+{
+	//show the current value
+	if(this._last_v)
+		this.outputs[0].label = this._last_v.toFixed(3);
+	else
+		this.outputs[0].label = "?";
+}
+
+MathRange.prototype.onGetInputs = function() {
+	return [["in_min","number"],["in_max","number"],["out_min","number"],["out_max","number"]];
+}
+
+LiteGraph.registerNodeType("math/range", MathRange);
+
+
 
 function MathRand()
 {
@@ -472,56 +604,179 @@ if(window.math)
 }
 
 
+function Math3DVec2ToXYZ()
+{
+	this.addInput("vec2","vec2");
+	this.addOutput("x","number");
+	this.addOutput("y","number");
+}
+
+Math3DVec2ToXYZ.title = "Vec2->XY";
+Math3DVec2ToXYZ.desc = "vector 2 to components";
+
+Math3DVec2ToXYZ.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null) return;
+
+	this.setOutputData( 0, v[0] );
+	this.setOutputData( 1, v[1] );
+}
+
+LiteGraph.registerNodeType("math3d/vec2-to-xyz", Math3DVec2ToXYZ );
+
+
+function Math3DXYToVec2()
+{
+	this.addInputs([["x","number"],["y","number"]]);
+	this.addOutput("vec2","vec2");
+	this.properties = {x:0, y:0};
+	this._data = new Float32Array(2);
+}
+
+Math3DXYToVec2.title = "XY->Vec2";
+Math3DXYToVec2.desc = "components to vector2";
+
+Math3DXYToVec2.prototype.onExecute = function()
+{
+	var x = this.getInputData(0);
+	if(x == null) x = this.properties.x;
+	var y = this.getInputData(1);
+	if(y == null) y = this.properties.y;
+
+	var data = this._data;
+	data[0] = x;
+	data[1] = y;
+
+	this.setOutputData( 0, data );
+}
+
+LiteGraph.registerNodeType("math3d/xy-to-vec2", Math3DXYToVec2 );
+
+
+
+
+function Math3DVec3ToXYZ()
+{
+	this.addInput("vec3","vec3");
+	this.addOutput("x","number");
+	this.addOutput("y","number");
+	this.addOutput("z","number");
+}
+
+Math3DVec3ToXYZ.title = "Vec3->XYZ";
+Math3DVec3ToXYZ.desc = "vector 3 to components";
+
+Math3DVec3ToXYZ.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null) return;
+
+	this.setOutputData( 0, v[0] );
+	this.setOutputData( 1, v[1] );
+	this.setOutputData( 2, v[2] );
+}
+
+LiteGraph.registerNodeType("math3d/vec3-to-xyz", Math3DVec3ToXYZ );
+
+
+function Math3DXYZToVec3()
+{
+	this.addInputs([["x","number"],["y","number"],["z","number"]]);
+	this.addOutput("vec3","vec3");
+	this.properties = {x:0, y:0, z:0};
+	this._data = new Float32Array(3);
+}
+
+Math3DXYZToVec3.title = "XYZ->Vec3";
+Math3DXYZToVec3.desc = "components to vector3";
+
+Math3DXYZToVec3.prototype.onExecute = function()
+{
+	var x = this.getInputData(0);
+	if(x == null) x = this.properties.x;
+	var y = this.getInputData(1);
+	if(y == null) y = this.properties.y;
+	var z = this.getInputData(2);
+	if(z == null) z = this.properties.z;
+
+	var data = this._data;
+	data[0] = x;
+	data[1] = y;
+	data[2] = z;
+
+	this.setOutputData( 0, data );
+}
+
+LiteGraph.registerNodeType("math3d/xyz-to-vec3", Math3DXYZToVec3 );
+
+
+
+function Math3DVec4ToXYZW()
+{
+	this.addInput("vec4","vec4");
+	this.addOutput("x","number");
+	this.addOutput("y","number");
+	this.addOutput("z","number");
+	this.addOutput("w","number");
+}
+
+Math3DVec4ToXYZW.title = "Vec4->XYZW";
+Math3DVec4ToXYZW.desc = "vector 4 to components";
+
+Math3DVec4ToXYZW.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null) return;
+
+	this.setOutputData( 0, v[0] );
+	this.setOutputData( 1, v[1] );
+	this.setOutputData( 2, v[2] );
+	this.setOutputData( 3, v[3] );
+}
+
+LiteGraph.registerNodeType("math3d/vec4-to-xyzw", Math3DVec4ToXYZW );
+
+
+function Math3DXYZWToVec4()
+{
+	this.addInputs([["x","number"],["y","number"],["z","number"],["w","number"]]);
+	this.addOutput("vec4","vec4");
+	this.properties = {x:0, y:0, z:0, w:0};
+	this._data = new Float32Array(4);
+}
+
+Math3DXYZWToVec4.title = "XYZW->Vec4";
+Math3DXYZWToVec4.desc = "components to vector4";
+
+Math3DXYZWToVec4.prototype.onExecute = function()
+{
+	var x = this.getInputData(0);
+	if(x == null) x = this.properties.x;
+	var y = this.getInputData(1);
+	if(y == null) y = this.properties.y;
+	var z = this.getInputData(2);
+	if(z == null) z = this.properties.z;
+	var w = this.getInputData(3);
+	if(w == null) w = this.properties.w;
+
+	var data = this._data;
+	data[0] = x;
+	data[1] = y;
+	data[2] = z;
+	data[3] = w;
+
+	this.setOutputData( 0, data );
+}
+
+LiteGraph.registerNodeType("math3d/xyzw-to-vec4", Math3DXYZWToVec4 );
+
+
+
+
 //if glMatrix is installed...
 if(window.glMatrix) 
 {
-	function Math3DVec3ToXYZ()
-	{
-		this.addInput("vec3","vec3");
-		this.addOutput("x","number");
-		this.addOutput("y","number");
-		this.addOutput("z","number");
-	}
-
-	Math3DVec3ToXYZ.title = "Vec3->XYZ";
-	Math3DVec3ToXYZ.desc = "vector 3 to components";
-
-	Math3DVec3ToXYZ.prototype.onExecute = function()
-	{
-		var v = this.getInputData(0);
-		if(v == null) return;
-
-		this.setOutputData( 0, v[0] );
-		this.setOutputData( 1, v[1] );
-		this.setOutputData( 2, v[2] );
-	}
-
-	LiteGraph.registerNodeType("math3d/vec3-to-xyz", Math3DVec3ToXYZ );
-
-
-	function Math3DXYZToVec3()
-	{
-		this.addInputs([["x","number"],["y","number"],["z","number"]]);
-		this.addOutput("vec3","vec3");
-		this.properties = {x:0, y:0, z:0};
-	}
-
-	Math3DXYZToVec3.title = "XYZ->Vec3";
-	Math3DXYZToVec3.desc = "components to vector3";
-
-	Math3DXYZToVec3.prototype.onExecute = function()
-	{
-		var x = this.getInputData(0);
-		if(x == null) x = this.properties.x;
-		var y = this.getInputData(1);
-		if(y == null) y = this.properties.y;
-		var z = this.getInputData(2);
-		if(z == null) z = this.properties.z;
-
-		this.setOutputData( 0, vec3.fromValues(x,y,z) );
-	}
-
-	LiteGraph.registerNodeType("math3d/xyz-to-vec3", Math3DXYZToVec3 );
 
 
 	function Math3DRotation()

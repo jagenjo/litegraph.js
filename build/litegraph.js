@@ -1159,7 +1159,9 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 		+ onSerialize
 		+ onSelected
 		+ onDeselected
-		+ onDropFile
+		+ onDropItem : DOM item dropped over the node
+		+ onDropFile : file dropped over the node
+		+ onConnectInput : if returns false the incoming connection will be canceled
 */
 
 /**
@@ -1179,7 +1181,23 @@ LGraphNode.prototype._ctor = function( title )
 	this.size = [LiteGraph.NODE_WIDTH,60];
 	this.graph = null;
 
-	this.pos = [10,10];
+	this._pos = new Float32Array(10,10);
+
+	Object.defineProperty( this, "pos", {
+		set: function(v)
+		{
+			if(!v || !v.length < 2)
+				return;
+			this._pos[0] = v[0];
+			this._pos[1] = v[1];
+		},
+		get: function()
+		{
+			return this._pos;
+		},
+		enumerable: true
+	});
+
 	this.id = -1; //not know till not added
 	this.type = null;
 
@@ -1769,8 +1787,14 @@ LGraphNode.prototype.connect = function(slot, node, target_slot)
 		return false;
 	}
 
+	if(node && node.constructor === Number)
+		node = this.graph.getNodeById( node );
+	if(!node)
+		throw("Node not found");
+
 	//avoid loopback
-	if(node == this) return false; 
+	if(node == this)
+		return false; 
 	//if( node.constructor != LGraphNode ) throw ("LGraphNode.connect: node is not of type LGraphNode");
 
 	if(target_slot.constructor === String)
@@ -1793,9 +1817,18 @@ LGraphNode.prototype.connect = function(slot, node, target_slot)
 	//if there is something already plugged there, disconnect
 	if(target_slot != -1 && node.inputs[target_slot].link != null)
 		node.disconnectInput(target_slot);
+
+	this.setDirtyCanvas(false,true);
+	this.graph.onConnectionChange();
 		
 	//special case: -1 means node-connection, used for triggers
 	var output = this.outputs[slot];
+
+	//allows nodes to block connection even if all test passes
+	if(node.onConnectInput)
+		if( node.onConnectInput( target_slot, output.type, output ) === false)
+			return false;
+
 	if(target_slot == -1)
 	{
 		if( output.links == null )
@@ -1816,8 +1849,6 @@ LGraphNode.prototype.connect = function(slot, node, target_slot)
 		output.links.push( link.id );
 		node.inputs[target_slot].link = link.id;
 
-		this.setDirtyCanvas(false,true);
-		this.graph.onConnectionChange();
 	}
 	return true;
 }
@@ -1855,6 +1886,11 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 
 	if(target_node)
 	{
+		if(target_node.constructor === Number)
+			target_node = this.graph.getNodeById( target_node );
+		if(!target_node)
+			throw("Target Node not found");
+
 		for(var i = 0, l = output.links.length; i < l; i++)
 		{
 			var link_id = output.links[i];
@@ -2352,7 +2388,8 @@ LGraphCanvas.prototype.setCanvas = function( canvas, skip_events )
 }
 
 //used in some events to capture them
-LGraphCanvas.prototype._doNothing = function doNothing() { return false; };
+LGraphCanvas.prototype._doNothing = function doNothing(e) { e.preventDefault(); return false; };
+LGraphCanvas.prototype._doReturnTrue = function doNothing(e) { e.preventDefault(); return true; };
 
 LGraphCanvas.prototype.bindEvents = function()
 {
@@ -2395,6 +2432,7 @@ LGraphCanvas.prototype.bindEvents = function()
 	canvas.addEventListener("dragover", this._doNothing, false );
 	canvas.addEventListener("dragend", this._doNothing, false );
 	canvas.addEventListener("drop", this._ondrop_callback, false );
+	canvas.addEventListener("dragenter", this._doReturnTrue, false );
 
 	this._events_binded = true;
 }
@@ -2414,6 +2452,7 @@ LGraphCanvas.prototype.unbindEvents = function()
 	this.canvas.removeEventListener( "keyup", this._key_callback );
 	this.canvas.removeEventListener( "contextmenu", this._doNothing );
 	this.canvas.removeEventListener( "drop", this._ondrop_callback );
+	this.canvas.removeEventListener( "dragenter", this._doReturnTrue );
 
 	this.canvas.removeEventListener("touchstart", this.touchHandler );
 	this.canvas.removeEventListener("touchmove", this.touchHandler );
@@ -3098,35 +3137,57 @@ LGraphCanvas.prototype.processDrop = function(e)
 	e.preventDefault();
 	this.adjustMouseEvent(e);
 
+	
 	var pos = [e.canvasX,e.canvasY];
 	var node = this.graph.getNodeOnPos(pos[0],pos[1]);
+
 	if(!node)
+	{
+		if(this.onDropItem)
+			this.onDropItem( event );
 		return;
+	}
 
-	if(!node.onDropFile)
-		return;
+	if(node.onDropFile)
+	{
+		var files = e.dataTransfer.files;
+		if(files && files.length)
+		{
+			for(var i=0; i < files.length; i++)
+			{
+				var file = e.dataTransfer.files[0];
+				var filename = file.name;
+				var ext = LGraphCanvas.getFileExtension( filename );
+				//console.log(file);
 
-	var file = e.dataTransfer.files[0];
-	var filename = file.name;
-	var ext = LGraphCanvas.getFileExtension( filename );
-	//console.log(file);
+				//prepare reader
+				var reader = new FileReader();
+				reader.onload = function (event) {
+					//console.log(event.target);
+					var data = event.target.result;
+					node.onDropFile( data, filename, file );
+				};
 
-	//prepare reader
-	var reader = new FileReader();
-	reader.onload = function (event) {
-		//console.log(event.target);
-		var data = event.target.result;
-		node.onDropFile( data, filename, file );
-	};
+				//read data
+				var type = file.type.split("/")[0];
+				if(type == "text" || type == "")
+					reader.readAsText(file);
+				else if (type == "image")
+					reader.readAsDataURL(file);
+				else
+					reader.readAsArrayBuffer(file);
+			}
+		}
+	}
 
-	//read data
-	var type = file.type.split("/")[0];
-	if(type == "text" || type == "")
-		reader.readAsText(file);
-	else if (type == "image")
-		reader.readAsDataURL(file);
-	else
-		reader.readAsArrayBuffer(file);
+	if(node.onDropItem)
+	{
+		if( node.onDropItem( event ) )
+			return true;
+	}
+
+	if(this.onDropItem)
+		return this.onDropItem( event );
 
 	return false;
 }
@@ -4476,6 +4537,7 @@ LGraphCanvas.prototype.processContextualMenu = function(node, event)
 	var win = this.getCanvasWindow();
 
 	var menu_info = null;
+	var options = {event: event, callback: inner_option_clicked};
 
 	//check if mouse is in input
 	var slot = null;
@@ -4483,15 +4545,19 @@ LGraphCanvas.prototype.processContextualMenu = function(node, event)
 		slot = node.getSlotInPosition( event.canvasX, event.canvasY );
 
 	if(slot)
+	{
 		menu_info = slot.locked ? [ "Cannot remove" ] : { "Remove Slot": slot };
+		options.title = slot.input ? slot.input.type : slot.output.type;
+	}
 	else
 		menu_info = node ? this.getNodeMenuOptions(node) : this.getCanvasMenuOptions();
+
 
 	//show menu
 	if(!menu_info)
 		return;
 
-	var menu = LiteGraph.createContextualMenu( menu_info, {event: event, callback: inner_option_clicked}, win);
+	var menu = LiteGraph.createContextualMenu( menu_info, options, win);
 
 	function inner_option_clicked(v,e)
 	{
@@ -4663,6 +4729,15 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 	style.padding = "2px";
 	style.borderBottom = "2px solid #AAF";
 	style.backgroundColor = "#444";
+
+	//title
+	if(options.title)
+	{
+		var element = document.createElement("div");
+		element.className = "graphcontextualmenu-title";
+		element.innerHTML = options.title;
+		root.appendChild(element);
+	}
 
 	//avoid a context menu in a context menu
 	root.addEventListener("contextmenu", function(e) { e.preventDefault(); return false; });
@@ -5948,8 +6023,6 @@ GamepadInput.prototype.onExecute = function()
 {
 	//get gamepad
 	var gamepad = this.getGamepad();
-	if(!gamepad)
-		return;
 
 	if(this.outputs)
 	{
@@ -5957,23 +6030,44 @@ GamepadInput.prototype.onExecute = function()
 		{
 			var output = this.outputs[i];
 			var v = null;
-			switch( output.name )
+
+			if(gamepad)
 			{
-				case "left_x_axis": v = gamepad.xbox.axes["lx"]; break;
-				case "left_y_axis": v = gamepad.xbox.axes["ly"]; break;
-				case "right_x_axis": v = gamepad.xbox.axes["rx"]; break;
-				case "right_y_axis": v = gamepad.xbox.axes["ry"]; break;
-				case "a_button": v = gamepad.xbox.buttons["a"] ? 1 : 0; break;
-				case "b_button": v = gamepad.xbox.buttons["b"] ? 1 : 0; break;
-				case "x_button": v = gamepad.xbox.buttons["x"] ? 1 : 0; break;
-				case "y_button": v = gamepad.xbox.buttons["y"] ? 1 : 0; break;
-				case "lb_button": v = gamepad.xbox.buttons["lb"] ? 1 : 0; break;
-				case "rb_button": v = gamepad.xbox.buttons["rb"] ? 1 : 0; break;
-				case "ls_button": v = gamepad.xbox.buttons["ls"] ? 1 : 0; break;
-				case "rs_button": v = gamepad.xbox.buttons["rs"] ? 1 : 0; break;
-				case "start_button": v = gamepad.xbox.buttons["start"] ? 1 : 0; break;
-				case "back_button": v = gamepad.xbox.buttons["back"] ? 1 : 0; break;
-				default: break;
+				switch( output.name )
+				{
+					case "left_axis": v = [ gamepad.xbox.axes["lx"], gamepad.xbox.axes["ly"]]; break;
+					case "right_axis": v = [ gamepad.xbox.axes["rx"], gamepad.xbox.axes["ry"]]; break;
+					case "left_x_axis": v = gamepad.xbox.axes["lx"]; break;
+					case "left_y_axis": v = gamepad.xbox.axes["ly"]; break;
+					case "right_x_axis": v = gamepad.xbox.axes["rx"]; break;
+					case "right_y_axis": v = gamepad.xbox.axes["ry"]; break;
+					case "trigger_left": v = gamepad.xbox.axes["ltrigger"]; break;
+					case "trigger_right": v = gamepad.xbox.axes["rtrigger"]; break;
+					case "a_button": v = gamepad.xbox.buttons["a"] ? 1 : 0; break;
+					case "b_button": v = gamepad.xbox.buttons["b"] ? 1 : 0; break;
+					case "x_button": v = gamepad.xbox.buttons["x"] ? 1 : 0; break;
+					case "y_button": v = gamepad.xbox.buttons["y"] ? 1 : 0; break;
+					case "lb_button": v = gamepad.xbox.buttons["lb"] ? 1 : 0; break;
+					case "rb_button": v = gamepad.xbox.buttons["rb"] ? 1 : 0; break;
+					case "ls_button": v = gamepad.xbox.buttons["ls"] ? 1 : 0; break;
+					case "rs_button": v = gamepad.xbox.buttons["rs"] ? 1 : 0; break;
+					case "start_button": v = gamepad.xbox.buttons["start"] ? 1 : 0; break;
+					case "back_button": v = gamepad.xbox.buttons["back"] ? 1 : 0; break;
+					default: break;
+				}
+			}
+			else
+			{
+				//if no gamepad is connected, output 0
+				switch( output.name )
+				{
+					case "left_axis":
+					case "right_axis":
+						v = [0,0];
+						break;
+					default:
+						v = 0;
+				}
 			}
 			this.setOutputData(i,v);
 		}
@@ -6003,7 +6097,8 @@ GamepadInput.prototype.getGamepad = function()
 			xbox.axes["ly"] = gamepad.axes[1];
 			xbox.axes["rx"] = gamepad.axes[2];
 			xbox.axes["ry"] = gamepad.axes[3];
-			xbox.axes["triggers"] = gamepad.axes[4];
+			xbox.axes["ltrigger"] = gamepad.buttons[6].value;
+			xbox.axes["rtrigger"] = gamepad.buttons[7].value;
 
 			for(var i = 0; i < gamepad.buttons.length; i++)
 			{
@@ -6043,11 +6138,14 @@ GamepadInput.prototype.onDrawBackground = function(ctx)
 
 GamepadInput.prototype.onGetOutputs = function() {
 	return [
+		["left_axis","vec2"],
+		["right_axis","vec2"],
 		["left_x_axis","number"],
 		["left_y_axis","number"],
 		["right_x_axis","number"],
 		["right_y_axis","number"],
-		["trigger","number"],
+		["trigger_left","number"],
+		["trigger_right","number"],
 		["a_button","number"],
 		["b_button","number"],
 		["x_button","number"],
@@ -6065,6 +6163,138 @@ LiteGraph.registerNodeType("input/gamepad", GamepadInput );
 
 })();
 (function(){
+
+//Converter
+function Converter()
+{
+	this.addInput("in","*");
+	this.size = [60,20];
+}
+
+Converter.title = "Converter";
+Converter.desc = "type A to type B";
+
+Converter.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null)
+		return;
+
+	if(this.outputs)
+		for(var i = 0; i < this.outputs.length; i++)
+		{
+			var output = this.outputs[i];
+			if(!output.links || !output.links.length)
+				continue;
+
+			var result = null;
+			switch( output.name )
+			{
+				case "number": result = v.length ? v[0] : parseFloat(v); break;
+				case "vec2": 
+				case "vec3": 
+				case "vec4": 
+					var result = null;
+					var count = 1;
+					switch(output.name)
+					{
+						case "vec2": count = 2; break;
+						case "vec3": count = 3; break;
+						case "vec4": count = 4; break;
+					}
+
+					var result = new Float32Array( count );
+					if( v.length )
+					{
+						for(var j = 0; j < v.length && j < result.length; j++)
+							result[j] = v[j];
+					}
+					else
+						result[0] = parseFloat(v);
+					break;
+			}
+			this.setOutputData(i, result);
+		}
+}
+
+Converter.prototype.onGetOutputs = function() {
+	return [["number","number"],["vec2","vec2"],["vec3","vec3"],["vec4","vec4"]];
+}
+
+LiteGraph.registerNodeType("math/converter", Converter );
+
+
+//Bypass
+function Bypass()
+{
+	this.addInput("in");
+	this.addOutput("out");
+	this.size = [60,20];
+}
+
+Bypass.title = "Bypass";
+Bypass.desc = "removes the type";
+
+Bypass.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	this.setOutputData(0, v);
+}
+
+LiteGraph.registerNodeType("math/bypass", Bypass );
+
+
+
+function MathRange()
+{
+	this.addInput("in","number",{locked:true});
+	this.addOutput("out","number",{locked:true});
+	this.properties = { "in": 0, in_min:0, in_max:1, out_min: 0, out_max: 1 };
+}
+
+MathRange.title = "Range";
+MathRange.desc = "Convert a number from one range to another";
+
+MathRange.prototype.onExecute = function()
+{
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var v = this.getInputData(i);
+			if(v === undefined)
+				continue;
+			this.properties[ input.name ] = v;
+		}
+
+	var v = this.properties["in"];
+	if(v === undefined || v === null || v.constructor !== Number)
+		v = 0;
+
+	var in_min = this.properties.in_min;
+	var in_max = this.properties.in_max;
+	var out_min = this.properties.out_min;
+	var out_max = this.properties.out_max;
+
+	this._last_v = ((v - in_min) / (in_max - in_min)) * (out_max - out_min) + out_min;
+	this.setOutputData(0, this._last_v );
+}
+
+MathRange.prototype.onDrawBackground = function(ctx)
+{
+	//show the current value
+	if(this._last_v)
+		this.outputs[0].label = this._last_v.toFixed(3);
+	else
+		this.outputs[0].label = "?";
+}
+
+MathRange.prototype.onGetInputs = function() {
+	return [["in_min","number"],["in_max","number"],["out_min","number"],["out_max","number"]];
+}
+
+LiteGraph.registerNodeType("math/range", MathRange);
+
 
 
 function MathRand()
@@ -6538,56 +6768,179 @@ if(window.math)
 }
 
 
+function Math3DVec2ToXYZ()
+{
+	this.addInput("vec2","vec2");
+	this.addOutput("x","number");
+	this.addOutput("y","number");
+}
+
+Math3DVec2ToXYZ.title = "Vec2->XY";
+Math3DVec2ToXYZ.desc = "vector 2 to components";
+
+Math3DVec2ToXYZ.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null) return;
+
+	this.setOutputData( 0, v[0] );
+	this.setOutputData( 1, v[1] );
+}
+
+LiteGraph.registerNodeType("math3d/vec2-to-xyz", Math3DVec2ToXYZ );
+
+
+function Math3DXYToVec2()
+{
+	this.addInputs([["x","number"],["y","number"]]);
+	this.addOutput("vec2","vec2");
+	this.properties = {x:0, y:0};
+	this._data = new Float32Array(2);
+}
+
+Math3DXYToVec2.title = "XY->Vec2";
+Math3DXYToVec2.desc = "components to vector2";
+
+Math3DXYToVec2.prototype.onExecute = function()
+{
+	var x = this.getInputData(0);
+	if(x == null) x = this.properties.x;
+	var y = this.getInputData(1);
+	if(y == null) y = this.properties.y;
+
+	var data = this._data;
+	data[0] = x;
+	data[1] = y;
+
+	this.setOutputData( 0, data );
+}
+
+LiteGraph.registerNodeType("math3d/xy-to-vec2", Math3DXYToVec2 );
+
+
+
+
+function Math3DVec3ToXYZ()
+{
+	this.addInput("vec3","vec3");
+	this.addOutput("x","number");
+	this.addOutput("y","number");
+	this.addOutput("z","number");
+}
+
+Math3DVec3ToXYZ.title = "Vec3->XYZ";
+Math3DVec3ToXYZ.desc = "vector 3 to components";
+
+Math3DVec3ToXYZ.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null) return;
+
+	this.setOutputData( 0, v[0] );
+	this.setOutputData( 1, v[1] );
+	this.setOutputData( 2, v[2] );
+}
+
+LiteGraph.registerNodeType("math3d/vec3-to-xyz", Math3DVec3ToXYZ );
+
+
+function Math3DXYZToVec3()
+{
+	this.addInputs([["x","number"],["y","number"],["z","number"]]);
+	this.addOutput("vec3","vec3");
+	this.properties = {x:0, y:0, z:0};
+	this._data = new Float32Array(3);
+}
+
+Math3DXYZToVec3.title = "XYZ->Vec3";
+Math3DXYZToVec3.desc = "components to vector3";
+
+Math3DXYZToVec3.prototype.onExecute = function()
+{
+	var x = this.getInputData(0);
+	if(x == null) x = this.properties.x;
+	var y = this.getInputData(1);
+	if(y == null) y = this.properties.y;
+	var z = this.getInputData(2);
+	if(z == null) z = this.properties.z;
+
+	var data = this._data;
+	data[0] = x;
+	data[1] = y;
+	data[2] = z;
+
+	this.setOutputData( 0, data );
+}
+
+LiteGraph.registerNodeType("math3d/xyz-to-vec3", Math3DXYZToVec3 );
+
+
+
+function Math3DVec4ToXYZW()
+{
+	this.addInput("vec4","vec4");
+	this.addOutput("x","number");
+	this.addOutput("y","number");
+	this.addOutput("z","number");
+	this.addOutput("w","number");
+}
+
+Math3DVec4ToXYZW.title = "Vec4->XYZW";
+Math3DVec4ToXYZW.desc = "vector 4 to components";
+
+Math3DVec4ToXYZW.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null) return;
+
+	this.setOutputData( 0, v[0] );
+	this.setOutputData( 1, v[1] );
+	this.setOutputData( 2, v[2] );
+	this.setOutputData( 3, v[3] );
+}
+
+LiteGraph.registerNodeType("math3d/vec4-to-xyzw", Math3DVec4ToXYZW );
+
+
+function Math3DXYZWToVec4()
+{
+	this.addInputs([["x","number"],["y","number"],["z","number"],["w","number"]]);
+	this.addOutput("vec4","vec4");
+	this.properties = {x:0, y:0, z:0, w:0};
+	this._data = new Float32Array(4);
+}
+
+Math3DXYZWToVec4.title = "XYZW->Vec4";
+Math3DXYZWToVec4.desc = "components to vector4";
+
+Math3DXYZWToVec4.prototype.onExecute = function()
+{
+	var x = this.getInputData(0);
+	if(x == null) x = this.properties.x;
+	var y = this.getInputData(1);
+	if(y == null) y = this.properties.y;
+	var z = this.getInputData(2);
+	if(z == null) z = this.properties.z;
+	var w = this.getInputData(3);
+	if(w == null) w = this.properties.w;
+
+	var data = this._data;
+	data[0] = x;
+	data[1] = y;
+	data[2] = z;
+	data[3] = w;
+
+	this.setOutputData( 0, data );
+}
+
+LiteGraph.registerNodeType("math3d/xyzw-to-vec4", Math3DXYZWToVec4 );
+
+
+
+
 //if glMatrix is installed...
 if(window.glMatrix) 
 {
-	function Math3DVec3ToXYZ()
-	{
-		this.addInput("vec3","vec3");
-		this.addOutput("x","number");
-		this.addOutput("y","number");
-		this.addOutput("z","number");
-	}
-
-	Math3DVec3ToXYZ.title = "Vec3->XYZ";
-	Math3DVec3ToXYZ.desc = "vector 3 to components";
-
-	Math3DVec3ToXYZ.prototype.onExecute = function()
-	{
-		var v = this.getInputData(0);
-		if(v == null) return;
-
-		this.setOutputData( 0, v[0] );
-		this.setOutputData( 1, v[1] );
-		this.setOutputData( 2, v[2] );
-	}
-
-	LiteGraph.registerNodeType("math3d/vec3-to-xyz", Math3DVec3ToXYZ );
-
-
-	function Math3DXYZToVec3()
-	{
-		this.addInputs([["x","number"],["y","number"],["z","number"]]);
-		this.addOutput("vec3","vec3");
-		this.properties = {x:0, y:0, z:0};
-	}
-
-	Math3DXYZToVec3.title = "XYZ->Vec3";
-	Math3DXYZToVec3.desc = "components to vector3";
-
-	Math3DXYZToVec3.prototype.onExecute = function()
-	{
-		var x = this.getInputData(0);
-		if(x == null) x = this.properties.x;
-		var y = this.getInputData(1);
-		if(y == null) y = this.properties.y;
-		var z = this.getInputData(2);
-		if(z == null) z = this.properties.z;
-
-		this.setOutputData( 0, vec3.fromValues(x,y,z) );
-	}
-
-	LiteGraph.registerNodeType("math3d/xyz-to-vec3", Math3DXYZToVec3 );
 
 
 	function Math3DRotation()
@@ -7557,21 +7910,36 @@ if(typeof(LiteGraph) != "undefined")
 
 	LGraphTexture.prototype.onExecute = function()
 	{
-		if(this._drop_texture)
-		{
-			this.setOutputData(0, this._drop_texture);
-			return;
-		}
+		var tex = null;
+		if(this.isOutputConnected(1))
+			tex = this.getInputData(0);		
 
-		if(!this.properties.name)
-			return;
+		if(!tex && this._drop_texture)
+			tex = this._drop_texture;
 
-		var tex = LGraphTexture.getTexture( this.properties.name );
+		if(!tex && this.properties.name)
+			tex = LGraphTexture.getTexture( this.properties.name );
+
 		if(!tex) 
 			return;
 
 		this._last_tex = tex;
 		this.setOutputData(0, tex);
+
+		for(var i = 1; i < this.outputs.length; i++)
+		{
+			var output = this.outputs[i];
+			if(!output)
+				continue;
+			var v = null;
+			if(output.name == "width")
+				v = tex.width;
+			else if(output.name == "height")
+				v = tex.height;
+			else if(output.name == "aspect")
+				v = tex.width / tex.height;
+			this.setOutputData(i, v);
+		}
 	}
 
 	LGraphTexture.prototype.onResourceRenamed = function(old_name,new_name)
@@ -7629,7 +7997,8 @@ if(typeof(LiteGraph) != "undefined")
 	//very slow, used at your own risk
 	LGraphTexture.generateLowResTexturePreview = function(tex)
 	{
-		if(!tex) return null;
+		if(!tex)
+			return null;
 
 		var size = LGraphTexture.image_preview_size;
 		var temp_tex = tex;
@@ -7665,6 +8034,17 @@ if(typeof(LiteGraph) != "undefined")
 		return tex_canvas;
 	}
 
+	LGraphTexture.prototype.onGetInputs = function()
+	{
+		return [["in","Texture"]];
+	}
+
+
+	LGraphTexture.prototype.onGetOutputs = function()
+	{
+		return [["width","number"],["height","number"],["aspect","number"]];
+	}
+
 	LiteGraph.registerNodeType("texture/texture", LGraphTexture );
 
 	//**************************
@@ -7680,7 +8060,8 @@ if(typeof(LiteGraph) != "undefined")
 
 	LGraphTexturePreview.prototype.onDrawBackground = function(ctx)
 	{
-		if(this.flags.collapsed) return;
+		if(this.flags.collapsed)
+			return;
 
 		var tex = this.getInputData(0);
 		if(!tex) return;
@@ -8012,15 +8393,202 @@ if(typeof(LiteGraph) != "undefined")
 
 	LiteGraph.registerNodeType("texture/shader", LGraphTextureShader );
 
+	// Texture Scale Offset
+
+	function LGraphTextureScaleOffset()
+	{
+		this.addInput("in","Texture");
+		this.addInput("scale","vec2");
+		this.addInput("offset","vec2");
+		this.addOutput("out","Texture");
+		this.properties = { offset: vec2.fromValues(0,0), scale: vec2.fromValues(1,1), precision: LGraphTexture.DEFAULT };
+	}
+
+	LGraphTextureScaleOffset.widgets_info = {
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureScaleOffset.title = "Scale/Offset";
+	LGraphTextureScaleOffset.desc = "Applies an scaling and offseting";
+
+	LGraphTextureScaleOffset.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+
+		if(!this.isOutputConnected(0) || !tex)
+			return; //saves work
+
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH)
+		{
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		var width = tex.width;
+		var height = tex.height;
+		var type = this.precision === LGraphTexture.LOW ? gl.UNSIGNED_BYTE : gl.HIGH_PRECISION_FORMAT;
+		if (this.precision === LGraphTexture.DEFAULT)
+			type = tex.type;
+
+		if(!this._tex || this._tex.width != width || this._tex.height != height || this._tex.type != type )
+			this._tex = new GL.Texture( width, height, { type: type, format: gl.RGBA, filter: gl.LINEAR });
+
+		var shader = this._shader;
+
+		if(!shader)
+			shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureScaleOffset.pixel_shader );
+
+		var scale = this.getInputData(1);
+		if(scale)
+		{
+			this.properties.scale[0] = scale[0];
+			this.properties.scale[1] = scale[1];
+		}
+		else
+			scale = this.properties.scale;
+
+		var offset = this.getInputData(2);
+		if(offset)
+		{
+			this.properties.offset[0] = offset[0];
+			this.properties.offset[1] = offset[1];
+		}
+		else
+			offset = this.properties.offset;
+
+		this._tex.drawTo(function() {
+			gl.disable( gl.DEPTH_TEST );
+			gl.disable( gl.CULL_FACE );
+			gl.disable( gl.BLEND );
+			tex.bind(0);
+			var mesh = Mesh.getScreenQuad();
+			shader.uniforms({u_texture:0, u_scale: scale, u_offset: offset}).draw( mesh );
+		});
+
+		this.setOutputData( 0, this._tex );
+	}
+
+	LGraphTextureScaleOffset.pixel_shader = "precision highp float;\n\
+			\n\
+			uniform sampler2D u_texture;\n\
+			uniform sampler2D u_textureB;\n\
+			varying vec2 v_coord;\n\
+			uniform vec2 u_scale;\n\
+			uniform vec2 u_offset;\n\
+			\n\
+			void main() {\n\
+				vec2 uv = v_coord;\n\
+				uv = uv / u_scale - u_offset;\n\
+				gl_FragColor = texture2D(u_texture, uv);\n\
+			}\n\
+			";
+
+	LiteGraph.registerNodeType("texture/scaleOffset", LGraphTextureScaleOffset );
+
+
+
+	// Warp (distort a texture) *************************
+
+	function LGraphTextureWarp()
+	{
+		this.addInput("in","Texture");
+		this.addInput("warp","Texture");
+		this.addInput("factor","number");
+		this.addOutput("out","Texture");
+		this.properties = { factor: 0.01, precision: LGraphTexture.DEFAULT };
+	}
+
+	LGraphTextureWarp.widgets_info = {
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureWarp.title = "Warp";
+	LGraphTextureWarp.desc = "Texture warp operation";
+
+	LGraphTextureWarp.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH)
+		{
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		var texB = this.getInputData(1);
+
+		var width = 512;
+		var height = 512;
+		var type = gl.UNSIGNED_BYTE;
+		if(tex)
+		{
+			width = tex.width;
+			height = tex.height;
+			type = tex.type;
+		}
+		else if (texB)
+		{
+			width = texB.width;
+			height = texB.height;
+			type = texB.type;
+		}
+
+		if(!tex && !this._tex )
+			this._tex = new GL.Texture( width, height, { type: this.precision === LGraphTexture.LOW ? gl.UNSIGNED_BYTE : gl.HIGH_PRECISION_FORMAT, format: gl.RGBA, filter: gl.LINEAR });
+		else
+			this._tex = LGraphTexture.getTargetTexture( tex || this._tex, this._tex, this.properties.precision );
+
+		var shader = this._shader;
+
+		if(!shader)
+			shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureWarp.pixel_shader );
+
+		var factor = this.getInputData(2);
+		if(factor != null)
+			this.properties.factor = factor;
+		else
+			factor = parseFloat( this.properties.factor );
+
+		this._tex.drawTo(function() {
+			gl.disable( gl.DEPTH_TEST );
+			gl.disable( gl.CULL_FACE );
+			gl.disable( gl.BLEND );
+			if(tex)	tex.bind(0);
+			if(texB) texB.bind(1);
+			var mesh = Mesh.getScreenQuad();
+			shader.uniforms({u_texture:0, u_textureB:1, u_factor: factor }).draw( mesh );
+		});
+
+		this.setOutputData(0, this._tex);
+	}
+
+	LGraphTextureWarp.pixel_shader = "precision highp float;\n\
+			\n\
+			uniform sampler2D u_texture;\n\
+			uniform sampler2D u_textureB;\n\
+			varying vec2 v_coord;\n\
+			uniform float u_factor;\n\
+			\n\
+			void main() {\n\
+				vec2 uv = v_coord;\n\
+				uv += texture2D(u_textureB, uv).rg * u_factor;\n\
+				gl_FragColor = texture2D(u_texture, uv);\n\
+			}\n\
+			";
+
+	LiteGraph.registerNodeType("texture/warp", LGraphTextureWarp );
+
+	//****************************************************
+
 	// Texture to Viewport *****************************************
 	function LGraphTextureToViewport()
 	{
 		this.addInput("Texture","Texture");
-		this.properties = { additive: false, antialiasing: false, disable_alpha: false };
+		this.properties = { additive: false, antialiasing: false, disable_alpha: false, gamma: 1.0 };
 		this.size[0] = 130;
-
-		if(!LGraphTextureToViewport._shader)
-			LGraphTextureToViewport._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureToViewport.pixel_shader );
 	}
 
 	LGraphTextureToViewport.title = "to Viewport";
@@ -8044,23 +8612,46 @@ if(typeof(LiteGraph) != "undefined")
 		}
 
 		gl.disable( gl.DEPTH_TEST );
+		var gamma = this.properties.gamma || 1.0;
+		if( this.isInputConnected(1) )
+			gamma = this.getInputData(1);
+
+
 		if(this.properties.antialiasing)
 		{
+			if(!LGraphTextureToViewport._shader)
+				LGraphTextureToViewport._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureToViewport.aa_pixel_shader );
+
 			var viewport = gl.getViewport(); //gl.getParameter(gl.VIEWPORT);
 			var mesh = Mesh.getScreenQuad();
 			tex.bind(0);
-			LGraphTextureToViewport._shader.uniforms({u_texture:0, uViewportSize:[tex.width,tex.height], inverseVP: [1/tex.width,1/tex.height] }).draw(mesh);
+			LGraphTextureToViewport._shader.uniforms({u_texture:0, uViewportSize:[tex.width,tex.height], u_igamma: 1 / gamma,  inverseVP: [1/tex.width,1/tex.height] }).draw(mesh);
 		}
 		else
-			tex.toViewport();
+		{
+			if(gamma != 1.0)
+			{
+				if(!LGraphTextureToViewport._gamma_shader)
+					LGraphTextureToViewport._gamma_shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureToViewport.gamma_pixel_shader );
+				tex.toViewport(LGraphTextureToViewport._gamma_shader, { u_texture:0, u_igamma: 1 / gamma });
+			}
+			else
+				tex.toViewport();
+		}
 	}
 
-	LGraphTextureToViewport.pixel_shader = "precision highp float;\n\
+	LGraphTextureToViewport.prototype.onGetInputs = function()
+	{
+		return [["gamma","number"]];
+	}
+
+	LGraphTextureToViewport.aa_pixel_shader = "precision highp float;\n\
 			precision highp float;\n\
 			varying vec2 v_coord;\n\
 			uniform sampler2D u_texture;\n\
 			uniform vec2 uViewportSize;\n\
 			uniform vec2 inverseVP;\n\
+			uniform float u_igamma;\n\
 			#define FXAA_REDUCE_MIN   (1.0/ 128.0)\n\
 			#define FXAA_REDUCE_MUL   (1.0 / 8.0)\n\
 			#define FXAA_SPAN_MAX     8.0\n\
@@ -8098,17 +8689,31 @@ if(typeof(LiteGraph) != "undefined")
 				vec3 rgbB = rgbA * 0.5 + 0.25 * (texture2D(tex, fragCoord * inverseVP + dir * -0.5).xyz + \n\
 					texture2D(tex, fragCoord * inverseVP + dir * 0.5).xyz);\n\
 				\n\
-				return vec4(rgbA,1.0);\n\
+				//return vec4(rgbA,1.0);\n\
 				float lumaB = dot(rgbB, luma);\n\
 				if ((lumaB < lumaMin) || (lumaB > lumaMax))\n\
 					color = vec4(rgbA, 1.0);\n\
 				else\n\
 					color = vec4(rgbB, 1.0);\n\
+				if(u_igamma != 1.0)\n\
+					color.xyz = pow( color.xyz, vec3(u_igamma) );\n\
 				return color;\n\
 			}\n\
 			\n\
 			void main() {\n\
 			   gl_FragColor = applyFXAA( u_texture, v_coord * uViewportSize) ;\n\
+			}\n\
+			";
+
+	LGraphTextureToViewport.gamma_pixel_shader = "precision highp float;\n\
+			precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float u_igamma;\n\
+			void main() {\n\
+				vec4 color = texture2D( u_texture, v_coord);\n\
+				color.xyz = pow(color.xyz, vec3(u_igamma) );\n\
+			   gl_FragColor = color;\n\
 			}\n\
 			";
 
@@ -8828,8 +9433,8 @@ if(typeof(LiteGraph) != "undefined")
 		var shader = LGraphTextureDepthRange._shader;
 
 		//TODO: this asumes we have LiteScene, change it
-		var camera = Renderer._current_camera;
-		var planes = [Renderer._current_camera.near,Renderer._current_camera.far];
+		var camera = LS.Renderer._current_camera;
+		var planes = [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far];
 
 		this._temp_texture.drawTo( function() {
 			tex.bind(0);
@@ -9028,7 +9633,7 @@ if(typeof(LiteGraph) != "undefined")
 		{
 			video = document.createElement("video");
 			video.autoplay = true;
-		    video.src = window.URL.createObjectURL(localMediaStream);
+		    video.src = window.URL.createObjectURL( localMediaStream );
 			this._video = video;
 			//document.body.appendChild( video ); //debug
 			//when video info is loaded (size and so)
@@ -9227,7 +9832,7 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphFXLens._shader;
-		var camera = Renderer._current_camera;
+		var camera = LS.Renderer._current_camera;
 
 		this._tex.drawTo( function() {
 			tex.bind(0);
@@ -9489,13 +10094,16 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphFXGeneric.desc = "applies an FX from a list";
 
 	LGraphFXGeneric.widgets_info = {
-		"fx": { widget:"combo", values:["halftone","pixelate","lowpalette","noise"] },
+		"fx": { widget:"combo", values:["halftone","pixelate","lowpalette","noise","gamma"] },
 		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
 	};
 	LGraphFXGeneric.shaders = {};
 
 	LGraphFXGeneric.prototype.onExecute = function()
 	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
 		var tex = this.getInputData(0);
 		if(this.properties.precision === LGraphTexture.PASS_THROUGH )
 		{
@@ -9503,7 +10111,8 @@ if(typeof(LiteGraph) != "undefined")
 			return;
 		}		
 
-		if(!tex) return;
+		if(!tex)
+			return;
 
 		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
 
@@ -9537,7 +10146,7 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
-		var camera = Renderer._current_camera;
+		var camera = LS.Renderer._current_camera;
 
 		var noise = null;
 		if(fx == "noise")
@@ -9548,7 +10157,7 @@ if(typeof(LiteGraph) != "undefined")
 			if(fx == "noise")
 				noise.bind(1);
 
-			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: [Renderer._current_camera.near,Renderer._current_camera.far] })
+			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far] })
 				.draw(mesh);
 		});
 
@@ -9618,6 +10227,17 @@ if(typeof(LiteGraph) != "undefined")
 				vec4 color = texture2D(u_texture, v_coord);\n\
 				vec3 noise = texture2D(u_noise, v_coord * vec2(u_size.x / 512.0, u_size.y / 512.0) + u_rand).xyz - vec3(0.5);\n\
 				gl_FragColor = vec4( color.xyz + noise * u_value1, color.a );\n\
+			}\n";
+
+	LGraphFXGeneric.pixel_shader_gamma = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float u_value1;\n\
+			\n\
+			void main() {\n\
+				vec4 color = texture2D(u_texture, v_coord);\n\
+				float gamma = 1.0 / u_value1;\n\
+				gl_FragColor = vec4( pow( color.xyz, vec3(gamma) ), color.a );\n\
 			}\n";
 
 
