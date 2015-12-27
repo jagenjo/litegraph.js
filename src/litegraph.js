@@ -1883,6 +1883,7 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 	if(!output.links || output.links.length == 0)
 		return false;
 
+	//one of the links
 	if(target_node)
 	{
 		if(target_node.constructor === Number)
@@ -1905,7 +1906,7 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 			}
 		}
 	}
-	else
+	else //all the links
 	{
 		for(var i = 0, l = output.links.length; i < l; i++)
 		{
@@ -1915,6 +1916,7 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 			var target_node = this.graph.getNodeById( link_info.target_id );
 			if(target_node)
 				target_node.inputs[ link_info.target_slot ].link = null; //remove other side link
+			delete this.graph.links[ link_id ]; //remove the link from the links pool
 		}
 		output.links = null;
 	}
@@ -4778,11 +4780,13 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 
 	root.addEventListener("mouseout", function(e) {
 		//console.log("OUT!");
-		var aux = e.toElement;
+		//check if mouse leave a inner element
+		var aux = e.relatedTarget || e.toElement;
 		while(aux != this && aux != ref_window.document)
 			aux = aux.parentNode;
 
-		if(aux == this) return;
+		if(aux == this)
+			return;
 		this.mouse_inside = false;
 		if(!this.block_close)
 			this.closeMenu();
