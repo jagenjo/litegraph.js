@@ -4,13 +4,13 @@ if(typeof(LiteGraph) != "undefined")
 	function LGraphTexture()
 	{
 		this.addOutput("Texture","Texture");
-		this.properties = {name:""};
+		this.properties = { name:"", filter: true };
 		this.size = [LGraphTexture.image_preview_size, LGraphTexture.image_preview_size];
 	}
 
 	LGraphTexture.title = "Texture";
 	LGraphTexture.desc = "Texture";
-	LGraphTexture.widgets_info = {"name": { widget:"texture"} };
+	LGraphTexture.widgets_info = {"name": { widget:"texture"}, "filter": { widget:"checkbox"} };
 
 	//REPLACE THIS TO INTEGRATE WITH YOUR FRAMEWORK
 	LGraphTexture.loadTextureCallback = null; //function in charge of loading textures when not present in the container
@@ -164,6 +164,12 @@ if(typeof(LiteGraph) != "undefined")
 			return;
 
 		this._last_tex = tex;
+
+		if(this.properties.filter === false)
+			tex.setParameter( gl.TEXTURE_MAG_FILTER, gl.NEAREST );
+		else 
+			tex.setParameter( gl.TEXTURE_MAG_FILTER, gl.LINEAR );
+
 		this.setOutputData(0, tex);
 
 		for(var i = 1; i < this.outputs.length; i++)
