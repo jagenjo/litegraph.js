@@ -2681,6 +2681,8 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 	var n = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
 	var skip_dragging = false;
+    
+    LiteGraph.closeAllContextualMenus();
 
 	if(e.which == 1) //left button mouse
 	{
