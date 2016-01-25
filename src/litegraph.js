@@ -2681,19 +2681,25 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 	var n = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
 	var skip_dragging = false;
+    
+    LiteGraph.closeAllContextualMenus();
 
 	if(e.which == 1) //left button mouse
 	{
-		//another node selected
+
 		if(!e.shiftKey) //REFACTOR: integrate with function
 		{
-			var todeselect = [];
-			for(var i in this.selected_nodes)
-				if (this.selected_nodes[i] != n)
-						todeselect.push(this.selected_nodes[i]);
-			//two passes to avoid problems modifying the container
-			for(var i in todeselect)
-				this.processNodeDeselected(todeselect[i]);
+            //no node or another node selected
+            if (!n || !this.selected_nodes[n.id]) {
+
+                var todeselect = [];
+                for (var i in this.selected_nodes)
+                    if (this.selected_nodes[i] != n)
+                        todeselect.push(this.selected_nodes[i]);
+                //two passes to avoid problems modifying the container
+                for (var i in todeselect)
+                    this.processNodeDeselected(todeselect[i]);
+            }
 		}
 		var clicking_canvas_bg = false;
 
@@ -4771,8 +4777,16 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 	//allows to create graph canvas in separate window
 	ref_window = ref_window || window;
 
-	if(!options.from)
-		LiteGraph.closeAllContextualMenus();
+    if (!options.from)
+        LiteGraph.closeAllContextualMenus();
+    else {
+        //closing submenus
+        var menus = document.querySelectorAll(".graphcontextualmenu");
+        for (var key in menus) {
+            if (menus[key].previousSibling == options.from)
+                menus[key].closeMenu();
+        }
+    }
 
 	var root = ref_window.document.createElement("div");
 	root.className = "graphcontextualmenu graphmenubar-panel";
