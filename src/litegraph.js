@@ -4771,8 +4771,16 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 	//allows to create graph canvas in separate window
 	ref_window = ref_window || window;
 
-	if(!options.from)
-		LiteGraph.closeAllContextualMenus();
+    if (!options.from)
+        LiteGraph.closeAllContextualMenus();
+    else {
+        //closing submenus
+        var menus = document.querySelectorAll(".graphcontextualmenu");
+        for (var key in menus) {
+            if (menus[key].previousSibling == options.from)
+                menus[key].closeMenu();
+        }
+    }
 
 	var root = ref_window.document.createElement("div");
 	root.className = "graphcontextualmenu graphmenubar-panel";
