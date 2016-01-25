@@ -2684,16 +2684,20 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 	if(e.which == 1) //left button mouse
 	{
-		//another node selected
+
 		if(!e.shiftKey) //REFACTOR: integrate with function
 		{
-			var todeselect = [];
-			for(var i in this.selected_nodes)
-				if (this.selected_nodes[i] != n)
-						todeselect.push(this.selected_nodes[i]);
-			//two passes to avoid problems modifying the container
-			for(var i in todeselect)
-				this.processNodeDeselected(todeselect[i]);
+            //no node or another node selected
+            if (!n || !this.selected_nodes[n.id]) {
+
+                var todeselect = [];
+                for (var i in this.selected_nodes)
+                    if (this.selected_nodes[i] != n)
+                        todeselect.push(this.selected_nodes[i]);
+                //two passes to avoid problems modifying the container
+                for (var i in todeselect)
+                    this.processNodeDeselected(todeselect[i]);
+            }
 		}
 		var clicking_canvas_bg = false;
 
