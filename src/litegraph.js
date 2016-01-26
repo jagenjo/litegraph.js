@@ -697,7 +697,7 @@ LGraph.prototype.remove = function(node)
 				node.disconnectOutput(i);
 		}
 
-	node.id = -1;
+	//node.id = -1; //why?
 
 	//callback
 	if(node.onRemoved)
@@ -3282,11 +3282,9 @@ LGraphCanvas.prototype.processNodeDeselected = function(n)
 	delete this.selected_nodes[n.id];
 
 	if(this.onNodeDeselected)
-		this.onNodeDeselected();
+		this.onNodeDeselected(n);
 
 	this.dirty_canvas = true;
-
-	//this.showNodePanel(null);
 }
 
 LGraphCanvas.prototype.processNodeDblClicked = function(n)
