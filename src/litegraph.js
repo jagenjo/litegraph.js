@@ -3664,7 +3664,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 			}
 
 			var pattern = null;
-			if(this._bg_img != this._pattern_img && this._bg_img.width > 0)
+			if(this._pattern == null && this._bg_img.width > 0)
 			{
 				pattern = ctx.createPattern( this._bg_img, 'repeat' );
 				this._pattern_img = this._bg_img;
