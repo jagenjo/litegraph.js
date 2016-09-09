@@ -1,6 +1,65 @@
 //widgets
 (function(){
 
+	/* Button ****************/
+
+	function WidgetButton()
+	{
+		this.addOutput( "clicked", LiteGraph.EVENT );
+		this.addProperty( "text","" );
+		this.addProperty( "font","40px Arial" );
+		this.addProperty( "message", "" );
+		this.size = [64,84];
+	}
+
+	WidgetButton.title = "Button";
+	WidgetButton.desc = "Triggers an event";
+
+	WidgetButton.prototype.onDrawForeground = function(ctx)
+	{
+		if(this.flags.collapsed)
+			return;
+
+		//ctx.font = "40px Arial";
+		//ctx.textAlign = "center";
+		ctx.fillStyle = "black";
+		ctx.fillRect(1,1,this.size[0] - 3, this.size[1] - 3);
+		ctx.fillStyle = "#AAF";
+		ctx.fillRect(0,0,this.size[0] - 3, this.size[1] - 3);
+		ctx.fillStyle = this.clicked ? "white" : (this.mouseOver ? "#668" : "#334");
+		ctx.fillRect(1,1,this.size[0] - 4, this.size[1] - 4);
+
+		if( this.properties.text || this.properties.text === 0 )
+		{
+			ctx.textAlign = "center";
+			ctx.fillStyle = this.clicked ? "black" : "white";
+			if( this.properties.font )
+				ctx.font = this.properties.font;
+			ctx.fillText(this.properties.text, this.size[0] * 0.5, this.size[1] * 0.85 );
+			ctx.textAlign = "left";
+		}
+	}
+
+	WidgetButton.prototype.onMouseDown = function(e, local_pos)
+	{
+		if(local_pos[0] > 1 && local_pos[1] > 1 && local_pos[0] < (this.size[0] - 2) && local_pos[1] < (this.size[1] - 2) )
+		{
+			this.clicked = true;
+			this.trigger( "clicked", this.properties.message );
+			return true;
+		}
+	}
+
+	WidgetButton.prototype.onMouseUp = function(e)
+	{
+		this.clicked = false;
+	}
+
+
+	LiteGraph.registerNodeType("widget/button", WidgetButton );
+
+	/* Knob ****************/
+
 	function WidgetKnob()
 	{
 		this.addOutput("",'number');

@@ -150,11 +150,11 @@ function GlobalInput()
 
 	this.addOutput(input_name, null );
 
-	this.properties = {name: input_name, type: null };
+	this.properties = { name: input_name, type: null };
 
 	var that = this;
 
-	Object.defineProperty(this.properties, "name", {
+	Object.defineProperty( this.properties, "name", {
 		get: function() { 
 			return input_name;
 		},
@@ -173,7 +173,7 @@ function GlobalInput()
 		enumerable: true
 	});
 
-	Object.defineProperty(this.properties, "type", {
+	Object.defineProperty( this.properties, "type", {
 		get: function() { return that.outputs[0].type; },
 		set: function(v) { 
 			that.outputs[0].type = v; 
@@ -272,7 +272,7 @@ LiteGraph.registerNodeType("graph/output", GlobalOutput);
 function Constant()
 {
 	this.addOutput("value","number");
-	this.properties = { value:1.0 };
+	this.addProperty( "value", 1.0 );
 	this.editable = { property:"value", type:"number" };
 }
 
@@ -313,7 +313,7 @@ function Watch()
 	this.size = [60,20];
 	this.addInput("value",0,{label:""});
 	this.addOutput("value",0,{label:""});
-	this.properties = { value:"" };
+	this.addProperty( "value", "" );
 }
 
 Watch.title = "Watch";
@@ -348,16 +348,37 @@ LiteGraph.registerNodeType("basic/watch", Watch);
 //Show value inside the debug console
 function Console()
 {
+	this.mode = LiteGraph.ON_EVENT;
 	this.size = [60,20];
-	this.addInput("data",0);
+	this.addProperty( "msg", "" );
+	this.addInput("log", LiteGraph.EVENT);
+	this.addInput("msg",0);
 }
 
 Console.title = "Console";
 Console.desc = "Show value inside the console";
 
+Console.prototype.onAction = function(action, param)
+{
+	if(action == "log")
+		console.log( param );
+	else if(action == "warn")
+		console.warn( param );
+	else if(action == "error")
+		console.error( param );
+}
+
 Console.prototype.onExecute = function()
 {
-	console.log( this.getInputData(0) );
+	var msg = this.getInputData(0);
+	if(msg !== null)
+		this.properties.msg = msg;
+	console.log(msg);
+}
+
+Console.prototype.onGetInputs = function()
+{
+	return [["log",LiteGraph.ACTION],["warn",LiteGraph.ACTION],["error",LiteGraph.ACTION]];
 }
 
 LiteGraph.registerNodeType("basic/console", Console );

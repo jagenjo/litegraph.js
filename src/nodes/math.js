@@ -85,7 +85,12 @@ function MathRange()
 {
 	this.addInput("in","number",{locked:true});
 	this.addOutput("out","number",{locked:true});
-	this.properties = { "in": 0, in_min:0, in_max:1, out_min: 0, out_max: 1 };
+
+	this.addProperty( "in", 0 );
+	this.addProperty( "in_min", 0 );
+	this.addProperty( "in_max", 1 );
+	this.addProperty( "out_min", 0 );
+	this.addProperty( "out_max", 1 );
 }
 
 MathRange.title = "Range";
@@ -136,7 +141,8 @@ LiteGraph.registerNodeType("math/range", MathRange);
 function MathRand()
 {
 	this.addOutput("value","number");
-	this.properties = { min:0, max:1 };
+	this.addProperty( "min", 0 );
+	this.addProperty( "max", 1 );
 	this.size = [60,20];
 }
 
@@ -182,7 +188,8 @@ function MathClamp()
 	this.addInput("in","number");
 	this.addOutput("out","number");
 	this.size = [60,20];
-	this.properties = {min:0, max:1};
+	this.addProperty( "min", 0 );
+	this.addProperty( "max", 1 );
 }
 
 MathClamp.title = "Clamp";
@@ -310,7 +317,7 @@ function MathScale()
 	this.addInput("in","number",{label:""});
 	this.addOutput("out","number",{label:""});
 	this.size = [60,20];
-	this.properties = {"factor":1};
+	this.addProperty( "factor", 1 );
 }
 
 MathScale.title = "Scale";
@@ -326,18 +333,73 @@ MathScale.prototype.onExecute = function()
 LiteGraph.registerNodeType("math/scale", MathScale );
 
 
+//Math clamp
+function MathAverageFilter()
+{
+	this.addInput("in","number");
+	this.addOutput("out","number");
+	this.size = [60,20];
+	this.addProperty( "samples", 10 );
+	this._values = new Float32Array(10);
+	this._current = 0;
+}
+
+MathAverageFilter.title = "Average";
+MathAverageFilter.desc = "Average Filter";
+
+MathAverageFilter.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null)
+		v = 0;
+
+	var num_samples = this._values.length;
+
+	this._values[ this._current % num_samples ] = v;
+	this._current += 1;
+	if(this._current > num_samples)
+		this._current = 0;
+
+	var avr = 0;
+	for(var i = 0; i < num_samples; ++i)
+		avr += this._values[i];
+
+	this.setOutputData( 0, avr / num_samples );
+}
+
+MathAverageFilter.prototype.onPropertyChanged = function( name, value )
+{
+	if(value < 1)
+		value = 1;
+	this.properties.samples = Math.round(value);
+	var old = this._values;
+
+	this._values = new Float32Array( this.properties.samples );
+	if(old.length <= this._values.length )
+		this._values.set(old);
+	else
+		this._values.set( old.subarray( 0, this._values.length ) );
+}
+
+LiteGraph.registerNodeType("math/average", MathAverageFilter );
+
+
 //Math operation
 function MathOperation()
 {
 	this.addInput("A","number");
 	this.addInput("B","number");
 	this.addOutput("=","number");
-	this.properties = {A:1.0, B:1.0, OP:"+"};
+	this.addProperty( "A", 1 );
+	this.addProperty( "B", 1 );
+	this.addProperty( "OP", "+", "string", { values: MathOperation.values } );
 }
+
+MathOperation.values = ["+","-","*","/","%","^"];
 
 MathOperation.title = "Operation";
 MathOperation.desc = "Easy math operators";
-MathOperation["@OP"] = { type:"enum", title: "operation", values:["+","-","*","/","%","^"]};
+MathOperation["@OP"] = { type:"enum", title: "operation", values: MathOperation.values };
 
 
 MathOperation.prototype.setValue = function(v)
@@ -365,16 +427,28 @@ MathOperation.prototype.onExecute = function()
 	{
 		case '+': result = A+B; break;
 		case '-': result = A-B; break;
+		case 'x': 
+		case 'X': 
+		case '*': result = A*B; break;
 		case '/': result = A/B; break;
 		case '%': result = A%B; break;
 		case '^': result = Math.pow(A,B); break;
+		default:
+			console.warn("Unknown operation: " + this.properties.OP);
 	}
 	this.setOutputData(0, result );
 }
 
 MathOperation.prototype.onDrawBackground = function(ctx)
 {
-	this.outputs[0].label = "A" + this.properties.OP + "B";
+	if(this.flags.collapsed)
+		return;
+
+	ctx.font = "40px Arial";
+	ctx.fillStyle = "black";
+	ctx.textAlign = "center";
+	ctx.fillText(this.properties.OP, this.size[0] * 0.5, this.size[1] * 0.5 + LiteGraph.NODE_TITLE_HEIGHT );
+	ctx.textAlign = "left";
 }
 
 LiteGraph.registerNodeType("math/operation", MathOperation );
@@ -387,7 +461,8 @@ function MathCompare()
 	this.addInput( "B","number" );
 	this.addOutput("A==B","boolean");
 	this.addOutput("A!=B","boolean");
-	this.properties = {A:0,B:0};
+	this.addProperty( "A", 0 );
+	this.addProperty( "B", 0 );
 }
 
 MathCompare.title = "Compare";
@@ -437,11 +512,15 @@ function MathCondition()
 	this.addInput("A","number");
 	this.addInput("B","number");
 	this.addOutput("out","boolean");
-	this.properties = { A:0, B:1, OP:">" };
+	this.addProperty( "A", 1 );
+	this.addProperty( "B", 1 );
+	this.addProperty( "OP", ">", "string", { values: MathCondition.values } );
+
 	this.size = [60,40];
 }
 
-MathCondition["@OP"] = { type:"enum", title: "operation", values:[">","<","==","!=","<=",">="]};
+MathCondition.values = [">","<","==","!=","<=",">="];
+MathCondition["@OP"] = { type:"enum", title: "operation", values: MathCondition.values };
 
 MathCondition.title = "Condition";
 MathCondition.desc = "evaluates condition between A and B";
@@ -481,7 +560,8 @@ function MathAccumulate()
 {
 	this.addInput("inc","number");
 	this.addOutput("total","number");
-	this.properties = { increment: 0, value: 0 };
+	this.addProperty( "increment", 1 );
+	this.addProperty( "value", 0 );
 }
 
 MathAccumulate.title = "Accumulate";
@@ -489,6 +569,9 @@ MathAccumulate.desc = "Increments a value every time";
 
 MathAccumulate.prototype.onExecute = function()
 {
+	if(this.properties.value === null)
+		this.properties.value = 0;
+
 	var inc = this.getInputData(0);
 	if(inc !== null)
 		this.properties.value += inc;
@@ -504,7 +587,9 @@ function MathTrigonometry()
 {
 	this.addInput("v","number");
 	this.addOutput("sin","number");
-	this.properties = {amplitude:1.0, offset: 0};
+
+	this.addProperty( "amplitude", 1 );
+	this.addProperty( "offset", 0 );
 	this.bgImageUrl = "nodes/imgs/icon-sin.png";
 }
 
@@ -515,6 +600,8 @@ MathTrigonometry.filter = "shader";
 MathTrigonometry.prototype.onExecute = function()
 {
 	var v = this.getInputData(0);
+	if(v == null)
+		v = 0;
 	var amplitude = this.properties["amplitude"];
 	var slot = this.findInputSlot("amplitude");
 	if(slot != -1)
@@ -778,12 +865,35 @@ LiteGraph.registerNodeType("math3d/xyzw-to-vec4", Math3DXYZWToVec4 );
 if(window.glMatrix) 
 {
 
+	function Math3DQuaternion()
+	{
+		this.addOutput("quat","quat");
+		this.properties = { x:0, y:0, z:0, w: 1 };
+		this._value = quat.create();
+	}
+
+	Math3DQuaternion.title = "Quaternion";
+	Math3DQuaternion.desc = "quaternion";
+
+	Math3DQuaternion.prototype.onExecute = function()
+	{
+		this._value[0] = this.properties.x;
+		this._value[1] = this.properties.y;
+		this._value[2] = this.properties.z;
+		this._value[3] = this.properties.w;
+		this.setOutputData( 0, this._value );
+	}
+
+	LiteGraph.registerNodeType("math3d/quaternion", Math3DQuaternion );
+
 
 	function Math3DRotation()
 	{
 		this.addInputs([["degrees","number"],["axis","vec3"]]);
 		this.addOutput("quat","quat");
 		this.properties = { angle:90.0, axis: vec3.fromValues(0,1,0) };
+
+		this._value = quat.create();
 	}
 
 	Math3DRotation.title = "Rotation";
@@ -796,7 +906,7 @@ if(window.glMatrix)
 		var axis = this.getInputData(1);
 		if(axis == null) axis = this.properties.axis;
 
-		var R = quat.setAxisAngle(quat.create(), axis, angle * 0.0174532925 );
+		var R = quat.setAxisAngle( this._value, axis, angle * 0.0174532925 );
 		this.setOutputData( 0, R );
 	}
 
@@ -834,6 +944,8 @@ if(window.glMatrix)
 	{
 		this.addInputs( [["A","quat"],["B","quat"]] );
 		this.addOutput( "A*B","quat" );
+
+		this._value = quat.create();
 	}
 
 	Math3DMultQuat.title = "Mult. Quat";
@@ -846,11 +958,42 @@ if(window.glMatrix)
 		var B = this.getInputData(1);
 		if(B == null) return;
 
-		var R = quat.multiply(quat.create(), A,B);
+		var R = quat.multiply( this._value, A, B );
 		this.setOutputData( 0, R );
 	}
 
 	LiteGraph.registerNodeType("math3d/mult-quat", Math3DMultQuat );
+
+
+	function Math3DQuatSlerp()
+	{
+		this.addInputs( [["A","quat"],["B","quat"],["factor","number"]] );
+		this.addOutput( "slerp","quat" );
+		this.addProperty( "factor", 0.5 );
+
+		this._value = quat.create();
+	}
+
+	Math3DQuatSlerp.title = "Quat Slerp";
+	Math3DQuatSlerp.desc = "quaternion spherical interpolation";
+
+	Math3DQuatSlerp.prototype.onExecute = function()
+	{
+		var A = this.getInputData(0);
+		if(A == null)
+			return;
+		var B = this.getInputData(1);
+		if(B == null)
+			return;
+		var factor = this.properties.factor;
+		if( this.getInputData(2) != null )
+			factor = this.getInputData(2);
+
+		var R = quat.slerp( this._value, A, B, factor );
+		this.setOutputData( 0, R );
+	}
+
+	LiteGraph.registerNodeType("math3d/quat-slerp", Math3DQuatSlerp );
 
 } //glMatrix
 

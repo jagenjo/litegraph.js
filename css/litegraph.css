@@ -31,6 +31,11 @@
 	transition: * linear 0.5s;
 }
 
+.graphmenu-entry.event {
+	border-left: 8px solid orange;
+	padding-left: 12px;
+}
+
 .graphmenu-entry.disabled {
 	opacity: 0.3;
 }
@@ -52,3 +57,52 @@
 	-moz-width: calc( 100% - 20px );
 	-webkit-width: calc( 100% - 20px );
 }
+
+.graphmenu-entry .property_name {
+	display: inline-block;
+	text-align: left;
+	min-width: 80px;
+	min-height: 1.2em;
+}
+
+.graphmenu-entry .property_value {
+	display: inline-block;
+	background-color: rgba(0,0,0,0.5);
+	text-align: right;
+	min-width: 80px;
+	min-height: 1.2em;
+	vertical-align: middle;
+	padding-right: 10px;
+}
+
+.graphdialog {
+	position: absolute;
+	top: 10px;
+	left: 10px;
+	height: 2em;
+	background-color: #333;
+	font-size: 1.2em;
+}
+
+.graphdialog .name {
+	display: inline-block;
+	min-width: 60px;
+	min-height: 1.5em;
+	padding-left: 10px;
+}
+
+.graphdialog input, .graphdialog select {
+	margin-top: 3px;
+	min-width: 60px;
+	min-height: 1.5em;
+	background-color: black;
+	border: 0;
+	color: white;
+	padding-left: 10px;
+}
+
+.graphdialog button {
+	margin-top: 3px;
+	vertical-align: top;
+}
+

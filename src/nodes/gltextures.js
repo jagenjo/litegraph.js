@@ -309,6 +309,9 @@ if(typeof(LiteGraph) != "undefined")
 		if(this.flags.collapsed)
 			return;
 
+		if(!ctx.webgl)
+			return; //not working well
+
 		var tex = this.getInputData(0);
 		if(!tex) return;
 
@@ -833,7 +836,7 @@ if(typeof(LiteGraph) != "undefined")
 	function LGraphTextureToViewport()
 	{
 		this.addInput("Texture","Texture");
-		this.properties = { additive: false, antialiasing: false, disable_alpha: false, gamma: 1.0 };
+		this.properties = { additive: false, antialiasing: false, filter: true, disable_alpha: false, gamma: 1.0 };
 		this.size[0] = 130;
 	}
 
@@ -862,6 +865,7 @@ if(typeof(LiteGraph) != "undefined")
 		if( this.isInputConnected(1) )
 			gamma = this.getInputData(1);
 
+		tex.setParameter( gl.TEXTURE_MAG_FILTER, this.properties.filter ? gl.LINEAR : gl.NEAREST );
 
 		if(this.properties.antialiasing)
 		{
@@ -1774,38 +1778,23 @@ if(typeof(LiteGraph) != "undefined")
 			this.properties.intensity = intensity;
 		}
 
-		gl.disable( gl.BLEND );
-		gl.disable( gl.DEPTH_TEST );
-		var mesh = Mesh.getScreenQuad();
-		var shader = LGraphTextureBlur._shader;
-		var scale = this.properties.scale || [1,1];
-
 		//blur sometimes needs an aspect correction
 		var aspect = LiteGraph.camera_aspect;
 		if(!aspect && window.gl !== undefined)
 			aspect = gl.canvas.height / gl.canvas.width;
 		if(!aspect)
 			aspect = 1;
-
-		//iterate
-		var start_texture = tex;
 		aspect = this.properties.preserve_aspect ? aspect : 1;
+
+		var start_texture = tex;
+		var scale = this.properties.scale || [1,1];
+		var origin = start_texture;
 		for(var i = 0; i < iterations; ++i)
 		{
-			this._temp_texture.drawTo( function() {
-				start_texture.bind(0);
-				shader.uniforms({u_texture:0, u_intensity: 1, u_offset: [0, 1/start_texture.height * scale[1] ] })
-					.draw(mesh);
-			});
-
-			this._temp_texture.bind(0);
-			this._final_texture.drawTo( function() {
-				shader.uniforms({u_texture:0, u_intensity: intensity, u_offset: [aspect/start_texture.width * scale[0], 0] })
-					.draw(mesh);
-			});
-			start_texture = this._final_texture;
+			origin.applyBlur( aspect * scale[0] * i, scale[1] * i, intensity, this._temp_texture, this._final_texture );
+			origin = this._final_texture;
 		}
-		
+
 		this.setOutputData(0, this._final_texture);
 	}
 

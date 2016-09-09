@@ -1,5 +1,6 @@
 ../src/litegraph.js
 ../src/nodes/base.js
+../src/nodes/events.js
 ../src/nodes/interface.js
 ../src/nodes/input.js
 ../src/nodes/math.js
@@ -7,3 +8,4 @@
 ../src/nodes/image.js
 ../src/nodes/gltextures.js
 ../src/nodes/glfx.js
+../src/nodes/midi.js

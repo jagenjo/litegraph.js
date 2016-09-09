@@ -6,6 +6,17 @@ function demo()
 
 function multiConnection()
 {
+
+
+	var node_button = LiteGraph.createNode("widget/button");
+	node_button.pos = [100,400];
+	graph.add(node_button);
+
+	var node_console = LiteGraph.createNode("basic/console");
+	node_console.pos = [400,400];
+	graph.add(node_console);
+	node_button.connect(0, node_console );
+
 	var node_const_A = LiteGraph.createNode("basic/const");
 	node_const_A.pos = [200,200];
 	graph.add(node_const_A);
@@ -18,7 +29,6 @@ function multiConnection()
 
 	var node_math = LiteGraph.createNode("math/operation");
 	node_math.pos = [400,200];
-	node_math.addOutput("A*B");
 	graph.add(node_math);
 
 	var node_watch = LiteGraph.createNode("basic/watch");
