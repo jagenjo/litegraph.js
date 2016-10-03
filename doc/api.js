@@ -7,6 +7,7 @@ YUI.add("yuidoc-meta", function(Y) {
         "LiteGraph"
     ],
     "modules": [],
-    "allModules": []
+    "allModules": [],
+    "elements": []
 } };
 });

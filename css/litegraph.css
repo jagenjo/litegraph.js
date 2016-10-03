@@ -7,13 +7,13 @@
 	-webkit-user-select: none;
 }
 
-.graphcontextualmenu {
+.graphcontextmenu {
 	padding: 4px;
 	min-width: 100px;
 }
 
 
-.graphcontextualmenu-title {
+.graphcontextmenu-title {
 	color: #DDE;
 	background-color: #222;	
 	margin: 0;

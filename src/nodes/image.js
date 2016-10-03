@@ -42,7 +42,7 @@ GraphicsImage.prototype.onExecute = function()
 		this.img.dirty = false;
 }
 
-GraphicsImage.prototype.onPropertyChange = function(name,value)
+GraphicsImage.prototype.onPropertyChanged = function(name,value)
 {
 	this.properties[name] = value;
 	if (name == "url" && value != "")
@@ -401,7 +401,7 @@ ImageCrop.prototype.onExecute = function()
 		this.setOutputData(0,null);
 }
 
-ImageCrop.prototype.onPropertyChange = function(name,value)
+ImageCrop.prototype.onPropertyChanged = function(name,value)
 {
 	this.properties[name] = value;
 
@@ -524,7 +524,7 @@ ImageVideo.prototype.loadVideo = function(url)
 	//document.body.appendChild(this.video);
 }
 
-ImageVideo.prototype.onPropertyChange = function(name,value)
+ImageVideo.prototype.onPropertyChanged = function(name,value)
 {
 	this.properties[name] = value;
 	if (name == "url" && value != "")

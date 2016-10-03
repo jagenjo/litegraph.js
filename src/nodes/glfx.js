@@ -61,7 +61,7 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphFXLens._shader;
-		var camera = LS.Renderer._current_camera;
+		//var camera = LS.Renderer._current_camera;
 
 		this._tex.drawTo( function() {
 			tex.bind(0);
@@ -375,7 +375,11 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
-		var camera = LS.Renderer._current_camera;
+		var camera = window.LS ? LS.Renderer._current_camera : null;
+		if(camera)
+			camera_planes = [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far];
+		else
+			camera_planes = [1,100];
 
 		var noise = null;
 		if(fx == "noise")
@@ -386,7 +390,7 @@ if(typeof(LiteGraph) != "undefined")
 			if(fx == "noise")
 				noise.bind(1);
 
-			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far] })
+			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: camera_planes })
 				.draw(mesh);
 		});
 

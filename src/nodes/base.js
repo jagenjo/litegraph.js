@@ -2,6 +2,25 @@
 (function(){
 
 
+//Constant
+function Time()
+{
+	this.addOutput("in ms","number");
+	this.addOutput("in sec","number");
+}
+
+Time.title = "Time";
+Time.desc = "Time";
+
+Time.prototype.onExecute = function()
+{
+	this.setOutputData(0, this.graph.globaltime * 1000 );
+	this.setOutputData(1, this.graph.globaltime  );
+}
+
+LiteGraph.registerNodeType("basic/time", Time);
+
+
 //Subgraph: a node that contains a graph
 function Subgraph()
 {

@@ -213,12 +213,12 @@
 	WidgetKnob.prototype.onWidget = function(e,widget)
 	{
 		if(widget.name=="increase")
-			this.onPropertyChange("size", this.properties.size + 10);
+			this.onPropertyChanged("size", this.properties.size + 10);
 		else if(widget.name=="decrease")
-			this.onPropertyChange("size", this.properties.size - 10);
+			this.onPropertyChanged("size", this.properties.size - 10);
 	}
 
-	WidgetKnob.prototype.onPropertyChange = function(name,value)
+	WidgetKnob.prototype.onPropertyChanged = function(name,value)
 	{
 		if(name=="wcolor")
 			this.properties[name] = value;
@@ -351,7 +351,7 @@
 		//this.oldmouse = null;
 	}
 
-	WidgetHSlider.prototype.onPropertyChange = function(name,value)
+	WidgetHSlider.prototype.onPropertyChanged = function(name,value)
 	{
 		if(name=="wcolor")
 			this.properties[name] = value;
@@ -604,7 +604,7 @@
 			}
 		},
 
-		onPropertyChange: function(name,value)
+		onPropertyChanged: function(name,value)
 		{
 			this.properties[name] = value;
 			return true;
@@ -703,7 +703,7 @@
 		}
 	}
 
-	WidgetText.prototype.onPropertyChange = function(name,value)
+	WidgetText.prototype.onPropertyChanged = function(name,value)
 	{
 		this.properties[name] = value;
 		this.str = typeof(value) == 'number' ? value.toFixed(3) : value;

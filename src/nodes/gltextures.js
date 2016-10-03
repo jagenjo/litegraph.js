@@ -494,6 +494,8 @@ if(typeof(LiteGraph) != "undefined")
 				this.boxcolor = "#FF0000";
 				return;
 			}
+			this.boxcolor = "#FF0000";
+
 			this._shader_code = (uvcode + "|" + pixelcode);
 			shader = this._shader;
 		}
@@ -539,8 +541,10 @@ if(typeof(LiteGraph) != "undefined")
 			void main() {\n\
 				vec2 uv = v_coord;\n\
 				UV_CODE;\n\
-				vec3 color = texture2D(u_texture, uv).rgb;\n\
-				vec3 colorB = texture2D(u_textureB, uv).rgb;\n\
+				vec4 color4 = texture2D(u_texture, uv);\n\
+				vec3 color = color4.rgb;\n\
+				vec4 color4B = texture2D(u_textureB, uv);\n\
+				vec3 colorB = color4B.rgb;\n\
 				vec3 result = color;\n\
 				float alpha = 1.0;\n\
 				PIXEL_CODE;\n\
@@ -1846,13 +1850,13 @@ if(typeof(LiteGraph) != "undefined")
 		}
 
 		this._waiting_confirmation = true;
+		var that = this;
 
 		// Not showing vendor prefixes.
 		navigator.getUserMedia({video: true}, this.streamReady.bind(this), onFailSoHard);		
 
-		var that = this;
 		function onFailSoHard(e) {
-			trace('Webcam rejected', e);
+			console.log('Webcam rejected', e);
 			that._webcam_stream = false;
 			that.box_color = "red";
 		};
@@ -1942,7 +1946,84 @@ if(typeof(LiteGraph) != "undefined")
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
 
 
-	//Cubemap reader
+	function LGraphTextureMatte()
+	{
+		this.addInput("in","Texture");
+
+		this.addOutput("out","Texture");
+		this.properties = { key_color: vec3.fromValues(0.,1.,0.), threshold: 0.8, slope: 0.2, precision: LGraphTexture.DEFAULT };
+
+		if(!LGraphTextureMatte._shader)
+			LGraphTextureMatte._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureMatte.pixel_shader );
+	}
+
+	LGraphTextureMatte.title = "Matte";
+	LGraphTextureMatte.desc = "Extracts background";
+
+	LGraphTextureMatte.widgets_info = { 
+		"key_color": { widget:"color" },
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureMatte.prototype.onExecute = function()
+	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var tex = this.getInputData(0);
+
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH )
+		{
+			this.setOutputData(0,tex);
+			return;
+		}		
+
+		if(!tex)
+			return;
+
+		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
+
+		gl.disable( gl.BLEND );
+		gl.disable( gl.DEPTH_TEST );
+
+		if(!this._uniforms)
+			this._uniforms = { u_texture: 0, u_key_color: this.properties.key_color, u_threshold: 1, u_slope: 1 };
+		var uniforms = this._uniforms;
+
+		var mesh = Mesh.getScreenQuad();
+		var shader = LGraphTextureMatte._shader;
+
+		uniforms.u_key_color = this.properties.key_color;
+		uniforms.u_threshold = this.properties.threshold;
+		uniforms.u_slope = this.properties.slope;
+
+		this._tex.drawTo( function() {
+			tex.bind(0);
+			shader.uniforms( uniforms ).draw( mesh );
+		});
+
+		this.setOutputData( 0, this._tex );
+	}
+
+	LGraphTextureMatte.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform vec3 u_key_color;\n\
+			uniform float u_threshold;\n\
+			uniform float u_slope;\n\
+			\n\
+			void main() {\n\
+				vec3 color = texture2D( u_texture, v_coord ).xyz;\n\
+				float diff = length( normalize(color) - normalize(u_key_color) );\n\
+				float edge = u_threshold * (1.0 - u_slope);\n\
+				float alpha = smoothstep( edge, u_threshold, diff);\n\
+				gl_FragColor = vec4( color, alpha );\n\
+			}";
+
+	LiteGraph.registerNodeType("texture/matte", LGraphTextureMatte );
+
+	//***********************************
+	//Cubemap reader (to pass a cubemap to a node that requires cubemaps and no images)
 	function LGraphCubemap()
 	{
 		this.addOutput("Cubemap","Cubemap");

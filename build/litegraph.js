@@ -1219,8 +1219,8 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 	supported callbacks: 
 		+ onAdded: when added to graph
 		+ onRemoved: when removed from graph
-		+ onStart:	when starts playing
-		+ onStop:	when stops playing
+		+ onStart:	when the graph starts playing
+		+ onStop:	when the graph stops playing
 		+ onDrawForeground: render the inside widgets inside the node
 		+ onDrawBackground: render the background area inside the node (only in edit mode)
 		+ onMouseDown
@@ -1360,6 +1360,8 @@ LGraphNode.prototype.configure = function(info)
 		}
 	}
 
+	if( this.onConfigured )
+		this.onConfigured( info );
 }
 
 /**
@@ -1536,6 +1538,24 @@ LGraphNode.prototype.getInputInfo = function(slot)
 	if(slot < this.inputs.length)
 		return this.inputs[slot];
 	return null;
+}
+
+/**
+* returns the node connected in the input slot
+* @method getInputNode
+* @param {number} slot
+* @return {LGraphNode} node or null
+*/
+LGraphNode.prototype.getInputNode = function( slot )
+{
+	if(!this.inputs)
+		return null;
+	if(slot >= this.inputs.length)
+		return null;
+	var input = this.inputs[slot];
+	if(!input || !input.link)
+		return null;
+	return this.graph.getNodeById( input.link.origin_id );
 }
 
 
@@ -1964,7 +1984,7 @@ LGraphNode.prototype.findOutputSlot = function(name)
 * @param {number_or_string} target_slot the input slot of the target node (could be the number of the slot or the string with the name of the slot, or -1 to connect a trigger)
 * @return {boolean} if it was connected succesfully
 */
-LGraphNode.prototype.connect = function( slot, node, target_slot )
+LGraphNode.prototype.connect = function( slot, target_node, target_slot )
 {
 	target_slot = target_slot || 0;
 
@@ -1986,20 +2006,19 @@ LGraphNode.prototype.connect = function( slot, node, target_slot )
 		return false;
 	}
 
-	if(node && node.constructor === Number)
-		node = this.graph.getNodeById( node );
-	if(!node)
+	if(target_node && target_node.constructor === Number)
+		target_node = this.graph.getNodeById( target_node );
+	if(!target_node)
 		throw("Node not found");
 
 	//avoid loopback
-	if(node == this)
+	if(target_node == this)
 		return false; 
-	//if( node.constructor != LGraphNode ) throw ("LGraphNode.connect: node is not of type LGraphNode");
 
 	//you can specify the slot by name
 	if(target_slot.constructor === String)
 	{
-		target_slot = node.findInputSlot(target_slot);
+		target_slot = target_node.findInputSlot( target_slot );
 		if(target_slot == -1)
 		{
 			if(LiteGraph.debug)
@@ -2012,13 +2031,13 @@ LGraphNode.prototype.connect = function( slot, node, target_slot )
 		//search for first slot with event?
 		/*
 		//create input for trigger
-		var input = node.addInput("onTrigger", LiteGraph.EVENT );
-		target_slot = node.inputs.length - 1; //last one is the one created
-		node.mode = LiteGraph.ON_TRIGGER;
+		var input = target_node.addInput("onTrigger", LiteGraph.EVENT );
+		target_slot = target_node.inputs.length - 1; //last one is the one created
+		target_node.mode = LiteGraph.ON_TRIGGER;
 		*/
 		return false;
 	}
-	else if( !node.inputs || target_slot >= node.inputs.length ) 
+	else if( !target_node.inputs || target_slot >= target_node.inputs.length ) 
 	{
 		if(LiteGraph.debug)
 			console.log("Connect: Error, slot number not found");
@@ -2026,8 +2045,8 @@ LGraphNode.prototype.connect = function( slot, node, target_slot )
 	}
 
 	//if there is something already plugged there, disconnect
-	if(node.inputs[ target_slot ].link != null )
-		node.disconnectInput( target_slot );
+	if(target_node.inputs[ target_slot ].link != null )
+		target_node.disconnectInput( target_slot );
 
 	//why here??
 	this.setDirtyCanvas(false,true);
@@ -2036,36 +2055,36 @@ LGraphNode.prototype.connect = function( slot, node, target_slot )
 	var output = this.outputs[slot];
 
 	//allows nodes to block connection 
-	if(node.onConnectInput)
-		if( node.onConnectInput( target_slot, output.type, output ) === false)
+	if(target_node.onConnectInput)
+		if( target_node.onConnectInput( target_slot, output.type, output ) === false)
 			return false;
 
-	var input = node.inputs[target_slot];
+	var input = target_node.inputs[target_slot];
 
 	if( LiteGraph.isValidConnection( output.type, input.type) )
 	{
-		var link = { 
+		var link_info = { 
 			id: this.graph.last_link_id++, 
 			origin_id: this.id, 
 			origin_slot: slot, 
-			target_id: node.id, 
+			target_id: target_node.id, 
 			target_slot: target_slot
 		};
 
 		//add to graph links list
-		this.graph.links[ link.id ] = link;
+		this.graph.links[ link_info.id ] = link_info;
 
 		//connect in output
 		if( output.links == null )
 			output.links = [];
-		output.links.push( link.id );
+		output.links.push( link_info.id );
 		//connect in input
-		node.inputs[target_slot].link = link.id;
+		target_node.inputs[target_slot].link = link_info.id;
 
 		if(this.onConnectionsChange)
-			this.onConnectionsChange( LiteGraph.OUTPUT, slot );
-		if(node.onConnectionsChange)
-			node.onConnectionsChange( LiteGraph.OUTPUT, target_slot );
+			this.onConnectionsChange( LiteGraph.OUTPUT, slot, true, link_info ); //link_info has been created now, so its updated
+		if(target_node.onConnectionsChange)
+			target_node.onConnectionsChange( LiteGraph.INPUT, target_slot, true, link_info );
 	}
 
 	this.setDirtyCanvas(false,true);
@@ -2081,7 +2100,7 @@ LGraphNode.prototype.connect = function( slot, node, target_slot )
 * @param {LGraphNode} target_node the target node to which this slot is connected [Optional, if not target_node is specified all nodes will be disconnected]
 * @return {boolean} if it was disconnected succesfully
 */
-LGraphNode.prototype.disconnectOutput = function(slot, target_node)
+LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 {
 	if( slot.constructor === String )
 	{
@@ -2124,6 +2143,10 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 				output.links.splice(i,1); //remove here
 				target_node.inputs[ link_info.target_slot ].link = null; //remove there
 				delete this.graph.links[ link_id ]; //remove the link from the links pool
+				if(target_node.onConnectionsChange)
+					target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info ); //link_info hasnt been modified so its ok
+				if(this.onConnectionsChange)
+					this.onConnectionsChange( LiteGraph.OUTPUT, slot, false, link_info );
 				break;
 			}
 		}
@@ -2139,9 +2162,14 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 			if(target_node)
 				target_node.inputs[ link_info.target_slot ].link = null; //remove other side link
 			delete this.graph.links[ link_id ]; //remove the link from the links pool
+			if(target_node.onConnectionsChange)
+				target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info ); //link_info hasnt been modified so its ok
+			if(this.onConnectionsChange)
+				this.onConnectionsChange( LiteGraph.OUTPUT, slot, false, link_info );
 		}
 		output.links = null;
 	}
+
 
 	this.setDirtyCanvas(false,true);
 	this.graph.connectionChange( this );
@@ -2154,7 +2182,7 @@ LGraphNode.prototype.disconnectOutput = function(slot, target_node)
 * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
 * @return {boolean} if it was disconnected succesfully
 */
-LGraphNode.prototype.disconnectInput = function(slot)
+LGraphNode.prototype.disconnectInput = function( slot )
 {
 	//seek for the output slot
 	if( slot.constructor === String )
@@ -2185,15 +2213,15 @@ LGraphNode.prototype.disconnectInput = function(slot)
 	var link_info = this.graph.links[ link_id ];
 	if( link_info )
 	{
-		var node = this.graph.getNodeById( link_info.origin_id );
-		if(!node)
+		var target_node = this.graph.getNodeById( link_info.origin_id );
+		if(!target_node)
 			return false;
 
-		var output = node.outputs[ link_info.origin_slot ];
+		var output = target_node.outputs[ link_info.origin_slot ];
 		if(!output || !output.links || output.links.length == 0) 
 			return false;
 
-		//check outputs
+		//search in the inputs list for this link
 		for(var i = 0, l = output.links.length; i < l; i++)
 		{
 			var link_id = output.links[i];
@@ -2205,10 +2233,10 @@ LGraphNode.prototype.disconnectInput = function(slot)
 			}
 		}
 
-		if(this.onConnectionsChange)
-			this.onConnectionsChange( LiteGraph.OUTPUT );
-		if(node.onConnectionsChange)
-			node.onConnectionsChange( LiteGraph.INPUT);
+		if( this.onConnectionsChange )
+			this.onConnectionsChange( LiteGraph.INPUT, slot, false, link_info );
+		if( target_node.onConnectionsChange )
+			target_node.onConnectionsChange( LiteGraph.OUTPUT, i, false, link_info );
 	}
 
 	this.setDirtyCanvas(false,true);
@@ -2879,7 +2907,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	var n = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
 	var skip_dragging = false;
     
-    LiteGraph.closeAllContextualMenus( ref_window );
+    LiteGraph.closeAllContextMenus( ref_window );
 
 	if(e.which == 1) //left button mouse
 	{
@@ -3013,7 +3041,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	}
 	else if (e.which == 3) //right button
 	{
-		this.processContextualMenu(n,e);
+		this.processContextMenu(n,e);
 	}
 
 	//TODO
@@ -4587,7 +4615,7 @@ LGraphCanvas.onMenuAdd = function(node, e, prev_menu, canvas, first_event )
 		if(values[i])
 			entries[ i ] = { value: values[i], content: values[i]  , is_menu: true };
 
-	var menu = LiteGraph.createContextualMenu(entries, {event: e, callback: inner_clicked, from: prev_menu}, ref_window);
+	var menu = LiteGraph.createContextMenu(entries, {event: e, callback: inner_clicked, from: prev_menu}, ref_window);
 
 	function inner_clicked(v, e)
 	{
@@ -4597,7 +4625,7 @@ LGraphCanvas.onMenuAdd = function(node, e, prev_menu, canvas, first_event )
 		for(var i in node_types)
 			values.push( { content: node_types[i].title, value: node_types[i].type });
 
-		LiteGraph.createContextualMenu(values, {event: e, callback: inner_create, from: menu}, ref_window);
+		LiteGraph.createContextMenu(values, {event: e, callback: inner_create, from: menu}, ref_window);
 		return false;
 	}
 
@@ -4654,7 +4682,7 @@ LGraphCanvas.showMenuNodeInputs = function(node, e, prev_menu)
 	if(!entries.length)
 		return;
 
-	var menu = LiteGraph.createContextualMenu(entries, {event: e, callback: inner_clicked, from: prev_menu}, ref_window);
+	var menu = LiteGraph.createContextMenu(entries, {event: e, callback: inner_clicked, from: prev_menu}, ref_window);
 
 	function inner_clicked(v, e, prev)
 	{
@@ -4711,7 +4739,7 @@ LGraphCanvas.showMenuNodeOutputs = function(node, e, prev_menu)
 	if(!entries.length)
 		return;
 
-	var menu = LiteGraph.createContextualMenu(entries, {event: e, callback: inner_clicked, from: prev_menu}, ref_window);
+	var menu = LiteGraph.createContextMenu(entries, {event: e, callback: inner_clicked, from: prev_menu}, ref_window);
 
 	function inner_clicked( v, e, prev )
 	{
@@ -4731,7 +4759,7 @@ LGraphCanvas.showMenuNodeOutputs = function(node, e, prev_menu)
 			var entries = [];
 			for(var i in value)
 				entries.push({content: i, value: value[i]});
-			LiteGraph.createContextualMenu(entries, {event: e, callback: inner_clicked, from: prev_menu});		
+			LiteGraph.createContextMenu(entries, {event: e, callback: inner_clicked, from: prev_menu});		
 			return false;
 		}
 		else
@@ -4758,7 +4786,7 @@ LGraphCanvas.onShowMenuNodeProperties = function(node,e, prev_menu)
 	if(!entries.length)
 		return;
 
-	var menu = LiteGraph.createContextualMenu(entries, {event: e, callback: inner_clicked, from: prev_menu},ref_window);
+	var menu = LiteGraph.createContextMenu(entries, {event: e, callback: inner_clicked, from: prev_menu},ref_window);
 
 	function inner_clicked( v, e, prev )
 	{
@@ -4786,7 +4814,19 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	var info = null;
 	if(node.getPropertyInfo)
 		info = node.getPropertyInfo(property);
-	if(info.type)
+	if(node.properties_info)
+	{
+		for(var i = 0; i < node.properties_info.length; ++i)
+		{
+			if( node.properties_info[i].name == property )
+			{
+				info = node.properties_info[i];
+				break;
+			}
+		}
+	}
+
+	if(info !== undefined && info !== null && info.type )
 		type = info.type;
 
 	var input_html = "";
@@ -4803,6 +4843,10 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 		}
 		input_html += "</select>";
 	}
+	else if(type == "boolean")
+	{
+		input_html = "<input autofocus type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
+	}
 
 
 	var dialog = document.createElement("div");
@@ -4813,21 +4857,35 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	{
 		var input = dialog.querySelector("select");
 		input.addEventListener("change", function(e){
-			var index = e.target.value;
-			setValue( e.options[e.selectedIndex].value );
+			setValue( e.target.value );
+			//var index = e.target.value;
+			//setValue( e.options[e.selectedIndex].value );
 		});
+	}
+	else if(type == "boolean")
+	{
+		var input = dialog.querySelector("input");
+		if(input)
+		{
+			input.addEventListener("click", function(e){
+				setValue( !!input.checked );
+			});
+		}
 	}
 	else
 	{
 		var input = dialog.querySelector("input");
-		input.value = node.properties[ property ] !== undefined ? node.properties[ property ] : "";
-		input.addEventListener("keydown", function(e){
-			if(e.keyCode != 13)
-				return;
-			inner();
-			e.preventDefault();
-			e.stopPropagation();
-		});
+		if(input)
+		{
+			input.value = node.properties[ property ] !== undefined ? node.properties[ property ] : "";
+			input.addEventListener("keydown", function(e){
+				if(e.keyCode != 13)
+					return;
+				inner();
+				e.preventDefault();
+				e.stopPropagation();
+			});
+		}
 	}
 
 	var rect = this.canvas.getClientRects()[0];
@@ -4864,9 +4922,11 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	function setValue(value)
 	{
 		if(typeof( node.properties[ property ] ) == "number")
-			node.properties[ property ] = Number(value);
-		else
-			node.properties[ property ] = value;
+			value = Number(value);
+		node.properties[ property ] = value;
+
+		if(node.onPropertyChanged)
+			node.onPropertyChanged( property, value );
 		dialog.parentNode.removeChild( dialog );
 		node.setDirtyCanvas(true,true);
 	}
@@ -4885,7 +4945,7 @@ LGraphCanvas.onMenuNodePin = function(node)
 
 LGraphCanvas.onMenuNodeMode = function(node, e, prev_menu)
 {
-	LiteGraph.createContextualMenu(["Always","On Event","Never"], {event: e, callback: inner_clicked, from: prev_menu});
+	LiteGraph.createContextMenu(["Always","On Event","Never"], {event: e, callback: inner_clicked, from: prev_menu});
 
 	function inner_clicked(v)
 	{
@@ -4913,7 +4973,7 @@ LGraphCanvas.onMenuNodeColors = function(node, e, prev_menu)
 		var value = {value:i, content:"<span style='display: block; color:"+color.color+"; background-color:"+color.bgcolor+"'>"+i+"</span>"};
 		values.push(value);
 	}
-	LiteGraph.createContextualMenu(values, {event: e, callback: inner_clicked, from: prev_menu});
+	LiteGraph.createContextMenu(values, {event: e, callback: inner_clicked, from: prev_menu});
 
 	function inner_clicked(v)
 	{
@@ -4932,7 +4992,7 @@ LGraphCanvas.onMenuNodeColors = function(node, e, prev_menu)
 
 LGraphCanvas.onMenuNodeShapes = function(node,e)
 {
-	LiteGraph.createContextualMenu(["box","round"], {event: e, callback: inner_clicked});
+	LiteGraph.createContextMenu(["box","round"], {event: e, callback: inner_clicked});
 
 	function inner_clicked(v)
 	{
@@ -5047,7 +5107,7 @@ LGraphCanvas.prototype.getNodeMenuOptions = function(node)
 	return options;
 }
 
-LGraphCanvas.prototype.processContextualMenu = function(node, event)
+LGraphCanvas.prototype.processContextMenu = function(node, event)
 {
 	var that = this;
 	var win = this.getCanvasWindow();
@@ -5075,7 +5135,7 @@ LGraphCanvas.prototype.processContextualMenu = function(node, event)
 	if(!menu_info)
 		return;
 
-	var menu = LiteGraph.createContextualMenu( menu_info, options, win);
+	var menu = LiteGraph.createContextMenu( menu_info, options, win);
 
 	function inner_option_clicked(v,e)
 	{
@@ -5221,7 +5281,7 @@ function num2hex(triplet) {
 
 /* LiteGraph GUI elements *************************************/
 
-LiteGraph.createContextualMenu = function(values,options, ref_window)
+LiteGraph.createContextMenu = function(values,options, ref_window)
 {
 	options = options || {};
 	this.options = options;
@@ -5230,10 +5290,10 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 	ref_window = ref_window || window;
 
     if (!options.from)
-        LiteGraph.closeAllContextualMenus( ref_window );
+        LiteGraph.closeAllContextMenus( ref_window );
     else {
         //closing submenus
-        var menus = document.querySelectorAll(".graphcontextualmenu");
+        var menus = document.querySelectorAll(".graphcontextmenu");
         for (var key in menus) {
             if (menus[key].previousSibling == options.from)
                 menus[key].closeMenu();
@@ -5241,7 +5301,7 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
     }
 
 	var root = ref_window.document.createElement("div");
-	root.className = "graphcontextualmenu graphmenubar-panel";
+	root.className = "graphcontextmenu graphmenubar-panel";
 	this.root = root;
 	var style = root.style;
 
@@ -5255,12 +5315,13 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 	style.padding = "2px";
 	style.borderBottom = "2px solid #AAF";
 	style.backgroundColor = "#444";
+	style.zIndex = 10;
 
 	//title
 	if(options.title)
 	{
 		var element = document.createElement("div");
-		element.className = "graphcontextualmenu-title";
+		element.className = "graphcontextmenu-title";
 		element.innerHTML = options.title;
 		root.appendChild(element);
 	}
@@ -5368,7 +5429,7 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 		}
 
 		if(close)
-			LiteGraph.closeAllContextualMenus( ref_window );
+			LiteGraph.closeAllContextMenus( ref_window );
 			//root.closeMenu();
 	}
 
@@ -5387,11 +5448,11 @@ LiteGraph.createContextualMenu = function(values,options, ref_window)
 	return root;
 }
 
-LiteGraph.closeAllContextualMenus = function( ref_window )
+LiteGraph.closeAllContextMenus = function( ref_window )
 {
 	ref_window = ref_window || window;
 
-	var elements = ref_window.document.querySelectorAll(".graphcontextualmenu");
+	var elements = ref_window.document.querySelectorAll(".graphcontextmenu");
 	if(!elements.length) return;
 
 	var result = [];
@@ -5454,6 +5515,25 @@ if( !window["requestAnimationFrame"] )
 
 //basic nodes
 (function(){
+
+
+//Constant
+function Time()
+{
+	this.addOutput("in ms","number");
+	this.addOutput("in sec","number");
+}
+
+Time.title = "Time";
+Time.desc = "Time";
+
+Time.prototype.onExecute = function()
+{
+	this.setOutputData(0, this.graph.globaltime * 1000 );
+	this.setOutputData(1, this.graph.globaltime  );
+}
+
+LiteGraph.registerNodeType("basic/time", Time);
 
 
 //Subgraph: a node that contains a graph
@@ -6105,12 +6185,12 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 	WidgetKnob.prototype.onWidget = function(e,widget)
 	{
 		if(widget.name=="increase")
-			this.onPropertyChange("size", this.properties.size + 10);
+			this.onPropertyChanged("size", this.properties.size + 10);
 		else if(widget.name=="decrease")
-			this.onPropertyChange("size", this.properties.size - 10);
+			this.onPropertyChanged("size", this.properties.size - 10);
 	}
 
-	WidgetKnob.prototype.onPropertyChange = function(name,value)
+	WidgetKnob.prototype.onPropertyChanged = function(name,value)
 	{
 		if(name=="wcolor")
 			this.properties[name] = value;
@@ -6243,7 +6323,7 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 		//this.oldmouse = null;
 	}
 
-	WidgetHSlider.prototype.onPropertyChange = function(name,value)
+	WidgetHSlider.prototype.onPropertyChanged = function(name,value)
 	{
 		if(name=="wcolor")
 			this.properties[name] = value;
@@ -6496,7 +6576,7 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 			}
 		},
 
-		onPropertyChange: function(name,value)
+		onPropertyChanged: function(name,value)
 		{
 			this.properties[name] = value;
 			return true;
@@ -6595,7 +6675,7 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 		}
 	}
 
-	WidgetText.prototype.onPropertyChange = function(name,value)
+	WidgetText.prototype.onPropertyChanged = function(name,value)
 	{
 		this.properties[name] = value;
 		this.str = typeof(value) == 'number' ? value.toFixed(3) : value;
@@ -7908,7 +7988,7 @@ GraphicsImage.prototype.onExecute = function()
 		this.img.dirty = false;
 }
 
-GraphicsImage.prototype.onPropertyChange = function(name,value)
+GraphicsImage.prototype.onPropertyChanged = function(name,value)
 {
 	this.properties[name] = value;
 	if (name == "url" && value != "")
@@ -8267,7 +8347,7 @@ ImageCrop.prototype.onExecute = function()
 		this.setOutputData(0,null);
 }
 
-ImageCrop.prototype.onPropertyChange = function(name,value)
+ImageCrop.prototype.onPropertyChanged = function(name,value)
 {
 	this.properties[name] = value;
 
@@ -8390,7 +8470,7 @@ ImageVideo.prototype.loadVideo = function(url)
 	//document.body.appendChild(this.video);
 }
 
-ImageVideo.prototype.onPropertyChange = function(name,value)
+ImageVideo.prototype.onPropertyChanged = function(name,value)
 {
 	this.properties[name] = value;
 	if (name == "url" && value != "")
@@ -9061,6 +9141,8 @@ if(typeof(LiteGraph) != "undefined")
 				this.boxcolor = "#FF0000";
 				return;
 			}
+			this.boxcolor = "#FF0000";
+
 			this._shader_code = (uvcode + "|" + pixelcode);
 			shader = this._shader;
 		}
@@ -9106,8 +9188,10 @@ if(typeof(LiteGraph) != "undefined")
 			void main() {\n\
 				vec2 uv = v_coord;\n\
 				UV_CODE;\n\
-				vec3 color = texture2D(u_texture, uv).rgb;\n\
-				vec3 colorB = texture2D(u_textureB, uv).rgb;\n\
+				vec4 color4 = texture2D(u_texture, uv);\n\
+				vec3 color = color4.rgb;\n\
+				vec4 color4B = texture2D(u_textureB, uv);\n\
+				vec3 colorB = color4B.rgb;\n\
 				vec3 result = color;\n\
 				float alpha = 1.0;\n\
 				PIXEL_CODE;\n\
@@ -10413,13 +10497,13 @@ if(typeof(LiteGraph) != "undefined")
 		}
 
 		this._waiting_confirmation = true;
+		var that = this;
 
 		// Not showing vendor prefixes.
 		navigator.getUserMedia({video: true}, this.streamReady.bind(this), onFailSoHard);		
 
-		var that = this;
 		function onFailSoHard(e) {
-			trace('Webcam rejected', e);
+			console.log('Webcam rejected', e);
 			that._webcam_stream = false;
 			that.box_color = "red";
 		};
@@ -10509,7 +10593,84 @@ if(typeof(LiteGraph) != "undefined")
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
 
 
-	//Cubemap reader
+	function LGraphTextureMatte()
+	{
+		this.addInput("in","Texture");
+
+		this.addOutput("out","Texture");
+		this.properties = { key_color: vec3.fromValues(0.,1.,0.), threshold: 0.8, slope: 0.2, precision: LGraphTexture.DEFAULT };
+
+		if(!LGraphTextureMatte._shader)
+			LGraphTextureMatte._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureMatte.pixel_shader );
+	}
+
+	LGraphTextureMatte.title = "Matte";
+	LGraphTextureMatte.desc = "Extracts background";
+
+	LGraphTextureMatte.widgets_info = { 
+		"key_color": { widget:"color" },
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureMatte.prototype.onExecute = function()
+	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var tex = this.getInputData(0);
+
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH )
+		{
+			this.setOutputData(0,tex);
+			return;
+		}		
+
+		if(!tex)
+			return;
+
+		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
+
+		gl.disable( gl.BLEND );
+		gl.disable( gl.DEPTH_TEST );
+
+		if(!this._uniforms)
+			this._uniforms = { u_texture: 0, u_key_color: this.properties.key_color, u_threshold: 1, u_slope: 1 };
+		var uniforms = this._uniforms;
+
+		var mesh = Mesh.getScreenQuad();
+		var shader = LGraphTextureMatte._shader;
+
+		uniforms.u_key_color = this.properties.key_color;
+		uniforms.u_threshold = this.properties.threshold;
+		uniforms.u_slope = this.properties.slope;
+
+		this._tex.drawTo( function() {
+			tex.bind(0);
+			shader.uniforms( uniforms ).draw( mesh );
+		});
+
+		this.setOutputData( 0, this._tex );
+	}
+
+	LGraphTextureMatte.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform vec3 u_key_color;\n\
+			uniform float u_threshold;\n\
+			uniform float u_slope;\n\
+			\n\
+			void main() {\n\
+				vec3 color = texture2D( u_texture, v_coord ).xyz;\n\
+				float diff = length( normalize(color) - normalize(u_key_color) );\n\
+				float edge = u_threshold * (1.0 - u_slope);\n\
+				float alpha = smoothstep( edge, u_threshold, diff);\n\
+				gl_FragColor = vec4( color, alpha );\n\
+			}";
+
+	LiteGraph.registerNodeType("texture/matte", LGraphTextureMatte );
+
+	//***********************************
+	//Cubemap reader (to pass a cubemap to a node that requires cubemaps and no images)
 	function LGraphCubemap()
 	{
 		this.addOutput("Cubemap","Cubemap");
@@ -10634,7 +10795,7 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphFXLens._shader;
-		var camera = LS.Renderer._current_camera;
+		//var camera = LS.Renderer._current_camera;
 
 		this._tex.drawTo( function() {
 			tex.bind(0);
@@ -10948,7 +11109,11 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
-		var camera = LS.Renderer._current_camera;
+		var camera = window.LS ? LS.Renderer._current_camera : null;
+		if(camera)
+			camera_planes = [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far];
+		else
+			camera_planes = [1,100];
 
 		var noise = null;
 		if(fx == "noise")
@@ -10959,7 +11124,7 @@ if(typeof(LiteGraph) != "undefined")
 			if(fx == "noise")
 				noise.bind(1);
 
-			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far] })
+			shader.uniforms({u_texture:0, u_noise:1, u_size: [tex.width, tex.height], u_rand:[ Math.random(), Math.random() ], u_value1: value1, u_value2: value2, u_camera_planes: camera_planes })
 				.draw(mesh);
 		});
 
@@ -11734,6 +11899,652 @@ function now() { return window.performance.now() }
 
 
 
+
+
+
+})( window );
+//not tested nor finished
+
+(function( global )
+{
+
+function LGAudio()
+{
+	this.properties = {
+		src: "demodata/audio.wav",
+		gain: 0.5,
+		loop: true
+	};
+
+	this._loading_audio = false;
+	this._audio_buffer = null;
+	this._audionodes = [];
+
+	this.addOutput( "out", "audio" );
+	this.addInput( "gain", "number" );
+
+	//init context
+	var context = LGAudio.getAudioContext();
+
+	//create gain node
+	this.audionode = context.createGain();
+	this.audionode.graphnode = this;
+	this.audionode.gain.value = this.properties.gain;
+
+	//debug
+	if(this.properties.src)
+		this.loadSound( this.properties.src );
+}
+
+LGAudio.getAudioContext = function()
+{
+	if(!this._audio_context)
+	{
+		window.AudioContext = window.AudioContext || window.webkitAudioContext;
+		if(!window.AudioContext)
+		{
+			console.error("AudioContext not supported by browser");
+			return null;
+		}
+		this._audio_context = new AudioContext();	
+		this._audio_context.onmessage = function(msg) { console.log("msg",msg);};
+		this._audio_context.onended = function(msg) { console.log("ended",msg);};
+		this._audio_context.oncomplete = function(msg) { console.log("complete",msg);};
+	}
+
+	//in case it crashes
+	if(this._audio_context.state == "suspended")
+		this._audio_context.resume();
+	return this._audio_context;
+}
+
+LGAudio.connect = function( audionodeA, audionodeB )
+{
+	audionodeA.connect( audionodeB );
+
+	/*
+	if(!nodeA.outputs)
+		nodeA.outputs = [];
+	nodeA.outputs.push( nodeB );
+	if(!nodeB.inputs)
+		nodeB.inputs = [];
+	nodeB.inputs.push( nodeA );
+	*/
+}
+
+LGAudio.disconnect = function( audionodeA, audionodeB )
+{
+	audionodeA.disconnect( audionodeB );
+
+	/*
+	if(nodeA.outputs)
+	{
+		var index = nodeA.outputs.indexOf( nodeB );
+		if(index != -1)
+			nodeA.outputs.splice(index,1);
+	}
+	if(nodeB.inputs)
+	{
+		var index = nodeB.inputs.indexOf( nodeA );
+		if(index != -1)
+			nodeB.inputs.splice(index,1);
+	}
+	*/
+}
+
+LGAudio.prototype.onAdded = function(graph)
+{
+	if(graph.status === LGraph.STATUS_RUNNING)
+		this.onStart();
+}
+
+LGAudio.prototype.onStart = function()
+{
+	if(!this._audio_buffer)
+		return;
+
+	this.playBuffer( this._audio_buffer );
+}
+
+LGAudio.prototype.onStop = function()
+{
+	this.stopAllSounds();
+}
+
+LGAudio.prototype.onRemoved = function()
+{
+	this.stopAllSounds();
+}
+
+LGAudio.prototype.stopAllSounds = function()
+{
+	//iterate and stop
+	for(var i = 0; i < this._audionodes.length; ++i )
+	{
+		this._audionodes[i].stop();
+		//this._audionodes[i].disconnect( this.audionode );
+	}
+	this._audionodes.length = 0;
+}
+
+LGAudio.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if( v !== undefined )
+		this.audionode.gain.value = v;
+}
+
+LGAudio.prototype.onAction = function(event)
+{
+	if(this._audio_buffer)
+	{
+		if(event == "Play")
+			this.playBuffer(this._audio_buffer);
+		else if(event == "Stop")
+			this.stopAllSounds();
+	}
+}
+
+LGAudio.prototype.onPropertyChanged = function( name, value )
+{
+	if( name == "src" ) 
+		this.loadSound( value );
+	else if(name == "gain")
+		this.audionode.gain.value = value;
+}
+
+LGAudio.prototype.playBuffer = function( buffer )
+{
+	var that = this;
+	var context = LGAudio.getAudioContext();
+
+	//create a new audionode (this is mandatory, AudioAPI doesnt like to reuse old ones)
+	var audionode = context.createBufferSource(); //create a AudioBufferSourceNode
+	audionode.graphnode = this;
+	audionode.buffer = buffer;
+	audionode.loop = this.properties.loop;
+	this._audionodes.push( audionode );
+	audionode.connect( this.audionode ); //connect to gain
+	this._audionodes.push( audionode );
+
+	audionode.onended = function()
+	{
+		console.log("ended!");
+		that.trigger("ended");
+		//remove
+		var index = that._audionodes.indexOf( audionode );
+		if(index != -1)
+			that._audionodes.splice(index,1);
+	}
+
+	audionode.start();
+	return audionode;
+}
+
+LGAudio.prototype.onConnectionsChange = function( connection, slot, connected, link_info )
+{
+	//only process the outputs events
+	if(connection != LiteGraph.OUTPUT)
+		return;
+
+	var target_node = null;
+	if( link_info )
+		target_node = this.graph.getNodeById( link_info.target_id );
+
+	if( !target_node )
+		return;
+
+	if( connected )	
+	{
+		if(target_node.connectAudioToSlot)
+			target_node.connectAudioToSlot( this.audionode, link_info.target_slot );
+		else
+			LGAudio.connect( this.audionode, target_node.audionode );
+	}
+	else
+	{
+		if(target_node.disconnectAudioFromSlot)
+			target_node.disconnectAudioFromSlot( this.audionode, link_info.target_slot );
+		else
+			LGAudio.disconnect( this.audionode, target_node.audionode );
+	}
+}
+
+LGAudio.prototype.loadSound = function( url )
+{
+	var that = this;
+
+	//kill previous load
+	if(this._request)
+	{
+		this._request.abort();
+		this._request = null;
+	}
+
+	this._audio_buffer = null;
+	this._loading_audio = false;
+
+	if(!url)
+		return;
+
+	//load new sample
+	var request = new XMLHttpRequest();
+	request.open('GET', url, true);
+	request.responseType = 'arraybuffer';
+	this._loading_audio = true;
+	this._request = request;
+
+	var context = LGAudio.getAudioContext();
+
+	// Decode asynchronously
+	request.onload = function() {
+		context.decodeAudioData( request.response, function(buffer) {
+			that._audio_buffer = buffer;
+			that._loading_audio = false;
+			//if is playing, then play it
+			if(that.graph && that.graph.status === LGraph.STATUS_RUNNING)
+				that.onStart();
+		}, onError);
+	}
+	request.send();
+
+	function onError(err)
+	{
+		console.log("Audio loading sample error:",err);
+	}
+}
+
+LGAudio.prototype.onGetInputs = function()
+{
+	return [["Play",LiteGraph.ACTION],["Stop",LiteGraph.ACTION]];
+}
+
+LGAudio.prototype.onGetOutputs = function()
+{
+	return [["ended",LiteGraph.EVENT]];
+}
+
+
+LGAudio.title = "Source";
+LGAudio.desc = "Plays audio";
+LiteGraph.registerNodeType("audio/source", LGAudio);
+global.LGAudio = LGAudio;
+
+//*****************************************************
+
+function LGAudioAnalyser()
+{
+	this.properties = {
+		fftSize: 2048,
+		minDecibels: -100,
+		maxDecibels: -10,
+		smoothingTimeConstant: 0.5
+	};
+
+	var context = LGAudio.getAudioContext();
+
+	this.audionode = context.createAnalyser();
+	this.audionode.graphnode = this;
+	this.audionode.fftSize = this.properties.fftSize;
+	this.audionode.minDecibels = this.properties.minDecibels;
+	this.audionode.maxDecibels = this.properties.maxDecibels;
+	this.audionode.smoothingTimeConstant = this.properties.smoothingTimeConstant;
+
+	this.addInput("in","audio");
+	this.addOutput("freqs","FFT");
+	//this.addOutput("time","freq");
+
+	this._freq_bin = null;
+	this._time_bin = null;
+}
+
+LGAudioAnalyser.prototype.onPropertyChanged = function(name, value)
+{
+	this.audionode[ name ] = value;
+}
+
+LGAudioAnalyser.prototype.onExecute = function()
+{
+	if(this.isOutputConnected(0))
+	{
+		//send FFT
+		var bufferLength = this.audionode.frequencyBinCount;
+		if( !this._freq_bin || this._freq_bin.length != bufferLength )
+			this._freq_bin = new Uint8Array( bufferLength );
+		this.audionode.getByteFrequencyData( this._freq_bin );
+		this.setOutputData(0,this._freq_bin);
+	}
+
+	//properties
+	for(var i = 1; i < this.inputs.length; ++i)
+	{
+		var input = this.inputs[i];
+		var v = this.getInputData(i);
+		if (v !== undefined)
+			this.audionode[ input.name ].value = v;
+	}
+
+	//time domain
+	//this.audionode.getFloatTimeDomainData( dataArray );
+}
+
+LGAudioAnalyser.prototype.onGetInputs = function()
+{
+	return [["minDecibels","number"],["maxDecibels","number"],["smoothingTimeConstant","number"]];
+}
+
+
+LGAudioAnalyser.title = "Analyser";
+LGAudioAnalyser.desc = "Audio Analyser";
+LiteGraph.registerNodeType( "audio/analyser", LGAudioAnalyser );
+
+
+
+//*****************************************************
+
+//this function helps creating wrappers to existing classes
+function createAudioNodeWrapper( class_object )
+{
+	class_object.prototype.onPropertyChanged = function(name, value)
+	{
+		if( this.audionode[ name ] === undefined )
+			return;
+
+		if( this.audionode[ name ].value !== undefined )
+			this.audionode[ name ].value = value;
+		else
+			this.audionode[ name ] = value;
+	}
+
+	class_object.prototype.onConnectionsChange = function( connection, slot, connected, link_info )
+	{
+		//only process the outputs events
+		if(connection != LiteGraph.OUTPUT)
+			return;
+
+		var target_node = null;
+		if( link_info )
+			target_node = this.graph.getNodeById( link_info.target_id );
+		if( !target_node )
+			return;
+
+		if( connected )	
+		{
+			if(target_node.connectAudioToSlot)
+				target_node.connectAudioToSlot( this.audionode, link_info.target_slot );
+			else
+				LGAudio.connect( this.audionode, target_node.audionode );
+		}
+		else
+		{
+			if(target_node.disconnectAudioFromSlot)
+				target_node.disconnectAudioFromSlot( this.audionode, link_info.target_slot );
+			else
+				LGAudio.disconnect( this.audionode, target_node.audionode );
+		}
+	}
+}
+
+
+//*****************************************************
+
+function LGAudioGain()
+{
+	//default 
+	this.properties = {
+		gain: 1
+	};
+
+	this.audionode = LGAudio.getAudioContext().createGain();
+	this.addInput("in","audio");
+	this.addInput("gain","number");
+	this.addOutput("out","audio");
+}
+
+LGAudioGain.prototype.onExecute = function()
+{
+	if(!this.inputs || !this.inputs.length)
+		return;
+
+	for(var i = 1; i < this.inputs.length; ++i)
+	{
+		var input = this.inputs[i];
+		var v = this.getInputData(i);
+		if(v !== undefined)
+			this.audionode[ input.name ].value = v;
+	}
+}
+
+createAudioNodeWrapper( LGAudioGain );
+
+LGAudioGain.title = "Gain";
+LGAudioGain.desc = "Audio gain";
+LiteGraph.registerNodeType("audio/gain", LGAudioGain);
+
+
+function LGAudioMixer()
+{
+	//default 
+	this.properties = {
+		gain1: 0.5,
+		gain2: 0.5
+	};
+
+	this.audionode = LGAudio.getAudioContext().createGain();
+
+	this.audionode1 = LGAudio.getAudioContext().createGain();
+	this.audionode1.gain.value = this.properties.gain1;
+	this.audionode2 = LGAudio.getAudioContext().createGain();
+	this.audionode2.gain.value = this.properties.gain2;
+
+	this.audionode1.connect( this.audionode );
+	this.audionode2.connect( this.audionode );
+
+	this.addInput("in1","audio");
+	this.addInput("in1 gain","number");
+	this.addInput("in2","audio");
+	this.addInput("in2 gain","number");
+
+	this.addOutput("out","audio");
+}
+
+LGAudioMixer.prototype.connectAudioToSlot = function( audionode, slot )
+{
+	if(slot == 0)
+		LGAudio.connect( audionode, this.audionode1 );
+	else if(slot == 2)
+		LGAudio.connect( audionode, this.audionode2 );
+}
+
+LGAudioMixer.prototype.disconnectAudioFromSlot = function( audionode, slot )
+{
+	if(slot == 0)
+		LGAudio.disconnect( audionode, this.audionode1 );
+	else if(slot == 2)
+		LGAudio.disconnect( audionode, this.audionode2 );
+}
+
+LGAudioMixer.prototype.onExecute = function()
+{
+	if(!this.inputs || !this.inputs.length)
+		return;
+
+	for(var i = 1; i < this.inputs.length; ++i)
+	{
+		var input = this.inputs[i];
+		if(input.type == "audio")
+			continue;
+
+		var v = this.getInputData(i);
+		if(v === undefined)
+			continue;
+
+		if(i == 1)
+			this.audionode1.gain.value = v;
+		else if(i == 3)
+			this.audionode2.gain.value = v;
+	}
+}
+
+createAudioNodeWrapper( LGAudioMixer );
+
+LGAudioMixer.title = "Mixer";
+LGAudioMixer.desc = "Audio mixer";
+LiteGraph.registerNodeType("audio/mixer", LGAudioMixer);
+
+
+function LGAudioDelay()
+{
+	//default 
+	this.properties = {
+		time: 5
+	};
+
+	this.audionode = LGAudio.getAudioContext().createDelay( this.properties.time );
+	this.addInput("in","audio");
+	this.addOutput("out","audio");
+}
+
+createAudioNodeWrapper( LGAudioDelay );
+
+LGAudioDelay.prototype.onPropertyChanged = function( name, value )
+{
+	if(name == "time")
+	{
+		if(value > 500)
+			value = 500;
+		if(value < 0)
+			value = 0;
+
+		var input_node = this.getInputNode(0);
+		var output_nodes = this.getOutputNodes(0);
+
+		if(input_node)
+			input_node.audionode.disconnect( this.audionode );
+		if(output_nodes)
+		{
+			for(var i = 0; i < output_nodes.length; ++i)
+				this.audionode.disconnect( output_nodes[i].audionode );
+		}
+
+		this.audionode = LGAudio.getAudioContext().createDelay( value );
+
+		if(input_node)
+			input_node.audionode.connect( this.audionode );
+		if(output_nodes)
+		{
+			for(var i = 0; i < output_nodes.length; ++i)
+				this.audionode.connect( output_nodes[i].audionode );
+		}
+	}
+}
+
+LGAudioDelay.title = "Delay";
+LGAudioDelay.desc = "Audio delay";
+LiteGraph.registerNodeType("audio/delay", LGAudioDelay);
+
+
+function LGAudioBiquadFilter()
+{
+	//default 
+	this.properties = {
+		frequency: 350,
+		detune: 0,
+		Q: 1
+	};
+	this.addProperty("type","lowpass","enum",{values:["lowpass","highpass","bandpass","lowshelf","highshelf","peaking","notch","allpass"]});	
+
+	//create node
+	this.audionode = LGAudio.getAudioContext().createBiquadFilter();
+
+	//slots
+	this.addInput("in","audio");
+	this.addOutput("out","audio");
+}
+
+LGAudioBiquadFilter.prototype.onExecute = function()
+{
+	if(!this.inputs || !this.inputs.length)
+		return;
+
+	for(var i = 1; i < this.inputs.length; ++i)
+	{
+		var input = this.inputs[i];
+		var v = this.getInputData(i);
+		if(v !== undefined)
+			this.audionode[ input.name ].value = v;
+	}
+}
+
+LGAudioBiquadFilter.prototype.onGetInputs = function()
+{
+	return [["frequency","number"],["detune","number"],["Q","number"]];
+}
+
+createAudioNodeWrapper( LGAudioBiquadFilter );
+
+LGAudioBiquadFilter.title = "BiquadFilter";
+LGAudioBiquadFilter.desc = "Audio filter";
+LiteGraph.registerNodeType("audio/biquadfilter", LGAudioBiquadFilter);
+
+
+//*****************************************************
+
+function LGAudioDestination()
+{
+	this.audionode = LGAudio.getAudioContext().destination;
+	this.addInput("in","audio");
+}
+
+
+LGAudioDestination.title = "Destination";
+LGAudioDestination.desc = "Audio output";
+LiteGraph.registerNodeType("audio/destination", LGAudioDestination);
+
+
+
+//EXTRA 
+
+
+function LGAudioVisualization()
+{
+	this.addInput("freqs","FFT");
+	this.size = [300,200];
+	this._last_buffer = null;
+}
+
+LGAudioVisualization.prototype.onExecute = function()
+{
+	this._last_buffer = this.getInputData(0);
+}
+
+LGAudioVisualization.prototype.onDrawForeground = function(ctx)
+{
+	if(!this._last_buffer)
+		return;
+
+	var buffer = this._last_buffer;
+
+	var delta = buffer.length / this.size[0];
+	var h = this.size[1];
+
+	ctx.fillStyle = "black";
+	ctx.fillRect(0,0,this.size[0],this.size[1]);
+	ctx.strokeStyle = "white";
+	ctx.beginPath();
+	var x = 0;
+	for(var i = 0; i < buffer.length; i+= delta)
+	{
+		ctx.moveTo(x,h);
+		ctx.lineTo(x,h - (buffer[i|0]/255) * h);
+		x++;
+	}
+	ctx.stroke();
+}
+
+LGAudioVisualization.title = "Visualization";
+LGAudioVisualization.desc = "Audio Visualization";
+LiteGraph.registerNodeType("audio/visualization", LGAudioVisualization);
 
 
 
