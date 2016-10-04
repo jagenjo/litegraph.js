@@ -44,6 +44,7 @@ var LiteGraph = {
 	debug: false,
 	throw_errors: true,
 	registered_node_types: {}, //nodetypes by string
+	node_types_by_file_extension: {}, //used for droping files in the canvas
 	Nodes: {}, //node types by classname
 
 	/**
@@ -81,6 +82,12 @@ var LiteGraph = {
 		//warnings
 		if(base_class.prototype.onPropertyChange)
 			console.warn("LiteGraph node class " + type + " has onPropertyChange method, it must be called onPropertyChanged with d at the end");
+
+		if( base_class.supported_extensions )
+		{
+			for(var i in base_class.supported_extensions )
+				this.node_types_by_file_extension[ base_class.supported_extensions[i].toLowerCase() ] = base_class;
+		}
 	},
 
 	/**
@@ -119,8 +126,8 @@ var LiteGraph = {
 		title = title || base_class.title || type;
 
 		var node = new base_class( name );
-
 		node.type = type;
+
 		if(!node.title) node.title = title;
 		if(!node.properties) node.properties = {};
 		if(!node.properties_info) node.properties_info = [];
@@ -1185,12 +1192,41 @@ LGraph.prototype.configure = function(data, keep_old)
 
 		node.id = n_info.id; //id it or it will create a new id
 		this.add(node, true); //add before configure, otherwise configure cannot create links
-		node.configure(n_info);
+	}
+
+	//configure nodes afterwards so they can reach each other
+	for(var i = 0, l = nodes.length; i < l; ++i)
+	{
+		var n_info = nodes[i];
+		var node = this.getNodeById( n_info.id );
+		if(node)
+			node.configure( n_info );
 	}
 
 	this.updateExecutionOrder();
 	this.setDirtyCanvas(true,true);
 	return error;
+}
+
+LGraph.prototype.load = function(url)
+{
+	var that = this;
+	var req = new XMLHttpRequest();
+	req.open('GET', url, true); 
+	req.send(null);
+	req.onload = function (oEvent) {
+		if(req.status !== 200)
+		{
+			console.error("Error loading graph:",req.status,req.response);
+			return;
+		}
+		var data = JSON.parse( req.response );
+		that.configure(data);
+	}
+	req.onerror = function(err)
+	{
+		console.error("Error loading graph:",err);
+	}
 }
 
 LGraph.prototype.onNodeTrace = function(node, msg, color)
@@ -1331,7 +1367,26 @@ LGraphNode.prototype.configure = function(info)
 	}
 
 	if(this.onConnectionsChange)
-		this.onConnectionsChange();
+	{
+		if(this.inputs)
+		for(var i = 0; i < this.inputs.length; ++i)
+		{
+			var input = this.inputs[i];
+			var link_info = this.graph.links[ input.link ];
+			this.onConnectionsChange( LiteGraph.INPUT, i, true, link_info ); //link_info has been created now, so its updated
+		}
+
+		if(this.outputs)
+		for(var i = 0; i < this.outputs.length; ++i)
+		{
+			var output = this.outputs[i];
+			for(var j = 0; j < output.links.length; ++j)
+			{
+				var link_info = this.graph.links[ output.links[j] ];
+				this.onConnectionsChange( LiteGraph.OUTPUT, i, true, link_info ); //link_info has been created now, so its updated
+			}
+		}
+	}
 
 	//FOR LEGACY, PLEASE REMOVE ON NEXT VERSION
 	for(var i in this.inputs)
@@ -1554,7 +1609,10 @@ LGraphNode.prototype.getInputNode = function( slot )
 	var input = this.inputs[slot];
 	if(!input || !input.link)
 		return null;
-	return this.graph.getNodeById( input.link.origin_id );
+	var link_info = this.graph.links[ input.link ];
+	if(!link_info)
+		return null;
+	return this.graph.getNodeById( link_info.origin_id );
 }
 
 
@@ -3447,8 +3505,11 @@ LGraphCanvas.prototype.processDrop = function(e)
 
 	if(!node)
 	{
+		var r = null;
 		if(this.onDropItem)
-			this.onDropItem( event );
+			r = this.onDropItem( event );
+		if(!r)
+			this.checkDropItem(e);
 		return;
 	}
 
@@ -3495,6 +3556,26 @@ LGraphCanvas.prototype.processDrop = function(e)
 
 	return false;
 }
+
+//called if the graph doesnt have a default drop item behaviour
+LGraphCanvas.prototype.checkDropItem = function(e)
+{
+	if(e.dataTransfer.files.length)
+	{
+		var file = e.dataTransfer.files[0];
+		var ext = LGraphCanvas.getFileExtension( file.name ).toLowerCase();
+		var nodetype = LiteGraph.node_types_by_file_extension[ext];
+		if(nodetype)
+		{
+			var node = LiteGraph.createNode( nodetype.type );
+			node.pos = [e.canvasX, e.canvasY];
+			this.graph.add( node );
+			if( node.onDropFile )
+				node.onDropFile( file );
+		}
+	}
+}
+
 
 LGraphCanvas.prototype.processNodeSelected = function(n,e)
 {

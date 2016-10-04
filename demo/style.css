@@ -241,3 +241,15 @@ textarea {
 	margin: 10px;
 }
 
+.selector {
+	font-size: 1.8em;
+}
+
+
+.selector select {
+	color: white;
+	background-color: black;
+	border: 0;
+	font-size: 1em;
+}
+

@@ -14,12 +14,13 @@ GraphicsImage.title = "Image";
 GraphicsImage.desc = "Image loader";
 GraphicsImage.widgets = [{name:"load",text:"Load",type:"button"}];
 
+GraphicsImage.supported_extensions = ["jpg","jpeg","png","gif"];
 
 GraphicsImage.prototype.onAdded = function()
 {
 	if(this.properties["url"] != "" && this.img == null)
 	{
-		this.loadImage(this.properties["url"]);
+		this.loadImage( this.properties["url"] );
 	}
 }
 
@@ -51,14 +52,7 @@ GraphicsImage.prototype.onPropertyChanged = function(name,value)
 	return true;
 }
 
-GraphicsImage.prototype.onDropFile = function(file, filename)
-{
-	var img = new Image();
-	img.src = file;
-	this.img = img;
-}
-
-GraphicsImage.prototype.loadImage = function(url)
+GraphicsImage.prototype.loadImage = function( url, callback )
 {
 	if(url == "")
 	{
@@ -68,7 +62,6 @@ GraphicsImage.prototype.loadImage = function(url)
 
 	this.img = document.createElement("img");
 
-	var url = name;
 	if(url.substr(0,7) == "http://")
 	{
 		if(LiteGraph.proxy) //proxy external files
@@ -80,6 +73,8 @@ GraphicsImage.prototype.loadImage = function(url)
 	var that = this;
 	this.img.onload = function()
 	{
+		if(callback)
+			callback(this);
 		that.trace("Image loaded, size: " + that.img.width + "x" + that.img.height );
 		this.dirty = true;
 		that.boxcolor = "#9F9";
@@ -93,6 +88,18 @@ GraphicsImage.prototype.onWidget = function(e,widget)
 	{
 		this.loadImage(this.properties["url"]);
 	}
+}
+
+GraphicsImage.prototype.onDropFile = function(file)
+{
+	var that = this;
+	if(this._url)
+		URL.revokeObjectURL( this._url );
+	this._url = URL.createObjectURL( file );
+	this.properties.url = this._url;
+	this.loadImage( this._url, function(img){
+		that.size[1] = (img.height / img.width) * that.size[0];
+	});
 }
 
 LiteGraph.registerNodeType("graphics/image", GraphicsImage);
@@ -365,7 +372,7 @@ LiteGraph.registerNodeType("graphics/imagefade", ImageFade);
 function ImageCrop()
 {
 	this.addInput("","image");
-	this.addOutputs("","image");
+	this.addOutput("","image");
 	this.properties = {width:256,height:256,x:0,y:0,scale:1.0 };
 	this.size = [50,20];
 }
@@ -388,7 +395,8 @@ ImageCrop.prototype.createCanvas = function()
 ImageCrop.prototype.onExecute = function()
 {
 	var input = this.getInputData(0);
-	if(!input) return;
+	if(!input)
+		return;
 
 	if(input.width)
 	{
@@ -399,6 +407,14 @@ ImageCrop.prototype.onExecute = function()
 	}
 	else
 		this.setOutputData(0,null);
+}
+
+ImageCrop.prototype.onDrawBackground = function(ctx)
+{
+	if(this.flags.collapsed)
+		return;
+	if(this.canvas)
+		ctx.drawImage( this.canvas, 0,0,this.canvas.width,this.canvas.height, 0,0, this.size[0], this.size[1] );
 }
 
 ImageCrop.prototype.onPropertyChanged = function(name,value)
@@ -422,7 +438,7 @@ ImageCrop.prototype.onPropertyChanged = function(name,value)
 	return true;
 }
 
-LiteGraph.registerNodeType("graphics/cropImage", ImageFade );
+LiteGraph.registerNodeType("graphics/cropImage", ImageCrop );
 
 
 function ImageVideo()

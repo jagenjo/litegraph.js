@@ -1,6 +1,5 @@
-//NOT FINISHED
-
-function Editor(container_id, options)
+//Creates an interface to access extra features from a graph (like play, stop, live, etc)
+function Editor( container_id, options )
 {
 	//fill container
 	var html = "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
@@ -11,6 +10,8 @@ function Editor(container_id, options)
 	this.root = root;
 	root.className = "litegraph-editor";
 	root.innerHTML = html;
+
+	this.tools = root.querySelector(".tools");
 
 	var canvas = root.querySelector(".graphcanvas");
 
@@ -64,7 +65,8 @@ Editor.prototype.addLoadCounter = function()
 
 Editor.prototype.addToolsButton = function(id,name,icon_url, callback, container)
 {
-	if(!container) container = ".tools";
+	if(!container)
+		container = ".tools";
 
 	var button = this.createButton(name, icon_url);
 	button.id = id;
@@ -183,7 +185,9 @@ Editor.prototype.addMiniWindow = function(w,h)
 
 	var graphcanvas = new LGraphCanvas(canvas, this.graph);
 	graphcanvas.background_image = "imgs/grid.png";
-	graphcanvas.scale = 0.5;
+	graphcanvas.scale = 0.25;
+	this.miniwindow_graphcanvas = graphcanvas;
+	graphcanvas.onClear = function() { graphcanvas.scale = 0.25; };
 
 	miniwindow.style.position = "absolute";
 	miniwindow.style.top = "4px";
@@ -197,7 +201,6 @@ Editor.prototype.addMiniWindow = function(w,h)
 		miniwindow.parentNode.removeChild(miniwindow);
 	});
 	miniwindow.appendChild(close_button);
-
 
 	this.root.querySelector(".content").appendChild(miniwindow);
 }
