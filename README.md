@@ -34,7 +34,7 @@ function MyAddNode()
 }
 
 //name to show
-MyAddNode.name = "Sum";
+MyAddNode.title = "Sum";
 
 //function to call when the node is executed
 MyAddNode.prototype.onExecute = function()
