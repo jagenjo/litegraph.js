@@ -1538,6 +1538,7 @@ LGraphNode.prototype.setOutputData = function(slot,data)
 * retrieves the input data (data traveling through the connection) from one slot
 * @method getInputData
 * @param {number} slot
+* @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
 * @return {*} data or if it is not connected returns undefined
 */
 LGraphNode.prototype.getInputData = function( slot, force_update )
@@ -1551,6 +1552,7 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 	var link_id = this.inputs[slot].link;
 	var link = this.graph.links[ link_id ];
 
+	//used to extract data from the incomming connection
 	if(!force_update)
 		return link.data;
 
