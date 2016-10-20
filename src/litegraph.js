@@ -2511,6 +2511,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.show_info = true;
 	this.allow_dragcanvas = true;
 	this.allow_dragnodes = true;
+	this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
 
 	this.always_render_background = false; 
 	this.render_connections_shadows = false; //too much cpu
@@ -2986,7 +2987,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 		//when clicked on top of a node
 		//and it is not interactive
-		if(n) 
+		if(n && this.allow_interaction ) 
 		{
 			if(!this.live_mode && !n.flags.pinned)
 				this.bringToFront(n); //if it wasnt selected?
@@ -3149,7 +3150,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 		this.dirty_canvas = true;
 		this.dirty_bgcanvas = true;
 	}
-	else
+	else if(this.allow_interaction)
 	{
 		if(this.connecting_node)
 			this.dirty_canvas = true;
@@ -3513,7 +3514,7 @@ LGraphCanvas.prototype.processDrop = function(e)
 		return;
 	}
 
-	if(node.onDropFile)
+	if( node.onDropFile || node.onDropData )
 	{
 		var files = e.dataTransfer.files;
 		if(files && files.length)
@@ -3525,22 +3526,28 @@ LGraphCanvas.prototype.processDrop = function(e)
 				var ext = LGraphCanvas.getFileExtension( filename );
 				//console.log(file);
 
-				//prepare reader
-				var reader = new FileReader();
-				reader.onload = function (event) {
-					//console.log(event.target);
-					var data = event.target.result;
-					node.onDropFile( data, filename, file );
-				};
+				if(node.onDropFile)
+					node.onDropFile(file);
 
-				//read data
-				var type = file.type.split("/")[0];
-				if(type == "text" || type == "")
-					reader.readAsText(file);
-				else if (type == "image")
-					reader.readAsDataURL(file);
-				else
-					reader.readAsArrayBuffer(file);
+				if(node.onDropData)
+				{
+					//prepare reader
+					var reader = new FileReader();
+					reader.onload = function (event) {
+						//console.log(event.target);
+						var data = event.target.result;
+						node.onDropData( data, filename, file );
+					};
+
+					//read data
+					var type = file.type.split("/")[0];
+					if(type == "text" || type == "")
+						reader.readAsText(file);
+					else if (type == "image")
+						reader.readAsDataURL(file);
+					else
+						reader.readAsArrayBuffer(file);
+				}
 			}
 		}
 	}
@@ -3991,7 +3998,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		if(this.background_image && this.scale > 0.5)
 		{
 			ctx.globalAlpha = (1.0 - 0.5 / this.scale) * this.editor_alpha;
-			ctx.webkitImageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = false;
+			ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = false;
 			if(!this._bg_img || this._bg_img.name != this.background_image)
 			{
 				this._bg_img = new Image();
@@ -4020,7 +4027,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 			}
 
 			ctx.globalAlpha = 1.0;
-			ctx.webkitImageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = true;
+			ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = true;
 		}
 
 		if(this.onBackgroundRender)
@@ -4861,12 +4868,14 @@ LGraphCanvas.onShowMenuNodeProperties = function(node,e, prev_menu)
 		for (var i in node.properties)
 		{
 			var value = node.properties[i] !== undefined ? node.properties[i] : " ";
+			//value could contain invalid html characters, clean that
+			value = LGraphCanvas.decodeHTML(value);			
 			entries.push({content: "<span class='property_name'>" + i + "</span>" + "<span class='property_value'>" + value + "</span>", value: i});
 		}
 	if(!entries.length)
 		return;
 
-	var menu = LiteGraph.createContextMenu(entries, {event: e, callback: inner_clicked, from: prev_menu},ref_window);
+	var menu = LiteGraph.createContextMenu(entries, {event: e, callback: inner_clicked, from: prev_menu, allow_html: true },ref_window);
 
 	function inner_clicked( v, e, prev )
 	{
@@ -4876,6 +4885,70 @@ LGraphCanvas.onShowMenuNodeProperties = function(node,e, prev_menu)
 	}
 
 	return false;
+}
+
+LGraphCanvas.decodeHTML = function( str )
+{
+	var e = document.createElement("div");
+	e.innerText = str;
+	return e.innerHTML;
+}
+
+LGraphCanvas.onShowTitleEditor = function( node, event )
+{
+	var input_html = "";
+
+	var dialog = document.createElement("div");
+	dialog.className = "graphdialog";
+	dialog.innerHTML = "<span class='name'>Title</span><input autofocus type='text' class='value'/><button>OK</button>";
+	var input = dialog.querySelector("input");
+	if(input)
+	{
+		input.value = node.title;
+		input.addEventListener("keydown", function(e){
+			if(e.keyCode != 13)
+				return;
+			inner();
+			e.preventDefault();
+			e.stopPropagation();
+		});
+	}
+
+	var rect = this.canvas.getClientRects()[0];
+	var offsetx = -20;
+	var offsety = -20;
+	if(rect)
+	{
+		offsetx -= rect.left;
+		offsety -= rect.top;
+	}
+
+	if( event )
+	{
+		dialog.style.left = (event.pageX + offsetx) + "px";
+		dialog.style.top = (event.pageY + offsety)+ "px";
+	}
+	else
+	{
+		dialog.style.left = (this.canvas.width * 0.5 + offsetx) + "px";
+		dialog.style.top = (this.canvas.height * 0.5 + offsety) + "px";
+	}
+
+	var button = dialog.querySelector("button");
+	button.addEventListener("click", inner );
+	this.canvas.parentNode.appendChild( dialog );
+
+	function inner()
+	{
+		setValue( input.value );
+	}
+
+	function setValue(value)
+	{
+		node.title = value;
+		dialog.parentNode.removeChild( dialog );
+		node.setDirtyCanvas(true,true);
+	}
 }
 
 LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options )
@@ -5147,6 +5220,7 @@ LGraphCanvas.prototype.getNodeMenuOptions = function(node)
 			null,
 			{content:"Properties", is_menu: true, callback: LGraphCanvas.onShowMenuNodeProperties },
 			null,
+			{content:"Title", callback: LGraphCanvas.onShowTitleEditor },
 			{content:"Mode", is_menu: true, callback: LGraphCanvas.onMenuNodeMode },
 			{content:"Collapse", callback: LGraphCanvas.onMenuNodeCollapse },
 			{content:"Pin", callback: LGraphCanvas.onMenuNodePin },
@@ -5361,7 +5435,7 @@ function num2hex(triplet) {
 
 /* LiteGraph GUI elements *************************************/
 
-LiteGraph.createContextMenu = function(values,options, ref_window)
+LiteGraph.createContextMenu = function(values, options, ref_window)
 {
 	options = options || {};
 	this.options = options;
@@ -5434,10 +5508,16 @@ LiteGraph.createContextMenu = function(values,options, ref_window)
 		element.style.cursor = "pointer";
 		element.dataset["value"] = typeof(item) == "string" ? item : item.value;
 		element.data = item;
+
+		var content = "";
 		if(typeof(item) == "string")
-			element.innerHTML = values.constructor == Array ? values[i] : i;
+			content = values.constructor == Array ? values[i] : i;
 		else
-			element.innerHTML = item.content ? item.content : i;
+			content = item.content ? item.content : i;
+		if(options.allow_html)
+			element.innerHTML = content;
+		else
+			element.innerText = content;
 
 		element.addEventListener("click", on_click );
 		root.appendChild(element);

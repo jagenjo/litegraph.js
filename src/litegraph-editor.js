@@ -22,8 +22,8 @@ function Editor( container_id, options )
 	graph.onAfterExecute = function() { graphcanvas.draw(true) };
 
 	//add stuff
-	this.addToolsButton("loadsession_button","Load","imgs/icon-load.png", this.onLoadButton.bind(this), ".tools-left" );
-	this.addToolsButton("savesession_button","Save","imgs/icon-save.png", this.onSaveButton.bind(this), ".tools-left" );
+	//this.addToolsButton("loadsession_button","Load","imgs/icon-load.png", this.onLoadButton.bind(this), ".tools-left" );
+	//this.addToolsButton("savesession_button","Save","imgs/icon-save.png", this.onSaveButton.bind(this), ".tools-left" );
 	this.addLoadCounter();
 	this.addToolsButton("playnode_button","Play","imgs/icon-play.png", this.onPlayButton.bind(this), ".tools-right" );
 	this.addToolsButton("playstepnode_button","Step","imgs/icon-playstep.png", this.onPlayStepButton.bind(this), ".tools-right" );
@@ -186,8 +186,14 @@ Editor.prototype.addMiniWindow = function(w,h)
 	var graphcanvas = new LGraphCanvas(canvas, this.graph);
 	graphcanvas.background_image = "imgs/grid.png";
 	graphcanvas.scale = 0.25;
+	graphcanvas.allow_dragnodes = false;
+	graphcanvas.allow_interaction = false;
 	this.miniwindow_graphcanvas = graphcanvas;
-	graphcanvas.onClear = function() { graphcanvas.scale = 0.25; };
+	graphcanvas.onClear = function() { 
+		graphcanvas.scale = 0.25;
+		graphcanvas.allow_dragnodes = false;
+		graphcanvas.allow_interaction = false;
+	};
 
 	miniwindow.style.position = "absolute";
 	miniwindow.style.top = "4px";
