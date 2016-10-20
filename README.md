@@ -4,11 +4,14 @@ A library to create graphs similar to PD. Nodes can be programmed easily and it 
 
 # Projects using it
 
+## [webglstudio.org](http://webglstudio.org)
+
 ![WebGLStudio](imgs/webglstudio.gif "WebGLStudio")
-[webglstudio.org](http://webglstudio.org)
+
+## [MOI Elephant](http://moiscript.weebly.com/elephant-systegraveme-nodal.html)
 
 ![MOI Elephant](imgs/elephant.gif "MOI Elephant")
-[MOI Elephant](http://moiscript.weebly.com/elephant-systegraveme-nodal.html)
+
 
 
 Utils
