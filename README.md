@@ -64,7 +64,9 @@ LiteGraph.registerNodeType("basic/sum", MyAddNode );
 
 ![MOI Elephant](imgs/elephant.gif "MOI Elephant")
 
+### [Mynodes.NET](http://www.mynodes.net)
 
+![MyNodes.NET](imgs/mynodes.png "MyNodes.NET")
 
 ## Utils
 -----
