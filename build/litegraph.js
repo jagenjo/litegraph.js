@@ -1,5 +1,5 @@
 //packer version
-
+(function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
 // *************************************************************
@@ -11,7 +11,7 @@
 * @constructor
 */
 
-var LiteGraph = {
+var LiteGraph = global.LiteGraph = {
 
 	NODE_TITLE_HEIGHT: 16,
 	NODE_SLOT_HEIGHT: 15,
@@ -101,7 +101,12 @@ var LiteGraph = {
 	{
 		LGraphNode.prototype[name] = func;
 		for(var i in this.registered_node_types)
-			this.registered_node_types[i].prototype[name] = func;
+		{
+			var type = this.registered_node_types[i];
+			if(type.prototype[name])
+				type.prototype["_" + name] = type.prototype[name]; //keep old in case of replacing
+			type.prototype[name] = func;
+		}
 	},
 
 	/**
@@ -286,7 +291,7 @@ else
 * @constructor
 */
 
-function LGraph()
+global.LGraph = LiteGraph.LGraph = function LGraph()
 {
 	if (LiteGraph.debug)
 		console.log("Graph created");
@@ -1284,7 +1289,7 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 * @param {String} name a name for the node
 */
 
-function LGraphNode(title)
+global.LGraphNode = LiteGraph.LGraphNode = function LGraphNode(title)
 {
 	this._ctor();
 }
@@ -1415,8 +1420,8 @@ LGraphNode.prototype.configure = function(info)
 		}
 	}
 
-	if( this.onConfigured )
-		this.onConfigured( info );
+	if( this.onConfigure )
+		this.onConfigure( info );
 }
 
 /**
@@ -1539,6 +1544,7 @@ LGraphNode.prototype.setOutputData = function(slot,data)
 * retrieves the input data (data traveling through the connection) from one slot
 * @method getInputData
 * @param {number} slot
+* @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
 * @return {*} data or if it is not connected returns undefined
 */
 LGraphNode.prototype.getInputData = function( slot, force_update )
@@ -1552,6 +1558,7 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 	var link_id = this.inputs[slot].link;
 	var link = this.graph.links[ link_id ];
 
+	//used to extract data from the incomming connection
 	if(!force_update)
 		return link.data;
 
@@ -2484,7 +2491,7 @@ LGraphNode.prototype.localToScreen = function(x,y, graphcanvas)
 * @param {LGraph} graph [optional]
 * @param {Object} options [optional] { skip_rendering, autoresize }
 */
-function LGraphCanvas( canvas, graph, options )
+global.LGraphCanvas = LiteGraph.LGraphCanvas = function LGraphCanvas( canvas, graph, options )
 {
 	options = options || {};
 
@@ -5318,6 +5325,7 @@ LGraphCanvas.prototype.processContextMenu = function(node, event)
 
 //API *************************************************
 //function roundRect(ctx, x, y, width, height, radius, radius_low) {
+if(this.CanvasRenderingContext2D)
 CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius, radius_low) {
   if ( radius === undefined ) {
     radius = 5;
@@ -5346,27 +5354,31 @@ function compareObjects(a,b)
 			return false;
 	return true;
 }
+LiteGraph.compareObjects = compareObjects;
 
 function distance(a,b)
 {
 	return Math.sqrt( (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1]) );
 }
+LiteGraph.distance = distance;
 
 function colorToString(c)
 {
 	return "rgba(" + Math.round(c[0] * 255).toFixed() + "," + Math.round(c[1] * 255).toFixed() + "," + Math.round(c[2] * 255).toFixed() + "," + (c.length == 4 ? c[3].toFixed(2) : "1.0") + ")";
 }
+LiteGraph.colorToString = colorToString;
 
-function isInsideRectangle(x,y, left, top, width, height)
+function isInsideRectangle( x,y, left, top, width, height)
 {
 	if (left < x && (left + width) > x &&
 		top < y && (top + height) > y)
 		return true;	
 	return false;
 }
+LiteGraph.isInsideRectangle = isInsideRectangle;
 
 //[minx,miny,maxx,maxy]
-function growBounding(bounding, x,y)
+function growBounding( bounding, x,y)
 {
 	if(x < bounding[0])
 		bounding[0] = x;
@@ -5378,6 +5390,7 @@ function growBounding(bounding, x,y)
 	else if(y > bounding[3])
 		bounding[3] = y;
 }
+LiteGraph.growBounding = growBounding;
 
 //point inside boundin box
 function isInsideBounding(p,bb)
@@ -5389,6 +5402,7 @@ function isInsideBounding(p,bb)
 		return false;
 	return true;
 }
+LiteGraph.isInsideBounding = isInsideBounding;
 
 //boundings overlap, format: [start,end]
 function overlapBounding(a,b)
@@ -5400,6 +5414,7 @@ function overlapBounding(a,b)
 		return false;
 	return true;
 }
+LiteGraph.overlapBounding = overlapBounding;
 
 //Convert a hex value to its decimal value - the inputted hex must be in the
 //	format of a hex triplet - the kind we use for HTML colours. The function
@@ -5419,6 +5434,9 @@ function hex2num(hex) {
 	}
 	return(value);
 }
+
+LiteGraph.hex2num = hex2num;
+
 //Give a array with three values as the argument and the function will return
 //	the corresponding hex triplet.
 function num2hex(triplet) {
@@ -5433,6 +5451,8 @@ function num2hex(triplet) {
 	}
 	return(hex);
 }
+
+LiteGraph.num2hex = num2hex;
 
 /* LiteGraph GUI elements *************************************/
 
@@ -5663,7 +5683,7 @@ LiteGraph.createNodetypeWrapper = function( class_object )
 //LiteGraph.registerNodeType("scene/global", LGraphGlobal );
 */
 
-if( !window["requestAnimationFrame"] )
+if(typeof(window) !== undefined && !window["requestAnimationFrame"] )
 {
 	window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
 		  window.mozRequestAnimationFrame    ||
@@ -5672,7 +5692,7 @@ if( !window["requestAnimationFrame"] )
 		  });
 }
 
-
+})(this);
 
 //basic nodes
 (function(){
@@ -6287,7 +6307,7 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 	{
 		this.setOutputData(0, this.properties["value"] );
 
-		this.boxcolor = colorToString([this.value,this.value,this.value]);
+		this.boxcolor = LiteGraph.colorToString([this.value,this.value,this.value]);
 	}
 
 	WidgetKnob.prototype.onMouseDown = function(e)
@@ -6299,7 +6319,7 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 		this.center = [this.size[0] * 0.5, this.size[1] * 0.5 + 20];
 		this.radius = this.size[0] * 0.5;
 
-		if(e.canvasY - this.pos[1] < 20 || distance([e.canvasX,e.canvasY],[this.pos[0] + this.center[0],this.pos[1] + this.center[1]]) > this.radius)
+		if(e.canvasY - this.pos[1] < 20 || LiteGraph.distance([e.canvasX,e.canvasY],[this.pos[0] + this.center[0],this.pos[1] + this.center[1]]) > this.radius)
 			return false;
 
 		this.oldmouse = [ e.canvasX - this.pos[0], e.canvasY - this.pos[1] ];
@@ -6442,7 +6462,7 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 	{
 		this.properties["value"] = this.properties["min"] + (this.properties["max"] - this.properties["min"]) * this.value;
 		this.setOutputData(0, this.properties["value"] );
-		this.boxcolor = colorToString([this.value,this.value,this.value]);
+		this.boxcolor = LiteGraph.colorToString([this.value,this.value,this.value]);
 	}
 
 	WidgetHSlider.prototype.onMouseDown = function(e)
@@ -8929,10 +8949,7 @@ if(typeof(LiteGraph) != "undefined")
 
 		var tex = container[ name ];
 		if(!tex && name && name[0] != ":")
-		{
-			this.loadTexture(name);
-			return null;
-		}
+			return this.loadTexture(name);
 
 		return tex;
 	}
@@ -9143,6 +9160,12 @@ if(typeof(LiteGraph) != "undefined")
 		if(temp_tex)
 			temp_tex.toCanvas(tex_canvas);
 		return tex_canvas;
+	}
+
+	LGraphTexture.prototype.getResources = function(res)
+	{
+		res[ this.properties.name ] = GL.Texture;
+		return res;
 	}
 
 	LGraphTexture.prototype.onGetInputs = function()

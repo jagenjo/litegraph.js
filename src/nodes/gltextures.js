@@ -64,10 +64,7 @@ if(typeof(LiteGraph) != "undefined")
 
 		var tex = container[ name ];
 		if(!tex && name && name[0] != ":")
-		{
-			this.loadTexture(name);
-			return null;
-		}
+			return this.loadTexture(name);
 
 		return tex;
 	}
@@ -278,6 +275,12 @@ if(typeof(LiteGraph) != "undefined")
 		if(temp_tex)
 			temp_tex.toCanvas(tex_canvas);
 		return tex_canvas;
+	}
+
+	LGraphTexture.prototype.getResources = function(res)
+	{
+		res[ this.properties.name ] = GL.Texture;
+		return res;
 	}
 
 	LGraphTexture.prototype.onGetInputs = function()

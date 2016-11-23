@@ -154,7 +154,7 @@
 	{
 		this.setOutputData(0, this.properties["value"] );
 
-		this.boxcolor = colorToString([this.value,this.value,this.value]);
+		this.boxcolor = LiteGraph.colorToString([this.value,this.value,this.value]);
 	}
 
 	WidgetKnob.prototype.onMouseDown = function(e)
@@ -166,7 +166,7 @@
 		this.center = [this.size[0] * 0.5, this.size[1] * 0.5 + 20];
 		this.radius = this.size[0] * 0.5;
 
-		if(e.canvasY - this.pos[1] < 20 || distance([e.canvasX,e.canvasY],[this.pos[0] + this.center[0],this.pos[1] + this.center[1]]) > this.radius)
+		if(e.canvasY - this.pos[1] < 20 || LiteGraph.distance([e.canvasX,e.canvasY],[this.pos[0] + this.center[0],this.pos[1] + this.center[1]]) > this.radius)
 			return false;
 
 		this.oldmouse = [ e.canvasX - this.pos[0], e.canvasY - this.pos[1] ];
@@ -309,7 +309,7 @@
 	{
 		this.properties["value"] = this.properties["min"] + (this.properties["max"] - this.properties["min"]) * this.value;
 		this.setOutputData(0, this.properties["value"] );
-		this.boxcolor = colorToString([this.value,this.value,this.value]);
+		this.boxcolor = LiteGraph.colorToString([this.value,this.value,this.value]);
 	}
 
 	WidgetHSlider.prototype.onMouseDown = function(e)
