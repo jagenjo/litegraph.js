@@ -685,7 +685,9 @@ LGraph.prototype.add = function(node, skip_compute_order)
 
 	//give him an id
 	if(node.id == null || node.id == -1)
-		node.id = this.last_node_id++;
+		node.id = ++this.last_node_id;
+	else if (this.last_node_id < node.id)
+		this.last_node_id = node.id;
 
 	node.graph = this;
 
