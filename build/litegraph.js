@@ -690,7 +690,9 @@ LGraph.prototype.add = function(node, skip_compute_order)
 
 	//give him an id
 	if(node.id == null || node.id == -1)
-		node.id = this.last_node_id++;
+		node.id = ++this.last_node_id;
+	else if (this.last_node_id < node.id)
+		this.last_node_id = node.id;
 
 	node.graph = this;
 
@@ -1678,7 +1680,16 @@ LGraphNode.prototype.getOutputNodes = function(slot)
 
 	var r = [];
 	for(var i = 0; i < output.links.length; i++)
-		r.push( this.graph.getNodeById( output.links[i] ));
+	{
+		var link_id = output.links[i];
+		var link = this.graph.links[ link_id ];
+		if(link)
+		{
+			var target_node = this.graph.getNodeById( link.target_id );
+			if( target_node )
+				r.push( target_node );
+		}
+	}
 	return r;
 }
 

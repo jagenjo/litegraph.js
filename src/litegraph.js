@@ -1679,7 +1679,16 @@ LGraphNode.prototype.getOutputNodes = function(slot)
 
 	var r = [];
 	for(var i = 0; i < output.links.length; i++)
-		r.push( this.graph.getNodeById( output.links[i] ));
+	{
+		var link_id = output.links[i];
+		var link = this.graph.links[ link_id ];
+		if(link)
+		{
+			var target_node = this.graph.getNodeById( link.target_id );
+			if( target_node )
+				r.push( target_node );
+		}
+	}
 	return r;
 }
 
