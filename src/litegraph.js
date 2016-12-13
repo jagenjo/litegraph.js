@@ -321,6 +321,7 @@ LGraph.prototype.clear = function()
 	//nodes
 	this._nodes = [];
 	this._nodes_by_id = {};
+	this._nodes_in_order = null; //nodes that are executable sorted in execution order
 
 	//links
 	this.last_link_id = 0;
@@ -397,7 +398,8 @@ LGraph.prototype.detachCanvas = function(graphcanvas)
 
 LGraph.prototype.start = function(interval)
 {
-	if(this.status == LGraph.STATUS_RUNNING) return;
+	if( this.status == LGraph.STATUS_RUNNING )
+		return;
 	this.status = LGraph.STATUS_RUNNING;
 
 	if(this.onPlayEvent)
@@ -423,7 +425,7 @@ LGraph.prototype.start = function(interval)
 
 LGraph.prototype.stop = function()
 {
-	if(this.status == LGraph.STATUS_STOPPED)
+	if( this.status == LGraph.STATUS_STOPPED )
 		return;
 
 	this.status = LGraph.STATUS_STOPPED;
@@ -499,14 +501,13 @@ LGraph.prototype.runStep = function(num)
 * nodes with only inputs.
 * @method updateExecutionOrder
 */
-	
 LGraph.prototype.updateExecutionOrder = function()
 {
-	this._nodes_in_order = this.computeExecutionOrder();
+	this._nodes_in_order = this.computeExecutionOrder( true );
 }
 
 //This is more internal, it computes the order and returns it
-LGraph.prototype.computeExecutionOrder = function()
+LGraph.prototype.computeExecutionOrder = function( only_onExecute )
 {
 	var L = [];
 	var S = [];
@@ -518,6 +519,9 @@ LGraph.prototype.computeExecutionOrder = function()
 	for (var i = 0, l = this._nodes.length; i < l; ++i)
 	{
 		var n = this._nodes[i];
+		if( only_onExecute && !n.onExecute )
+			continue;
+
 		M[n.id] = n; //add to pending nodes
 
 		var num = 0; //num of input connections
@@ -790,13 +794,14 @@ LGraph.prototype.remove = function(node)
 /**
 * Returns a node by its id.
 * @method getNodeById
-* @param {String} id
+* @param {Number} id
 */
 
-LGraph.prototype.getNodeById = function(id)
+LGraph.prototype.getNodeById = function( id )
 {
-	if(id==null) return null;
-	return this._nodes_by_id[id];
+	if( id == null )
+		return null;
+	return this._nodes_by_id[ id ];
 }
 
 /**
@@ -1660,16 +1665,20 @@ LGraphNode.prototype.isOutputConnected = function(slot)
 */
 LGraphNode.prototype.getOutputNodes = function(slot)
 {
-	if(!this.outputs || this.outputs.length == 0) return null;
-	if(slot < this.outputs.length)
-	{
-		var output = this.outputs[slot];
-		var r = [];
-		for(var i = 0; i < output.length; i++)
-			r.push( this.graph.getNodeById( output.links[i].target_id ));
-		return r;
-	}
-	return null;
+	if(!this.outputs || this.outputs.length == 0)
+		return null;
+
+	if(slot >= this.outputs.length)
+		return null;
+
+	var output = this.outputs[slot];
+	if(!output.links || output.links.length == 0)
+		return null;
+
+	var r = [];
+	for(var i = 0; i < output.links.length; i++)
+		r.push( this.graph.getNodeById( output.links[i] ));
+	return r;
 }
 
 /**
@@ -4764,6 +4773,11 @@ LGraphCanvas.showMenuNodeInputs = function(node, e, prev_menu)
 		for (var i in options)
 		{
 			var entry = options[i];
+			if(!entry)
+			{
+				entries.push(null);
+				continue;
+			}
 			var label = entry[0];
 			if(entry[2] && entry[2].label)
 				label = entry[2].label;

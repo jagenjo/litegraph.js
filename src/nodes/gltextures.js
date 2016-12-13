@@ -1645,9 +1645,6 @@ if(typeof(LiteGraph) != "undefined")
 		this.addInput("Range","number");
 		this.addOutput("Texture","Texture");
 		this.properties = { distance:100, range: 50, high_precision: false };
-
-		if(!LGraphTextureDepthRange._shader)
-			LGraphTextureDepthRange._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureDepthRange.pixel_shader );
 	}
 
 	LGraphTextureDepthRange.title = "Depth Range";
@@ -1687,6 +1684,8 @@ if(typeof(LiteGraph) != "undefined")
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
+		if(!LGraphTextureDepthRange._shader)
+			LGraphTextureDepthRange._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureDepthRange.pixel_shader );
 		var shader = LGraphTextureDepthRange._shader;
 
 		//TODO: this asumes we have LiteScene, change it
@@ -1736,9 +1735,6 @@ if(typeof(LiteGraph) != "undefined")
 		this.addInput("Intensity","number");
 		this.addOutput("Blurred","Texture");
 		this.properties = { intensity: 1, iterations: 1, preserve_aspect: false, scale:[1,1] };
-
-		if(!LGraphTextureBlur._shader)
-			LGraphTextureBlur._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureBlur.pixel_shader );
 	}
 
 	LGraphTextureBlur.title = "Blur";
@@ -1829,6 +1825,169 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/blur", LGraphTextureBlur );
+
+	// Texture Blur *****************************************
+	function LGraphTextureKuwaharaFilter()
+	{
+		this.addInput("Texture","Texture");
+		this.addOutput("Filtered","Texture");
+		this.properties = { intensity: 1, radius: 5 };
+	}
+
+	LGraphTextureKuwaharaFilter.title = "Kuwahara Filter";
+	LGraphTextureKuwaharaFilter.desc = "Filters a texture giving an artistic oil canvas painting";
+
+	LGraphTextureKuwaharaFilter.max_radius = 10;
+	LGraphTextureKuwaharaFilter._shaders = [];
+
+	LGraphTextureKuwaharaFilter.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var temp = this._temp_texture;
+
+		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
+		{
+			//we need two textures to do the blurring
+			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+			//this._final_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+		}
+
+		//iterations
+		var radius = this.properties.radius;
+		radius = Math.min( Math.floor(radius), LGraphTextureKuwaharaFilter.max_radius );
+		if(radius == 0) //skip blurring
+		{
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		var intensity = this.properties.intensity;
+
+		//blur sometimes needs an aspect correction
+		var aspect = LiteGraph.camera_aspect;
+		if(!aspect && window.gl !== undefined)
+			aspect = gl.canvas.height / gl.canvas.width;
+		if(!aspect)
+			aspect = 1;
+		aspect = this.properties.preserve_aspect ? aspect : 1;
+
+		if(!LGraphTextureKuwaharaFilter._shaders[ radius ])
+			LGraphTextureKuwaharaFilter._shaders[ radius ] = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureKuwaharaFilter.pixel_shader, { RADIUS: radius.toFixed(0) });
+
+		var shader = LGraphTextureKuwaharaFilter._shaders[ radius ];
+		var mesh = GL.Mesh.getScreenQuad();
+		tex.bind(0);
+
+		this._temp_texture.drawTo( function() {
+			shader.uniforms({ u_texture: 0, u_intensity: intensity, u_resolution: [tex.width, tex.height], u_iResolution: [1/tex.width,1/tex.height]}).draw(mesh);
+		});
+
+		this.setOutputData(0, this._temp_texture);
+	}
+
+//from https://www.shadertoy.com/view/MsXSz4
+LGraphTextureKuwaharaFilter.pixel_shader = "\n\
+	precision highp float;\n\
+	varying vec2 v_coord;\n\
+	uniform sampler2D u_texture;\n\
+	uniform float u_intensity;\n\
+	uniform vec2 u_resolution;\n\
+	uniform vec2 u_iResolution;\n\
+	#ifndef RADIUS\n\
+		#define RADIUS 7\n\
+	#endif\n\
+	void main() {\n\
+	\n\
+		const int radius = RADIUS;\n\
+		vec2 fragCoord = v_coord;\n\
+		vec2 src_size = u_iResolution;\n\
+		vec2 uv = v_coord;\n\
+		float n = float((radius + 1) * (radius + 1));\n\
+		int i;\n\
+		int j;\n\
+		vec3 m0 = vec3(0.0); vec3 m1 = vec3(0.0); vec3 m2 = vec3(0.0); vec3 m3 = vec3(0.0);\n\
+		vec3 s0 = vec3(0.0); vec3 s1 = vec3(0.0); vec3 s2 = vec3(0.0); vec3 s3 = vec3(0.0);\n\
+		vec3 c;\n\
+		\n\
+		for (int j = -radius; j <= 0; ++j)  {\n\
+			for (int i = -radius; i <= 0; ++i)  {\n\
+				c = texture2D(u_texture, uv + vec2(i,j) * src_size).rgb;\n\
+				m0 += c;\n\
+				s0 += c * c;\n\
+			}\n\
+		}\n\
+		\n\
+		for (int j = -radius; j <= 0; ++j)  {\n\
+			for (int i = 0; i <= radius; ++i)  {\n\
+				c = texture2D(u_texture, uv + vec2(i,j) * src_size).rgb;\n\
+				m1 += c;\n\
+				s1 += c * c;\n\
+			}\n\
+		}\n\
+		\n\
+		for (int j = 0; j <= radius; ++j)  {\n\
+			for (int i = 0; i <= radius; ++i)  {\n\
+				c = texture2D(u_texture, uv + vec2(i,j) * src_size).rgb;\n\
+				m2 += c;\n\
+				s2 += c * c;\n\
+			}\n\
+		}\n\
+		\n\
+		for (int j = 0; j <= radius; ++j)  {\n\
+			for (int i = -radius; i <= 0; ++i)  {\n\
+				c = texture2D(u_texture, uv + vec2(i,j) * src_size).rgb;\n\
+				m3 += c;\n\
+				s3 += c * c;\n\
+			}\n\
+		}\n\
+		\n\
+		float min_sigma2 = 1e+2;\n\
+		m0 /= n;\n\
+		s0 = abs(s0 / n - m0 * m0);\n\
+		\n\
+		float sigma2 = s0.r + s0.g + s0.b;\n\
+		if (sigma2 < min_sigma2) {\n\
+			min_sigma2 = sigma2;\n\
+			gl_FragColor = vec4(m0, 1.0);\n\
+		}\n\
+		\n\
+		m1 /= n;\n\
+		s1 = abs(s1 / n - m1 * m1);\n\
+		\n\
+		sigma2 = s1.r + s1.g + s1.b;\n\
+		if (sigma2 < min_sigma2) {\n\
+			min_sigma2 = sigma2;\n\
+			gl_FragColor = vec4(m1, 1.0);\n\
+		}\n\
+		\n\
+		m2 /= n;\n\
+		s2 = abs(s2 / n - m2 * m2);\n\
+		\n\
+		sigma2 = s2.r + s2.g + s2.b;\n\
+		if (sigma2 < min_sigma2) {\n\
+			min_sigma2 = sigma2;\n\
+			gl_FragColor = vec4(m2, 1.0);\n\
+		}\n\
+		\n\
+		m3 /= n;\n\
+		s3 = abs(s3 / n - m3 * m3);\n\
+		\n\
+		sigma2 = s3.r + s3.g + s3.b;\n\
+		if (sigma2 < min_sigma2) {\n\
+			min_sigma2 = sigma2;\n\
+			gl_FragColor = vec4(m3, 1.0);\n\
+		}\n\
+	}\n\
+	";
+
+	LiteGraph.registerNodeType("texture/kuwahara", LGraphTextureKuwaharaFilter );
+
 
 	// Texture Webcam *****************************************
 	function LGraphTextureWebcam()
