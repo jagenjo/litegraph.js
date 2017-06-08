@@ -31,12 +31,12 @@ Slots have the next information:
 
 To integrate in you HTML application:
 
-```
+```js
 var graph = new LiteGraph.LGraph();
 var graph_canvas = new LiteGraph.LGraphCanvas( canvas, graph );
 ```
 
 If you want to start the graph then:
-```
+```js
 graph.start();
 ```
