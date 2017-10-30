@@ -1,6 +1,6 @@
 # litegraph.js
 
-A library in Javascript to create graphs in the browser similar to PD. Nodes can be programmed easily and it includes an editor to construct the graphs.
+A library in Javascript to create graphs in the browser similar to [PureData](https://puredata.info/). Nodes can be programmed easily and it includes an editor to construct the graphs.
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 

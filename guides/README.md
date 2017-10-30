@@ -25,3 +25,18 @@ Slots have the next information:
  * **label**: optional, string used to rename the name as shown in the canvas.
  
  To retrieve the data traveling through a link you can call node.getInputData or node.getOutputData
+
+
+## Integration
+
+To integrate in you HTML application:
+
+```js
+var graph = new LiteGraph.LGraph();
+var graph_canvas = new LiteGraph.LGraphCanvas( canvas, graph );
+```
+
+If you want to start the graph then:
+```js
+graph.start();
+```
