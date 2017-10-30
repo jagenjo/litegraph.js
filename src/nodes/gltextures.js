@@ -306,17 +306,19 @@ if(typeof(LiteGraph) != "undefined")
 
 	LGraphTexturePreview.title = "Preview";
 	LGraphTexturePreview.desc = "Show a texture in the graph canvas";
+	LGraphTexturePreview.allow_preview = false;
 
 	LGraphTexturePreview.prototype.onDrawBackground = function(ctx)
 	{
 		if(this.flags.collapsed)
 			return;
 
-		if(!ctx.webgl)
+		if(!ctx.webgl && !LGraphTexturePreview.allow_preview)
 			return; //not working well
 
 		var tex = this.getInputData(0);
-		if(!tex) return;
+		if(!tex)
+			return;
 
 		var tex_canvas = null;
 		
@@ -353,12 +355,19 @@ if(typeof(LiteGraph) != "undefined")
 	LGraphTextureSave.prototype.onExecute = function()
 	{
 		var tex = this.getInputData(0);
-		if(!tex) return;
+		if(!tex)
+			return;
 
 		if(this.properties.name)
 		{
-			var container = LGraphTexture.getTexturesContainer();
-			container[ this.properties.name ] = tex;
+			//for cases where we want to perform something when storing it
+			if( LGraphTexture.storeTexture )
+				LGraphTexture.storeTexture( this.properties.name, tex );
+			else
+			{
+				var container = LGraphTexture.getTexturesContainer();
+				container[ this.properties.name ] = tex;
+			}
 		}
 
 		this.setOutputData(0, tex);
@@ -564,7 +573,7 @@ if(typeof(LiteGraph) != "undefined")
 		this.addOutput("Texture","Texture");
 		this.properties = {code:"", width: 512, height: 512};
 
-		this.properties.code = "\nvoid main() {\n  vec2 uv = coord;\n  vec3 color = vec3(0.0);\n//your code here\n\ngl_FragColor = vec4(color, 1.0);\n}\n";
+		this.properties.code = "\nvoid main() {\n  vec2 uv = v_coord;\n  vec3 color = vec3(0.0);\n//your code here\n\ngl_FragColor = vec4(color, 1.0);\n}\n";
 	}
 
 	LGraphTextureShader.title = "Shader";
@@ -574,65 +583,133 @@ if(typeof(LiteGraph) != "undefined")
 		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
 	};
 
+	LGraphTextureShader.prototype.onPropertyChanged = function(name, value)
+	{
+		if(name != "code")
+			return;
+
+		var shader = this.getShader();
+		if(!shader)
+			return;
+
+		//update connections
+		var uniforms = shader.uniformInfo;
+
+		//remove deprecated slots
+		if(this.inputs)
+		{
+			var already = {};
+			for(var i = 0; i < this.inputs.length; ++i)
+			{
+				var info = this.getInputInfo(i);
+				if(!info)
+					continue;
+
+				if( uniforms[ info.name ] && !already[ info.name ] )
+				{
+					already[ info.name ] = true;
+					continue;
+				}
+				this.removeInput(i);
+				i--;
+			}
+		}
+
+		//update existing ones
+		for(var i in uniforms)
+		{
+			var info = shader.uniformInfo[i];
+			if(info.loc === null)
+				continue; //is an attribute, not a uniform
+			if(i == "time") //default one
+				continue;
+
+			var type = "number";
+			if( this._shader.samplers[i] )
+				type = "texture";
+			else
+			{
+				switch(info.size)
+				{
+					case 1: type = "number"; break;
+					case 2: type = "vec2"; break;
+					case 3: type = "vec3"; break;
+					case 4: type = "vec4"; break;
+					case 9: type = "mat3"; break;
+					case 16: type = "mat4"; break;
+					default: continue;
+				}
+			}
+
+			var slot = this.findInputSlot(i);
+			if(slot == -1)
+			{
+				this.addInput(i,type);
+				continue;
+			}
+
+			var input_info = this.getInputInfo(slot);
+			if(!input_info)
+				this.addInput(i,type);
+			else
+			{
+				if(input_info.type == type)
+					continue;
+				this.removeInput(slot,type);
+				this.addInput(i,type);
+			}
+		}
+	}
+
+	LGraphTextureShader.prototype.getShader = function()
+	{
+		//replug 
+		if(this._shader && this._shader_code == this.properties.code)
+			return this._shader;
+
+		this._shader_code = this.properties.code;
+		this._shader = new GL.Shader(Shader.SCREEN_VERTEX_SHADER, LGraphTextureShader.pixel_shader + this.properties.code );
+		if(!this._shader) {
+			this.boxcolor = "red";
+			return null;
+		}
+		else
+			this.boxcolor = "green";
+		return this._shader;
+	}
+
 	LGraphTextureShader.prototype.onExecute = function()
 	{
 		if(!this.isOutputConnected(0))
 			return; //saves work
 
-		//replug 
-		if(this._shader_code != this.properties.code)
-		{
-			this._shader_code = this.properties.code;
-			this._shader = new GL.Shader(Shader.SCREEN_VERTEX_SHADER, LGraphTextureShader.pixel_shader + this.properties.code );
-			if(!this._shader) {
-				this.boxcolor = "red";
-				return;
-			}
-			else
-				this.boxcolor = "green";
-			/*
-			var uniforms = this._shader.uniformLocations;
-			//disconnect inputs
-			if(this.inputs)
-				for(var i = 0; i < this.inputs.length; i++)
-				{
-					var slot = this.inputs[i];
-					if(slot.link != null)
-						this.disconnectInput(i);
-				}
+		var shader = this.getShader();
+		if(!shader)
+			return;
 
-			for(var i = 0; i < uniforms.length; i++)
+		var tex_slot = 0;
+
+		//set uniforms
+		for(var i = 0; i < this.inputs.length; ++i)
+		{
+			var info = this.getInputInfo(i);
+			var data = this.getInputData(i);
+			if(data == null)
+				continue;
+
+			if(data.constructor === GL.Texture)
 			{
-				var type = "number";
-				if( this._shader.isSampler[i] )
-					type = "texture";
-				else
-				{
-					var v = gl.getUniform(this._shader.program, i);
-					type = typeof(v);
-					if(type == "object" && v.length)
-					{
-						switch(v.length)
-						{
-							case 1: type = "number"; break;
-							case 2: type = "vec2"; break;
-							case 3: type = "vec3"; break;
-							case 4: type = "vec4"; break;
-							case 9: type = "mat3"; break;
-							case 16: type = "mat4"; break;
-							default: continue;
-						}
-					}
-				}
-				this.addInput(i,type);
+				data.bind(slot);
+				data = slot;
+				slot++;
 			}
-			*/
+			shader.setUniform( info.name, data );
 		}
 
+		//render to texture
 		if(!this._tex || this._tex.width != this.properties.width || this._tex.height != this.properties.height )
 			this._tex = new GL.Texture( this.properties.width, this.properties.height, { format: gl.RGBA, filter: gl.LINEAR });
 		var tex = this._tex;
-		var shader = this._shader;
 		var time = this.graph.getTime();
 		tex.drawTo(function()	{
 			shader.uniforms({texSize: [tex.width, tex.height], time: time}).draw( Mesh.getScreenQuad() );
@@ -830,7 +907,7 @@ if(typeof(LiteGraph) != "undefined")
 			\n\
 			void main() {\n\
 				vec2 uv = v_coord;\n\
-				uv += texture2D(u_textureB, uv).rg * u_factor;\n\
+				uv += ( texture2D(u_textureB, uv).rg - vec2(0.5)) * u_factor;\n\
 				gl_FragColor = texture2D(u_texture, uv);\n\
 			}\n\
 			";
@@ -1046,16 +1123,127 @@ if(typeof(LiteGraph) != "undefined")
 	LiteGraph.registerNodeType("texture/copy", LGraphTextureCopy );
 
 
+	// Texture Downsample *****************************************
+	function LGraphTextureDownsample()
+	{
+		this.addInput("Texture","Texture");
+		this.addOutput("","Texture");
+		this.properties = { iterations: 1, generate_mipmaps: false, precision: LGraphTexture.DEFAULT };
+	}
+
+	LGraphTextureDownsample.title = "Downsample";
+	LGraphTextureDownsample.desc = "Downsample Texture";
+	LGraphTextureDownsample.widgets_info = { 
+		iterations: { type:"number", step: 1, precision: 0, min: 1 },
+		precision: { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureDownsample.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex && !this._temp_texture)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		//we do not allow any texture different than texture 2D
+		if(!tex || tex.texture_type !== GL.TEXTURE_2D )
+			return;
+
+		var shader = LGraphTextureDownsample._shader;
+		if(!shader)
+			LGraphTextureDownsample._shader = shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureDownsample.pixel_shader );
+
+		var width = tex.width|0;
+		var height = tex.height|0;
+		var type = tex.type;
+		if(this.properties.precision === LGraphTexture.LOW)
+			type = gl.UNSIGNED_BYTE;
+		else if(this.properties.precision === LGraphTexture.HIGH)
+			type = gl.HIGH_PRECISION_FORMAT;
+		var iterations = this.properties.iterations || 1;
+
+		var origin = tex;
+		var target = null;
+
+		var temp = [];
+		var options = {
+			type: type,
+			format: tex.format
+		};
+
+		var offset = vec2.create();
+		var uniforms = {
+			u_offset: offset
+		};
+
+		if( this._texture )
+			GL.Texture.releaseTemporary( this._texture );
+
+		for(var i = 0; i < iterations; ++i)
+		{
+			offset[0] = 1/width;
+			offset[1] = 1/height;
+			width = width>>1 || 0;
+			height = height>>1 || 0;
+			target = GL.Texture.getTemporary( width, height, options );
+			temp.push( target );
+			origin.setParameter( GL.TEXTURE_MAG_FILTER, GL.NEAREST );
+			origin.copyTo( target, shader, uniforms );
+			if(width == 1 && height == 1)
+				break; //nothing else to do
+			origin = target;
+		}
+
+		//keep the last texture used
+		this._texture = temp.pop();
+
+		//free the rest
+		for(var i = 0; i < temp.length; ++i)
+			GL.Texture.releaseTemporary( temp[i] );
+
+		if(this.properties.generate_mipmaps)
+		{
+			this._texture.bind(0);
+			gl.generateMipmap(this._texture.texture_type);
+			this._texture.unbind(0);
+		}
+
+		this.setOutputData(0,this._texture);
+	}
+
+	LGraphTextureDownsample.pixel_shader = "precision highp float;\n\
+			precision highp float;\n\
+			uniform sampler2D u_texture;\n\
+			uniform vec2 u_offset;\n\
+			varying vec2 v_coord;\n\
+			\n\
+			void main() {\n\
+				vec4 color = texture2D(u_texture, v_coord );\n\
+				color += texture2D(u_texture, v_coord + vec2( u_offset.x, 0.0 ) );\n\
+				color += texture2D(u_texture, v_coord + vec2( 0.0, u_offset.y ) );\n\
+				color += texture2D(u_texture, v_coord + vec2( u_offset.x, u_offset.y ) );\n\
+			   gl_FragColor = color * 0.25;\n\
+			}\n\
+			";
+
+	LiteGraph.registerNodeType("texture/downsample", LGraphTextureDownsample );
+
+
+
 	// Texture Copy *****************************************
 	function LGraphTextureAverage()
 	{
 		this.addInput("Texture","Texture");
 		this.addOutput("","Texture");
-		this.properties = { low_precision: false };
+		this.properties = { mipmap_offset: 0, low_precision: false };
+
+		this._uniforms = { u_texture: 0, u_mipmap_offset: this.properties.mipmap_offset };
 	}
 
 	LGraphTextureAverage.title = "Average";
-	LGraphTextureAverage.desc = "Compute the total average of a texture and stores it as a 1x1 pixel texture";
+	LGraphTextureAverage.desc = "Compute a partial average (32 random samples) of a texture and stores it as a 1x1 pixel texture";
 
 	LGraphTextureAverage.prototype.onExecute = function()
 	{
@@ -1068,7 +1256,8 @@ if(typeof(LiteGraph) != "undefined")
 
 		if(!LGraphTextureAverage._shader)
 		{
-			LGraphTextureAverage._shader = new GL.Shader(Shader.SCREEN_VERTEX_SHADER, LGraphTextureAverage.pixel_shader);
+			LGraphTextureAverage._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureAverage.pixel_shader);
+			//creates 32 random numbers and stores the, in two mat4 
 			var samples = new Float32Array(32);
 			for(var i = 0; i < 32; ++i)	
 				samples[i] = Math.random();
@@ -1081,8 +1270,10 @@ if(typeof(LiteGraph) != "undefined")
 			this._temp_texture = new GL.Texture( 1, 1, { type: type, format: gl.RGBA, filter: gl.NEAREST });
 
 		var shader = LGraphTextureAverage._shader;
+		var uniforms = this._uniforms;
+		uniforms.u_mipmap_offset = this.properties.mipmap_offset;
 		this._temp_texture.drawTo(function(){
-			tex.toViewport(shader,{u_texture:0});
+			tex.toViewport( shader, uniforms );
 		});
 
 		this.setOutputData(0,this._temp_texture);
@@ -1093,6 +1284,7 @@ if(typeof(LiteGraph) != "undefined")
 			uniform mat4 u_samples_a;\n\
 			uniform mat4 u_samples_b;\n\
 			uniform sampler2D u_texture;\n\
+			uniform float u_mipmap_offset;\n\
 			varying vec2 v_coord;\n\
 			\n\
 			void main() {\n\
@@ -1100,8 +1292,8 @@ if(typeof(LiteGraph) != "undefined")
 				for(int i = 0; i < 4; ++i)\n\
 					for(int j = 0; j < 4; ++j)\n\
 					{\n\
-						color += texture2D(u_texture, vec2( u_samples_a[i][j], u_samples_b[i][j] ) );\n\
-						color += texture2D(u_texture, vec2( 1.0 - u_samples_a[i][j], u_samples_b[i][j] ) );\n\
+						color += texture2D(u_texture, vec2( u_samples_a[i][j], u_samples_b[i][j] ), u_mipmap_offset );\n\
+						color += texture2D(u_texture, vec2( 1.0 - u_samples_a[i][j], 1.0 - u_samples_b[i][j] ), u_mipmap_offset );\n\
 					}\n\
 			   gl_FragColor = color * 0.03125;\n\
 			}\n\
@@ -2192,6 +2384,8 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		this.properties = {name:""};
 		this.size = [LGraphTexture.image_preview_size, LGraphTexture.image_preview_size];
 	}
+
+	LGraphCubemap.title = "Cubemap";
 
 	LGraphCubemap.prototype.onDropFile = function(data, filename, file)
 	{

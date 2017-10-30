@@ -7,6 +7,153 @@
 	-webkit-user-select: none;
 }
 
+
+.litegraph.litecontextmenu {
+	position: fixed;
+	top: 100px;
+	left: 100px;
+	min-width: 100px;
+	color: #AAF;
+	padding: 0;
+	box-shadow: 0 0 10px black !important;
+	background-color: #2E2E2E !important;
+}
+
+.litegraph.litecontextmenu .litemenu-title img {
+	margin-top: 2px;
+	margin-left: 2px;
+	margin-right: 4px;
+}
+
+.litegraph.litecontextmenu .litemenu-entry {
+	margin: 2px;
+	padding: 2px;
+}
+
+.litegraph.litecontextmenu .litemenu-entry.submenu {
+	background-color: #2E2E2E !important;
+}
+
+.litegraph .litemenubar ul {
+	font-family:Tahoma, sans-serif;
+	margin: 0;
+	padding: 0;
+}
+
+.litegraph .litemenubar li {
+	font-size: 14px;
+	color: #999;
+	display: inline-block;
+	min-width: 50px;
+	padding-left: 10px;
+	padding-right: 10px;
+	user-select: none;
+	-moz-user-select: none;  
+	-webkit-user-select: none;  
+	cursor: pointer;
+}
+
+.litegraph .litemenubar li:hover {
+	background-color: #777;
+	color: #EEE;
+}
+
+.litegraph .litegraph .litemenubar-panel {
+	position: absolute;
+	top: 5px;
+	left: 5px;
+	min-width: 100px;
+	background-color: #444;
+	box-shadow: 0 0 3px black;
+	padding: 4px;
+	border-bottom: 2px solid #AAF;
+	z-index: 10;
+}
+
+.litegraph .litemenu-entry, .litemenu-title {
+	font-size: 12px;
+	color: #AAA;
+	padding: 0 0 0 4px;
+	margin: 2px;
+	padding-left: 2px;
+	-moz-user-select: none;  
+	-webkit-user-select: none;  
+	user-select: none;  
+	cursor: pointer;
+}
+
+.litegraph .litemenu-entry .icon {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	margin: 2px;
+	vertical-align: top;
+}
+
+.litegraph .litemenu-entry.checked .icon {
+	background-color: #AAF;
+}
+
+.litegraph .litemenu-entry .more {
+	float: right;
+	padding-right:5px;
+}
+
+.litegraph .litemenu-entry.disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.litegraph .litemenu-entry.separator {
+	display: block;
+	border-top: 1px solid #333;
+	border-bottom: 1px solid #666;
+	width: 100%;
+	height: 0px;
+	margin: 3px 0 2px 0;
+	background-color: transparent;
+	padding: 0 !important;
+	cursor: default !important;
+}
+
+.litegraph .litemenu-entry.has_submenu {
+	border-right: 2px solid cyan;
+}
+
+.litegraph .litemenu-title {
+	color: #DDE;
+	background-color: #111;	
+	margin: 0;
+	padding: 2px;
+	cursor: default;
+}
+
+.litegraph .litemenu-entry:hover:not(.disabled):not(.separator) {
+	background-color: #444 !important;
+	color: #EEE;
+	transition: * 0.4s;
+}
+
+.litegraph .litemenu-entry .property_name {
+	display: inline-block;
+	text-align: left;
+	min-width: 80px;
+	min-height: 1.2em;
+}
+
+.litegraph .litemenu-entry .property_value {
+	display: inline-block;
+	background-color: rgba(0,0,0,0.5);
+	text-align: right;
+	min-width: 80px;
+	min-height: 1.2em;
+	vertical-align: middle;
+	padding-right: 10px;
+}
+
+
+/* OLD */
+
 .graphcontextmenu {
 	padding: 4px;
 	min-width: 100px;
