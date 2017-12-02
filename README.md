@@ -4,6 +4,12 @@ A library in Javascript to create graphs in the browser similar to [PureData](ht
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
+## Installation
+
+```
+npm install litegraph.js
+```
+
 ## Creating a Graph ##
 
 You can create graphs from the editor (and store them in JSON) or directly from code:
