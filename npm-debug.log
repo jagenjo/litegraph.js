@@ -1,0 +1,34 @@
+0 info it worked if it ends with ok
+1 verbose cli [ 'C:\\Program Files\\nodejs\\node.exe',
+1 verbose cli   'C:\\Users\\kriffe\\AppData\\Roaming\\npm\\node_modules\\npm\\bin\\npm-cli.js',
+1 verbose cli   'version',
+1 verbose cli   'patch' ]
+2 info using npm@3.10.10
+3 info using node@v4.8.4
+4 info git [ 'status', '--porcelain' ]
+5 verbose stack Error: Git working directory not clean.
+5 verbose stack M build/litegraph.js
+5 verbose stack M build/litegraph.min.js
+5 verbose stack M src/nodes/gltextures.js
+5 verbose stack     at C:\Users\kriffe\AppData\Roaming\npm\node_modules\npm\lib\version.js:247:19
+5 verbose stack     at C:\Users\kriffe\AppData\Roaming\npm\node_modules\npm\lib\utils\no-progress-while-running.js:21:8
+5 verbose stack     at ChildProcess.exithandler (child_process.js:191:7)
+5 verbose stack     at emitTwo (events.js:87:13)
+5 verbose stack     at ChildProcess.emit (events.js:172:7)
+5 verbose stack     at maybeClose (internal/child_process.js:862:16)
+5 verbose stack     at Socket.<anonymous> (internal/child_process.js:338:11)
+5 verbose stack     at emitOne (events.js:77:13)
+5 verbose stack     at Socket.emit (events.js:169:7)
+5 verbose stack     at Pipe._onclose (net.js:490:12)
+6 verbose cwd C:\Users\kriffe\Documents\GitHub\litegraph.js
+7 error Windows_NT 10.0.16299
+8 error argv "C:\\Program Files\\nodejs\\node.exe" "C:\\Users\\kriffe\\AppData\\Roaming\\npm\\node_modules\\npm\\bin\\npm-cli.js" "version" "patch"
+9 error node v4.8.4
+10 error npm  v3.10.10
+11 error Git working directory not clean.
+11 error M build/litegraph.js
+11 error M build/litegraph.min.js
+11 error M src/nodes/gltextures.js
+12 error If you need help, you may report this error at:
+12 error     <https://github.com/npm/npm/issues>
+13 verbose exit [ 1, true ]
