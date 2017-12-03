@@ -8,16 +8,26 @@
   },
   "private": false,
   "scripts": {
+    "prebuild": "grunt clean:build",
+    "build": "grunt build",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kriffe/litegraph.js.git"
+    "url": "git+https://github.com/jagenjo/litegraph.js.git"
   },
   "author": "jagenjo",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/kriffe/litegraph.js/issues"
+    "url": "https://github.com/jagenjo/litegraph.js/issues"
   },
-  "homepage": "https://github.com/kriffe/litegraph.js#readme"
+  "homepage": "https://github.com/kriffe/litegraph.js#readme",
+  "devDependencies": {
+    "google-closure-compiler": "^20171112.0.0",
+    "grunt": "^1.0.1",
+    "grunt-closure-tools": "^1.0.0",
+    "grunt-contrib-clean": "^1.1.0",
+    "grunt-contrib-concat": "^1.0.1",
+    "grunt-contrib-copy": "^1.0.0"
+  }
 }

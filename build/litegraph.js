@@ -1,4 +1,3 @@
-//packer version
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
