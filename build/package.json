@@ -1,5 +1,5 @@
 {
-  "version": "0.1.2",
+  "version": "0.2.0",
   "name": "litegraph.js",
   "main": "litegraph.js",
   "description": "A graph node editor similar to PD or UDK Blueprints, it works in a HTML5 Canvas and allow to exported graphs to be included in applications.",
