@@ -101,3 +101,10 @@ It includes several commands in the utils folder to generate doc, check errors a
 --------
 
 You can write any feedback to javi.agenjo@gmail.com
+
+## Contributors
+
+- kriffe
+
+
+
