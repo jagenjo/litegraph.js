@@ -313,7 +313,7 @@ LiteGraph.registerNodeType("visualization/graph", {
 function ImageFade()
 {
 	this.addInputs([["img1","image"],["img2","image"],["fade","number"]]);
-	this.addInput("","image");
+	this.addOutput("","image");
 	this.properties = {fade:0.5,width:512,height:512};
 }
 
