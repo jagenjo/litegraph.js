@@ -4,20 +4,43 @@ A library in Javascript to create graphs in the browser similar to [PureData](ht
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
-## Creating a Graph ##
+![Node Graph](imgs/node_graph_example.PNG "WebGLStudio")
 
-You can create graphs from the editor (and store them in JSON) or directly from code:
+## Installation
 
-```javascript
+```
+npm install litegraph.js
+```
 
+## First project ##
+
+```html
+<html>
+<head>
+	<script type="text/javascript" src="/litegraph.js"></script>
+</head>
+<body style='width:100%; height:100%'>
+<canvas id='mycanvas' width='1024' height='720' style='border: 1px solid'></canvas>
+<script>
 var graph = new LGraph();
-var node = LiteGraph.createNode("basic/const");
-var node2 = LiteGraph.createNode("basic/watch");
-graph.add( node );
-graph.add( node2 );
-node.connect(0, node2, 0); //connect node slot 0 to node2 slot 0
 
-graph.runStep(1); //execute one cycle
+var canvas = new LGraphCanvas("#mycanvas", graph);
+
+var node_const = LiteGraph.createNode("basic/const");
+node_const.pos = [200,200];
+graph.add(node_const);
+node_const.setValue(4.5);
+
+var node_watch = LiteGraph.createNode("basic/watch");
+node_watch.pos = [700,200];
+graph.add(node_watch);
+
+node_const.connect(0, node_watch, 0 );
+
+graph.start()
+</script>
+</body>
+</html>
 ```
 
 ## How to code a new Node type
@@ -78,3 +101,10 @@ It includes several commands in the utils folder to generate doc, check errors a
 --------
 
 You can write any feedback to javi.agenjo@gmail.com
+
+## Contributors
+
+- kriffe
+
+
+

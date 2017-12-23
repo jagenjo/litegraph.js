@@ -1,4 +1,3 @@
-//packer version
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -9266,9 +9265,10 @@ LiteGraph.registerNodeType("graphics/webcam", ImageWebcam );
 
 })();
 //Works with Litegl.js to create WebGL nodes
+var LGraphTexture
 if(typeof(LiteGraph) != "undefined")
 {
-	function LGraphTexture()
+	LGraphTexture = function()
 	{
 		this.addOutput("Texture","Texture");
 		this.properties = { name:"", filter: true };
