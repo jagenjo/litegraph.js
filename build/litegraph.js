@@ -1,3 +1,4 @@
+//packer version
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -8862,7 +8863,7 @@ LiteGraph.registerNodeType("visualization/graph", {
 function ImageFade()
 {
 	this.addInputs([["img1","image"],["img2","image"],["fade","number"]]);
-	this.addInput("","image");
+	this.addOutput("","image");
 	this.properties = {fade:0.5,width:512,height:512};
 }
 
@@ -9264,6 +9265,7 @@ LiteGraph.registerNodeType("graphics/webcam", ImageWebcam );
 
 
 })();
+
 //Works with Litegl.js to create WebGL nodes
 var LGraphTexture
 if(typeof(LiteGraph) != "undefined")
