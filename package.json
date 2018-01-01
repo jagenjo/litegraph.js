@@ -1,6 +1,6 @@
 {
-  "name": "@skymaker/litegraph.js",
-  "version": "0.2.1",
+  "name": "litegraph.js",
+  "version": "0.3.0-0",
   "description": "A graph node editor similar to PD or UDK Blueprints, it works in a HTML5 Canvas and allow to exported graphs to be included in applications.",
   "main": "build/litegraph.js",
   "directories": {
@@ -18,6 +18,10 @@
   },
   "author": "jagenjo",
   "license": "MIT",
+  "files": [
+    "build",
+    "css"
+  ],
   "bugs": {
     "url": "https://github.com/jagenjo/litegraph.js/issues"
   },
