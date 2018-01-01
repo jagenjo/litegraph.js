@@ -2414,13 +2414,14 @@ LGraphNode.prototype.disconnectInput = function( slot )
 		for(var i = 0, l = output.links.length; i < l; i++)
 		{
 			var link_id = output.links[i];
-			var link_info = this.graph.links[ link_id ];
 			if( link_info.target_id == this.id )
 			{
 				output.links.splice(i,1);
 				break;
 			}
 		}
+
+		delete this.graph.links[ link_id ]; //remove from the pool
 
 		if( this.onConnectionsChange )
 			this.onConnectionsChange( LiteGraph.INPUT, slot, false, link_info, input );
