@@ -10,7 +10,7 @@
   "scripts": {
     "prebuild": "grunt clean:build",
     "build": "grunt build",
-    "start": "npx nodemon utils/server.js",
+    "start": "nodemon utils/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -31,6 +31,7 @@
     "express": "^4.16.2",
     "google-closure-compiler": "^20171112.0.0",
     "grunt": "^1.0.1",
+    "grunt-cli": "^1.2.0",
     "grunt-closure-tools": "^1.0.0",
     "grunt-contrib-clean": "^1.1.0",
     "grunt-contrib-concat": "^1.0.1",
