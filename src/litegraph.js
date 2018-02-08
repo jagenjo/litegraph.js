@@ -5883,6 +5883,7 @@ ContextMenu.prototype.addItem = function( name, value, options )
 
 ContextMenu.prototype.close = function(e, ignore_parent_menu)
 {
+	if( e.which != 0 ) return // need for chromebooks
 	if(this.root.parentNode)
 		this.root.parentNode.removeChild( this.root );
 	if(this.parentMenu && !ignore_parent_menu)
