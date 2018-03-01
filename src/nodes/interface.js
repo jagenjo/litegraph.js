@@ -663,9 +663,7 @@
 		var v = this.getInputData(0);
 		if(v != null)
 			this.properties["value"] = v;
-		else
-			this.properties["value"] = "";
-		this.setDirtyCanvas(true);
+		//this.setDirtyCanvas(true);
 	}
 
 	WidgetText.prototype.resize = function()

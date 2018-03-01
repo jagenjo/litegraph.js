@@ -1,3 +1,4 @@
+//packer version
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -49,6 +50,7 @@ var LiteGraph = global.LiteGraph = {
 
 	ALWAYS: 0,
 	ON_EVENT: 1,
+	ON_TRIGGER: 1, //the same
 	NEVER: 2,
 
 	proxy: null, //used to redirect calls
@@ -279,7 +281,7 @@ var LiteGraph = global.LiteGraph = {
 	{
 		if( !type_a ||  //generic output
 			!type_b || //generic input
-			type_a == type_a || //same type (is valid for triggers)
+			type_a == type_b || //same type (is valid for triggers)
 			(type_a !== LiteGraph.EVENT && type_b !== LiteGraph.EVENT && type_a.toLowerCase() == type_b.toLowerCase()) ) //same type
 			return true;
 		return false;
@@ -1197,7 +1199,7 @@ LGraph.prototype.serialize = function()
 	for(var i in this.links) //links is an OBJECT
 	{
 		var link = this.links[i];
-		links.push([ link.id, link.origin_id, link.origin_slot, link.target_id, link.target_slot ]);
+		links.push([ link.id, link.origin_id, link.origin_slot, link.target_id, link.target_slot, link.type ]);
 	}
 
 	var data = {
@@ -1233,7 +1235,7 @@ LGraph.prototype.configure = function(data, keep_old)
 		for(var i = 0; i < data.links.length; ++i)
 		{
 			var link = data.links[i];
-			links[ link[0] ] = { id: link[0], origin_id: link[1], origin_slot: link[2], target_id: link[3], target_slot: link[4] };
+			links[ link[0] ] = { id: link[0], origin_id: link[1], origin_slot: link[2], target_id: link[3], target_slot: link[4], type: link[5] };
 		}
 		data.links = links;
 	}
@@ -1606,6 +1608,10 @@ LGraphNode.prototype.setOutputData = function(slot, data)
 	if(!this.outputs)
 		return;
 
+	//this maybe slow and a niche case
+	//if(slot && slot.constructor === String)
+	//	slot = this.findOutputSlot(slot);
+
 	if(slot == -1 || slot >= this.outputs.length)
 		return;
 
@@ -1644,6 +1650,8 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 
 	var link_id = this.inputs[slot].link;
 	var link = this.graph.links[ link_id ];
+	if(!link) //bug: weird case but it happens sometimes
+		return null;
 
 	//used to extract data from the incomming connection
 	if(!force_update)
@@ -1806,36 +1814,56 @@ LGraphNode.prototype.trigger = function( action, param )
 
 	for(var i = 0; i < this.outputs.length; ++i)
 	{
-		var output = this.outputs[i];
-		if(output.type !== LiteGraph.EVENT || (action && output.name != action) )
+		var output = this.outputs[ slot ];
+		if(!output || output.type !== LiteGraph.EVENT || (action && output.name != action) )
+			continue;
+		this.triggerSlot( slot, param );
+	}
+}
+
+/**
+* Triggers an slot event in this node
+* @method triggerSlot
+* @param {Number} slot the index of the output slot
+* @param {*} param
+*/
+LGraphNode.prototype.triggerSlot = function( slot, param )
+{
+	if( !this.outputs )
+		return;
+
+	var output = this.outputs[ slot ];
+	if( !output )
+		return;
+
+	var links = output.links;
+	if(!links || !links.length)
+		return;
+
+	if(this.graph)
+		this.graph._last_trigger_time = LiteGraph.getTime();
+
+	//for every link attached here
+	for(var k = 0; k < links.length; ++k)
+	{
+		var link_info = this.graph.links[ links[k] ];
+		if(!link_info) //not connected
+			continue;
+		var node = this.graph.getNodeById( link_info.target_id );
+		if(!node) //node not found?
 			continue;
 
-		var links = output.links;
-		if(!links || !links.length)
-			continue;
+		//used to mark events in graph
+		link_info._last_time = LiteGraph.getTime();
 
-		//for every link attached here
-		for(var k = 0; k < links.length; ++k)
+		var target_connection = node.inputs[ link_info.target_slot ];
+
+		if(node.onAction)
+			node.onAction( target_connection.name, param );
+		else if(node.mode === LiteGraph.ON_TRIGGER)
 		{
-			var link_info = this.graph.links[ links[k] ];
-			if(!link_info) //not connected
-				continue;
-			var node = this.graph.getNodeById( link_info.target_id );
-			if(!node) //node not found?
-				continue;
-
-			//used to mark events in graph
-			link_info._last_time = LiteGraph.getTime();
-
-			var target_connection = node.inputs[ link_info.target_slot ];
-
-			if(node.onAction)
-				node.onAction( target_connection.name, param );
-			else if(node.mode === LiteGraph.ON_TRIGGER)
-			{
-				if(node.onExecute)
-					node.onExecute(param);
-			}
+			if(node.onExecute)
+				node.onExecute(param);
 		}
 	}
 }
@@ -2342,6 +2370,8 @@ LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 		{
 			var link_id = output.links[i];
 			var link_info = this.graph.links[ link_id ];
+			if(!link_info) //bug: it happens sometimes
+				continue;
 
 			var target_node = this.graph.getNodeById( link_info.target_id );
 			var input = null;
@@ -2349,10 +2379,10 @@ LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 			{
 				input = target_node.inputs[ link_info.target_slot ];
 				input.link = null; //remove other side link
+				if(target_node.onConnectionsChange)
+					target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info, input ); //link_info hasnt been modified so its ok
 			}
 			delete this.graph.links[ link_id ]; //remove the link from the links pool
-			if(target_node.onConnectionsChange)
-				target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info, input ); //link_info hasnt been modified so its ok
 			if(this.onConnectionsChange)
 				this.onConnectionsChange( LiteGraph.OUTPUT, slot, false, link_info, output );
 		}
@@ -3048,7 +3078,8 @@ LGraphCanvas.prototype.getCanvasWindow = function()
 */
 LGraphCanvas.prototype.startRendering = function()
 {
-	if(this.is_rendering) return; //already rendering
+	if(this.is_rendering)
+		return; //already rendering
 
 	this.is_rendering = true;
 	renderFrame.call(this);
@@ -6486,6 +6517,104 @@ LiteGraph.registerNodeType("basic/script", NodeScript );
 (function(){
 
 //Show value inside the debug console
+function LogEvent()
+{
+	this.size = [60,20];
+	this.addInput("event", LiteGraph.ACTION);
+}
+
+LogEvent.title = "Log Event";
+LogEvent.desc = "Log event in console";
+
+LogEvent.prototype.onAction = function( action, param )
+{
+	console.log( action, param );
+}
+
+LiteGraph.registerNodeType("events/log", LogEvent );
+
+
+//Filter events
+function FilterEvent()
+{
+	this.size = [60,20];
+	this.addInput("event", LiteGraph.ACTION);
+	this.addOutput("event", LiteGraph.EVENT);
+	this.properties = {
+		equal_to: "",
+		has_property:"",
+		property_equal_to: ""
+	};
+}
+
+FilterEvent.title = "Filter Event";
+FilterEvent.desc = "Blocks events that do not match the filter";
+
+FilterEvent.prototype.onAction = function( action, param )
+{
+	if( param == null )
+		return;
+
+	if( this.properties.equal_to && this.properties.equal_to != param )
+		return;
+
+	if( this.properties.has_property )
+	{
+		var prop = param[ this.properties.has_property ];
+		if( prop == null )
+			return;
+
+		if( this.properties.property_equal_to && this.properties.property_equal_to != prop )
+			return;
+	}
+
+	this.triggerSlot(0,param);
+}
+
+LiteGraph.registerNodeType("events/filter", FilterEvent );
+
+/*
+//Filter events
+function SetModeNode()
+{
+	this.size = [60,20];
+	this.addInput("event", LiteGraph.ACTION);
+	this.addOutput("event", LiteGraph.EVENT);
+	this.properties = {
+		equal_to: "",
+		has_property:"",
+		property_equal_to: ""
+	};
+}
+
+SetModeNode.title = "Set Node Mode";
+SetModeNode.desc = "Changes a node mode";
+
+SetModeNode.prototype.onAction = function( action, param )
+{
+	if( param == null )
+		return;
+
+	if( this.properties.equal_to && this.properties.equal_to != param )
+		return;
+
+	if( this.properties.has_property )
+	{
+		var prop = param[ this.properties.has_property ];
+		if( prop == null )
+			return;
+
+		if( this.properties.property_equal_to && this.properties.property_equal_to != prop )
+			return;
+	}
+
+	this.triggerSlot(0,param);
+}
+
+LiteGraph.registerNodeType("events/set_mode", SetModeNode );
+*/
+
+//Show value inside the debug console
 function DelayEvent()
 {
 	this.size = [60,20];
@@ -7198,9 +7327,7 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 		var v = this.getInputData(0);
 		if(v != null)
 			this.properties["value"] = v;
-		else
-			this.properties["value"] = "";
-		this.setDirtyCanvas(true);
+		//this.setDirtyCanvas(true);
 	}
 
 	WidgetText.prototype.resize = function()
@@ -7320,36 +7447,56 @@ function GamepadInput()
 {
 	this.addOutput("left_x_axis","number");
 	this.addOutput("left_y_axis","number");
-	this.properties = {};
+	this.addOutput( "button_pressed", LiteGraph.EVENT );
+	this.properties = { gamepad_index: 0, threshold: 0.1 };
+
+	this._left_axis = vec2.create();
+	this._right_axis = vec2.create();
+	this._triggers = vec2.create();
+	this._previous_buttons = new Uint8Array(17);
+	this._current_buttons = new Uint8Array(17);
 }
 
 GamepadInput.title = "Gamepad";
 GamepadInput.desc = "gets the input of the gamepad";
 
+GamepadInput.zero = new Float32Array(2);
+GamepadInput.buttons = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs","home"];
+
 GamepadInput.prototype.onExecute = function()
 {
 	//get gamepad
 	var gamepad = this.getGamepad();
+	var threshold = this.properties.threshold || 0.0;
+
+	this._left_axis[0] = Math.abs( gamepad.xbox.axes["lx"] ) > threshold ? gamepad.xbox.axes["lx"] : 0;
+	this._left_axis[1] = Math.abs( gamepad.xbox.axes["ly"] ) > threshold ? gamepad.xbox.axes["ly"] : 0;
+	this._right_axis[0] = Math.abs( gamepad.xbox.axes["rx"] ) > threshold ? gamepad.xbox.axes["rx"] : 0;
+	this._right_axis[1] = Math.abs( gamepad.xbox.axes["ry"] ) > threshold ? gamepad.xbox.axes["ry"] : 0;
+	this._triggers[0] = Math.abs( gamepad.xbox.axes["ltrigger"] ) > threshold ? gamepad.xbox.axes["ltrigger"] : 0;
+	this._triggers[1] = Math.abs( gamepad.xbox.axes["rtrigger"] ) > threshold ? gamepad.xbox.axes["rtrigger"] : 0;
 
 	if(this.outputs)
 	{
 		for(var i = 0; i < this.outputs.length; i++)
 		{
 			var output = this.outputs[i];
+			if(!output.links || !output.links.length)
+				continue;
 			var v = null;
 
 			if(gamepad)
 			{
 				switch( output.name )
 				{
-					case "left_axis": v = [ gamepad.xbox.axes["lx"], gamepad.xbox.axes["ly"]]; break;
-					case "right_axis": v = [ gamepad.xbox.axes["rx"], gamepad.xbox.axes["ry"]]; break;
-					case "left_x_axis": v = gamepad.xbox.axes["lx"]; break;
-					case "left_y_axis": v = gamepad.xbox.axes["ly"]; break;
-					case "right_x_axis": v = gamepad.xbox.axes["rx"]; break;
-					case "right_y_axis": v = gamepad.xbox.axes["ry"]; break;
-					case "trigger_left": v = gamepad.xbox.axes["ltrigger"]; break;
-					case "trigger_right": v = gamepad.xbox.axes["rtrigger"]; break;
+					case "left_axis": v = this._left_axis; break;
+					case "right_axis": v = this._right_axis; break;
+					case "left_x_axis": v = this._left_axis[0]; break;
+					case "left_y_axis": v = this._left_axis[1]; break;
+					case "right_x_axis": v = this._right_axis[0]; break;
+					case "right_y_axis": v = this._right_axis[1]; break;
+					case "trigger_left": v = this._triggers[0]; break;
+					case "trigger_right": v = this._triggers[1]; break;
 					case "a_button": v = gamepad.xbox.buttons["a"] ? 1 : 0; break;
 					case "b_button": v = gamepad.xbox.buttons["b"] ? 1 : 0; break;
 					case "x_button": v = gamepad.xbox.buttons["x"] ? 1 : 0; break;
@@ -7360,6 +7507,13 @@ GamepadInput.prototype.onExecute = function()
 					case "rs_button": v = gamepad.xbox.buttons["rs"] ? 1 : 0; break;
 					case "start_button": v = gamepad.xbox.buttons["start"] ? 1 : 0; break;
 					case "back_button": v = gamepad.xbox.buttons["back"] ? 1 : 0; break;
+					case "button_pressed": 
+						for(var j = 0; j < this._current_buttons.length; ++j)
+						{
+							if( this._current_buttons[j] && !this._previous_buttons[j] )
+								this.triggerSlot( i, GamepadInput.buttons[j] );
+						}
+						break;
 					default: break;
 				}
 			}
@@ -7368,9 +7522,10 @@ GamepadInput.prototype.onExecute = function()
 				//if no gamepad is connected, output 0
 				switch( output.name )
 				{
+					case "button_pressed": break;
 					case "left_axis":
 					case "right_axis":
-						v = [0,0];
+						v = GamepadInput.zero;
 						break;
 					default:
 						v = 0;
@@ -7389,7 +7544,10 @@ GamepadInput.prototype.getGamepad = function()
 	var gamepads = getGamepads.call(navigator);
 	var gamepad = null;
 
-	for(var i = 0; i < 4; i++)
+	this._previous_buttons.set( this._current_buttons );
+
+	//pick the first connected
+	for(var i = this.properties.gamepad_index; i < 4; i++)
 	{
 		if (gamepads[i])
 		{
@@ -7407,28 +7565,30 @@ GamepadInput.prototype.getGamepad = function()
 			xbox.axes["ltrigger"] = gamepad.buttons[6].value;
 			xbox.axes["rtrigger"] = gamepad.buttons[7].value;
 
-			for(var i = 0; i < gamepad.buttons.length; i++)
+			for(var j = 0; j < gamepad.buttons.length; j++)
 			{
+				this._current_buttons[j] = gamepad.buttons[j].pressed;
+
 				//mapping of XBOX
-				switch(i) //I use a switch to ensure that a player with another gamepad could play
+				switch(j) //I use a switch to ensure that a player with another gamepad could play
 				{
-					case 0: xbox.buttons["a"] = gamepad.buttons[i].pressed; break;
-					case 1: xbox.buttons["b"] = gamepad.buttons[i].pressed; break;
-					case 2: xbox.buttons["x"] = gamepad.buttons[i].pressed; break;
-					case 3: xbox.buttons["y"] = gamepad.buttons[i].pressed; break;
-					case 4: xbox.buttons["lb"] = gamepad.buttons[i].pressed; break;
-					case 5: xbox.buttons["rb"] = gamepad.buttons[i].pressed; break;
-					case 6: xbox.buttons["lt"] = gamepad.buttons[i].pressed; break;
-					case 7: xbox.buttons["rt"] = gamepad.buttons[i].pressed; break;
-					case 8: xbox.buttons["back"] = gamepad.buttons[i].pressed; break;
-					case 9: xbox.buttons["start"] = gamepad.buttons[i].pressed; break;
-					case 10: xbox.buttons["ls"] = gamepad.buttons[i].pressed; break;
-					case 11: xbox.buttons["rs"] = gamepad.buttons[i].pressed; break;
-					case 12: if( gamepad.buttons[i].pressed) xbox.hat += "up"; break;
-					case 13: if( gamepad.buttons[i].pressed) xbox.hat += "down"; break;
-					case 14: if( gamepad.buttons[i].pressed) xbox.hat += "left"; break;
-					case 15: if( gamepad.buttons[i].pressed) xbox.hat += "right"; break;
-					case 16: xbox.buttons["home"] = gamepad.buttons[i].pressed; break;
+					case 0: xbox.buttons["a"] = gamepad.buttons[j].pressed; break;
+					case 1: xbox.buttons["b"] = gamepad.buttons[j].pressed; break;
+					case 2: xbox.buttons["x"] = gamepad.buttons[j].pressed; break;
+					case 3: xbox.buttons["y"] = gamepad.buttons[j].pressed; break;
+					case 4: xbox.buttons["lb"] = gamepad.buttons[j].pressed; break;
+					case 5: xbox.buttons["rb"] = gamepad.buttons[j].pressed; break;
+					case 6: xbox.buttons["lt"] = gamepad.buttons[j].pressed; break;
+					case 7: xbox.buttons["rt"] = gamepad.buttons[j].pressed; break;
+					case 8: xbox.buttons["back"] = gamepad.buttons[j].pressed; break;
+					case 9: xbox.buttons["start"] = gamepad.buttons[j].pressed; break;
+					case 10: xbox.buttons["ls"] = gamepad.buttons[j].pressed; break;
+					case 11: xbox.buttons["rs"] = gamepad.buttons[j].pressed; break;
+					case 12: if( gamepad.buttons[j].pressed) xbox.hat += "up"; break;
+					case 13: if( gamepad.buttons[j].pressed) xbox.hat += "down"; break;
+					case 14: if( gamepad.buttons[j].pressed) xbox.hat += "left"; break;
+					case 15: if( gamepad.buttons[j].pressed) xbox.hat += "right"; break;
+					case 16: xbox.buttons["home"] = gamepad.buttons[j].pressed; break;
 					default:
 				}
 			}
@@ -7440,7 +7600,7 @@ GamepadInput.prototype.getGamepad = function()
 
 GamepadInput.prototype.onDrawBackground = function(ctx)
 {
-	//render
+	//render gamepad state?
 }
 
 GamepadInput.prototype.onGetOutputs = function() {
@@ -7462,7 +7622,8 @@ GamepadInput.prototype.onGetOutputs = function() {
 		["ls_button","number"],
 		["rs_button","number"],
 		["start","number"],
-		["back","number"]
+		["back","number"],
+		["button_pressed", LiteGraph.EVENT]
 	];
 }
 

@@ -2,6 +2,104 @@
 (function(){
 
 //Show value inside the debug console
+function LogEvent()
+{
+	this.size = [60,20];
+	this.addInput("event", LiteGraph.ACTION);
+}
+
+LogEvent.title = "Log Event";
+LogEvent.desc = "Log event in console";
+
+LogEvent.prototype.onAction = function( action, param )
+{
+	console.log( action, param );
+}
+
+LiteGraph.registerNodeType("events/log", LogEvent );
+
+
+//Filter events
+function FilterEvent()
+{
+	this.size = [60,20];
+	this.addInput("event", LiteGraph.ACTION);
+	this.addOutput("event", LiteGraph.EVENT);
+	this.properties = {
+		equal_to: "",
+		has_property:"",
+		property_equal_to: ""
+	};
+}
+
+FilterEvent.title = "Filter Event";
+FilterEvent.desc = "Blocks events that do not match the filter";
+
+FilterEvent.prototype.onAction = function( action, param )
+{
+	if( param == null )
+		return;
+
+	if( this.properties.equal_to && this.properties.equal_to != param )
+		return;
+
+	if( this.properties.has_property )
+	{
+		var prop = param[ this.properties.has_property ];
+		if( prop == null )
+			return;
+
+		if( this.properties.property_equal_to && this.properties.property_equal_to != prop )
+			return;
+	}
+
+	this.triggerSlot(0,param);
+}
+
+LiteGraph.registerNodeType("events/filter", FilterEvent );
+
+/*
+//Filter events
+function SetModeNode()
+{
+	this.size = [60,20];
+	this.addInput("event", LiteGraph.ACTION);
+	this.addOutput("event", LiteGraph.EVENT);
+	this.properties = {
+		equal_to: "",
+		has_property:"",
+		property_equal_to: ""
+	};
+}
+
+SetModeNode.title = "Set Node Mode";
+SetModeNode.desc = "Changes a node mode";
+
+SetModeNode.prototype.onAction = function( action, param )
+{
+	if( param == null )
+		return;
+
+	if( this.properties.equal_to && this.properties.equal_to != param )
+		return;
+
+	if( this.properties.has_property )
+	{
+		var prop = param[ this.properties.has_property ];
+		if( prop == null )
+			return;
+
+		if( this.properties.property_equal_to && this.properties.property_equal_to != prop )
+			return;
+	}
+
+	this.triggerSlot(0,param);
+}
+
+LiteGraph.registerNodeType("events/set_mode", SetModeNode );
+*/
+
+//Show value inside the debug console
 function DelayEvent()
 {
 	this.size = [60,20];
