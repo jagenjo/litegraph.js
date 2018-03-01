@@ -49,8 +49,8 @@ var LiteGraph = global.LiteGraph = {
 
 	ALWAYS: 0,
 	ON_EVENT: 1,
-	ON_TRIGGER: 1, //the same
 	NEVER: 2,
+	ON_TRIGGER: 3,
 
 	proxy: null, //used to redirect calls
 
@@ -5302,7 +5302,7 @@ LGraphCanvas.onMenuNodePin = function( value, options, e, menu, node )
 
 LGraphCanvas.onMenuNodeMode = function( value, options, e, menu, node )
 {
-	new LiteGraph.ContextMenu(["Always","On Event","Never"], {event: e, callback: inner_clicked, parentMenu: prev_menu, node: node });
+	new LiteGraph.ContextMenu(["Always","On Event","On Trigger","Never"], {event: e, callback: inner_clicked, parentMenu: menu, node: node });
 
 	function inner_clicked(v)
 	{
@@ -5311,6 +5311,7 @@ LGraphCanvas.onMenuNodeMode = function( value, options, e, menu, node )
 		switch(v)
 		{
 			case "On Event": node.mode = LiteGraph.ON_EVENT; break;
+			case "On Trigger": node.mode = LiteGraph.ON_TRIGGER; break;
 			case "Never": node.mode = LiteGraph.NEVER; break;
 			case "Always":
 			default:
@@ -5913,7 +5914,6 @@ ContextMenu.prototype.addItem = function( name, value, options )
 
 ContextMenu.prototype.close = function(e, ignore_parent_menu)
 {
-	if( e != undefined && e.which == 0 ) return
 	if(this.root.parentNode)
 		this.root.parentNode.removeChild( this.root );
 	if(this.parentMenu && !ignore_parent_menu)
