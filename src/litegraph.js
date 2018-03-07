@@ -1319,6 +1319,7 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 		+ skip_title_render
 		+ clip_area
 		+ unsafe_execution: not allowed for safe execution
+		+ skip_repeated_outputs: when adding new outputs, it wont show if there is one already connected
 
 	supported callbacks:
 		+ onAdded: when added to graph
@@ -4961,7 +4962,10 @@ LGraphCanvas.showMenuNodeOptionalInputs = function( v, options, e, prev_menu, no
 			v.callback.call( that, node, v, e, prev );
 
 		if(v.value)
+		{
 			node.addInput(v.value[0],v.value[1], v.value[2]);
+			node.setDirtyCanvas(true,true);
+		}
 	}
 
 	return false;
@@ -4991,7 +4995,7 @@ LGraphCanvas.showMenuNodeOptionalOutputs = function( v, options, e, prev_menu, n
 				continue;
 			}
 
-			if(node.findOutputSlot(entry[0]) != -1)
+			if(node.flags && node.flags.skip_repeated_outputs && node.findOutputSlot(entry[0]) != -1)
 				continue; //skip the ones already on
 			var label = entry[0];
 			if(entry[2] && entry[2].label)
@@ -5032,7 +5036,11 @@ LGraphCanvas.showMenuNodeOptionalOutputs = function( v, options, e, prev_menu, n
 			return false;
 		}
 		else
+		{
 			node.addOutput( v.value[0], v.value[1], v.value[2]);
+			node.setDirtyCanvas(true,true);
+		}
+
 	}
 
 	return false;
@@ -5197,10 +5205,7 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 		input_html = "<input autofocus type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
 	}
 
-
-	var dialog = document.createElement("div");
-	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>" + property + "</span>"+input_html+"<button>OK</button>";
+	var dialog = this.createDialog( "<span class='name'>" + property + "</span>"+input_html+"<button>OK</button>" , options );
 
 	if(type == "enum" && info.values)
 	{
@@ -5237,6 +5242,35 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 		}
 	}
 
+	var button = dialog.querySelector("button");
+	button.addEventListener("click", inner );
+
+	function inner()
+	{
+		setValue( input.value );
+	}
+
+	function setValue(value)
+	{
+		if(typeof( node.properties[ property ] ) == "number")
+			value = Number(value);
+		node.properties[ property ] = value;
+
+		if(node.onPropertyChanged)
+			node.onPropertyChanged( property, value );
+		dialog.close();
+		node.setDirtyCanvas(true,true);
+	}
+}
+
+LGraphCanvas.prototype.createDialog = function( html, options )
+{
+	options = options || {};
+
+	var dialog = document.createElement("div");
+	dialog.className = "graphdialog";
+	dialog.innerHTML = html;
+
 	var rect = this.canvas.getClientRects()[0];
 	var offsetx = -20;
 	var offsety = -20;
@@ -5265,28 +5299,15 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	dialog.style.left = offsetx + "px";
 	dialog.style.top = offsety + "px";
 
-	var button = dialog.querySelector("button");
-	button.addEventListener("click", inner );
-
 	this.canvas.parentNode.appendChild( dialog );
 
-
-	function inner()
+	dialog.close = function()
 	{
-		setValue( input.value );
+		if(this.parentNode)
+			this.parentNode.removeChild( this );
 	}
 
-	function setValue(value)
-	{
-		if(typeof( node.properties[ property ] ) == "number")
-			value = Number(value);
-		node.properties[ property ] = value;
-
-		if(node.onPropertyChanged)
-			node.onPropertyChanged( property, value );
-		dialog.parentNode.removeChild( dialog );
-		node.setDirtyCanvas(true,true);
-	}
+	return dialog;
 }
 
 LGraphCanvas.onMenuNodeCollapse = function( value, options, e, menu, node )
@@ -5503,10 +5524,15 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 
 	if(slot)
 	{
-		menu_info = slot.locked ? [ "Cannot remove" ] : { "Remove Slot": slot };
-		options.title = slot.input ? slot.input.type : slot.output.type;
-		if(slot.input && slot.input.type == LiteGraph.EVENT)
+		menu_info = [];
+		menu_info.push( slot.locked ? "Cannot remove"  : { content: "Remove Slot", slot: slot } );
+		menu_info.push( { content: "Rename Slot", slot: slot } );
+		options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
+		if(slot.input && slot.input.type == LiteGraph.ACTION)
+			options.title = "Action";
+		if(slot.output && slot.output.type == LiteGraph.EVENT)
 			options.title = "Event";
+
 	}
 	else
 		menu_info = node ? this.getNodeMenuOptions(node) : this.getCanvasMenuOptions();
@@ -5522,13 +5548,30 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 		if(!v)
 			return;
 
-		if(v == slot)
+		if(v.content == "Remove Slot")
 		{
-			if(v.input)
-				node.removeInput( slot.slot );
-			else if(v.output)
-				node.removeOutput( slot.slot );
+			var info = v.slot;
+			if(info.input)
+				node.removeInput( info.slot );
+			else if(info.output)
+				node.removeOutput( info.slot );
 			return;
+		}
+		else if( v.content == "Rename Slot")
+		{
+			var info = v.slot;
+			var dialog = that.createDialog( "<span class='name'>Name</span><input type='text'/><button>OK</button>" , options );
+			var input = dialog.querySelector("input");
+			dialog.querySelector("button").addEventListener("click",function(e){
+				if(input.value)
+				{
+					var slot_info = info.input ? node.getInputInfo( info.slot ) : node.getOutputInfo( info.slot );
+					if( slot_info )
+						slot_info.label = input.value;
+					that.setDirty(true);
+				}	
+				dialog.close();
+			});
 		}
 
 		//if(v.callback)

@@ -50,8 +50,8 @@ var LiteGraph = global.LiteGraph = {
 
 	ALWAYS: 0,
 	ON_EVENT: 1,
-	ON_TRIGGER: 1, //the same
 	NEVER: 2,
+	ON_TRIGGER: 3,
 
 	proxy: null, //used to redirect calls
 
@@ -1320,6 +1320,7 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 		+ skip_title_render
 		+ clip_area
 		+ unsafe_execution: not allowed for safe execution
+		+ skip_repeated_outputs: when adding new outputs, it wont show if there is one already connected
 
 	supported callbacks:
 		+ onAdded: when added to graph
@@ -4962,7 +4963,10 @@ LGraphCanvas.showMenuNodeOptionalInputs = function( v, options, e, prev_menu, no
 			v.callback.call( that, node, v, e, prev );
 
 		if(v.value)
+		{
 			node.addInput(v.value[0],v.value[1], v.value[2]);
+			node.setDirtyCanvas(true,true);
+		}
 	}
 
 	return false;
@@ -4992,7 +4996,7 @@ LGraphCanvas.showMenuNodeOptionalOutputs = function( v, options, e, prev_menu, n
 				continue;
 			}
 
-			if(node.findOutputSlot(entry[0]) != -1)
+			if(node.flags && node.flags.skip_repeated_outputs && node.findOutputSlot(entry[0]) != -1)
 				continue; //skip the ones already on
 			var label = entry[0];
 			if(entry[2] && entry[2].label)
@@ -5033,7 +5037,11 @@ LGraphCanvas.showMenuNodeOptionalOutputs = function( v, options, e, prev_menu, n
 			return false;
 		}
 		else
+		{
 			node.addOutput( v.value[0], v.value[1], v.value[2]);
+			node.setDirtyCanvas(true,true);
+		}
+
 	}
 
 	return false;
@@ -5198,10 +5206,7 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 		input_html = "<input autofocus type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
 	}
 
-
-	var dialog = document.createElement("div");
-	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>" + property + "</span>"+input_html+"<button>OK</button>";
+	var dialog = this.createDialog( "<span class='name'>" + property + "</span>"+input_html+"<button>OK</button>" , options );
 
 	if(type == "enum" && info.values)
 	{
@@ -5238,6 +5243,35 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 		}
 	}
 
+	var button = dialog.querySelector("button");
+	button.addEventListener("click", inner );
+
+	function inner()
+	{
+		setValue( input.value );
+	}
+
+	function setValue(value)
+	{
+		if(typeof( node.properties[ property ] ) == "number")
+			value = Number(value);
+		node.properties[ property ] = value;
+
+		if(node.onPropertyChanged)
+			node.onPropertyChanged( property, value );
+		dialog.close();
+		node.setDirtyCanvas(true,true);
+	}
+}
+
+LGraphCanvas.prototype.createDialog = function( html, options )
+{
+	options = options || {};
+
+	var dialog = document.createElement("div");
+	dialog.className = "graphdialog";
+	dialog.innerHTML = html;
+
 	var rect = this.canvas.getClientRects()[0];
 	var offsetx = -20;
 	var offsety = -20;
@@ -5266,28 +5300,15 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	dialog.style.left = offsetx + "px";
 	dialog.style.top = offsety + "px";
 
-	var button = dialog.querySelector("button");
-	button.addEventListener("click", inner );
-
 	this.canvas.parentNode.appendChild( dialog );
 
-
-	function inner()
+	dialog.close = function()
 	{
-		setValue( input.value );
+		if(this.parentNode)
+			this.parentNode.removeChild( this );
 	}
 
-	function setValue(value)
-	{
-		if(typeof( node.properties[ property ] ) == "number")
-			value = Number(value);
-		node.properties[ property ] = value;
-
-		if(node.onPropertyChanged)
-			node.onPropertyChanged( property, value );
-		dialog.parentNode.removeChild( dialog );
-		node.setDirtyCanvas(true,true);
-	}
+	return dialog;
 }
 
 LGraphCanvas.onMenuNodeCollapse = function( value, options, e, menu, node )
@@ -5303,7 +5324,7 @@ LGraphCanvas.onMenuNodePin = function( value, options, e, menu, node )
 
 LGraphCanvas.onMenuNodeMode = function( value, options, e, menu, node )
 {
-	new LiteGraph.ContextMenu(["Always","On Event","Never"], {event: e, callback: inner_clicked, parentMenu: prev_menu, node: node });
+	new LiteGraph.ContextMenu(["Always","On Event","On Trigger","Never"], {event: e, callback: inner_clicked, parentMenu: menu, node: node });
 
 	function inner_clicked(v)
 	{
@@ -5312,6 +5333,7 @@ LGraphCanvas.onMenuNodeMode = function( value, options, e, menu, node )
 		switch(v)
 		{
 			case "On Event": node.mode = LiteGraph.ON_EVENT; break;
+			case "On Trigger": node.mode = LiteGraph.ON_TRIGGER; break;
 			case "Never": node.mode = LiteGraph.NEVER; break;
 			case "Always":
 			default:
@@ -5503,10 +5525,15 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 
 	if(slot)
 	{
-		menu_info = slot.locked ? [ "Cannot remove" ] : { "Remove Slot": slot };
-		options.title = slot.input ? slot.input.type : slot.output.type;
-		if(slot.input && slot.input.type == LiteGraph.EVENT)
+		menu_info = [];
+		menu_info.push( slot.locked ? "Cannot remove"  : { content: "Remove Slot", slot: slot } );
+		menu_info.push( { content: "Rename Slot", slot: slot } );
+		options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
+		if(slot.input && slot.input.type == LiteGraph.ACTION)
+			options.title = "Action";
+		if(slot.output && slot.output.type == LiteGraph.EVENT)
 			options.title = "Event";
+
 	}
 	else
 		menu_info = node ? this.getNodeMenuOptions(node) : this.getCanvasMenuOptions();
@@ -5522,13 +5549,30 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 		if(!v)
 			return;
 
-		if(v == slot)
+		if(v.content == "Remove Slot")
 		{
-			if(v.input)
-				node.removeInput( slot.slot );
-			else if(v.output)
-				node.removeOutput( slot.slot );
+			var info = v.slot;
+			if(info.input)
+				node.removeInput( info.slot );
+			else if(info.output)
+				node.removeOutput( info.slot );
 			return;
+		}
+		else if( v.content == "Rename Slot")
+		{
+			var info = v.slot;
+			var dialog = that.createDialog( "<span class='name'>Name</span><input type='text'/><button>OK</button>" , options );
+			var input = dialog.querySelector("input");
+			dialog.querySelector("button").addEventListener("click",function(e){
+				if(input.value)
+				{
+					var slot_info = info.input ? node.getInputInfo( info.slot ) : node.getOutputInfo( info.slot );
+					if( slot_info )
+						slot_info.label = input.value;
+					that.setDirty(true);
+				}	
+				dialog.close();
+			});
 		}
 
 		//if(v.callback)
@@ -7450,9 +7494,9 @@ function GamepadInput()
 	this.addOutput( "button_pressed", LiteGraph.EVENT );
 	this.properties = { gamepad_index: 0, threshold: 0.1 };
 
-	this._left_axis = vec2.create();
-	this._right_axis = vec2.create();
-	this._triggers = vec2.create();
+	this._left_axis = new Float32Array(2);
+	this._right_axis = new Float32Array(2);
+	this._triggers = new Float32Array(2);
 	this._previous_buttons = new Uint8Array(17);
 	this._current_buttons = new Uint8Array(17);
 }
@@ -7469,12 +7513,15 @@ GamepadInput.prototype.onExecute = function()
 	var gamepad = this.getGamepad();
 	var threshold = this.properties.threshold || 0.0;
 
-	this._left_axis[0] = Math.abs( gamepad.xbox.axes["lx"] ) > threshold ? gamepad.xbox.axes["lx"] : 0;
-	this._left_axis[1] = Math.abs( gamepad.xbox.axes["ly"] ) > threshold ? gamepad.xbox.axes["ly"] : 0;
-	this._right_axis[0] = Math.abs( gamepad.xbox.axes["rx"] ) > threshold ? gamepad.xbox.axes["rx"] : 0;
-	this._right_axis[1] = Math.abs( gamepad.xbox.axes["ry"] ) > threshold ? gamepad.xbox.axes["ry"] : 0;
-	this._triggers[0] = Math.abs( gamepad.xbox.axes["ltrigger"] ) > threshold ? gamepad.xbox.axes["ltrigger"] : 0;
-	this._triggers[1] = Math.abs( gamepad.xbox.axes["rtrigger"] ) > threshold ? gamepad.xbox.axes["rtrigger"] : 0;
+	if(gamepad)
+	{
+		this._left_axis[0] = Math.abs( gamepad.xbox.axes["lx"] ) > threshold ? gamepad.xbox.axes["lx"] : 0;
+		this._left_axis[1] = Math.abs( gamepad.xbox.axes["ly"] ) > threshold ? gamepad.xbox.axes["ly"] : 0;
+		this._right_axis[0] = Math.abs( gamepad.xbox.axes["rx"] ) > threshold ? gamepad.xbox.axes["rx"] : 0;
+		this._right_axis[1] = Math.abs( gamepad.xbox.axes["ry"] ) > threshold ? gamepad.xbox.axes["ry"] : 0;
+		this._triggers[0] = Math.abs( gamepad.xbox.axes["ltrigger"] ) > threshold ? gamepad.xbox.axes["ltrigger"] : 0;
+		this._triggers[1] = Math.abs( gamepad.xbox.axes["rtrigger"] ) > threshold ? gamepad.xbox.axes["rtrigger"] : 0;
+	}
 
 	if(this.outputs)
 	{
@@ -7601,6 +7648,17 @@ GamepadInput.prototype.getGamepad = function()
 GamepadInput.prototype.onDrawBackground = function(ctx)
 {
 	//render gamepad state?
+	var la = this._left_axis;
+	var ra = this._right_axis;
+	ctx.strokeStyle = "#88A";
+	ctx.strokeRect( (la[0] + 1) * 0.5 * this.size[0] - 4, (la[1] + 1) * 0.5 * this.size[1] - 4, 8, 8 );
+	ctx.strokeStyle = "#8A8";
+	ctx.strokeRect( (ra[0] + 1) * 0.5 * this.size[0] - 4, (ra[1] + 1) * 0.5 * this.size[1] - 4, 8, 8 );
+	var h = this.size[1] / this._current_buttons.length
+	ctx.fillStyle = "#AEB";
+	for(var i = 0; i < this._current_buttons.length; ++i)
+		if(this._current_buttons[i])
+			ctx.fillRect( 0, h * i, 6, h);
 }
 
 GamepadInput.prototype.onGetOutputs = function() {
@@ -11266,7 +11324,8 @@ if(typeof(LiteGraph) != "undefined")
 		this.addInput("Distance","number");
 		this.addInput("Range","number");
 		this.addOutput("Texture","Texture");
-		this.properties = { distance:100, range: 50, high_precision: false };
+		this.properties = { distance:100, range: 50, only_depth: false, high_precision: false };
+		this._uniforms = {u_texture:0, u_distance: 100, u_range: 50, u_camera_planes: null };
 	}
 
 	LGraphTextureDepthRange.title = "Depth Range";
@@ -11288,6 +11347,8 @@ if(typeof(LiteGraph) != "undefined")
 			this._temp_texture.width != tex.width || this._temp_texture.height != tex.height)
 			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: precision, format: gl.RGBA, filter: gl.LINEAR });
 
+		var uniforms = this._uniforms;
+
 		//iterations
 		var distance = this.properties.distance;
 		if( this.isInputConnected(1) )
@@ -11303,21 +11364,33 @@ if(typeof(LiteGraph) != "undefined")
 			this.properties.range = range;
 		}
 
+		uniforms.u_distance = distance;
+		uniforms.u_range = range;
+
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		if(!LGraphTextureDepthRange._shader)
+		{
 			LGraphTextureDepthRange._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureDepthRange.pixel_shader );
-		var shader = LGraphTextureDepthRange._shader;
+			LGraphTextureDepthRange._shader_onlydepth = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureDepthRange.pixel_shader, { ONLY_DEPTH:""} );
+		}
+		var shader = this.properties.only_depth ? LGraphTextureDepthRange._shader_onlydepth : LGraphTextureDepthRange._shader;
 
-		//TODO: this asumes we have LiteScene, change it
-		var camera = LS.Renderer._current_camera;
-		var planes = [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far];
+		//NEAR AND FAR PLANES
+		var planes = null;
+		if( tex.near_far_planes )
+			planes = tex.near_far_planes;
+		else if( window.LS && LS.Renderer._main_camera )
+			planes = LS.Renderer._main_camera._uniforms.u_camera_planes;
+		else
+			planes = [0.1,1000]; //hardcoded
+		uniforms.u_camera_planes = planes;
+
 
 		this._temp_texture.drawTo( function() {
 			tex.bind(0);
-			shader.uniforms({u_texture:0, u_distance: distance, u_range: range, u_camera_planes: planes })
-				.draw(mesh);
+			shader.uniforms( uniforms ).draw(mesh);
 		});
 
 		this.setOutputData(0, this._temp_texture);
@@ -11333,17 +11406,24 @@ if(typeof(LiteGraph) != "undefined")
 			\n\
 			float LinearDepth()\n\
 			{\n\
-				float n = u_camera_planes.x;\n\
-				float f = u_camera_planes.y;\n\
-				return (2.0 * n) / (f + n - texture2D(u_texture, v_coord).x * (f - n));\n\
+				float zNear = u_camera_planes.x;\n\
+				float zFar = u_camera_planes.y;\n\
+				float depth = texture2D(u_texture, v_coord).x;\n\
+				depth = depth * 2.0 - 1.0;\n\
+				return zNear * (depth + 1.0) / (zFar + zNear - depth * (zFar - zNear));\n\
 			}\n\
 			\n\
 			void main() {\n\
-				float diff = abs(LinearDepth() * u_camera_planes.y - u_distance);\n\
-				float dof = 1.0;\n\
-				if(diff <= u_range)\n\
-					dof = diff / u_range;\n\
-			   gl_FragColor = vec4(dof);\n\
+				float depth = LinearDepth();\n\
+				#ifdef ONLY_DEPTH\n\
+				   gl_FragColor = vec4(depth);\n\
+				#else\n\
+					float diff = abs(depth * u_camera_planes.y - u_distance);\n\
+					float dof = 1.0;\n\
+					if(diff <= u_range)\n\
+						dof = diff / u_range;\n\
+				   gl_FragColor = vec4(dof);\n\
+				#endif\n\
 			}\n\
 			";
 
@@ -14398,3 +14478,252 @@ LiteGraph.registerNodeType("audio/destination", LGAudioDestination);
 
 
 })( window );
+//event related nodes
+(function(){
+
+function LGWebSocket()
+{
+	this.size = [60,20];
+	this.addInput("send", LiteGraph.ACTION);
+	this.addOutput("received", LiteGraph.EVENT);
+	this.addInput("in", 0 );
+	this.addOutput("out", 0 );
+	this.properties = {
+		url: "",
+		room: "lgraph" //allows to filter messages
+	};
+	this._ws = null;
+	this._last_data = [];
+}
+
+LGWebSocket.title = "WebSocket";
+LGWebSocket.desc = "Send data through a websocket";
+
+LGWebSocket.prototype.onPropertyChanged = function(name,value)
+{
+	if(name == "url")
+		this.createSocket();
+}
+
+LGWebSocket.prototype.onExecute = function()
+{
+	if(!this._ws && this.properties.url)
+		this.createSocket();
+
+	if(!this._ws || this._ws.readyState != WebSocket.OPEN )
+		return;
+
+	var room = this.properties.room;
+
+	for(var i = 1; i < this.inputs.length; ++i)
+	{
+		var data = this.getInputData(i);
+		if(data != null)
+		{
+			var json;
+			try
+			{
+				json = JSON.stringify({ type: 0, room: room, channel: i, data: data });
+			}
+			catch (err)
+			{
+				continue;
+			}
+			this._ws.send( json );
+		}
+	}
+
+	for(var i = 1; i < this.outputs.length; ++i)
+		this.setOutputData( i, this._last_data[i] );
+}
+
+LGWebSocket.prototype.createSocket = function()
+{
+	var that = this;
+	var url = this.properties.url;
+	if( url.substr(0,2) != "ws" )
+		url = "ws://" + url;
+	this._ws = new WebSocket( url );
+	this._ws.onopen = function()
+	{
+		console.log("ready");
+		that.boxcolor = "#8E8";
+	}
+	this._ws.onmessage = function(e)
+	{
+		var data = JSON.parse( e.data );
+		if( data.room && data.room != this.properties.room )
+			return;
+		if( e.data.type == 1 )
+			that.triggerSlot( 0, data );
+		else
+			that._last_data[ e.data.channel || 0 ] = data.data;
+	}
+	this._ws.onerror = function(e)
+	{
+		console.log("couldnt connect to websocket");
+		that.boxcolor = "#E88";
+	}
+	this._ws.onclose = function(e)
+	{
+		console.log("connection closed");
+		that.boxcolor = "#000";
+	}
+}
+
+LGWebSocket.prototype.send = function(data)
+{
+	if(!this._ws || this._ws.readyState != WebSocket.OPEN )
+		return;
+	this._ws.send( JSON.stringify({ type:1, msg: data }) );
+}
+
+LGWebSocket.prototype.onAction = function( action, param )
+{
+	if(!this._ws || this._ws.readyState != WebSocket.OPEN )
+		return;
+	this._ws.send( { type: 1, room: this.properties.room, action: action, data: param } );
+}
+
+LGWebSocket.prototype.onGetInputs = function()
+{
+	return [["in",0]];
+}
+
+LGWebSocket.prototype.onGetOutputs = function()
+{
+	return [["out",0]];
+}
+
+LiteGraph.registerNodeType("network/websocket", LGWebSocket );
+
+
+//It is like a websocket but using the SillyServer.js server that bounces packets back to all clients connected:
+//For more information: https://github.com/jagenjo/SillyServer.js
+
+function LGSillyClient()
+{
+	this.size = [60,20];
+	this.addInput("send", LiteGraph.ACTION);
+	this.addOutput("received", LiteGraph.EVENT);
+	this.addInput("in", 0 );
+	this.addOutput("out", 0 );
+	this.properties = {
+		url: "tamats.com:55000",
+		room: "lgraph"
+	};
+
+	this._server = null;
+	this.createSocket();
+	this._last_data = [];
+}
+
+LGSillyClient.title = "SillyClient";
+LGSillyClient.desc = "Connects to SillyServer to broadcast messages";
+
+LGSillyClient.prototype.onPropertyChanged = function(name,value)
+{
+	var final_url = (this.properties.url + "/" + this.properties.room);
+	if(this._server && this._final_url != final_url )
+	{
+		this._server.connect( this.properties.url, this.properties.room );
+		this._final_url = final_url;
+	}
+}
+
+LGSillyClient.prototype.onExecute = function()
+{
+	if(!this._server || !this._server.is_connected)
+		return;
+
+	for(var i = 1; i < this.inputs.length; ++i)
+	{
+		var data = this.getInputData(i);
+		if(data != null)
+			this._server.sendMessage( { type: 0, channel: i, data: data } );
+	}
+
+	for(var i = 1; i < this.outputs.length; ++i)
+		this.setOutputData( i, this._last_data[i] );
+}
+
+LGSillyClient.prototype.createSocket = function()
+{
+	var that = this;
+	if(typeof(SillyClient) == "undefined")
+	{
+		if(!this._error)
+			console.error("SillyClient node cannot be used, you must include SillyServer.js");
+		this._error = true;
+		return;
+	}
+
+	this._server = new SillyClient();
+	this._server.on_ready = function()
+	{
+		console.log("ready");
+		that.boxcolor = "#8E8";
+	}
+	this._server.on_message = function(id,msg)
+	{
+		var data = null;
+		try
+		{
+			data = JSON.parse( msg );
+		}
+		catch (err)
+		{
+			return;
+		}
+		
+		if(data.type == 1)
+			that.triggerSlot( 0, data );
+		else
+			that._last_data[ data.channel || 0 ] = data.data;
+	}
+	this._server.on_error = function(e)
+	{
+		console.log("couldnt connect to websocket");
+		that.boxcolor = "#E88";
+	}
+	this._server.on_close = function(e)
+	{
+		console.log("connection closed");
+		that.boxcolor = "#000";
+	}
+
+	if(this.properties.url && this.properties.room)
+	{
+		this._server.connect( this.properties.url, this.properties.room );
+		this._final_url = (this.properties.url + "/" + this.properties.room);
+	}
+}
+
+LGSillyClient.prototype.send = function(data)
+{
+	if(!this._server || !this._server.is_connected)
+		return;
+	this._server.sendMessage( { type:1, data: data } );
+}
+
+LGSillyClient.prototype.onAction = function( action, param )
+{
+	if(!this._server || !this._server.is_connected)
+		return;
+	this._server.sendMessage( { type: 1, action: action, data: param } );
+}
+
+LGSillyClient.prototype.onGetInputs = function()
+{
+	return [["in",0]];
+}
+
+LGSillyClient.prototype.onGetOutputs = function()
+{
+	return [["out",0]];
+}
+
+LiteGraph.registerNodeType("network/sillyclient", LGSillyClient );
+
+
+})();

@@ -7,9 +7,9 @@ function GamepadInput()
 	this.addOutput( "button_pressed", LiteGraph.EVENT );
 	this.properties = { gamepad_index: 0, threshold: 0.1 };
 
-	this._left_axis = vec2.create();
-	this._right_axis = vec2.create();
-	this._triggers = vec2.create();
+	this._left_axis = new Float32Array(2);
+	this._right_axis = new Float32Array(2);
+	this._triggers = new Float32Array(2);
 	this._previous_buttons = new Uint8Array(17);
 	this._current_buttons = new Uint8Array(17);
 }
@@ -26,12 +26,15 @@ GamepadInput.prototype.onExecute = function()
 	var gamepad = this.getGamepad();
 	var threshold = this.properties.threshold || 0.0;
 
-	this._left_axis[0] = Math.abs( gamepad.xbox.axes["lx"] ) > threshold ? gamepad.xbox.axes["lx"] : 0;
-	this._left_axis[1] = Math.abs( gamepad.xbox.axes["ly"] ) > threshold ? gamepad.xbox.axes["ly"] : 0;
-	this._right_axis[0] = Math.abs( gamepad.xbox.axes["rx"] ) > threshold ? gamepad.xbox.axes["rx"] : 0;
-	this._right_axis[1] = Math.abs( gamepad.xbox.axes["ry"] ) > threshold ? gamepad.xbox.axes["ry"] : 0;
-	this._triggers[0] = Math.abs( gamepad.xbox.axes["ltrigger"] ) > threshold ? gamepad.xbox.axes["ltrigger"] : 0;
-	this._triggers[1] = Math.abs( gamepad.xbox.axes["rtrigger"] ) > threshold ? gamepad.xbox.axes["rtrigger"] : 0;
+	if(gamepad)
+	{
+		this._left_axis[0] = Math.abs( gamepad.xbox.axes["lx"] ) > threshold ? gamepad.xbox.axes["lx"] : 0;
+		this._left_axis[1] = Math.abs( gamepad.xbox.axes["ly"] ) > threshold ? gamepad.xbox.axes["ly"] : 0;
+		this._right_axis[0] = Math.abs( gamepad.xbox.axes["rx"] ) > threshold ? gamepad.xbox.axes["rx"] : 0;
+		this._right_axis[1] = Math.abs( gamepad.xbox.axes["ry"] ) > threshold ? gamepad.xbox.axes["ry"] : 0;
+		this._triggers[0] = Math.abs( gamepad.xbox.axes["ltrigger"] ) > threshold ? gamepad.xbox.axes["ltrigger"] : 0;
+		this._triggers[1] = Math.abs( gamepad.xbox.axes["rtrigger"] ) > threshold ? gamepad.xbox.axes["rtrigger"] : 0;
+	}
 
 	if(this.outputs)
 	{
@@ -158,6 +161,17 @@ GamepadInput.prototype.getGamepad = function()
 GamepadInput.prototype.onDrawBackground = function(ctx)
 {
 	//render gamepad state?
+	var la = this._left_axis;
+	var ra = this._right_axis;
+	ctx.strokeStyle = "#88A";
+	ctx.strokeRect( (la[0] + 1) * 0.5 * this.size[0] - 4, (la[1] + 1) * 0.5 * this.size[1] - 4, 8, 8 );
+	ctx.strokeStyle = "#8A8";
+	ctx.strokeRect( (ra[0] + 1) * 0.5 * this.size[0] - 4, (ra[1] + 1) * 0.5 * this.size[1] - 4, 8, 8 );
+	var h = this.size[1] / this._current_buttons.length
+	ctx.fillStyle = "#AEB";
+	for(var i = 0; i < this._current_buttons.length; ++i)
+		if(this._current_buttons[i])
+			ctx.fillRect( 0, h * i, 6, h);
 }
 
 GamepadInput.prototype.onGetOutputs = function() {

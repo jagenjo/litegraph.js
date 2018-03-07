@@ -1837,7 +1837,8 @@ if(typeof(LiteGraph) != "undefined")
 		this.addInput("Distance","number");
 		this.addInput("Range","number");
 		this.addOutput("Texture","Texture");
-		this.properties = { distance:100, range: 50, high_precision: false };
+		this.properties = { distance:100, range: 50, only_depth: false, high_precision: false };
+		this._uniforms = {u_texture:0, u_distance: 100, u_range: 50, u_camera_planes: null };
 	}
 
 	LGraphTextureDepthRange.title = "Depth Range";
@@ -1859,6 +1860,8 @@ if(typeof(LiteGraph) != "undefined")
 			this._temp_texture.width != tex.width || this._temp_texture.height != tex.height)
 			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: precision, format: gl.RGBA, filter: gl.LINEAR });
 
+		var uniforms = this._uniforms;
+
 		//iterations
 		var distance = this.properties.distance;
 		if( this.isInputConnected(1) )
@@ -1874,21 +1877,33 @@ if(typeof(LiteGraph) != "undefined")
 			this.properties.range = range;
 		}
 
+		uniforms.u_distance = distance;
+		uniforms.u_range = range;
+
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
 		if(!LGraphTextureDepthRange._shader)
+		{
 			LGraphTextureDepthRange._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureDepthRange.pixel_shader );
-		var shader = LGraphTextureDepthRange._shader;
+			LGraphTextureDepthRange._shader_onlydepth = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureDepthRange.pixel_shader, { ONLY_DEPTH:""} );
+		}
+		var shader = this.properties.only_depth ? LGraphTextureDepthRange._shader_onlydepth : LGraphTextureDepthRange._shader;
 
-		//TODO: this asumes we have LiteScene, change it
-		var camera = LS.Renderer._current_camera;
-		var planes = [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far];
+		//NEAR AND FAR PLANES
+		var planes = null;
+		if( tex.near_far_planes )
+			planes = tex.near_far_planes;
+		else if( window.LS && LS.Renderer._main_camera )
+			planes = LS.Renderer._main_camera._uniforms.u_camera_planes;
+		else
+			planes = [0.1,1000]; //hardcoded
+		uniforms.u_camera_planes = planes;
+
 
 		this._temp_texture.drawTo( function() {
 			tex.bind(0);
-			shader.uniforms({u_texture:0, u_distance: distance, u_range: range, u_camera_planes: planes })
-				.draw(mesh);
+			shader.uniforms( uniforms ).draw(mesh);
 		});
 
 		this.setOutputData(0, this._temp_texture);
@@ -1904,17 +1919,24 @@ if(typeof(LiteGraph) != "undefined")
 			\n\
 			float LinearDepth()\n\
 			{\n\
-				float n = u_camera_planes.x;\n\
-				float f = u_camera_planes.y;\n\
-				return (2.0 * n) / (f + n - texture2D(u_texture, v_coord).x * (f - n));\n\
+				float zNear = u_camera_planes.x;\n\
+				float zFar = u_camera_planes.y;\n\
+				float depth = texture2D(u_texture, v_coord).x;\n\
+				depth = depth * 2.0 - 1.0;\n\
+				return zNear * (depth + 1.0) / (zFar + zNear - depth * (zFar - zNear));\n\
 			}\n\
 			\n\
 			void main() {\n\
-				float diff = abs(LinearDepth() * u_camera_planes.y - u_distance);\n\
-				float dof = 1.0;\n\
-				if(diff <= u_range)\n\
-					dof = diff / u_range;\n\
-			   gl_FragColor = vec4(dof);\n\
+				float depth = LinearDepth();\n\
+				#ifdef ONLY_DEPTH\n\
+				   gl_FragColor = vec4(depth);\n\
+				#else\n\
+					float diff = abs(depth * u_camera_planes.y - u_distance);\n\
+					float dof = 1.0;\n\
+					if(diff <= u_range)\n\
+						dof = diff / u_range;\n\
+				   gl_FragColor = vec4(dof);\n\
+				#endif\n\
 			}\n\
 			";
 
