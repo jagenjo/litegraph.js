@@ -1818,7 +1818,7 @@ LGraphNode.prototype.trigger = function( action, param )
 		var output = this.outputs[ slot ];
 		if(!output || output.type !== LiteGraph.EVENT || (action && output.name != action) )
 			continue;
-		this.triggerSlot( slot, param );
+		this.triggerSlot( i, param );
 	}
 }
 
