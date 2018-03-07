@@ -14610,12 +14610,14 @@ function LGSillyClient()
 	this.addOutput("out", 0 );
 	this.properties = {
 		url: "tamats.com:55000",
-		room: "lgraph"
+		room: "lgraph",
+		save_bandwidth: true
 	};
 
 	this._server = null;
 	this.createSocket();
-	this._last_data = [];
+	this._last_input_data = [];
+	this._last_output_data = [];
 }
 
 LGSillyClient.title = "SillyClient";
@@ -14636,15 +14638,22 @@ LGSillyClient.prototype.onExecute = function()
 	if(!this._server || !this._server.is_connected)
 		return;
 
+	var save_bandwidth = this.properties.save_bandwidth;
+
 	for(var i = 1; i < this.inputs.length; ++i)
 	{
 		var data = this.getInputData(i);
 		if(data != null)
+		{
+			if( save_bandwidth && this._last_input_data[i] == data )
+				continue;
 			this._server.sendMessage( { type: 0, channel: i, data: data } );
+			this._last_input_data[i] = data;
+		}
 	}
 
 	for(var i = 1; i < this.outputs.length; ++i)
-		this.setOutputData( i, this._last_data[i] );
+		this.setOutputData( i, this._last_output_data[i] );
 }
 
 LGSillyClient.prototype.createSocket = function()
@@ -14679,7 +14688,7 @@ LGSillyClient.prototype.createSocket = function()
 		if(data.type == 1)
 			that.triggerSlot( 0, data );
 		else
-			that._last_data[ data.channel || 0 ] = data.data;
+			that._last_output_data[ data.channel || 0 ] = data.data;
 	}
 	this._server.on_error = function(e)
 	{
