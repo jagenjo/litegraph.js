@@ -1815,7 +1815,7 @@ LGraphNode.prototype.trigger = function( action, param )
 
 	for(var i = 0; i < this.outputs.length; ++i)
 	{
-		var output = this.outputs[ slot ];
+		var output = this.outputs[ i ];
 		if(!output || output.type !== LiteGraph.EVENT || (action && output.name != action) )
 			continue;
 		this.triggerSlot( i, param );
@@ -11966,7 +11966,10 @@ if(typeof(LiteGraph) != "undefined")
 		this.properties = { aberration:1.0, distortion: 1.0, blur: 1.0, precision: LGraphTexture.DEFAULT };
 
 		if(!LGraphFXLens._shader)
+		{
 			LGraphFXLens._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphFXLens.pixel_shader );
+			LGraphFXLens._texture = new GL.Texture(3,1,{ format: gl.RGB, wrap: gl.CLAMP_TO_EDGE, magFilter: gl.LINEAR, minFilter: gl.LINEAR, pixel_data: [255,0,0, 0,255,0, 0,0,255] });
+		}
 	}
 
 	LGraphFXLens.title = "Lens";
@@ -11988,7 +11991,6 @@ if(typeof(LiteGraph) != "undefined")
 
 		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
 
-		//iterations
 		var aberration = this.properties.aberration;
 		if( this.isInputConnected(1) )
 		{
