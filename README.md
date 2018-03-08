@@ -8,6 +8,8 @@ It can be integrated easily in any existing web applications and graphs can be r
 
 ## Installation
 
+I recommend to download the build/litegraph.js file which is more updated than the npm package.
+
 ```
 npm install litegraph.js
 ```
@@ -74,6 +76,27 @@ MyAddNode.prototype.onExecute = function()
 //register in the system
 LiteGraph.registerNodeType("basic/sum", MyAddNode );
 
+```
+
+## Server side
+
+It also works server-side using Node although some nodes do not work in server (audio, graphics, input, etc).
+
+```js
+var LiteGraph = require("./litegraph.js").LiteGraph;
+
+var graph = new LiteGraph.LGraph();
+
+var node_time = LiteGraph.createNode("basic/time");
+graph.add(node_time);
+
+var node_console = LiteGraph.createNode("basic/console");
+node_console.mode = LiteGraph.ALWAYS;
+graph.add(node_console);
+
+node_time.connect( 0, node_console, 1 );
+
+graph.start()
 ```
 
 
