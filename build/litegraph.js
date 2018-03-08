@@ -2126,9 +2126,14 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 * @method getBounding
 * @return {Float32Array[4]} the total size
 */
-LGraphNode.prototype.getBounding = function()
+LGraphNode.prototype.getBounding = function( out )
 {
-	return new Float32Array([this.pos[0] - 4, this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, this.pos[0] + this.size[0] + 4, this.pos[1] + this.size[1] + LGraph.NODE_TITLE_HEIGHT]);
+	out = out || new Float32Array(4);
+	out[0] = this.pos[0] - 4;
+	out[1] = this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT;
+	out[2] = this.pos[0] + this.size[0] + 4;
+	out[3] = this.pos[1] + this.size[1] + LGraph.NODE_TITLE_HEIGHT;
+	return out;
 }
 
 /**
@@ -4007,6 +4012,7 @@ LGraphCanvas.prototype.sendToBack = function(n)
 
 LGraphCanvas.prototype.computeVisibleNodes = function()
 {
+	var temp = new Float32Array(4);
 	var visible_nodes = [];
 	for(var i = 0, l = this.graph._nodes.length; i < l; ++i)
 	{
@@ -4016,7 +4022,7 @@ LGraphCanvas.prototype.computeVisibleNodes = function()
 		if(this.live_mode && !n.onDrawBackground && !n.onDrawForeground)
 			continue;
 
-		if(!overlapBounding(this.visible_area, n.getBounding() ))
+		if(!overlapBounding( this.visible_area, n.getBounding( temp ) ))
 			continue; //out of the visible area
 
 		visible_nodes.push(n);
