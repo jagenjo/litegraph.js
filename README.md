@@ -76,6 +76,27 @@ LiteGraph.registerNodeType("basic/sum", MyAddNode );
 
 ```
 
+## Server side
+
+It also works server-side using Node although some nodes do not work in server (audio, graphics, input, etc).
+
+```js
+var LiteGraph = require("./litegraph.js").LiteGraph;
+
+var graph = new LiteGraph.LGraph();
+
+var node_time = LiteGraph.createNode("basic/time");
+graph.add(node_time);
+
+var node_console = LiteGraph.createNode("basic/console");
+node_console.mode = LiteGraph.ALWAYS;
+graph.add(node_console);
+
+node_time.connect( 0, node_console, 1 );
+
+graph.start()
+```
+
 
 ## Projects using it
 
