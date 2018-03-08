@@ -1,6 +1,6 @@
 //basic nodes
-(function(){
-
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 //Constant
 function Time()
@@ -461,4 +461,4 @@ LiteGraph.registerNodeType("basic/script", NodeScript );
 
 
 
-})();
+})(this);

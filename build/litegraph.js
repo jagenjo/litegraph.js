@@ -1,4 +1,5 @@
 //packer version
+
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -173,7 +174,7 @@ var LiteGraph = global.LiteGraph = {
 
 		title = title || base_class.title || type;
 
-		var node = new base_class( name );
+		var node = new base_class( title );
 		node.type = type;
 
 		if(!node.title) node.title = title;
@@ -312,10 +313,18 @@ var LiteGraph = global.LiteGraph = {
 	}
 };
 
+//timer that works everywhere
 if(typeof(performance) != "undefined")
-  LiteGraph.getTime = function getTime() { return performance.now(); }
+	LiteGraph.getTime = performance.now.bind(performance);
+else if(typeof(Date) != "undefined" && Date.now)
+	LiteGraph.getTime = Date.now.bind(Date);
+else if(typeof(process) != "undefined")
+	LiteGraph.getTime = function(){
+		var t = process.hrtime();
+		return t[0]*0.001 + t[1]*(1e-6);
+	}
 else
-  LiteGraph.getTime = function getTime() { return Date.now(); }
+  LiteGraph.getTime = function getTime() { return (new Date).getTime(); }
 
 
 
@@ -333,13 +342,15 @@ else
 * @constructor
 */
 
-global.LGraph = LiteGraph.LGraph = function LGraph()
+function LGraph()
 {
 	if (LiteGraph.debug)
 		console.log("Graph created");
 	this.list_of_graphcanvas = null;
 	this.clear();
 }
+
+global.LGraph = LiteGraph.LGraph = LGraph;
 
 //default supported types
 LGraph.supported_types = ["number","string","boolean"];
@@ -1383,10 +1394,12 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 * @param {String} name a name for the node
 */
 
-global.LGraphNode = LiteGraph.LGraphNode = function LGraphNode(title)
+function LGraphNode(title)
 {
 	this._ctor();
 }
+
+global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
 
 LGraphNode.prototype._ctor = function( title )
 {
@@ -2681,7 +2694,7 @@ LGraphNode.prototype.localToScreen = function(x,y, graphcanvas)
 * @param {LGraph} graph [optional]
 * @param {Object} options [optional] { skip_rendering, autoresize }
 */
-global.LGraphCanvas = LiteGraph.LGraphCanvas = function LGraphCanvas( canvas, graph, options )
+function LGraphCanvas( canvas, graph, options )
 {
 	options = options || {};
 
@@ -2732,6 +2745,8 @@ global.LGraphCanvas = LiteGraph.LGraphCanvas = function LGraphCanvas( canvas, gr
 
 	this.autoresize = options.autoresize;
 }
+
+global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
 LGraphCanvas.link_type_colors = {"-1":"#F85",'number':"#AAC","node":"#DCA"};
 
@@ -6185,7 +6200,7 @@ LiteGraph.createNodetypeWrapper = function( class_object )
 //LiteGraph.registerNodeType("scene/global", LGraphGlobal );
 */
 
-if(typeof(window) !== undefined && !window["requestAnimationFrame"] )
+if( typeof(window) != "undefined" && !window["requestAnimationFrame"] )
 {
 	window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
 		  window.mozRequestAnimationFrame    ||
@@ -6196,9 +6211,12 @@ if(typeof(window) !== undefined && !window["requestAnimationFrame"] )
 
 })(this);
 
-//basic nodes
-(function(){
+if(typeof(exports) != "undefined")
+	exports.LiteGraph = this.LiteGraph;
 
+//basic nodes
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 //Constant
 function Time()
@@ -6659,9 +6677,10 @@ LiteGraph.registerNodeType("basic/script", NodeScript );
 
 
 
-})();
+})(this);
 //event related nodes
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 //Show value inside the debug console
 function LogEvent()
@@ -6808,9 +6827,10 @@ DelayEvent.prototype.onGetInputs = function()
 LiteGraph.registerNodeType("events/delay", DelayEvent );
 
 
-})();
+})(this);
 //widgets
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 	/* Button ****************/
 
@@ -7587,8 +7607,9 @@ LiteGraph.registerNodeType("events/delay", DelayEvent );
 
 	LiteGraph.registerNodeType("widget/panel", WidgetPanel );
 
-})();
-(function(){
+})(this);
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 function GamepadInput()
 {
@@ -7790,8 +7811,9 @@ GamepadInput.prototype.onGetOutputs = function() {
 
 LiteGraph.registerNodeType("input/gamepad", GamepadInput );
 
-})();
-(function(){
+})(this);
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 //Converter
 function Converter()
@@ -8478,7 +8500,7 @@ LiteGraph.registerNodeType("math/trigonometry", MathTrigonometry );
 
 
 //math library for safe math operations without eval
-if(window.math)
+if(typeof(math) != undefined)
 {
 	function MathFormula()
 	{
@@ -8696,7 +8718,7 @@ LiteGraph.registerNodeType("math3d/xyzw-to-vec4", Math3DXYZWToVec4 );
 
 
 //if glMatrix is installed...
-if(window.glMatrix) 
+if(global.glMatrix) 
 {
 
 	function Math3DQuaternion()
@@ -8831,7 +8853,10 @@ if(window.glMatrix)
 
 } //glMatrix
 
-})();
+})(this);
+(function(global){
+var LiteGraph = global.LiteGraph;
+
 function Selector()
 {
 	this.addInput("sel","boolean");
@@ -8869,11 +8894,9 @@ Selector.prototype.onGetInputs = function() {
 
 LiteGraph.registerNodeType("logic/selector", Selector);
 
-
-(function(){
-
-
-
+})(this);
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 function GraphicsImage()
 {
@@ -9586,18 +9609,24 @@ ImageWebcam.prototype.onDrawBackground = function(ctx)
 LiteGraph.registerNodeType("graphics/webcam", ImageWebcam );
 
 
-})();
+})(this);
+
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 //Works with Litegl.js to create WebGL nodes
-var LGraphTexture
-if(typeof(LiteGraph) != "undefined")
+global.LGraphTexture = null;
+
+if(typeof(GL) != "undefined")
 {
-	LGraphTexture = function()
+	function LGraphTexture()
 	{
 		this.addOutput("Texture","Texture");
 		this.properties = { name:"", filter: true };
 		this.size = [LGraphTexture.image_preview_size, LGraphTexture.image_preview_size];
 	}
+
+	global.LGraphTexture = LGraphTexture;
 
 	LGraphTexture.title = "Texture";
 	LGraphTexture.desc = "Texture";
@@ -12054,10 +12083,15 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LiteGraph.registerNodeType("texture/cubemap", LGraphCubemap );
 
 } //litegl.js defined
+
+})(this);
+(function(global){
+var LiteGraph = global.LiteGraph;
+
 //Works with Litegl.js to create WebGL nodes
-if(typeof(LiteGraph) != "undefined")
+if(typeof(GL) != "undefined")
 {
-	
+
 	// Texture Lens *****************************************
 	function LGraphFXLens()
 	{
@@ -12611,10 +12645,13 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("fx/vigneting", LGraphFXVigneting );
-	window.LGraphFXVigneting = LGraphFXVigneting;
+	global.LGraphFXVigneting = LGraphFXVigneting;
 }
+
+})(this);
 (function( global )
 {
+var LiteGraph = global.LiteGraph;
 
 function MIDIEvent( data )
 {
@@ -13319,17 +13356,10 @@ LiteGraph.registerNodeType("midi/cc", LGMIDICC);
 
 function now() { return window.performance.now() }
 
-
-
-
-
-
-
-})( window );
-//not tested nor finished
-
+})( this );
 (function( global )
 {
+var LiteGraph = global.LiteGraph;
 
 var LGAudio = {};
 global.LGAudio = LGAudio;
@@ -14582,9 +14612,10 @@ LiteGraph.registerNodeType("audio/destination", LGAudioDestination);
 
 
 
-})( window );
+})( this );
 //event related nodes
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 function LGWebSocket()
 {
@@ -14840,4 +14871,4 @@ LGSillyClient.prototype.onGetOutputs = function()
 LiteGraph.registerNodeType("network/sillyclient", LGSillyClient );
 
 
-})();
+})(this);

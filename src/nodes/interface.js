@@ -1,5 +1,6 @@
 //widgets
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 	/* Button ****************/
 
@@ -776,4 +777,4 @@
 
 	LiteGraph.registerNodeType("widget/panel", WidgetPanel );
 
-})();
+})(this);

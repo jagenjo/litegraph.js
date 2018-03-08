@@ -1,7 +1,6 @@
-//not tested nor finished
-
 (function( global )
 {
+var LiteGraph = global.LiteGraph;
 
 var LGAudio = {};
 global.LGAudio = LGAudio;
@@ -1254,4 +1253,4 @@ LiteGraph.registerNodeType("audio/destination", LGAudioDestination);
 
 
 
-})( window );
+})( this );

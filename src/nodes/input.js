@@ -1,4 +1,5 @@
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 function GamepadInput()
 {
@@ -200,4 +201,4 @@ GamepadInput.prototype.onGetOutputs = function() {
 
 LiteGraph.registerNodeType("input/gamepad", GamepadInput );
 
-})();
+})(this);

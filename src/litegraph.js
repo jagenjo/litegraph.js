@@ -172,7 +172,7 @@ var LiteGraph = global.LiteGraph = {
 
 		title = title || base_class.title || type;
 
-		var node = new base_class( name );
+		var node = new base_class( title );
 		node.type = type;
 
 		if(!node.title) node.title = title;
@@ -311,10 +311,18 @@ var LiteGraph = global.LiteGraph = {
 	}
 };
 
+//timer that works everywhere
 if(typeof(performance) != "undefined")
-  LiteGraph.getTime = function getTime() { return performance.now(); }
+	LiteGraph.getTime = performance.now.bind(performance);
+else if(typeof(Date) != "undefined" && Date.now)
+	LiteGraph.getTime = Date.now.bind(Date);
+else if(typeof(process) != "undefined")
+	LiteGraph.getTime = function(){
+		var t = process.hrtime();
+		return t[0]*0.001 + t[1]*(1e-6);
+	}
 else
-  LiteGraph.getTime = function getTime() { return Date.now(); }
+  LiteGraph.getTime = function getTime() { return (new Date).getTime(); }
 
 
 
@@ -332,13 +340,15 @@ else
 * @constructor
 */
 
-global.LGraph = LiteGraph.LGraph = function LGraph()
+function LGraph()
 {
 	if (LiteGraph.debug)
 		console.log("Graph created");
 	this.list_of_graphcanvas = null;
 	this.clear();
 }
+
+global.LGraph = LiteGraph.LGraph = LGraph;
 
 //default supported types
 LGraph.supported_types = ["number","string","boolean"];
@@ -1382,10 +1392,12 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 * @param {String} name a name for the node
 */
 
-global.LGraphNode = LiteGraph.LGraphNode = function LGraphNode(title)
+function LGraphNode(title)
 {
 	this._ctor();
 }
+
+global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
 
 LGraphNode.prototype._ctor = function( title )
 {
@@ -2680,7 +2692,7 @@ LGraphNode.prototype.localToScreen = function(x,y, graphcanvas)
 * @param {LGraph} graph [optional]
 * @param {Object} options [optional] { skip_rendering, autoresize }
 */
-global.LGraphCanvas = LiteGraph.LGraphCanvas = function LGraphCanvas( canvas, graph, options )
+function LGraphCanvas( canvas, graph, options )
 {
 	options = options || {};
 
@@ -2731,6 +2743,8 @@ global.LGraphCanvas = LiteGraph.LGraphCanvas = function LGraphCanvas( canvas, gr
 
 	this.autoresize = options.autoresize;
 }
+
+global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
 LGraphCanvas.link_type_colors = {"-1":"#F85",'number':"#AAC","node":"#DCA"};
 
@@ -6184,7 +6198,7 @@ LiteGraph.createNodetypeWrapper = function( class_object )
 //LiteGraph.registerNodeType("scene/global", LGraphGlobal );
 */
 
-if(typeof(window) !== undefined && !window["requestAnimationFrame"] )
+if( typeof(window) != "undefined" && !window["requestAnimationFrame"] )
 {
 	window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
 		  window.mozRequestAnimationFrame    ||
@@ -6194,3 +6208,6 @@ if(typeof(window) !== undefined && !window["requestAnimationFrame"] )
 }
 
 })(this);
+
+if(typeof(exports) != "undefined")
+	exports.LiteGraph = this.LiteGraph;

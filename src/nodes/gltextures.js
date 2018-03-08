@@ -1,13 +1,19 @@
+(function(global){
+var LiteGraph = global.LiteGraph;
+
 //Works with Litegl.js to create WebGL nodes
-var LGraphTexture
-if(typeof(LiteGraph) != "undefined")
+global.LGraphTexture = null;
+
+if(typeof(GL) != "undefined")
 {
-	LGraphTexture = function()
+	function LGraphTexture()
 	{
 		this.addOutput("Texture","Texture");
 		this.properties = { name:"", filter: true };
 		this.size = [LGraphTexture.image_preview_size, LGraphTexture.image_preview_size];
 	}
+
+	global.LGraphTexture = LGraphTexture;
 
 	LGraphTexture.title = "Texture";
 	LGraphTexture.desc = "Texture";
@@ -2464,3 +2470,5 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LiteGraph.registerNodeType("texture/cubemap", LGraphCubemap );
 
 } //litegl.js defined
+
+})(this);

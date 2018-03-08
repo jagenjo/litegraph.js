@@ -1,5 +1,6 @@
 //event related nodes
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 function LGWebSocket()
 {
@@ -255,4 +256,4 @@ LGSillyClient.prototype.onGetOutputs = function()
 LiteGraph.registerNodeType("network/sillyclient", LGSillyClient );
 
 
-})();
+})(this);

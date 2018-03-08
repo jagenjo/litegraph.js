@@ -1,5 +1,6 @@
 (function( global )
 {
+var LiteGraph = global.LiteGraph;
 
 function MIDIEvent( data )
 {
@@ -704,10 +705,4 @@ LiteGraph.registerNodeType("midi/cc", LGMIDICC);
 
 function now() { return window.performance.now() }
 
-
-
-
-
-
-
-})( window );
+})( this );

@@ -1,3 +1,6 @@
+(function(global){
+var LiteGraph = global.LiteGraph;
+
 function Selector()
 {
 	this.addInput("sel","boolean");
@@ -35,3 +38,4 @@ Selector.prototype.onGetInputs = function() {
 
 LiteGraph.registerNodeType("logic/selector", Selector);
 
+})(this);

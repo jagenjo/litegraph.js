@@ -1,5 +1,6 @@
 //event related nodes
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 //Show value inside the debug console
 function LogEvent()
@@ -146,4 +147,4 @@ DelayEvent.prototype.onGetInputs = function()
 LiteGraph.registerNodeType("events/delay", DelayEvent );
 
 
-})();
+})(this);
