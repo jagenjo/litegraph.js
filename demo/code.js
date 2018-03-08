@@ -4,7 +4,7 @@ var editor = new LiteGraph.Editor("main");
 window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
 window.addEventListener("resize", function() { editor.graphcanvas.resize(); } );
-
+window.addEventListener("keydown", editor.graphcanvas.processKey.bind(editor.graphcanvas) );
 
 //create scene selector
 var elem = document.createElement("span");

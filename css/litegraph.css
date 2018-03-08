@@ -178,7 +178,7 @@
 	transition: * linear 0.5s;
 }
 
-.graphmenu-entry.event {
+.graphmenu-entry.event, .litemenu-entry.event {
 	border-left: 8px solid orange;
 	padding-left: 12px;
 }
@@ -187,7 +187,7 @@
 	opacity: 0.3;
 }
 
-.graphmenu-entry.submenu {
+.graphmenu-entry.submenu  {
 	border-right: 2px solid #EEE;
 }
 
@@ -212,7 +212,7 @@
 	min-height: 1.2em;
 }
 
-.graphmenu-entry .property_value {
+.graphmenu-entry .property_value, .litemenu-entry .property_value {
 	display: inline-block;
 	background-color: rgba(0,0,0,0.5);
 	text-align: right;

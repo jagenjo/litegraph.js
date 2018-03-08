@@ -41,7 +41,7 @@ function Subgraph()
 	this.subgraph.onGlobalOutputTypeChanged = this.onSubgraphTypeChangeGlobalOutput.bind(this);
 	
 
-	this.bgcolor = "#940";
+	this.bgcolor = "#663";
 }
 
 Subgraph.title = "Subgraph";
