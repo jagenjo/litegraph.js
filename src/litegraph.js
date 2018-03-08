@@ -40,7 +40,7 @@ var LiteGraph = global.LiteGraph = {
 	DEFAULT_POSITION: [100,100],//default node position
 	node_images_path: "",
 
-	VALID_SHAPES: ["box","round","circle"],
+	VALID_SHAPES: ["box","round"], //,"circle"
 
 	BOX_SHAPE: 1,
 	ROUND_SHAPE: 2,
