@@ -8,11 +8,12 @@ It can be integrated easily in any existing web applications and graphs can be r
 
 ## Installation
 
-I recommend to download the build/litegraph.js file which is more updated than the npm package.
-
+You can install it using npm 
 ```
 npm install litegraph.js
 ```
+
+Or downloading the ```build/litegraph.js``` version from this repository.
 
 ## First project ##
 
