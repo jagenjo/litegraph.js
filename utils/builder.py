@@ -42,7 +42,7 @@ sys.stderr.write(" + Root folder: " + root_path + "\n")
 
 def packJSCode(files):
     f1, fullcode_path = tempfile.mkstemp() #create temporary file
-    data = "//packer version\n"
+    data = "//packer version\n\n"
     
     for filename in files:
         filename = filename.strip()

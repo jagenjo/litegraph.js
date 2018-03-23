@@ -1,7 +1,5 @@
-(function(){
-
-
-
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 function GraphicsImage()
 {
@@ -714,4 +712,4 @@ ImageWebcam.prototype.onDrawBackground = function(ctx)
 LiteGraph.registerNodeType("graphics/webcam", ImageWebcam );
 
 
-})();
+})(this);

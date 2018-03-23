@@ -1,4 +1,5 @@
-(function(){
+(function(global){
+var LiteGraph = global.LiteGraph;
 
 //Converter
 function Converter()
@@ -685,7 +686,7 @@ LiteGraph.registerNodeType("math/trigonometry", MathTrigonometry );
 
 
 //math library for safe math operations without eval
-if(window.math)
+if(typeof(math) != undefined)
 {
 	function MathFormula()
 	{
@@ -903,7 +904,7 @@ LiteGraph.registerNodeType("math3d/xyzw-to-vec4", Math3DXYZWToVec4 );
 
 
 //if glMatrix is installed...
-if(window.glMatrix) 
+if(global.glMatrix) 
 {
 
 	function Math3DQuaternion()
@@ -1038,4 +1039,4 @@ if(window.glMatrix)
 
 } //glMatrix
 
-})();
+})(this);

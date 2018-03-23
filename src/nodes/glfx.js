@@ -1,7 +1,10 @@
+(function(global){
+var LiteGraph = global.LiteGraph;
+
 //Works with Litegl.js to create WebGL nodes
-if(typeof(LiteGraph) != "undefined")
+if(typeof(GL) != "undefined")
 {
-	
+
 	// Texture Lens *****************************************
 	function LGraphFXLens()
 	{
@@ -13,7 +16,10 @@ if(typeof(LiteGraph) != "undefined")
 		this.properties = { aberration:1.0, distortion: 1.0, blur: 1.0, precision: LGraphTexture.DEFAULT };
 
 		if(!LGraphFXLens._shader)
+		{
 			LGraphFXLens._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphFXLens.pixel_shader );
+			LGraphFXLens._texture = new GL.Texture(3,1,{ format: gl.RGB, wrap: gl.CLAMP_TO_EDGE, magFilter: gl.LINEAR, minFilter: gl.LINEAR, pixel_data: [255,0,0, 0,255,0, 0,0,255] });
+		}
 	}
 
 	LGraphFXLens.title = "Lens";
@@ -35,7 +41,6 @@ if(typeof(LiteGraph) != "undefined")
 
 		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
 
-		//iterations
 		var aberration = this.properties.aberration;
 		if( this.isInputConnected(1) )
 		{
@@ -553,5 +558,7 @@ if(typeof(LiteGraph) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("fx/vigneting", LGraphFXVigneting );
-	window.LGraphFXVigneting = LGraphFXVigneting;
+	global.LGraphFXVigneting = LGraphFXVigneting;
 }
+
+})(this);
