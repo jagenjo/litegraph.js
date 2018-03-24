@@ -1,6 +1,6 @@
 {
   "name": "litegraph.js",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A graph node editor similar to PD or UDK Blueprints, it works in a HTML5 Canvas and allow to exported graphs to be included in applications.",
   "main": "build/litegraph.js",
   "directories": {
@@ -8,9 +8,9 @@
   },
   "private": false,
   "scripts": {
-    "prebuild": "grunt clean:build",
+    "prebuild": "rimraf build",
     "build": "grunt build",
-    "start": "npx nodemon utils/server.js",
+    "start": "nodemon utils/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -31,10 +31,10 @@
     "express": "^4.16.2",
     "google-closure-compiler": "^20171112.0.0",
     "grunt": "^1.0.1",
+    "grunt-cli": "^1.2.0",
     "grunt-closure-tools": "^1.0.0",
-    "grunt-contrib-clean": "^1.1.0",
     "grunt-contrib-concat": "^1.0.1",
-    "grunt-contrib-copy": "^1.0.0",
-    "nodemon": "^1.14.7"
+    "nodemon": "^1.14.7",
+    "rimraf": "^2.6.2"
   }
 }
