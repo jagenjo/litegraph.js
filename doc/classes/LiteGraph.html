@@ -170,6 +170,10 @@
                                 <a href="#method_registerNodeType">registerNodeType</a>
 
                             </li>
+                            <li class="index-item method">
+                                <a href="#method_wrapFunctionAsNode">wrapFunctionAsNode</a>
+
+                            </li>
                     </ul>
                 </div>
 
@@ -201,7 +205,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l135"><code>..&#x2F;src&#x2F;litegraph.js:135</code></a>
+        <a href="../files/.._src_litegraph.js.html#l164"><code>..&#x2F;src&#x2F;litegraph.js:164</code></a>
         </p>
 
 
@@ -261,7 +265,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l153"><code>..&#x2F;src&#x2F;litegraph.js:153</code></a>
+        <a href="../files/.._src_litegraph.js.html#l182"><code>..&#x2F;src&#x2F;litegraph.js:182</code></a>
         </p>
 
 
@@ -340,7 +344,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l196"><code>..&#x2F;src&#x2F;litegraph.js:196</code></a>
+        <a href="../files/.._src_litegraph.js.html#l225"><code>..&#x2F;src&#x2F;litegraph.js:225</code></a>
         </p>
 
 
@@ -406,7 +410,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l209"><code>..&#x2F;src&#x2F;litegraph.js:209</code></a>
+        <a href="../files/.._src_litegraph.js.html#l238"><code>..&#x2F;src&#x2F;litegraph.js:238</code></a>
         </p>
 
 
@@ -466,7 +470,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l231"><code>..&#x2F;src&#x2F;litegraph.js:231</code></a>
+        <a href="../files/.._src_litegraph.js.html#l260"><code>..&#x2F;src&#x2F;litegraph.js:260</code></a>
         </p>
 
 
@@ -549,6 +553,101 @@
 
                     <div class="param-description">
                         <p>class containing the structure of a node</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_wrapFunctionAsNode" class="method item">
+    <h3 class="name"><code>wrapFunctionAsNode</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+                <li class="arg">
+                        <code>func</code>
+                </li>
+                <li class="arg">
+                        <code>param_types</code>
+                </li>
+                <li class="arg">
+                        <code>return_type</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l135"><code>..&#x2F;src&#x2F;litegraph.js:135</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>create a new node type by passing a function, it wraps it with a propper class</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>node name with namespace (p.e.: 'math/sum')</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">func</code>
+                        <span class="type">Function</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">param_types</code>
+                        <span class="type">Array</span>
+
+
+                    <div class="param-description">
+                        <p>[optional] an array containing the type of every parameter, otherwise parameters will accept any type</p>
+
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">return_type</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                        <p>[optional] string with the return type, otherwise it will be generic</p>
 
                     </div>
 

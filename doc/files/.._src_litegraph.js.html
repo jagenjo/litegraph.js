@@ -126,7 +126,7 @@ var LiteGraph = global.LiteGraph = {
 	DEFAULT_POSITION: [100,100],//default node position
 	node_images_path: &quot;&quot;,
 
-	VALID_SHAPES: [&quot;box&quot;,&quot;round&quot;,&quot;circle&quot;],
+	VALID_SHAPES: [&quot;box&quot;,&quot;round&quot;], //,&quot;circle&quot;
 
 	BOX_SHAPE: 1,
 	ROUND_SHAPE: 2,
@@ -219,6 +219,35 @@ var LiteGraph = global.LiteGraph = {
 	},
 
 	/**
+	* create a new node type by passing a function, it wraps it with a propper class
+	* @method wrapFunctionAsNode
+	* @param {String} name node name with namespace (p.e.: &#x27;math/sum&#x27;)
+	* @param {Function} func
+	* @param {Array} param_types [optional] an array containing the type of every parameter, otherwise parameters will accept any type
+	* @param {String} return_type [optional] string with the return type, otherwise it will be generic
+	*/
+	wrapFunctionAsNode: function( name, func, param_types, return_type )
+	{
+		var params = Array(func.length);
+		var code = &quot;&quot;;
+		var names = LiteGraph.getParameterNames( func );
+		for(var i = 0; i &lt; names.length; ++i)
+			code += &quot;this.addInput(&#x27;&quot;+names[i]+&quot;&#x27;,&quot;+(param_types &amp;&amp; param_types[i] ? &quot;&#x27;&quot; + param_types[i] + &quot;&#x27;&quot; : &quot;0&quot;) + &quot;);\n&quot;;
+		code += &quot;this.addOutput(&#x27;out&#x27;,&quot;+( return_type ? &quot;&#x27;&quot; + return_type + &quot;&#x27;&quot; : 0 )+&quot;);\n&quot;;
+		var classobj = Function(code);
+		classobj.title = name.split(&quot;/&quot;).pop();
+		classobj.desc = &quot;Generated from &quot; + func.name;
+		classobj.prototype.onExecute = function onExecute()
+		{
+			for(var i = 0; i &lt; params.length; ++i)
+				params[i] = this.getInputData(i);
+			var r = func.apply( this, params );
+			this.setOutputData(0,r);
+		}
+		this.registerNodeType( name, classobj );
+	},
+
+	/**
 	* Adds this method to all nodetypes, existing and to be created
 	* (You can add it to LGraphNode.prototype but then existing node types wont have it)
 	* @method addNodeMethod
@@ -258,7 +287,7 @@ var LiteGraph = global.LiteGraph = {
 
 		title = title || base_class.title || type;
 
-		var node = new base_class( name );
+		var node = new base_class( title );
 		node.type = type;
 
 		if(!node.title) node.title = title;
@@ -391,16 +420,36 @@ var LiteGraph = global.LiteGraph = {
 		if( !type_a ||  //generic output
 			!type_b || //generic input
 			type_a == type_b || //same type (is valid for triggers)
-			(type_a !== LiteGraph.EVENT &amp;&amp; type_b !== LiteGraph.EVENT &amp;&amp; type_a.toLowerCase() == type_b.toLowerCase()) ) //same type
-			return true;
+			type_a == LiteGraph.EVENT &amp;&amp; type_b == LiteGraph.ACTION ) 
+				return true;
+
+		type_a = type_a.toLowerCase();
+		type_b = type_b.toLowerCase();
+		if( type_a.indexOf(&quot;,&quot;) == -1 &amp;&amp; type_b.indexOf(&quot;,&quot;) == -1 )
+			return type_a == type_b;
+
+		var supported_types_a = type_a.split(&quot;,&quot;);
+		var supported_types_b = type_b.split(&quot;,&quot;);
+		for(var i = 0; i &lt; supported_types_a.length; ++i) 
+			for(var j = 0; j &lt; supported_types_b.length; ++j) 
+				if( supported_types_a[i] == supported_types_b[i] )
+					return true;
 		return false;
 	}
 };
 
+//timer that works everywhere
 if(typeof(performance) != &quot;undefined&quot;)
-  LiteGraph.getTime = function getTime() { return performance.now(); }
+	LiteGraph.getTime = performance.now.bind(performance);
+else if(typeof(Date) != &quot;undefined&quot; &amp;&amp; Date.now)
+	LiteGraph.getTime = Date.now.bind(Date);
+else if(typeof(process) != &quot;undefined&quot;)
+	LiteGraph.getTime = function(){
+		var t = process.hrtime();
+		return t[0]*0.001 + t[1]*(1e-6);
+	}
 else
-  LiteGraph.getTime = function getTime() { return Date.now(); }
+  LiteGraph.getTime = function getTime() { return (new Date).getTime(); }
 
 
 
@@ -418,13 +467,15 @@ else
 * @constructor
 */
 
-global.LGraph = LiteGraph.LGraph = function LGraph()
+function LGraph()
 {
 	if (LiteGraph.debug)
 		console.log(&quot;Graph created&quot;);
 	this.list_of_graphcanvas = null;
 	this.clear();
 }
+
+global.LGraph = LiteGraph.LGraph = LGraph;
 
 //default supported types
 LGraph.supported_types = [&quot;number&quot;,&quot;string&quot;,&quot;boolean&quot;];
@@ -1468,10 +1519,12 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 * @param {String} name a name for the node
 */
 
-global.LGraphNode = LiteGraph.LGraphNode = function LGraphNode(title)
+function LGraphNode(title)
 {
 	this._ctor();
 }
+
+global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
 
 LGraphNode.prototype._ctor = function( title )
 {
@@ -2211,9 +2264,14 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 * @method getBounding
 * @return {Float32Array[4]} the total size
 */
-LGraphNode.prototype.getBounding = function()
+LGraphNode.prototype.getBounding = function( out )
 {
-	return new Float32Array([this.pos[0] - 4, this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, this.pos[0] + this.size[0] + 4, this.pos[1] + this.size[1] + LGraph.NODE_TITLE_HEIGHT]);
+	out = out || new Float32Array(4);
+	out[0] = this.pos[0] - 4;
+	out[1] = this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT;
+	out[2] = this.pos[0] + this.size[0] + 4;
+	out[3] = this.pos[1] + this.size[1] + LGraph.NODE_TITLE_HEIGHT;
+	return out;
 }
 
 /**
@@ -2761,7 +2819,7 @@ LGraphNode.prototype.localToScreen = function(x,y, graphcanvas)
 * @param {LGraph} graph [optional]
 * @param {Object} options [optional] { skip_rendering, autoresize }
 */
-global.LGraphCanvas = LiteGraph.LGraphCanvas = function LGraphCanvas( canvas, graph, options )
+function LGraphCanvas( canvas, graph, options )
 {
 	options = options || {};
 
@@ -2812,6 +2870,8 @@ global.LGraphCanvas = LiteGraph.LGraphCanvas = function LGraphCanvas( canvas, gr
 
 	this.autoresize = options.autoresize;
 }
+
+global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
 LGraphCanvas.link_type_colors = {&quot;-1&quot;:&quot;#F85&quot;,&#x27;number&#x27;:&quot;#AAC&quot;,&quot;node&quot;:&quot;#DCA&quot;};
 
@@ -3610,8 +3670,8 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 						if(this.connecting_output.type == LiteGraph.EVENT)
 							this.connecting_node.connect( this.connecting_slot, node, LiteGraph.EVENT );
 						else
-							if(input &amp;&amp; !input.link &amp;&amp; input.type == this.connecting_output.type) //toLowerCase missing
-								this.connecting_node.connect(this.connecting_slot, node, 0);
+							if(input &amp;&amp; !input.link &amp;&amp; LiteGraph.isValidConnection( input.type &amp;&amp; this.connecting_output.type ) )
+								this.connecting_node.connect( this.connecting_slot, node, 0 );
 					}
 				}
 			}
@@ -3744,7 +3804,8 @@ LGraphCanvas.prototype.processKey = function(e)
 
 	if(e.type == &quot;keydown&quot;)
 	{
-		console.log(e);
+		//console.log(e); //debug
+
 		//select all Control A
 		if(e.keyCode == 65 &amp;&amp; e.ctrlKey)
 		{
@@ -4092,6 +4153,7 @@ LGraphCanvas.prototype.sendToBack = function(n)
 
 LGraphCanvas.prototype.computeVisibleNodes = function()
 {
+	var temp = new Float32Array(4);
 	var visible_nodes = [];
 	for(var i = 0, l = this.graph._nodes.length; i &lt; l; ++i)
 	{
@@ -4101,7 +4163,7 @@ LGraphCanvas.prototype.computeVisibleNodes = function()
 		if(this.live_mode &amp;&amp; !n.onDrawBackground &amp;&amp; !n.onDrawForeground)
 			continue;
 
-		if(!overlapBounding(this.visible_area, n.getBounding() ))
+		if(!overlapBounding( this.visible_area, n.getBounding( temp ) ))
 			continue; //out of the visible area
 
 		visible_nodes.push(n);
@@ -6256,15 +6318,17 @@ LiteGraph.extendClass = function ( target, origin )
 		}
 }
 
-/*
-LiteGraph.createNodetypeWrapper = function( class_object )
-{
-	//create Nodetype object
-}
-//LiteGraph.registerNodeType(&quot;scene/global&quot;, LGraphGlobal );
-*/
+LiteGraph.getParameterNames = function(func) {  
+    return (func + &#x27;&#x27;)
+      .replace(/[/][/].*$/mg,&#x27;&#x27;) // strip single-line comments
+      .replace(/\s+/g, &#x27;&#x27;) // strip white space
+      .replace(/[/][*][^/*]*[*][/]/g, &#x27;&#x27;) // strip multi-line comments  /**/
+      .split(&#x27;){&#x27;, 1)[0].replace(/^[^(]*[(]/, &#x27;&#x27;) // extract the parameters  
+      .replace(/=[^,]+/g, &#x27;&#x27;) // strip any ES6 defaults  
+      .split(&#x27;,&#x27;).filter(Boolean); // split &amp; filter [&quot;&quot;]
+} 
 
-if(typeof(window) !== undefined &amp;&amp; !window[&quot;requestAnimationFrame&quot;] )
+if( typeof(window) != &quot;undefined&quot; &amp;&amp; !window[&quot;requestAnimationFrame&quot;] )
 {
 	window.requestAnimationFrame = window.webkitRequestAnimationFrame ||
 		  window.mozRequestAnimationFrame    ||
@@ -6274,6 +6338,9 @@ if(typeof(window) !== undefined &amp;&amp; !window[&quot;requestAnimationFrame&q
 }
 
 })(this);
+
+if(typeof(exports) != &quot;undefined&quot;)
+	exports.LiteGraph = this.LiteGraph;
 
     </pre>
 </div>

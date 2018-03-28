@@ -135,6 +135,35 @@ var LiteGraph = global.LiteGraph = {
 	},
 
 	/**
+	* create a new node type by passing a function, it wraps it with a propper class
+	* @method wrapFunctionAsNode
+	* @param {String} name node name with namespace (p.e.: 'math/sum')
+	* @param {Function} func
+	* @param {Array} param_types [optional] an array containing the type of every parameter, otherwise parameters will accept any type
+	* @param {String} return_type [optional] string with the return type, otherwise it will be generic
+	*/
+	wrapFunctionAsNode: function( name, func, param_types, return_type )
+	{
+		var params = Array(func.length);
+		var code = "";
+		var names = LiteGraph.getParameterNames( func );
+		for(var i = 0; i < names.length; ++i)
+			code += "this.addInput('"+names[i]+"',"+(param_types && param_types[i] ? "'" + param_types[i] + "'" : "0") + ");\n";
+		code += "this.addOutput('out',"+( return_type ? "'" + return_type + "'" : 0 )+");\n";
+		var classobj = Function(code);
+		classobj.title = name.split("/").pop();
+		classobj.desc = "Generated from " + func.name;
+		classobj.prototype.onExecute = function onExecute()
+		{
+			for(var i = 0; i < params.length; ++i)
+				params[i] = this.getInputData(i);
+			var r = func.apply( this, params );
+			this.setOutputData(0,r);
+		}
+		this.registerNodeType( name, classobj );
+	},
+
+	/**
 	* Adds this method to all nodetypes, existing and to be created
 	* (You can add it to LGraphNode.prototype but then existing node types wont have it)
 	* @method addNodeMethod
@@ -307,8 +336,20 @@ var LiteGraph = global.LiteGraph = {
 		if( !type_a ||  //generic output
 			!type_b || //generic input
 			type_a == type_b || //same type (is valid for triggers)
-			(type_a !== LiteGraph.EVENT && type_b !== LiteGraph.EVENT && type_a.toLowerCase() == type_b.toLowerCase()) ) //same type
-			return true;
+			type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION ) 
+				return true;
+
+		type_a = type_a.toLowerCase();
+		type_b = type_b.toLowerCase();
+		if( type_a.indexOf(",") == -1 && type_b.indexOf(",") == -1 )
+			return type_a == type_b;
+
+		var supported_types_a = type_a.split(",");
+		var supported_types_b = type_b.split(",");
+		for(var i = 0; i < supported_types_a.length; ++i) 
+			for(var j = 0; j < supported_types_b.length; ++j) 
+				if( supported_types_a[i] == supported_types_b[i] )
+					return true;
 		return false;
 	}
 };
@@ -3545,8 +3586,8 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 						if(this.connecting_output.type == LiteGraph.EVENT)
 							this.connecting_node.connect( this.connecting_slot, node, LiteGraph.EVENT );
 						else
-							if(input && !input.link && input.type == this.connecting_output.type) //toLowerCase missing
-								this.connecting_node.connect(this.connecting_slot, node, 0);
+							if(input && !input.link && LiteGraph.isValidConnection( input.type && this.connecting_output.type ) )
+								this.connecting_node.connect( this.connecting_slot, node, 0 );
 					}
 				}
 			}
@@ -3679,7 +3720,8 @@ LGraphCanvas.prototype.processKey = function(e)
 
 	if(e.type == "keydown")
 	{
-		console.log(e);
+		//console.log(e); //debug
+
 		//select all Control A
 		if(e.keyCode == 65 && e.ctrlKey)
 		{
@@ -6192,13 +6234,15 @@ LiteGraph.extendClass = function ( target, origin )
 		}
 }
 
-/*
-LiteGraph.createNodetypeWrapper = function( class_object )
-{
-	//create Nodetype object
-}
-//LiteGraph.registerNodeType("scene/global", LGraphGlobal );
-*/
+LiteGraph.getParameterNames = function(func) {  
+    return (func + '')
+      .replace(/[/][/].*$/mg,'') // strip single-line comments
+      .replace(/\s+/g, '') // strip white space
+      .replace(/[/][*][^/*]*[*][/]/g, '') // strip multi-line comments  /**/
+      .split('){', 1)[0].replace(/^[^(]*[(]/, '') // extract the parameters  
+      .replace(/=[^,]+/g, '') // strip any ES6 defaults  
+      .split(',').filter(Boolean); // split & filter [""]
+} 
 
 if( typeof(window) != "undefined" && !window["requestAnimationFrame"] )
 {
@@ -6578,6 +6622,24 @@ Watch.prototype.onDrawBackground = function(ctx)
 }
 
 LiteGraph.registerNodeType("basic/watch", Watch);
+
+//Watch a value in the editor
+function Pass()
+{
+	this.addInput("in",0);
+	this.addOutput("out",0);
+	this.size = [40,20];
+}
+
+Pass.title = "Pass";
+Pass.desc = "Allows to connect different types";
+
+Pass.prototype.onExecute = function()
+{
+	this.setOutputData( 0, this.getInputData(0) );
+}
+
+LiteGraph.registerNodeType("basic/pass", Pass);
 
 
 //Show value inside the debug console
@@ -7040,7 +7102,7 @@ var LiteGraph = global.LiteGraph;
 	{
 		//this.oldmouse = null;
 	}
-	
+
 	WidgetKnob.prototype.onWidget = function(e,widget)
 	{
 		if(widget.name=="increase")
@@ -7082,7 +7144,7 @@ var LiteGraph = global.LiteGraph;
 	WidgetHSlider.title = "H.Slider";
 	WidgetHSlider.desc = "Linear slider controller";
 
-	WidgetHSlider.prototype.onInit = function()
+	WidgetHSlider.prototype.onAdded = function()
 	{
 		this.value = 0.5;
 		this.imgfg = this.loadImage("imgs/slider_fg.png");
@@ -7108,7 +7170,7 @@ var LiteGraph = global.LiteGraph;
 
 	WidgetHSlider.prototype.onDrawImage = function(ctx)
 	{
-		if(!this.imgfg || !this.imgfg.width) 
+		if(!this.imgfg || !this.imgfg.width)
 			return;
 
 		//border
@@ -7235,8 +7297,8 @@ var LiteGraph = global.LiteGraph;
 
 		createGradient: function(ctx)
 		{
-			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);  
-			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);  
+			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);
+			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);
 			this.lineargradient.addColorStop(1,this.properties["bgcolorBottom"]);
 		},
 
@@ -7293,7 +7355,7 @@ var LiteGraph = global.LiteGraph;
 			if(!this.oldmouse) return;
 
 			var m = [ e.canvasX - this.pos[0], e.canvasY - this.pos[1] ];
-			
+
 			this.properties.x = m[0] / this.size[0];
 			this.properties.y = m[1] / this.size[1];
 
@@ -7335,8 +7397,8 @@ var LiteGraph = global.LiteGraph;
 
 		createGradient: function(ctx)
 		{
-			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);  
-			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);  
+			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);
+			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);
 			this.lineargradient.addColorStop(1,this.properties["bgcolorBottom"]);
 		},
 
@@ -7344,7 +7406,7 @@ var LiteGraph = global.LiteGraph;
 		{
 			ctx.fillStyle = this.mouseOver ? this.properties["color"] : "#AAA";
 
-			if(this.clicking) 
+			if(this.clicking)
 				ctx.fillStyle = "#FFF";
 
 			ctx.strokeStyle = "#AAA";
@@ -7374,7 +7436,7 @@ var LiteGraph = global.LiteGraph;
 				this.createGradient(ctx);
 
 			ctx.fillStyle = this.mouseOver ? this.properties["color"] : this.lineargradient;
-			if(this.clicking) 
+			if(this.clicking)
 				ctx.fillStyle = "#444";
 
 			ctx.strokeStyle = "#FFF";
@@ -7405,7 +7467,7 @@ var LiteGraph = global.LiteGraph;
 			}
 			else if(module && module.onTrigger)
 			{
-				module.onTrigger();  
+				module.onTrigger();
 			}
 		},
 
@@ -7562,8 +7624,8 @@ var LiteGraph = global.LiteGraph;
 			return;
 		}
 
-		this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);  
-		this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);  
+		this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);
+		this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);
 		this.lineargradient.addColorStop(1,this.properties["bgcolorBottom"]);
 	}
 
