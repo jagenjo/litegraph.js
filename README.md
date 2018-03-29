@@ -79,6 +79,17 @@ LiteGraph.registerNodeType("basic/sum", MyAddNode );
 
 ```
 
+or you can wrap an existing function:
+
+```js
+function sum(a,b)
+{
+   return a+b;
+}
+
+LiteGraph.wrapFunctionAsNode("math/sum",sum, ["Number","Number"],"Number");
+```
+
 ## Server side
 
 It also works server-side using Node although some nodes do not work in server (audio, graphics, input, etc).
