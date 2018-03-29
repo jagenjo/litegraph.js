@@ -66,23 +66,15 @@ function sortTest()
 
 function benchmark()
 {
-	var num_nodes = 500;
-	var consts = [];
-	for(var i = 0; i < num_nodes; i++)
-	{
-		var n = LiteGraph.createNode("math/rand",null, {pos: [(2000 * Math.random())|0, (2000 * Math.random())|0] });
-		graph.add(n);
-		consts.push(n);
-	}
-
-	var watches = [];
+	var num_nodes = 200;
+	var nodes = [];
 	for(var i = 0; i < num_nodes; i++)
 	{
 		var n = LiteGraph.createNode("basic/watch",null, {pos: [(2000 * Math.random())|0, (2000 * Math.random())|0] });
 		graph.add(n);
-		watches.push(n);
+		nodes.push(n);
 	}
 
-	for(var i = 0; i < num_nodes; i++)
-		consts[ (Math.random() * consts.length)|0 ].connect(0, watches[ (Math.random() * watches.length)|0 ], 0 );
+	for(var i = 0; i < nodes.length; i++)
+		nodes[ (Math.random() * nodes.length)|0 ].connect(0, nodes[ (Math.random() * nodes.length)|0 ], 0 );
 }

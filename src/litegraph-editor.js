@@ -184,6 +184,7 @@ Editor.prototype.addMiniWindow = function(w,h)
 	var canvas = miniwindow.querySelector("canvas");
 
 	var graphcanvas = new LGraphCanvas(canvas, this.graph);
+	graphcanvas.show_info = false;
 	graphcanvas.background_image = "imgs/grid.png";
 	graphcanvas.scale = 0.25;
 	graphcanvas.allow_dragnodes = false;
