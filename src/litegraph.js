@@ -98,7 +98,7 @@ var LiteGraph = global.LiteGraph = {
 			for(var i in LGraphNode.prototype)
 				if(!base_class.prototype[i])
 					base_class.prototype[i] = LGraphNode.prototype[i];
-		
+
 		Object.defineProperty( base_class.prototype, "shape",{
 			set: function(v) {
 				switch(v)
@@ -335,7 +335,7 @@ var LiteGraph = global.LiteGraph = {
 		if( !type_a ||  //generic output
 			!type_b || //generic input
 			type_a == type_b || //same type (is valid for triggers)
-			type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION ) 
+			type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION )
 				return true;
 
 		type_a = type_a.toLowerCase();
@@ -345,9 +345,9 @@ var LiteGraph = global.LiteGraph = {
 
 		var supported_types_a = type_a.split(",");
 		var supported_types_b = type_b.split(",");
-		for(var i = 0; i < supported_types_a.length; ++i) 
-			for(var j = 0; j < supported_types_b.length; ++j) 
-				if( supported_types_a[i] == supported_types_b[i] )
+		for(var i = 0; i < supported_types_a.length; ++i)
+			for(var j = 0; j < supported_types_b.length; ++j)
+				if( supported_types_a[i] == supported_types_b[j] )
 					return true;
 		return false;
 	}
@@ -3047,7 +3047,7 @@ LGraphCanvas.prototype.bindEvents = function()
 
 	var canvas = this.canvas;
 	var ref_window = this.getCanvasWindow();
-	var document = ref_window.document; //hack used when moving canvas between windows 
+	var document = ref_window.document; //hack used when moving canvas between windows
 
 	this._mousedown_callback = this.processMouseDown.bind(this);
 	this._mousewheel_callback = this.processMouseWheel.bind(this);
@@ -5927,7 +5927,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 					if( slot_info )
 						slot_info.label = input.value;
 					that.setDirty(true);
-				}	
+				}
 				dialog.close();
 			});
 		}
@@ -6439,15 +6439,15 @@ LiteGraph.extendClass = function ( target, origin )
 		}
 }
 
-LiteGraph.getParameterNames = function(func) {  
+LiteGraph.getParameterNames = function(func) {
     return (func + '')
       .replace(/[/][/].*$/mg,'') // strip single-line comments
       .replace(/\s+/g, '') // strip white space
       .replace(/[/][*][^/*]*[*][/]/g, '') // strip multi-line comments  /**/
-      .split('){', 1)[0].replace(/^[^(]*[(]/, '') // extract the parameters  
-      .replace(/=[^,]+/g, '') // strip any ES6 defaults  
+      .split('){', 1)[0].replace(/^[^(]*[(]/, '') // extract the parameters
+      .replace(/=[^,]+/g, '') // strip any ES6 defaults
       .split(',').filter(Boolean); // split & filter [""]
-} 
+}
 
 if( typeof(window) != "undefined" && !window["requestAnimationFrame"] )
 {
