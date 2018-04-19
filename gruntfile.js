@@ -12,7 +12,8 @@ module.exports = function (grunt) {
       'src/nodes/gltextures.js',
       'src/nodes/glfx.js',
       'src/nodes/midi.js',
-      'src/nodes/audio.js'
+      'src/nodes/audio.js',
+      'src/nodes/network.js'
     ],
     concat: {
       build: {
