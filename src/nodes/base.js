@@ -363,6 +363,24 @@ Watch.prototype.onDrawBackground = function(ctx)
 
 LiteGraph.registerNodeType("basic/watch", Watch);
 
+//Watch a value in the editor
+function Pass()
+{
+	this.addInput("in",0);
+	this.addOutput("out",0);
+	this.size = [40,20];
+}
+
+Pass.title = "Pass";
+Pass.desc = "Allows to connect different types";
+
+Pass.prototype.onExecute = function()
+{
+	this.setOutputData( 0, this.getInputData(0) );
+}
+
+LiteGraph.registerNodeType("basic/pass", Pass);
+
 
 //Show value inside the debug console
 function Console()

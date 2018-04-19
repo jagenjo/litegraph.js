@@ -210,7 +210,7 @@ var LiteGraph = global.LiteGraph;
 	{
 		//this.oldmouse = null;
 	}
-	
+
 	WidgetKnob.prototype.onWidget = function(e,widget)
 	{
 		if(widget.name=="increase")
@@ -252,7 +252,7 @@ var LiteGraph = global.LiteGraph;
 	WidgetHSlider.title = "H.Slider";
 	WidgetHSlider.desc = "Linear slider controller";
 
-	WidgetHSlider.prototype.onInit = function()
+	WidgetHSlider.prototype.onAdded = function()
 	{
 		this.value = 0.5;
 		this.imgfg = this.loadImage("imgs/slider_fg.png");
@@ -278,7 +278,7 @@ var LiteGraph = global.LiteGraph;
 
 	WidgetHSlider.prototype.onDrawImage = function(ctx)
 	{
-		if(!this.imgfg || !this.imgfg.width) 
+		if(!this.imgfg || !this.imgfg.width)
 			return;
 
 		//border
@@ -405,8 +405,8 @@ var LiteGraph = global.LiteGraph;
 
 		createGradient: function(ctx)
 		{
-			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);  
-			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);  
+			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);
+			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);
 			this.lineargradient.addColorStop(1,this.properties["bgcolorBottom"]);
 		},
 
@@ -463,7 +463,7 @@ var LiteGraph = global.LiteGraph;
 			if(!this.oldmouse) return;
 
 			var m = [ e.canvasX - this.pos[0], e.canvasY - this.pos[1] ];
-			
+
 			this.properties.x = m[0] / this.size[0];
 			this.properties.y = m[1] / this.size[1];
 
@@ -505,8 +505,8 @@ var LiteGraph = global.LiteGraph;
 
 		createGradient: function(ctx)
 		{
-			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);  
-			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);  
+			this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);
+			this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);
 			this.lineargradient.addColorStop(1,this.properties["bgcolorBottom"]);
 		},
 
@@ -514,7 +514,7 @@ var LiteGraph = global.LiteGraph;
 		{
 			ctx.fillStyle = this.mouseOver ? this.properties["color"] : "#AAA";
 
-			if(this.clicking) 
+			if(this.clicking)
 				ctx.fillStyle = "#FFF";
 
 			ctx.strokeStyle = "#AAA";
@@ -544,7 +544,7 @@ var LiteGraph = global.LiteGraph;
 				this.createGradient(ctx);
 
 			ctx.fillStyle = this.mouseOver ? this.properties["color"] : this.lineargradient;
-			if(this.clicking) 
+			if(this.clicking)
 				ctx.fillStyle = "#444";
 
 			ctx.strokeStyle = "#FFF";
@@ -575,7 +575,7 @@ var LiteGraph = global.LiteGraph;
 			}
 			else if(module && module.onTrigger)
 			{
-				module.onTrigger();  
+				module.onTrigger();
 			}
 		},
 
@@ -732,8 +732,8 @@ var LiteGraph = global.LiteGraph;
 			return;
 		}
 
-		this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);  
-		this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);  
+		this.lineargradient = ctx.createLinearGradient(0,0,0,this.size[1]);
+		this.lineargradient.addColorStop(0,this.properties["bgcolorTop"]);
 		this.lineargradient.addColorStop(1,this.properties["bgcolorBottom"]);
 	}
 
