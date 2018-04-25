@@ -2807,6 +2807,12 @@ function LGraphCanvas( canvas, graph, options )
 	this.title_text_font = "bold 14px Arial";
 	this.inner_text_font = "normal 12px Arial";
 	this.default_link_color = "#AAC";
+	this.default_connection_color = {
+		input_off: "#AAC",
+		input_on: "#7F7",
+		output_off: "#AAC",
+		output_on: "#7F7",
+	};
 
 	this.highquality_render = true;
 	this.editor_alpha = 1; //used for transition
@@ -2824,6 +2830,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.dragging_rectangle = null;
 
 	this.always_render_background = false;
+	this.render_canvas_area = true;
 	this.render_connections_shadows = false; //too much cpu
 	this.render_connections_border = true;
 	this.render_curved_connections = true;
@@ -4537,8 +4544,10 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		//ctx.fillRect( this.visible_area[0] + 10, this.visible_area[1] + 10, this.visible_area[2] - 20, this.visible_area[3] - 20);
 
 		//bg
-		ctx.strokeStyle = "#235";
-		ctx.strokeRect(0,0,canvas.width,canvas.height);
+		if (this.render_canvas_area) {
+			ctx.strokeStyle = "#235";
+			ctx.strokeRect(0,0,canvas.width,canvas.height);
+		}
 
 		if(this.render_connections_shadows)
 		{
@@ -4690,7 +4699,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				if ( this.connecting_node && LiteGraph.isValidConnection( slot.type && out_slot.type ) )
 					ctx.globalAlpha = 0.4 * editor_alpha;
 
-				ctx.fillStyle = slot.link != null ? "#7F7" : "#AAA";
+				ctx.fillStyle = slot.link != null ? this.default_connection_color.input_on : this.default_connection_color.input_off;
 
 				var pos = node.getConnectionPos(true,i);
 				pos[0] -= node.pos[0];
@@ -4734,7 +4743,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				pos[0] -= node.pos[0];
 				pos[1] -= node.pos[1];
 
-				ctx.fillStyle = slot.links && slot.links.length ? "#7F7" : "#AAA";
+				ctx.fillStyle = slot.links && slot.links.length ? this.default_connection_color.output_on : this.default_connection_color.output_off;
 				ctx.beginPath();
 				//ctx.rect( node.size[0] - 14,i*14,10,10);
 
