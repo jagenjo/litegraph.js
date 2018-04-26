@@ -2830,7 +2830,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.dragging_rectangle = null;
 
 	this.always_render_background = false;
-	this.render_canvas_area = true;
+	this.render_canvas_border = true;
 	this.render_connections_shadows = false; //too much cpu
 	this.render_connections_border = true;
 	this.render_curved_connections = true;
@@ -4544,7 +4544,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		//ctx.fillRect( this.visible_area[0] + 10, this.visible_area[1] + 10, this.visible_area[2] - 20, this.visible_area[3] - 20);
 
 		//bg
-		if (this.render_canvas_area) {
+		if (this.render_canvas_border) {
 			ctx.strokeStyle = "#235";
 			ctx.strokeRect(0,0,canvas.width,canvas.height);
 		}
