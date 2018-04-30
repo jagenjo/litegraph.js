@@ -2809,6 +2809,7 @@ function LGraphCanvas( canvas, graph, options )
 
 	this.title_text_font = "bold 14px Arial";
 	this.inner_text_font = "normal 12px Arial";
+	this.node_title_color = LiteGraph.NODE_TITLE_COLOR;
 	this.default_link_color = "#AAC";
 	this.default_connection_color = {
 		input_off: "#AAC",
@@ -4506,7 +4507,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		//render BG
 		if(this.background_image && this.scale > 0.5)
 		{
-			if (this.zoom_modify_alpha)
+			if (zoom_modify_alpha)
 				ctx.globalAlpha = (1.0 - 0.5 / this.scale) * this.editor_alpha;
 			else
 				ctx.globalAlpha = this.editor_alpha;
@@ -4894,7 +4895,7 @@ LGraphCanvas.prototype.drawNodeShape = function(node, ctx, size, fgcolor, bgcolo
 		var title = node.getTitle();
 		if(title && this.scale > 0.5)
 		{
-			ctx.fillStyle = LiteGraph.NODE_TITLE_COLOR;
+			ctx.fillStyle = this.node_title_color;
 			ctx.fillText( title, 16, 13 - title_height );
 		}
 	}
