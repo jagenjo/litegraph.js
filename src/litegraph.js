@@ -4504,7 +4504,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		//render BG
 		if(this.background_image && this.scale > 0.5)
 		{
-			if (zoom_modify_alpha)
+			if (this.zoom_modify_alpha)
 				ctx.globalAlpha = (1.0 - 0.5 / this.scale) * this.editor_alpha;
 			else
 				ctx.globalAlpha = this.editor_alpha;
