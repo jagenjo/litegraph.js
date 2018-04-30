@@ -2803,6 +2803,7 @@ function LGraphCanvas( canvas, graph, options )
 
 	this.max_zoom = 10;
 	this.min_zoom = 0.1;
+	this.zoom_modify_alpha = false;
 
 	this.title_text_font = "bold 14px Arial";
 	this.inner_text_font = "normal 12px Arial";
@@ -4503,7 +4504,10 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		//render BG
 		if(this.background_image && this.scale > 0.5)
 		{
-			ctx.globalAlpha = (1.0 - 0.5 / this.scale) * this.editor_alpha;
+			if (zoom_modify_alpha)
+				ctx.globalAlpha = (1.0 - 0.5 / this.scale) * this.editor_alpha;
+			else
+				ctx.globalAlpha = this.editor_alpha;
 			ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = false;
 			if(!this._bg_img || this._bg_img.name != this.background_image)
 			{
