@@ -86,7 +86,7 @@ var LiteGraph = global.LiteGraph = {
 			console.log("Node registered: " + type);
 
 		var categories = type.split("/");
-		var classname = base_class.constructor.name;
+		var classname = base_class.name;
 
 		var pos = type.lastIndexOf("/");
 		base_class.category = type.substr(0,pos);
@@ -1028,7 +1028,7 @@ LGraph.prototype.findNodesByType = function(type)
 
 /**
 * Returns a list of nodes that matches a name
-* @method findNodesByName
+* @method findNodesByTitle
 * @param {String} name the name of the node to search
 * @return {Array} a list with all the nodes with this name
 */
@@ -1239,7 +1239,7 @@ LGraph.prototype.removeGlobalOutput = function(name)
 
 LGraph.prototype.setInputData = function(name,value)
 {
-	var nodes = this.findNodesByName( name );
+	var nodes = this.findNodesByTitle( name );
 	for(var i = 0, l = nodes.length; i < l; ++i)
 		nodes[i].setValue(value);
 }
@@ -1253,7 +1253,7 @@ LGraph.prototype.setInputData = function(name,value)
 
 LGraph.prototype.getOutputData = function(name)
 {
-	var n = this.findNodesByName(name);
+	var n = this.findNodesByTitle(name);
 	if(n.length)
 		return m[0].getValue();
 	return null;
@@ -1263,14 +1263,14 @@ LGraph.prototype.getOutputData = function(name)
 
 LGraph.prototype.triggerInput = function(name,value)
 {
-	var nodes = this.findNodesByName(name);
+	var nodes = this.findNodesByTitle(name);
 	for(var i = 0; i < nodes.length; ++i)
 		nodes[i].onTrigger(value);
 }
 
 LGraph.prototype.setCallback = function(name,func)
 {
-	var nodes = this.findNodesByName(name);
+	var nodes = this.findNodesByTitle(name);
 	for(var i = 0; i < nodes.length; ++i)
 		nodes[i].setTrigger(func);
 }
@@ -11794,7 +11794,8 @@ if(typeof(GL) != "undefined")
 			shader.uniforms( uniforms ).draw(mesh);
 		});
 
-		this.setOutputData(0, this._temp_texture);
+		this._temp_texture.near_far_planes = planes;
+		this.setOutputData(0, this._temp_texture );
 	}
 
 	LGraphTextureDepthRange.pixel_shader = "precision highp float;\n\
@@ -12211,6 +12212,141 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
 
 
+	//simple exposition, but plan to expand it to support different gamma curves
+	function LGraphExposition()
+	{
+		this.addInput("in","Texture");
+		this.addInput("exp","number");
+		this.addOutput("out","Texture");
+		this.properties = { exposition: 1, precision: LGraphTexture.LOW };
+	}
+
+	LGraphExposition.title = "Exposition";
+	LGraphExposition.desc = "Controls texture exposition";
+
+	LGraphExposition.widgets_info = {
+		"exposition": { widget:"slider", min:0,max:3 },
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphExposition.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var temp = this._temp_texture;
+		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
+			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+
+		var shader = LGraphExposition._shader;
+		if(!shader)
+			shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphExposition.pixel_shader );
+
+		var exp = this.properties.exposition;
+		var exp_input = this.getInputData(1);
+		if(exp_input != null)
+			exp = this.properties.exposition = exp_input;
+
+		//apply shader
+		temp.drawTo(function(){
+			gl.disable( gl.DEPTH_TEST );
+			tex.bind(0);
+			var mesh = GL.Mesh.getScreenQuad();
+			shader.uniforms({ u_texture: 0, u_exposition: exp }).draw(mesh);
+		});
+
+		this.setOutputData(0,temp);
+	}
+
+	LGraphExposition.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float u_exposition;\n\
+			\n\
+			void main() {\n\
+				vec4 color = texture2D( u_texture, v_coord );\n\
+				gl_FragColor = vec4( color.xyz * u_exposition, color.a );\n\
+			}";
+
+	LiteGraph.registerNodeType("texture/exposition", LGraphExposition );
+
+
+
+	function LGraphToneMapping()
+	{
+		this.addInput("in","Texture");
+		this.addOutput("out","Texture");
+		this.properties = { precision: LGraphTexture.LOW };
+	}
+
+	LGraphToneMapping.title = "Tone Mapping";
+	LGraphToneMapping.desc = "Applies Tone Mapping algorithm";
+
+	LGraphToneMapping.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var temp = this._temp_texture;
+
+		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
+			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+
+
+		//apply shader
+
+
+
+		this.setOutputData(0,this._temp_texture);
+	}
+
+	LGraphToneMapping.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float scale;\n\
+			uniform float averageLum;\n\
+			uniform vec3 lumwhite2;\n\
+			vec3 RGB2xyY (vec3 rgb)\n\
+			{\n\
+				 const mat3 RGB2XYZ = mat3(0.4124, 0.3576, 0.1805,\n\
+										   0.2126, 0.7152, 0.0722,\n\
+										   0.0193, 0.1192, 0.9505);\n\
+				vec3 XYZ = RGB2XYZ * rgb;\n\
+				\n\
+				float f = (XYZ.x + XYZ.y + XYZ.z);\n\
+				return vec3(XYZ.x / f,\n\
+							XYZ.y / f,\n\
+							XYZ.y);\n\
+			}\n\
+			\n\
+			void main() {\n\
+				vec4 color = texture2D( u_texture, v_coord ).xyz;\n\
+				vec3 rgb = color.xyz;\n\
+				//Ld - this part of the code is the same for both versions\n\
+				float lum = dot(rgb, vec3(0.2126f, 0.7152f, 0.0722f));\n\
+				float L = (scale / averageLum) * lum;\n\
+				float Ld = (L * (1.0 + L / lumwhite2)) / (1.0 + L);\n\
+				//first\n\
+				//vec3 xyY = RGB2xyY(rgb);\n\
+				//xyY.z *= Ld;\n\
+				//rgb = xyYtoRGB(xyY);\n\
+				//second\n\
+				rgb = (rgb / lum) * Ld;\n\
+				gl_FragColor = vec4( rgb, color.a );\n\
+			}";
+
+
+	//LiteGraph.registerNodeType("texture/tonemapping", LGraphToneMapping );
+
+
 	function LGraphTextureMatte()
 	{
 		this.addInput("in","Texture");
@@ -12286,6 +12422,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			}";
 
 	LiteGraph.registerNodeType("texture/matte", LGraphTextureMatte );
+
 
 	//***********************************
 	//Cubemap reader (to pass a cubemap to a node that requires cubemaps and no images)
@@ -12373,7 +12510,7 @@ if(typeof(GL) != "undefined")
 
 		if(!LGraphFXLens._shader)
 		{
-			LGraphFXLens._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphFXLens.pixel_shader );
+			LGraphFXLens._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphFXLens.pixel_shader );
 			LGraphFXLens._texture = new GL.Texture(3,1,{ format: gl.RGB, wrap: gl.CLAMP_TO_EDGE, magFilter: gl.LINEAR, minFilter: gl.LINEAR, pixel_data: [255,0,0, 0,255,0, 0,0,255] });
 		}
 	}
@@ -12466,7 +12603,120 @@ if(typeof(GL) != "undefined")
 		*/
 
 	LiteGraph.registerNodeType("fx/lens", LGraphFXLens );
-	window.LGraphFXLens = LGraphFXLens;
+	global.LGraphFXLens = LGraphFXLens;
+
+	/* not working yet
+	function LGraphDepthOfField()
+	{
+		this.addInput("Color","Texture");
+		this.addInput("Linear Depth","Texture");
+		this.addInput("Camera","camera");
+		this.addOutput("Texture","Texture");
+		this.properties = { high_precision: false };
+	}
+
+	LGraphDepthOfField.title = "Depth Of Field";
+	LGraphDepthOfField.desc = "Applies a depth of field effect";
+
+	LGraphDepthOfField.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		var depth = this.getInputData(1);
+		var camera = this.getInputData(2);
+
+		if(!tex || !depth || !camera) 
+		{
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		var precision = gl.UNSIGNED_BYTE;
+		if(this.properties.high_precision)
+			precision = gl.half_float_ext ? gl.HALF_FLOAT_OES : gl.FLOAT;			
+		if(!this._temp_texture || this._temp_texture.type != precision ||
+			this._temp_texture.width != tex.width || this._temp_texture.height != tex.height)
+			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: precision, format: gl.RGBA, filter: gl.LINEAR });
+
+		var shader = LGraphDepthOfField._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphDepthOfField._pixel_shader );
+
+		var screen_mesh = Mesh.getScreenQuad();
+
+		gl.disable( gl.DEPTH_TEST );
+		gl.disable( gl.BLEND );
+
+		var camera_position = camera.getEye();
+		var focus_point = camera.getCenter();
+		var distance = vec3.distance( camera_position, focus_point );
+		var far = camera.far;
+		var focus_range = distance * 0.5;
+
+		this._temp_texture.drawTo( function() {
+			tex.bind(0);
+			depth.bind(1);
+			shader.uniforms({u_texture:0, u_depth_texture:1, u_resolution: [1/tex.width, 1/tex.height], u_far: far, u_focus_point: distance, u_focus_scale: focus_range }).draw(screen_mesh);
+		});
+
+		this.setOutputData(0, this._temp_texture);
+	}
+
+	//from http://tuxedolabs.blogspot.com.es/2018/05/bokeh-depth-of-field-in-single-pass.html
+	LGraphDepthOfField._pixel_shader = "\n\
+		precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture; //Image to be processed\n\
+		uniform sampler2D u_depth_texture; //Linear depth, where 1.0 == far plane\n\
+		uniform vec2 u_iresolution; //The size of a pixel: vec2(1.0/width, 1.0/height)\n\
+		uniform float u_far; // Far plane\n\
+		uniform float u_focus_point;\n\
+		uniform float u_focus_scale;\n\
+		\n\
+		const float GOLDEN_ANGLE = 2.39996323;\n\
+		const float MAX_BLUR_SIZE = 20.0;\n\
+		const float RAD_SCALE = 0.5; // Smaller = nicer blur, larger = faster\n\
+		\n\
+		float getBlurSize(float depth, float focusPoint, float focusScale)\n\
+		{\n\
+		 float coc = clamp((1.0 / focusPoint - 1.0 / depth)*focusScale, -1.0, 1.0);\n\
+		 return abs(coc) * MAX_BLUR_SIZE;\n\
+		}\n\
+		\n\
+		vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale)\n\
+		{\n\
+		 float centerDepth = texture2D(u_depth_texture, texCoord).r * u_far;\n\
+		 float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);\n\
+		 vec3 color = texture2D(u_texture, v_coord).rgb;\n\
+		 float tot = 1.0;\n\
+		\n\
+		 float radius = RAD_SCALE;\n\
+		 for (float ang = 0.0; ang < 100.0; ang += GOLDEN_ANGLE)\n\
+		 {\n\
+		  vec2 tc = texCoord + vec2(cos(ang), sin(ang)) * u_iresolution * radius;\n\
+			\n\
+		  vec3 sampleColor = texture2D(u_texture, tc).rgb;\n\
+		  float sampleDepth = texture2D(u_depth_texture, tc).r * u_far;\n\
+		  float sampleSize = getBlurSize( sampleDepth, focusPoint, focusScale );\n\
+		  if (sampleDepth > centerDepth)\n\
+		   sampleSize = clamp(sampleSize, 0.0, centerSize*2.0);\n\
+			\n\
+		  float m = smoothstep(radius-0.5, radius+0.5, sampleSize);\n\
+		  color += mix(color/tot, sampleColor, m);\n\
+		  tot += 1.0;\n\
+		  radius += RAD_SCALE/radius;\n\
+		  if(radius>=MAX_BLUR_SIZE)\n\
+			 return color / tot;\n\
+		 }\n\
+		 return color / tot;\n\
+		}\n\
+		void main()\n\
+		{\n\
+			gl_FragColor = vec4( depthOfField( v_coord, u_focus_point, u_focus_scale ), 1.0 );\n\
+			//gl_FragColor = vec4( texture2D(u_depth_texture, v_coord).r );\n\
+		}\n\
+		";
+
+	LiteGraph.registerNodeType("fx/DOF", LGraphDepthOfField );
+	global.LGraphDepthOfField = LGraphDepthOfField;
+	*/
 
 	//*******************************************************
 
@@ -12667,7 +12917,7 @@ if(typeof(GL) != "undefined")
 
 
 	LiteGraph.registerNodeType("fx/bokeh", LGraphFXBokeh );
-	window.LGraphFXBokeh = LGraphFXBokeh;
+	global.LGraphFXBokeh = LGraphFXBokeh;
 
 	//************************************************
 
@@ -12736,7 +12986,7 @@ if(typeof(GL) != "undefined")
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
-		var camera = window.LS ? LS.Renderer._current_camera : null;
+		var camera = global.LS ? LS.Renderer._current_camera : null;
 		if(camera)
 			camera_planes = [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far];
 		else
@@ -12836,7 +13086,7 @@ if(typeof(GL) != "undefined")
 
 
 	LiteGraph.registerNodeType("fx/generic", LGraphFXGeneric );
-	window.LGraphFXGeneric = LGraphFXGeneric;
+	global.LGraphFXGeneric = LGraphFXGeneric;
 
 
 	// Vigneting ************************************

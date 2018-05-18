@@ -84,7 +84,7 @@ var LiteGraph = global.LiteGraph = {
 			console.log("Node registered: " + type);
 
 		var categories = type.split("/");
-		var classname = base_class.constructor.name;
+		var classname = base_class.name;
 
 		var pos = type.lastIndexOf("/");
 		base_class.category = type.substr(0,pos);
@@ -1026,7 +1026,7 @@ LGraph.prototype.findNodesByType = function(type)
 
 /**
 * Returns a list of nodes that matches a name
-* @method findNodesByName
+* @method findNodesByTitle
 * @param {String} name the name of the node to search
 * @return {Array} a list with all the nodes with this name
 */
@@ -1237,7 +1237,7 @@ LGraph.prototype.removeGlobalOutput = function(name)
 
 LGraph.prototype.setInputData = function(name,value)
 {
-	var nodes = this.findNodesByName( name );
+	var nodes = this.findNodesByTitle( name );
 	for(var i = 0, l = nodes.length; i < l; ++i)
 		nodes[i].setValue(value);
 }
@@ -1251,7 +1251,7 @@ LGraph.prototype.setInputData = function(name,value)
 
 LGraph.prototype.getOutputData = function(name)
 {
-	var n = this.findNodesByName(name);
+	var n = this.findNodesByTitle(name);
 	if(n.length)
 		return m[0].getValue();
 	return null;
@@ -1261,14 +1261,14 @@ LGraph.prototype.getOutputData = function(name)
 
 LGraph.prototype.triggerInput = function(name,value)
 {
-	var nodes = this.findNodesByName(name);
+	var nodes = this.findNodesByTitle(name);
 	for(var i = 0; i < nodes.length; ++i)
 		nodes[i].onTrigger(value);
 }
 
 LGraph.prototype.setCallback = function(name,func)
 {
-	var nodes = this.findNodesByName(name);
+	var nodes = this.findNodesByTitle(name);
 	for(var i = 0; i < nodes.length; ++i)
 		nodes[i].setTrigger(func);
 }

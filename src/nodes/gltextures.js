@@ -1912,7 +1912,8 @@ if(typeof(GL) != "undefined")
 			shader.uniforms( uniforms ).draw(mesh);
 		});
 
-		this.setOutputData(0, this._temp_texture);
+		this._temp_texture.near_far_planes = planes;
+		this.setOutputData(0, this._temp_texture );
 	}
 
 	LGraphTextureDepthRange.pixel_shader = "precision highp float;\n\
@@ -2329,6 +2330,141 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
 
 
+	//simple exposition, but plan to expand it to support different gamma curves
+	function LGraphExposition()
+	{
+		this.addInput("in","Texture");
+		this.addInput("exp","number");
+		this.addOutput("out","Texture");
+		this.properties = { exposition: 1, precision: LGraphTexture.LOW };
+	}
+
+	LGraphExposition.title = "Exposition";
+	LGraphExposition.desc = "Controls texture exposition";
+
+	LGraphExposition.widgets_info = {
+		"exposition": { widget:"slider", min:0,max:3 },
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphExposition.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var temp = this._temp_texture;
+		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
+			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+
+		var shader = LGraphExposition._shader;
+		if(!shader)
+			shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphExposition.pixel_shader );
+
+		var exp = this.properties.exposition;
+		var exp_input = this.getInputData(1);
+		if(exp_input != null)
+			exp = this.properties.exposition = exp_input;
+
+		//apply shader
+		temp.drawTo(function(){
+			gl.disable( gl.DEPTH_TEST );
+			tex.bind(0);
+			var mesh = GL.Mesh.getScreenQuad();
+			shader.uniforms({ u_texture: 0, u_exposition: exp }).draw(mesh);
+		});
+
+		this.setOutputData(0,temp);
+	}
+
+	LGraphExposition.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float u_exposition;\n\
+			\n\
+			void main() {\n\
+				vec4 color = texture2D( u_texture, v_coord );\n\
+				gl_FragColor = vec4( color.xyz * u_exposition, color.a );\n\
+			}";
+
+	LiteGraph.registerNodeType("texture/exposition", LGraphExposition );
+
+
+
+	function LGraphToneMapping()
+	{
+		this.addInput("in","Texture");
+		this.addOutput("out","Texture");
+		this.properties = { precision: LGraphTexture.LOW };
+	}
+
+	LGraphToneMapping.title = "Tone Mapping";
+	LGraphToneMapping.desc = "Applies Tone Mapping algorithm";
+
+	LGraphToneMapping.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var temp = this._temp_texture;
+
+		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
+			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+
+
+		//apply shader
+
+
+
+		this.setOutputData(0,this._temp_texture);
+	}
+
+	LGraphToneMapping.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float scale;\n\
+			uniform float averageLum;\n\
+			uniform vec3 lumwhite2;\n\
+			vec3 RGB2xyY (vec3 rgb)\n\
+			{\n\
+				 const mat3 RGB2XYZ = mat3(0.4124, 0.3576, 0.1805,\n\
+										   0.2126, 0.7152, 0.0722,\n\
+										   0.0193, 0.1192, 0.9505);\n\
+				vec3 XYZ = RGB2XYZ * rgb;\n\
+				\n\
+				float f = (XYZ.x + XYZ.y + XYZ.z);\n\
+				return vec3(XYZ.x / f,\n\
+							XYZ.y / f,\n\
+							XYZ.y);\n\
+			}\n\
+			\n\
+			void main() {\n\
+				vec4 color = texture2D( u_texture, v_coord ).xyz;\n\
+				vec3 rgb = color.xyz;\n\
+				//Ld - this part of the code is the same for both versions\n\
+				float lum = dot(rgb, vec3(0.2126f, 0.7152f, 0.0722f));\n\
+				float L = (scale / averageLum) * lum;\n\
+				float Ld = (L * (1.0 + L / lumwhite2)) / (1.0 + L);\n\
+				//first\n\
+				//vec3 xyY = RGB2xyY(rgb);\n\
+				//xyY.z *= Ld;\n\
+				//rgb = xyYtoRGB(xyY);\n\
+				//second\n\
+				rgb = (rgb / lum) * Ld;\n\
+				gl_FragColor = vec4( rgb, color.a );\n\
+			}";
+
+
+	//LiteGraph.registerNodeType("texture/tonemapping", LGraphToneMapping );
+
+
 	function LGraphTextureMatte()
 	{
 		this.addInput("in","Texture");
@@ -2404,6 +2540,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			}";
 
 	LiteGraph.registerNodeType("texture/matte", LGraphTextureMatte );
+
 
 	//***********************************
 	//Cubemap reader (to pass a cubemap to a node that requires cubemaps and no images)

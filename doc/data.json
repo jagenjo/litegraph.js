@@ -497,7 +497,7 @@
             "line": 1027,
             "description": "Returns a list of nodes that matches a name",
             "itemtype": "method",
-            "name": "findNodesByName",
+            "name": "findNodesByTitle",
             "params": [
                 {
                     "name": "name",

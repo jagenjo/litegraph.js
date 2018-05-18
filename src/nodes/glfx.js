@@ -17,7 +17,7 @@ if(typeof(GL) != "undefined")
 
 		if(!LGraphFXLens._shader)
 		{
-			LGraphFXLens._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphFXLens.pixel_shader );
+			LGraphFXLens._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphFXLens.pixel_shader );
 			LGraphFXLens._texture = new GL.Texture(3,1,{ format: gl.RGB, wrap: gl.CLAMP_TO_EDGE, magFilter: gl.LINEAR, minFilter: gl.LINEAR, pixel_data: [255,0,0, 0,255,0, 0,0,255] });
 		}
 	}
@@ -110,7 +110,120 @@ if(typeof(GL) != "undefined")
 		*/
 
 	LiteGraph.registerNodeType("fx/lens", LGraphFXLens );
-	window.LGraphFXLens = LGraphFXLens;
+	global.LGraphFXLens = LGraphFXLens;
+
+	/* not working yet
+	function LGraphDepthOfField()
+	{
+		this.addInput("Color","Texture");
+		this.addInput("Linear Depth","Texture");
+		this.addInput("Camera","camera");
+		this.addOutput("Texture","Texture");
+		this.properties = { high_precision: false };
+	}
+
+	LGraphDepthOfField.title = "Depth Of Field";
+	LGraphDepthOfField.desc = "Applies a depth of field effect";
+
+	LGraphDepthOfField.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		var depth = this.getInputData(1);
+		var camera = this.getInputData(2);
+
+		if(!tex || !depth || !camera) 
+		{
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		var precision = gl.UNSIGNED_BYTE;
+		if(this.properties.high_precision)
+			precision = gl.half_float_ext ? gl.HALF_FLOAT_OES : gl.FLOAT;			
+		if(!this._temp_texture || this._temp_texture.type != precision ||
+			this._temp_texture.width != tex.width || this._temp_texture.height != tex.height)
+			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: precision, format: gl.RGBA, filter: gl.LINEAR });
+
+		var shader = LGraphDepthOfField._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphDepthOfField._pixel_shader );
+
+		var screen_mesh = Mesh.getScreenQuad();
+
+		gl.disable( gl.DEPTH_TEST );
+		gl.disable( gl.BLEND );
+
+		var camera_position = camera.getEye();
+		var focus_point = camera.getCenter();
+		var distance = vec3.distance( camera_position, focus_point );
+		var far = camera.far;
+		var focus_range = distance * 0.5;
+
+		this._temp_texture.drawTo( function() {
+			tex.bind(0);
+			depth.bind(1);
+			shader.uniforms({u_texture:0, u_depth_texture:1, u_resolution: [1/tex.width, 1/tex.height], u_far: far, u_focus_point: distance, u_focus_scale: focus_range }).draw(screen_mesh);
+		});
+
+		this.setOutputData(0, this._temp_texture);
+	}
+
+	//from http://tuxedolabs.blogspot.com.es/2018/05/bokeh-depth-of-field-in-single-pass.html
+	LGraphDepthOfField._pixel_shader = "\n\
+		precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture; //Image to be processed\n\
+		uniform sampler2D u_depth_texture; //Linear depth, where 1.0 == far plane\n\
+		uniform vec2 u_iresolution; //The size of a pixel: vec2(1.0/width, 1.0/height)\n\
+		uniform float u_far; // Far plane\n\
+		uniform float u_focus_point;\n\
+		uniform float u_focus_scale;\n\
+		\n\
+		const float GOLDEN_ANGLE = 2.39996323;\n\
+		const float MAX_BLUR_SIZE = 20.0;\n\
+		const float RAD_SCALE = 0.5; // Smaller = nicer blur, larger = faster\n\
+		\n\
+		float getBlurSize(float depth, float focusPoint, float focusScale)\n\
+		{\n\
+		 float coc = clamp((1.0 / focusPoint - 1.0 / depth)*focusScale, -1.0, 1.0);\n\
+		 return abs(coc) * MAX_BLUR_SIZE;\n\
+		}\n\
+		\n\
+		vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale)\n\
+		{\n\
+		 float centerDepth = texture2D(u_depth_texture, texCoord).r * u_far;\n\
+		 float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);\n\
+		 vec3 color = texture2D(u_texture, v_coord).rgb;\n\
+		 float tot = 1.0;\n\
+		\n\
+		 float radius = RAD_SCALE;\n\
+		 for (float ang = 0.0; ang < 100.0; ang += GOLDEN_ANGLE)\n\
+		 {\n\
+		  vec2 tc = texCoord + vec2(cos(ang), sin(ang)) * u_iresolution * radius;\n\
+			\n\
+		  vec3 sampleColor = texture2D(u_texture, tc).rgb;\n\
+		  float sampleDepth = texture2D(u_depth_texture, tc).r * u_far;\n\
+		  float sampleSize = getBlurSize( sampleDepth, focusPoint, focusScale );\n\
+		  if (sampleDepth > centerDepth)\n\
+		   sampleSize = clamp(sampleSize, 0.0, centerSize*2.0);\n\
+			\n\
+		  float m = smoothstep(radius-0.5, radius+0.5, sampleSize);\n\
+		  color += mix(color/tot, sampleColor, m);\n\
+		  tot += 1.0;\n\
+		  radius += RAD_SCALE/radius;\n\
+		  if(radius>=MAX_BLUR_SIZE)\n\
+			 return color / tot;\n\
+		 }\n\
+		 return color / tot;\n\
+		}\n\
+		void main()\n\
+		{\n\
+			gl_FragColor = vec4( depthOfField( v_coord, u_focus_point, u_focus_scale ), 1.0 );\n\
+			//gl_FragColor = vec4( texture2D(u_depth_texture, v_coord).r );\n\
+		}\n\
+		";
+
+	LiteGraph.registerNodeType("fx/DOF", LGraphDepthOfField );
+	global.LGraphDepthOfField = LGraphDepthOfField;
+	*/
 
 	//*******************************************************
 
@@ -311,7 +424,7 @@ if(typeof(GL) != "undefined")
 
 
 	LiteGraph.registerNodeType("fx/bokeh", LGraphFXBokeh );
-	window.LGraphFXBokeh = LGraphFXBokeh;
+	global.LGraphFXBokeh = LGraphFXBokeh;
 
 	//************************************************
 
@@ -380,7 +493,7 @@ if(typeof(GL) != "undefined")
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 		var mesh = Mesh.getScreenQuad();
-		var camera = window.LS ? LS.Renderer._current_camera : null;
+		var camera = global.LS ? LS.Renderer._current_camera : null;
 		if(camera)
 			camera_planes = [LS.Renderer._current_camera.near, LS.Renderer._current_camera.far];
 		else
@@ -480,7 +593,7 @@ if(typeof(GL) != "undefined")
 
 
 	LiteGraph.registerNodeType("fx/generic", LGraphFXGeneric );
-	window.LGraphFXGeneric = LGraphFXGeneric;
+	global.LGraphFXGeneric = LGraphFXGeneric;
 
 
 	// Vigneting ************************************
