@@ -151,11 +151,27 @@
 
                             </li>
                             <li class="index-item method">
+                                <a href="#method_addGlobalInput">addGlobalInput</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_addGlobalOutput">addGlobalOutput</a>
+
+                            </li>
+                            <li class="index-item method">
                                 <a href="#method_arrange">arrange</a>
 
                             </li>
                             <li class="index-item method">
                                 <a href="#method_attachCanvas">attachCanvas</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_changeGlobalInputType">changeGlobalInputType</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_changeGlobalOutputType">changeGlobalOutputType</a>
 
                             </li>
                             <li class="index-item method">
@@ -191,11 +207,23 @@
 
                             </li>
                             <li class="index-item method">
+                                <a href="#method_getGlobalInputData">getGlobalInputData</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getGlobalOutputData">getGlobalOutputData</a>
+
+                            </li>
+                            <li class="index-item method">
                                 <a href="#method_getNodeById">getNodeById</a>
 
                             </li>
                             <li class="index-item method">
                                 <a href="#method_getNodeOnPos">getNodeOnPos</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_getOutputData">getOutputData</a>
 
                             </li>
                             <li class="index-item method">
@@ -211,6 +239,22 @@
 
                             </li>
                             <li class="index-item method">
+                                <a href="#method_removeGlobalInput">removeGlobalInput</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_removeGlobalOutput">removeGlobalOutput</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_renameGlobalInput">renameGlobalInput</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_renameGlobalOutput">renameGlobalOutput</a>
+
+                            </li>
+                            <li class="index-item method">
                                 <a href="#method_runStep">runStep</a>
 
                             </li>
@@ -223,7 +267,11 @@
 
                             </li>
                             <li class="index-item method">
-                                <a href="#method_setInputData">setInputData</a>
+                                <a href="#method_setGlobalInputData">setGlobalInputData</a>
+
+                            </li>
+                            <li class="index-item method">
+                                <a href="#method_setGlobalOutputData">setGlobalOutputData</a>
 
                             </li>
                             <li class="index-item method">
@@ -297,6 +345,165 @@
                     <div class="param-description">
                         <p>the instance of the node</p>
 
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_addGlobalInput" class="method item">
+    <h3 class="name"><code>addGlobalInput</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+                <li class="arg">
+                        <code>type</code>
+                </li>
+                <li class="arg">
+                        <code>value</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1065"><code>..&#x2F;src&#x2F;litegraph.js:1065</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Tell this graph it has a global graph input of this type</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">type</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">value</code>
+                        <span class="type"></span>
+
+
+                    <div class="param-description">
+                        <p>[optional]</p>
+
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_addGlobalOutput" class="method item">
+    <h3 class="name"><code>addGlobalOutput</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+                <li class="arg">
+                        <code>type</code>
+                </li>
+                <li class="arg">
+                        <code>value</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1190"><code>..&#x2F;src&#x2F;litegraph.js:1190</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Creates a global graph output</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">type</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">value</code>
+                        <span class="type"></span>
+
+
+                    <div class="param-description">
+                         
                     </div>
 
                 </li>
@@ -390,6 +597,138 @@
 
 
 </div>
+<div id="method_changeGlobalInputType" class="method item">
+    <h3 class="name"><code>changeGlobalInputType</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+                <li class="arg">
+                        <code>type</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1150"><code>..&#x2F;src&#x2F;litegraph.js:1150</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Changes the type of a global graph input</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">type</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_changeGlobalOutputType" class="method item">
+    <h3 class="name"><code>changeGlobalOutputType</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+                <li class="arg">
+                        <code>type</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1272"><code>..&#x2F;src&#x2F;litegraph.js:1272</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Changes the type of a global graph output</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">type</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
 <div id="method_clear" class="method item">
     <h3 class="name"><code>clear</code></h3>
 
@@ -442,7 +781,7 @@
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l1355"><code>..&#x2F;src&#x2F;litegraph.js:1355</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1403"><code>..&#x2F;src&#x2F;litegraph.js:1403</code></a>
         </p>
 
 
@@ -813,6 +1152,136 @@ if the nodes are using graphical actions</p>
 
 
 </div>
+<div id="method_getGlobalInputData" class="method item">
+    <h3 class="name"><code>getGlobalInputData</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type"></span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1106"><code>..&#x2F;src&#x2F;litegraph.js:1106</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Returns the current value of a global graph input</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type"></span>:
+                    <p>the data</p>
+
+            </div>
+        </div>
+
+
+</div>
+<div id="method_getGlobalOutputData" class="method item">
+    <h3 class="name"><code>getGlobalOutputData</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type"></span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1222"><code>..&#x2F;src&#x2F;litegraph.js:1222</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Returns the current value of a global graph output</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type"></span>:
+                    <p>the data</p>
+
+            </div>
+        </div>
+
+
+</div>
 <div id="method_getNodeById" class="method item">
     <h3 class="name"><code>getNodeById</code></h3>
 
@@ -960,6 +1429,71 @@ if the nodes are using graphical actions</p>
 
 
 </div>
+<div id="method_getOutputData" class="method item">
+    <h3 class="name"><code>getOutputData</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+        <span class="returns-inline">
+            <span class="type"></span>
+        </span>
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1236"><code>..&#x2F;src&#x2F;litegraph.js:1236</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Returns the current value of a global graph output (sames as getGlobalOutputData)</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+        <div class="returns">
+            <h4>Returns:</h4>
+
+            <div class="returns-description">
+                        <span class="type"></span>:
+                    <p>the data</p>
+
+            </div>
+        </div>
+
+
+</div>
 <div id="method_getTime" class="method item">
     <h3 class="name"><code>getTime</code></h3>
 
@@ -1018,7 +1552,7 @@ if the nodes are using graphical actions</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l1285"><code>..&#x2F;src&#x2F;litegraph.js:1285</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1333"><code>..&#x2F;src&#x2F;litegraph.js:1333</code></a>
         </p>
 
 
@@ -1079,6 +1613,257 @@ if the nodes are using graphical actions</p>
                     <div class="param-description">
                         <p>the instance of the node</p>
 
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_removeGlobalInput" class="method item">
+    <h3 class="name"><code>removeGlobalInput</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+                <li class="arg">
+                        <code>type</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1169"><code>..&#x2F;src&#x2F;litegraph.js:1169</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Removes a global graph input</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">type</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_removeGlobalOutput" class="method item">
+    <h3 class="name"><code>removeGlobalOutput</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1291"><code>..&#x2F;src&#x2F;litegraph.js:1291</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Removes a global graph output</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_renameGlobalInput" class="method item">
+    <h3 class="name"><code>renameGlobalInput</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>old_name</code>
+                </li>
+                <li class="arg">
+                        <code>new_name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1120"><code>..&#x2F;src&#x2F;litegraph.js:1120</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Changes the name of a global graph input</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">old_name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">new_name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_renameGlobalOutput" class="method item">
+    <h3 class="name"><code>renameGlobalOutput</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>old_name</code>
+                </li>
+                <li class="arg">
+                        <code>new_name</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1245"><code>..&#x2F;src&#x2F;litegraph.js:1245</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Renames a global graph output</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">old_name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">new_name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
                     </div>
 
                 </li>
@@ -1228,7 +2013,7 @@ if the nodes are using graphical actions</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l1322"><code>..&#x2F;src&#x2F;litegraph.js:1322</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1370"><code>..&#x2F;src&#x2F;litegraph.js:1370</code></a>
         </p>
 
 
@@ -1253,8 +2038,74 @@ if the nodes are using graphical actions</p>
 
 
 </div>
-<div id="method_setInputData" class="method item">
-    <h3 class="name"><code>setInputData</code></h3>
+<div id="method_setGlobalInputData" class="method item">
+    <h3 class="name"><code>setGlobalInputData</code></h3>
+
+        <div class="args">
+            <span class="paren">(</span><ul class="args-list inline commas">
+                <li class="arg">
+                        <code>name</code>
+                </li>
+                <li class="arg">
+                        <code>data</code>
+                </li>
+            </ul><span class="paren">)</span>
+        </div>
+
+
+
+
+
+
+
+
+    <div class="meta">
+                <p>
+                Defined in
+        <a href="../files/.._src_litegraph.js.html#l1083"><code>..&#x2F;src&#x2F;litegraph.js:1083</code></a>
+        </p>
+
+
+
+    </div>
+
+    <div class="description">
+        <p>Assign a data to the global graph input</p>
+
+    </div>
+
+        <div class="params">
+            <h4>Parameters:</h4>
+
+            <ul class="params-list">
+                <li class="param">
+                        <code class="param-name">name</code>
+                        <span class="type">String</span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+                <li class="param">
+                        <code class="param-name">data</code>
+                        <span class="type"></span>
+
+
+                    <div class="param-description">
+                         
+                    </div>
+
+                </li>
+            </ul>
+        </div>
+
+
+
+</div>
+<div id="method_setGlobalOutputData" class="method item">
+    <h3 class="name"><code>setGlobalOutputData</code></h3>
 
         <div class="args">
             <span class="paren">(</span><ul class="args-list inline commas">
@@ -1277,7 +2128,7 @@ if the nodes are using graphical actions</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l1230"><code>..&#x2F;src&#x2F;litegraph.js:1230</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1208"><code>..&#x2F;src&#x2F;litegraph.js:1208</code></a>
         </p>
 
 
@@ -1285,8 +2136,7 @@ if the nodes are using graphical actions</p>
     </div>
 
     <div class="description">
-        <p>Assigns a value to all the nodes that matches this name. This is used to create global variables of the node that
-can be easily accesed from the outside of the graph</p>
+        <p>Assign a data to the global output</p>
 
     </div>
 
@@ -1300,19 +2150,17 @@ can be easily accesed from the outside of the graph</p>
 
 
                     <div class="param-description">
-                        <p>the name of the node</p>
-
+                         
                     </div>
 
                 </li>
                 <li class="param">
                         <code class="param-name">value</code>
-                        <span class="type"></span>
+                        <span class="type">String</span>
 
 
                     <div class="param-description">
-                        <p>value to assign to this node</p>
-
+                         
                     </div>
 
                 </li>
@@ -1330,12 +2178,12 @@ can be easily accesed from the outside of the graph</p>
                 <li class="arg">
                         <code>name</code>
                 </li>
+                <li class="arg">
+                        <code>data</code>
+                </li>
             </ul><span class="paren">)</span>
         </div>
 
-        <span class="returns-inline">
-            <span class="type"></span>
-        </span>
 
 
 
@@ -1346,7 +2194,7 @@ can be easily accesed from the outside of the graph</p>
     <div class="meta">
                 <p>
                 Defined in
-        <a href="../files/.._src_litegraph.js.html#l1245"><code>..&#x2F;src&#x2F;litegraph.js:1245</code></a>
+        <a href="../files/.._src_litegraph.js.html#l1097"><code>..&#x2F;src&#x2F;litegraph.js:1097</code></a>
         </p>
 
 
@@ -1354,7 +2202,7 @@ can be easily accesed from the outside of the graph</p>
     </div>
 
     <div class="description">
-        <p>Returns the value of the first node with this name. This is used to access global variables of the graph from the outside</p>
+        <p>Assign a data to the global graph input (same as setGlobalInputData)</p>
 
     </div>
 
@@ -1368,23 +2216,23 @@ can be easily accesed from the outside of the graph</p>
 
 
                     <div class="param-description">
-                        <p>the name of the node</p>
+                         
+                    </div>
 
+                </li>
+                <li class="param">
+                        <code class="param-name">data</code>
+                        <span class="type"></span>
+
+
+                    <div class="param-description">
+                         
                     </div>
 
                 </li>
             </ul>
         </div>
 
-        <div class="returns">
-            <h4>Returns:</h4>
-
-            <div class="returns-description">
-                        <span class="type"></span>:
-                    <p>value of the node</p>
-
-            </div>
-        </div>
 
 
 </div>

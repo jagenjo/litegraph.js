@@ -40,7 +40,6 @@ function Subgraph()
 	this.subgraph.onGlobalOutputRenamed = this.onSubgraphRenamedGlobalOutput.bind(this);
 	this.subgraph.onGlobalOutputTypeChanged = this.onSubgraphTypeChangeGlobalOutput.bind(this);
 	
-
 	this.bgcolor = "#663";
 }
 
@@ -236,6 +235,8 @@ function GlobalOutput()
 
 	this.addInput(output_name, null);
 
+	this._value = null;
+
 	this.properties = {name: output_name, type: null };
 
 	var that = this;
@@ -270,7 +271,7 @@ function GlobalOutput()
 	});
 }
 
-GlobalOutput.title = "Ouput";
+GlobalOutput.title = "Output";
 GlobalOutput.desc = "Output of the graph";
 
 GlobalOutput.prototype.onAdded = function()
@@ -278,9 +279,15 @@ GlobalOutput.prototype.onAdded = function()
 	var name = this.graph.addGlobalOutput( this.properties.name, this.properties.type );
 }
 
+GlobalOutput.prototype.getValue = function()
+{
+	return this._value;
+}
+
 GlobalOutput.prototype.onExecute = function()
 {
-	this.graph.setGlobalOutputData( this.properties.name, this.getInputData(0) );
+	this._value = this.getInputData(0);
+	this.graph.setGlobalOutputData( this.properties.name, this._value );
 }
 
 LiteGraph.registerNodeType("graph/output", GlobalOutput);
