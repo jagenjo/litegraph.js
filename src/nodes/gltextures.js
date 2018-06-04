@@ -99,6 +99,18 @@ if(typeof(GL) != "undefined")
 		return target;
 	}
 
+
+	LGraphTexture.getTextureType = function( precision, ref_texture )
+	{
+		var type = ref_texture ? ref_texture.type : gl.UNSIGNED_BYTE;
+		switch( precision )
+		{
+			case LGraphTexture.LOW: type = gl.UNSIGNED_BYTE; break;
+			case LGraphTexture.HIGH: type = gl.HIGH_PRECISION_FORMAT; break;
+		}
+		return type;
+	}
+
 	LGraphTexture.getNoiseTexture = function()
 	{
 		if(this._noise_texture)
@@ -455,32 +467,23 @@ if(typeof(GL) != "undefined")
 
 		var width = 512;
 		var height = 512;
-		var type = gl.UNSIGNED_BYTE;
 		if(tex)
 		{
 			width = tex.width;
 			height = tex.height;
-			type = tex.type;
 		}
 		else if (texB)
 		{
 			width = texB.width;
 			height = texB.height;
-			type = texB.type;
 		}
 
+		var type = LGraphTexture.getTextureType( this.properties.precision, tex );
+
 		if(!tex && !this._tex )
-			this._tex = new GL.Texture( width, height, { type: this.precision === LGraphTexture.LOW ? gl.UNSIGNED_BYTE : gl.HIGH_PRECISION_FORMAT, format: gl.RGBA, filter: gl.LINEAR });
+			this._tex = new GL.Texture( width, height, { type: type, format: gl.RGBA, filter: gl.LINEAR });
 		else
 			this._tex = LGraphTexture.getTargetTexture( tex || this._tex, this._tex, this.properties.precision );
-
-		/*
-		if(this.properties.low_precision)
-			type = gl.UNSIGNED_BYTE;
-
-		if(!this._tex || this._tex.width != width || this._tex.height != height || this._tex.type != type )
-			this._tex = new GL.Texture( width, height, { type: type, format: gl.RGBA, filter: gl.LINEAR });
-		*/
 
 		var uvcode = "";
 		if(this.properties.uvcode)
@@ -578,9 +581,10 @@ if(typeof(GL) != "undefined")
 	function LGraphTextureShader()
 	{
 		this.addOutput("Texture","Texture");
-		this.properties = {code:"", width: 512, height: 512};
+		this.properties = {code:"", width: 512, height: 512, precision: LGraphTexture.DEFAULT };
 
 		this.properties.code = "\nvoid main() {\n  vec2 uv = v_coord;\n  vec3 color = vec3(0.0);\n//your code here\n\ngl_FragColor = vec4(color, 1.0);\n}\n";
+		this._uniforms = { texSize: vec2.create(), time: time };
 	}
 
 	LGraphTextureShader.title = "Shader";
@@ -713,16 +717,25 @@ if(typeof(GL) != "undefined")
 			shader.setUniform( info.name, data );
 		}
 
+		var uniforms = this._uniforms;
+
+		var type = LGraphTexture.getTextureType( this.properties.precision );
+
 		//render to texture
-		if(!this._tex || this._tex.width != this.properties.width || this._tex.height != this.properties.height )
-			this._tex = new GL.Texture( this.properties.width, this.properties.height, { format: gl.RGBA, filter: gl.LINEAR });
+		var w = this.properties.width|0;
+		var h = this.properties.height|0;
+		uniforms.texSize[0] = w;
+		uniforms.texSize[1] = h;
+
+		if(!this._tex || this._tex.type != type || this._tex.width != w || this._tex.height != h )
+			this._tex = new GL.Texture( w, h, { type: type, format: gl.RGBA, filter: gl.LINEAR });
 		var tex = this._tex;
 		var time = this.graph.getTime();
-		tex.drawTo(function()	{
-			shader.uniforms({texSize: [tex.width, tex.height], time: time}).draw( Mesh.getScreenQuad() );
+		tex.drawTo(function() {
+			shader.uniforms( uniforms ).draw( GL.Mesh.getScreenQuad() );
 		});
 
-		this.setOutputData(0, this._tex);
+		this.setOutputData( 0, this._tex );
 	}
 
 	LGraphTextureShader.pixel_shader = "precision highp float;\n\
@@ -1243,10 +1256,13 @@ if(typeof(GL) != "undefined")
 	function LGraphTextureAverage()
 	{
 		this.addInput("Texture","Texture");
-		this.addOutput("","Texture");
+		this.addOutput("tex","Texture");
+		this.addOutput("avg","vec4");
+		this.addOutput("lum","number");
 		this.properties = { mipmap_offset: 0, low_precision: false };
 
 		this._uniforms = { u_texture: 0, u_mipmap_offset: this.properties.mipmap_offset };
+		this._luminance = new Float32Array(4);
 	}
 
 	LGraphTextureAverage.title = "Average";
@@ -1258,7 +1274,7 @@ if(typeof(GL) != "undefined")
 		if(!tex)
 			return;
 
-		if(!this.isOutputConnected(0))
+		if(!this.isOutputConnected(0) && !this.isOutputConnected(1) && !this.isOutputConnected(2))
 			return; //saves work
 
 		if(!LGraphTextureAverage._shader)
@@ -1272,7 +1288,10 @@ if(typeof(GL) != "undefined")
 		}
 
 		var temp = this._temp_texture;
-		var type = this.properties.low_precision ? gl.UNSIGNED_BYTE : tex.type;
+		var type = gl.UNSIGNED_BYTE;
+		if(tex.type != type) //force floats, half floats cannot be read with gl.readPixels
+			type = gl.FLOAT;
+
 		if(!temp || temp.type != type )
 			this._temp_texture = new GL.Texture( 1, 1, { type: type, format: gl.RGBA, filter: gl.NEAREST });
 
@@ -1284,6 +1303,24 @@ if(typeof(GL) != "undefined")
 		});
 
 		this.setOutputData(0,this._temp_texture);
+
+		if(this.isOutputConnected(1) || this.isOutputConnected(2))
+		{
+			var pixel = this._temp_texture.getPixels();
+			if(pixel)
+			{
+				var v = this._luminance;
+				var type = this._temp_texture.type;
+				v.set( pixel );
+				if(type == gl.UNSIGNED_BYTE)
+					vec4.scale( v,v, 1/255 );
+				else if(type == GL.HALF_FLOAT || type == GL.HALF_FLOAT_OES)
+					vec4.scale( v,v, 1/(255*255) ); //is this correct?
+				this.setOutputData(1,v);
+				this.setOutputData(2,(v[0] + v[1] + v[2]) / 3);
+			}
+
+		}
 	}
 
 	LGraphTextureAverage.pixel_shader = "precision highp float;\n\
@@ -1371,12 +1408,12 @@ if(typeof(GL) != "undefined")
 	}
 
 	LGraphTextureLUT.widgets_info = { 
+		"texture": { widget:"texture"},
 		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
 	};
 
 	LGraphTextureLUT.title = "LUT";
 	LGraphTextureLUT.desc = "Apply LUT to Texture";
-	LGraphTextureLUT.widgets_info = {"texture": { widget:"texture"} };
 
 	LGraphTextureLUT.prototype.onExecute = function()
 	{
@@ -1391,7 +1428,8 @@ if(typeof(GL) != "undefined")
 			return;
 		}
 
-		if(!tex) return;
+		if(!tex)
+			return;
 
 		var lut_tex = this.getInputData(1);
 
@@ -1766,7 +1804,7 @@ if(typeof(GL) != "undefined")
 		this.addInput("Tex.","Texture");
 
 		this.addOutput("Edges","Texture");
-		this.properties = { invert: true, factor: 1, precision: LGraphTexture.DEFAULT };
+		this.properties = { invert: true, threshold: false, factor: 1, precision: LGraphTexture.DEFAULT };
 
 		if(!LGraphTextureEdges._shader)
 			LGraphTextureEdges._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureEdges.pixel_shader );
@@ -1803,10 +1841,11 @@ if(typeof(GL) != "undefined")
 		var shader = LGraphTextureEdges._shader;
 		var invert = this.properties.invert;
 		var factor = this.properties.factor;
+		var threshold = this.properties.threshold ? 1 : 0;
 
 		this._tex.drawTo( function() {
 			tex.bind(0);
-			shader.uniforms({u_texture:0, u_isize:[1/tex.width,1/tex.height], u_factor: factor, u_invert: invert ? 1 : 0}).draw(mesh);
+			shader.uniforms({u_texture:0, u_isize:[1/tex.width,1/tex.height], u_factor: factor, u_threshold: threshold, u_invert: invert ? 1 : 0}).draw(mesh);
 		});
 
 		this.setOutputData(0, this._tex);
@@ -1819,6 +1858,7 @@ if(typeof(GL) != "undefined")
 			uniform vec2 u_isize;\n\
 			uniform int u_invert;\n\
 			uniform float u_factor;\n\
+			uniform float u_threshold;\n\
 			\n\
 			void main() {\n\
 				vec4 center = texture2D(u_texture, v_coord);\n\
@@ -1830,7 +1870,10 @@ if(typeof(GL) != "undefined")
 				diff *= u_factor;\n\
 				if(u_invert == 1)\n\
 					diff.xyz = vec3(1.0) - diff.xyz;\n\
-			   gl_FragColor = vec4( diff.xyz, center.a );\n\
+				if( u_threshold == 0.0 )\n\
+					gl_FragColor = vec4( diff.xyz, center.a );\n\
+				else\n\
+					gl_FragColor = vec4( diff.x > 0.5 ? 1.0 : 0.0, diff.y > 0.5 ? 1.0 : 0.0, diff.z > 0.5 ? 1.0 : 0.0, center.a );\n\
 			}\n\
 			";
 
@@ -1956,11 +1999,15 @@ if(typeof(GL) != "undefined")
 		this.addInput("Iterations","number");
 		this.addInput("Intensity","number");
 		this.addOutput("Blurred","Texture");
-		this.properties = { intensity: 1, iterations: 1, preserve_aspect: false, scale:[1,1] };
+		this.properties = { intensity: 1, iterations: 1, preserve_aspect: false, scale:[1,1], precision: LGraphTexture.DEFAULT };
 	}
 
 	LGraphTextureBlur.title = "Blur";
 	LGraphTextureBlur.desc = "Blur a texture";
+
+	LGraphTextureBlur.widgets_info = {
+		precision: { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
 
 	LGraphTextureBlur.max_iterations = 20;
 
@@ -1973,13 +2020,13 @@ if(typeof(GL) != "undefined")
 		if(!this.isOutputConnected(0))
 			return; //saves work
 
-		var temp = this._temp_texture;
+		var temp = this._final_texture;
 
 		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
 		{
 			//we need two textures to do the blurring
-			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
-			this._final_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+			//this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+			temp = this._final_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
 		}
 
 		//iterations
@@ -2011,18 +2058,15 @@ if(typeof(GL) != "undefined")
 			aspect = 1;
 		aspect = this.properties.preserve_aspect ? aspect : 1;
 
-		var start_texture = tex;
 		var scale = this.properties.scale || [1,1];
-		var origin = start_texture;
-		for(var i = 0; i < iterations; ++i)
-		{
-			origin.applyBlur( aspect * scale[0] * i, scale[1] * i, intensity, this._temp_texture, this._final_texture );
-			origin = this._final_texture;
-		}
+		tex.applyBlur( aspect * scale[0], scale[1], intensity, temp );
+		for(var i = 1; i < iterations; ++i)
+			temp.applyBlur( aspect * scale[0] * (i+1), scale[1] * (i+1), intensity );
 
-		this.setOutputData(0, this._final_texture);
+		this.setOutputData(0, temp );
 	}
 
+	/*
 	LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 			precision highp float;\n\
 			varying vec2 v_coord;\n\
@@ -2042,11 +2086,236 @@ if(typeof(GL) != "undefined")
 			   sum += texture2D(u_texture, v_coord + u_offset * 2.0) * 0.12/0.98;\n\
 			   sum += texture2D(u_texture, v_coord + u_offset * 1.0) * 0.15/0.98;\n\
 			   gl_FragColor = u_intensity * sum;\n\
-			   /*gl_FragColor.a = center.a*/;\n\
 			}\n\
 			";
+	*/
 
 	LiteGraph.registerNodeType("texture/blur", LGraphTextureBlur );
+
+
+	// Texture Glow *****************************************
+	//based in https://catlikecoding.com/unity/tutorials/advanced-rendering/bloom/
+	function LGraphTextureGlow()
+	{
+		this.addInput("in","Texture");
+		this.addInput("dirt","Texture");
+		this.addOutput("out","Texture");
+		this.addOutput("glow","Texture");
+		this.properties = { intensity: 1, persistence: 0.99, iterations:16, threshold:0, scale: 1, dirt_factor: 0.5, precision: LGraphTexture.DEFAULT };
+		this._textures = [];
+		this._uniforms = { u_intensity: 1, u_texture: 0, u_glow_texture: 1, u_threshold: 0, u_texel_size: vec2.create() };
+	}
+
+	LGraphTextureGlow.title = "Glow";
+	LGraphTextureGlow.desc = "Filters a texture giving it a glow effect";
+	LGraphTextureGlow.weights = new Float32Array( [0.5,0.4,0.3,0.2] );
+
+	LGraphTextureGlow.widgets_info = {
+		"iterations": { type:"number", min: 0, max: 16, step: 1, precision: 0 },
+		"threshold": { type:"number", min: 0, max: 10, step: 0.01, precision: 2 },
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureGlow.prototype.onGetInputs = function(){
+		return [["enabled","boolean"],["threshold","number"],["intensity","number"],["persistence","number"],["iterations","number"],["dirt_factor","number"]];
+	}
+
+	LGraphTextureGlow.prototype.onGetOutputs = function(){
+		return [["average","Texture"]];
+	}
+
+	LGraphTextureGlow.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isAnyOutputConnected())
+			return; //saves work
+
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH || this.getInputDataByName("enabled" ) === false )
+		{
+			this.setOutputData(0,tex);
+			return;
+		}		
+
+		var width = tex.width;
+		var height = tex.height;
+
+		var texture_info = { format: tex.format, type: tex.type, minFilter: GL.LINEAR, magFilter: GL.LINEAR, wrap: gl.CLAMP_TO_EDGE	};
+		var type = LGraphTexture.getTextureType( this.properties.precision, tex );
+
+		var uniforms = this._uniforms;
+		var textures = this._textures;
+
+		//cut
+		var shader = LGraphTextureGlow._cut_shader;
+		if(!shader)
+			shader = LGraphTextureGlow._cut_shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureGlow.cut_pixel_shader );
+
+		gl.disable( gl.DEPTH_TEST );
+		gl.disable( gl.BLEND );
+
+		uniforms.u_threshold = this.getInputOrProperty("threshold");
+		var currentDestination = textures[0] = GL.Texture.getTemporary( width, height, texture_info );
+		tex.blit( currentDestination, shader.uniforms(uniforms) );
+		var currentSource = currentDestination;
+
+		var iterations = this.getInputOrProperty("iterations");
+		iterations = Math.clamp( iterations, 1, 16) | 0;
+		var texel_size = uniforms.u_texel_size;
+		var intensity = this.getInputOrProperty("intensity");
+
+		uniforms.u_intensity = 1;
+		uniforms.u_delta = this.properties.scale; //1
+
+		//downscale upscale shader
+		var shader = LGraphTextureGlow._shader;
+		if(!shader)
+			shader = LGraphTextureGlow._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureGlow.scale_pixel_shader );
+
+		var i = 1;
+		//downscale
+		for (;i < iterations; i++) {
+			width = width>>1;
+			if( (height|0) > 1 )
+				height = height>>1;
+			if( width < 2 )
+				break;
+			currentDestination = textures[i] = GL.Texture.getTemporary( width, height, texture_info );
+			texel_size[0] = 1 / currentSource.width; texel_size[1] = 1 / currentSource.height;
+			currentSource.blit( currentDestination, shader.uniforms(uniforms) );
+			currentSource = currentDestination;
+		}
+
+		//average
+		if(this.isOutputConnected(2))
+		{
+			var average_texture = this._average_texture;
+			if(!average_texture || average_texture.type != tex.type || average_texture.format != tex.format )
+				average_texture = this._average_texture = new GL.Texture( 1, 1, { type: tex.type, format: tex.format, filter: gl.LINEAR });
+			texel_size[0] = 1 / currentSource.width; texel_size[1] = 1 / currentSource.height;
+			uniforms.u_intensity = intensity;
+			uniforms.u_delta = 1;
+			currentSource.blit( average_texture, shader.uniforms(uniforms) ); 
+			this.setOutputData( 2, average_texture );
+		}
+
+		//upscale and blend 
+		gl.enable( gl.BLEND );
+		gl.blendFunc( gl.ONE, gl.ONE );
+		uniforms.u_intensity = this.getInputOrProperty("persistence");
+		uniforms.u_delta = 0.5;
+
+		for (i -= 2; i >= 0; i--) // i-=2 =>  -1 to point to last element in array, -1 to go to texture above
+		{ 
+			currentDestination = textures[i];
+			textures[i] = null;
+			texel_size[0] = 1 / currentSource.width; texel_size[1] = 1 / currentSource.height;
+			currentSource.blit( currentDestination, shader.uniforms(uniforms) );
+			GL.Texture.releaseTemporary( currentSource );
+			currentSource = currentDestination;
+		}
+		gl.disable( gl.BLEND );
+
+		//glow
+		if(this.isOutputConnected(1))
+		{
+			var glow_texture = this._glow_texture;
+			if(!glow_texture || glow_texture.width != tex.width || glow_texture.height != tex.height || glow_texture.type != type || glow_texture.format != tex.format )
+				glow_texture = this._glow_texture = new GL.Texture( tex.width,  tex.height, { type: type, format: tex.format, filter: gl.LINEAR });
+			currentSource.blit( glow_texture );
+			this.setOutputData( 1, glow_texture);
+		}
+
+		//final composition
+		if(this.isOutputConnected(0))
+		{
+			var final_texture = this._final_texture;
+			if(!final_texture || final_texture.width != tex.width || final_texture.height != tex.height || final_texture.type != type || final_texture.format != tex.format )
+				final_texture = this._final_texture = new GL.Texture( tex.width, tex.height, { type: type, format: tex.format, filter: gl.LINEAR });
+
+			var dirt_texture = this.getInputData(1);
+			var dirt_factor = this.getInputOrProperty("dirt_factor");
+
+			uniforms.u_intensity = intensity;
+
+			shader = dirt_texture ? LGraphTextureGlow._dirt_final_shader : LGraphTextureGlow._final_shader;
+			if(!shader)
+			{
+				if(dirt_texture)
+					shader = LGraphTextureGlow._dirt_final_shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureGlow.final_pixel_shader, { USE_DIRT: "" } );
+				else
+					shader = LGraphTextureGlow._final_shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureGlow.final_pixel_shader );
+			}
+
+			final_texture.drawTo( function(){
+				tex.bind(0);
+				currentSource.bind(1);
+				if(dirt_texture)
+				{
+					shader.setUniform( "u_dirt_factor", dirt_factor );
+					shader.setUniform( "u_dirt_texture", dirt_texture.bind(2) );
+				}
+				shader.toViewport( uniforms );
+			});
+			this.setOutputData( 0, final_texture );
+		}
+
+		GL.Texture.releaseTemporary( currentSource );
+	}
+
+	LGraphTextureGlow.cut_pixel_shader = "precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		uniform float u_threshold;\n\
+		void main() {\n\
+			gl_FragColor = max( texture2D( u_texture, v_coord ) - vec4( u_threshold ), vec4(0.0) );\n\
+		}"
+
+	LGraphTextureGlow.scale_pixel_shader = "precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		uniform vec2 u_texel_size;\n\
+		uniform float u_delta;\n\
+		uniform float u_intensity;\n\
+		\n\
+		vec4 sampleBox(vec2 uv) {\n\
+			vec4 o = u_texel_size.xyxy * vec2(-u_delta, u_delta).xxyy;\n\
+			vec4 s = texture2D( u_texture, uv + o.xy ) + texture2D( u_texture, uv + o.zy) + texture2D( u_texture, uv + o.xw) + texture2D( u_texture, uv + o.zw);\n\
+			return s * 0.25;\n\
+		}\n\
+		void main() {\n\
+			gl_FragColor = u_intensity * sampleBox( v_coord );\n\
+		}"
+
+	LGraphTextureGlow.final_pixel_shader = "precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		uniform sampler2D u_glow_texture;\n\
+		#ifdef USE_DIRT\n\
+			uniform sampler2D u_dirt_texture;\n\
+		#endif\n\
+		uniform vec2 u_texel_size;\n\
+		uniform float u_delta;\n\
+		uniform float u_intensity;\n\
+		uniform float u_dirt_factor;\n\
+		\n\
+		vec4 sampleBox(vec2 uv) {\n\
+			vec4 o = u_texel_size.xyxy * vec2(-u_delta, u_delta).xxyy;\n\
+			vec4 s = texture2D( u_glow_texture, uv + o.xy ) + texture2D( u_glow_texture, uv + o.zy) + texture2D( u_glow_texture, uv + o.xw) + texture2D( u_glow_texture, uv + o.zw);\n\
+			return s * 0.25;\n\
+		}\n\
+		void main() {\n\
+			vec4 glow = sampleBox( v_coord );\n\
+			#ifdef USE_DIRT\n\
+				glow = mix( glow, glow * texture2D( u_dirt_texture, v_coord ), u_dirt_factor );\n\
+			#endif\n\
+			gl_FragColor = texture2D( u_texture, v_coord ) + u_intensity * glow;\n\
+		}"
+
+	LiteGraph.registerNodeType("texture/glow", LGraphTextureGlow );
+
 
 	// Texture Blur *****************************************
 	function LGraphTextureKuwaharaFilter()
@@ -2269,12 +2538,18 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 	LGraphTextureWebcam.prototype.onRemoved = function()
 	{
-		if(this._webcam_stream)
+		if(!this._webcam_stream)
+			return;
+
+		var video_streams = this._webcam_stream.getVideoTracks();
+		if(video_streams.length)
 		{
-			this._webcam_stream.stop();
-			this._webcam_stream = null;
-			this._video = null;
+			var webcam = video_streams[0];
+			webcam.stop();
 		}
+
+		this._webcam_stream = null;
+		this._video = null;
 	}
 
 	LGraphTextureWebcam.prototype.onDrawBackground = function(ctx)
@@ -2330,6 +2605,114 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
 
 
+
+	//from https://github.com/spite/Wagner
+	function LGraphLensFX()
+	{
+		this.addInput("in","Texture");
+		this.addInput("f","number");
+		this.addOutput("out","Texture");
+		this.properties = { factor: 1, precision: LGraphTexture.LOW };
+
+		this._uniforms = { u_texture: 0, u_factor: 1 };
+	}
+
+	LGraphLensFX.title = "Lens FX";
+	LGraphLensFX.desc = "distortion and chromatic aberration";
+
+	LGraphLensFX.widgets_info = {
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphLensFX.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var temp = this._temp_texture;
+		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
+			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+
+		var shader = LGraphLensFX._shader;
+		if(!shader)
+			shader = LGraphLensFX._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphLensFX.pixel_shader );
+
+		var factor = this.getInputData(1);
+		if(factor == null)
+			factor = this.properties.factor;
+
+		var uniforms = this._uniforms;
+		uniforms.u_factor = factor;
+
+		//apply shader
+		gl.disable( gl.DEPTH_TEST );
+		temp.drawTo(function(){
+			tex.bind(0);
+			shader.uniforms(uniforms).draw( GL.Mesh.getScreenQuad() );
+		});
+
+		this.setOutputData(0,temp);
+	}
+
+	LGraphLensFX.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform sampler2D u_texture;\n\
+			uniform float u_factor;\n\
+			vec2 barrelDistortion(vec2 coord, float amt) {\n\
+				vec2 cc = coord - 0.5;\n\
+				float dist = dot(cc, cc);\n\
+				return coord + cc * dist * amt;\n\
+			}\n\
+			\n\
+			float sat( float t )\n\
+			{\n\
+				return clamp( t, 0.0, 1.0 );\n\
+			}\n\
+			\n\
+			float linterp( float t ) {\n\
+				return sat( 1.0 - abs( 2.0*t - 1.0 ) );\n\
+			}\n\
+			\n\
+			float remap( float t, float a, float b ) {\n\
+				return sat( (t - a) / (b - a) );\n\
+			}\n\
+			\n\
+			vec4 spectrum_offset( float t ) {\n\
+				vec4 ret;\n\
+				float lo = step(t,0.5);\n\
+				float hi = 1.0-lo;\n\
+				float w = linterp( remap( t, 1.0/6.0, 5.0/6.0 ) );\n\
+				ret = vec4(lo,1.0,hi, 1.) * vec4(1.0-w, w, 1.0-w, 1.);\n\
+			\n\
+				return pow( ret, vec4(1.0/2.2) );\n\
+			}\n\
+			\n\
+			const float max_distort = 2.2;\n\
+			const int num_iter = 12;\n\
+			const float reci_num_iter_f = 1.0 / float(num_iter);\n\
+			\n\
+			void main()\n\
+			{	\n\
+				vec2 uv=v_coord;\n\
+				vec4 sumcol = vec4(0.0);\n\
+				vec4 sumw = vec4(0.0);	\n\
+				for ( int i=0; i<num_iter;++i )\n\
+				{\n\
+					float t = float(i) * reci_num_iter_f;\n\
+					vec4 w = spectrum_offset( t );\n\
+					sumw += w;\n\
+					sumcol += w * texture2D( u_texture, barrelDistortion(uv, .6 * max_distort*t * u_factor ) );\n\
+				}\n\
+				gl_FragColor = sumcol / sumw;\n\
+			}";
+
+	LiteGraph.registerNodeType("texture/lensfx", LGraphLensFX );
+
+
 	//simple exposition, but plan to expand it to support different gamma curves
 	function LGraphExposition()
 	{
@@ -2337,6 +2720,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		this.addInput("exp","number");
 		this.addOutput("out","Texture");
 		this.properties = { exposition: 1, precision: LGraphTexture.LOW };
+		this._uniforms = { u_texture: 0, u_exposition: exp };
 	}
 
 	LGraphExposition.title = "Exposition";
@@ -2362,19 +2746,19 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 		var shader = LGraphExposition._shader;
 		if(!shader)
-			shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphExposition.pixel_shader );
+			shader = LGraphExposition._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphExposition.pixel_shader );
 
 		var exp = this.properties.exposition;
 		var exp_input = this.getInputData(1);
 		if(exp_input != null)
 			exp = this.properties.exposition = exp_input;
+		var uniforms = this._uniforms;
 
 		//apply shader
 		temp.drawTo(function(){
 			gl.disable( gl.DEPTH_TEST );
 			tex.bind(0);
-			var mesh = GL.Mesh.getScreenQuad();
-			shader.uniforms({ u_texture: 0, u_exposition: exp }).draw(mesh);
+			shader.uniforms(uniforms).draw(GL.Mesh.getScreenQuad());
 		});
 
 		this.setOutputData(0,temp);
@@ -2397,12 +2781,29 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	function LGraphToneMapping()
 	{
 		this.addInput("in","Texture");
+		this.addInput("avg","number");
 		this.addOutput("out","Texture");
-		this.properties = { precision: LGraphTexture.LOW };
+		this.properties = { scale:1, gamma: 1, average_lum: 1, lum_white: 1, precision: LGraphTexture.LOW };
+
+		this._uniforms = { 
+			u_texture: 0,
+			u_lumwhite2: 1,
+			u_igamma: 1,
+			u_scale: 1,
+			u_average_lum: 1
+		};
 	}
 
 	LGraphToneMapping.title = "Tone Mapping";
-	LGraphToneMapping.desc = "Applies Tone Mapping algorithm";
+	LGraphToneMapping.desc = "Applies Tone Mapping to convert from high to low";
+
+	LGraphToneMapping.widgets_info = {
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphToneMapping.prototype.onGetInputs = function() {
+		return [["enabled","boolean"]];
+	}
 
 	LGraphToneMapping.prototype.onExecute = function()
 	{
@@ -2413,15 +2814,38 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		if(!this.isOutputConnected(0))
 			return; //saves work
 
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH || this.getInputDataByName("enabled" ) === false )
+		{
+			this.setOutputData(0, tex );
+			return;
+		}
+
 		var temp = this._temp_texture;
 
 		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
 			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
 
+		//apply shader
+		var shader = LGraphToneMapping._shader;
+		if(!shader)
+			shader = LGraphToneMapping._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphToneMapping.pixel_shader );
+
+		var avg = this.getInputData(1);
+		if(avg != null)
+			this.properties.average_lum = avg;
+
+		var uniforms = this._uniforms;
+		uniforms.u_lumwhite2 = this.properties.lum_white * this.properties.lum_white;
+		uniforms.u_scale = this.properties.scale;
+		uniforms.u_average_lum = this.properties.average_lum;
+		uniforms.u_igamma = 1/this.properties.gamma;
 
 		//apply shader
-
-
+		gl.disable( gl.DEPTH_TEST );
+		temp.drawTo(function(){
+			tex.bind(0);
+			shader.uniforms(uniforms).draw( GL.Mesh.getScreenQuad() );
+		});
 
 		this.setOutputData(0,this._temp_texture);
 	}
@@ -2429,9 +2853,10 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LGraphToneMapping.pixel_shader = "precision highp float;\n\
 			varying vec2 v_coord;\n\
 			uniform sampler2D u_texture;\n\
-			uniform float scale;\n\
-			uniform float averageLum;\n\
-			uniform vec3 lumwhite2;\n\
+			uniform float u_scale;\n\
+			uniform float u_average_lum;\n\
+			uniform float u_lumwhite2;\n\
+			uniform float u_igamma;\n\
 			vec3 RGB2xyY (vec3 rgb)\n\
 			{\n\
 				 const mat3 RGB2XYZ = mat3(0.4124, 0.3576, 0.1805,\n\
@@ -2446,23 +2871,150 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			}\n\
 			\n\
 			void main() {\n\
-				vec4 color = texture2D( u_texture, v_coord ).xyz;\n\
+				vec4 color = texture2D( u_texture, v_coord );\n\
 				vec3 rgb = color.xyz;\n\
 				//Ld - this part of the code is the same for both versions\n\
-				float lum = dot(rgb, vec3(0.2126f, 0.7152f, 0.0722f));\n\
-				float L = (scale / averageLum) * lum;\n\
-				float Ld = (L * (1.0 + L / lumwhite2)) / (1.0 + L);\n\
+				float lum = dot(rgb, vec3(0.2126, 0.7152, 0.0722));\n\
+				float L = (u_scale / u_average_lum) * lum;\n\
+				float Ld = (L * (1.0 + L / u_lumwhite2)) / (1.0 + L);\n\
 				//first\n\
 				//vec3 xyY = RGB2xyY(rgb);\n\
 				//xyY.z *= Ld;\n\
 				//rgb = xyYtoRGB(xyY);\n\
 				//second\n\
 				rgb = (rgb / lum) * Ld;\n\
+				rgb = pow( rgb, vec3( u_igamma ) );\n\
 				gl_FragColor = vec4( rgb, color.a );\n\
 			}";
 
 
-	//LiteGraph.registerNodeType("texture/tonemapping", LGraphToneMapping );
+	LiteGraph.registerNodeType("texture/tonemapping", LGraphToneMapping );
+
+
+	function LGraphTexturePerlin()
+	{
+		this.addOutput("out","Texture");
+		this.properties = { width: 512, height: 512, seed:0, persistence: 0.1, octaves: 8, scale: 1, offset: [0,0], amplitude: 1, precision: LGraphTexture.DEFAULT };
+		this._key = 0;
+		this._uniforms = { u_persistence: 0.1, u_seed: 0, u_offset: vec2.create(), u_scale: 1, u_viewport: vec2.create() };
+	}
+
+	LGraphTexturePerlin.title = "Perlin";
+	LGraphTexturePerlin.desc = "Generates a perlin noise texture";
+
+	LGraphTexturePerlin.widgets_info = {
+		precision: { widget:"combo", values: LGraphTexture.MODE_VALUES },
+		width: { type: "Number", precision: 0, step: 1 },
+		height: { type: "Number", precision: 0, step: 1 },
+		octaves: { type: "Number", precision: 0, step: 1, min: 1, max: 50 }
+	};
+
+	LGraphTexturePerlin.prototype.onExecute = function()
+	{
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var w = this.properties.width|0;
+		var h = this.properties.height|0;
+		if(w == 0)	w = gl.viewport_data[2]; //0 means default
+		if(h == 0)	h = gl.viewport_data[3]; //0 means default
+		var type = LGraphTexture.getTextureType( this.properties.precision );
+
+		var temp = this._temp_texture;
+		if(!temp || temp.width != w || temp.height != h || temp.type != type )
+			temp = this._temp_texture = new GL.Texture( w, h, { type: type, format: gl.RGB, filter: gl.LINEAR });
+
+		//reusing old
+		var key = w + h + type + this.properties.persistence + this.properties.octaves + this.properties.scale + this.properties.seed + this.properties.offset[0] + this.properties.offset[1] + this.properties.amplitude;
+		if(key == this._key)
+		{
+			this.setOutputData( 0, temp );
+			return;
+		}
+		this._key = key;
+
+		//gather uniforms
+		var uniforms = this._uniforms;
+		uniforms.u_persistence = this.properties.persistence;
+		uniforms.u_octaves = this.properties.octaves;
+		uniforms.u_offset[0] = this.properties.offset[0];
+		uniforms.u_offset[1] = this.properties.offset[1];
+		uniforms.u_scale = this.properties.scale;
+		uniforms.u_amplitude = this.properties.amplitude;
+		uniforms.u_viewport[0] = w;
+		uniforms.u_viewport[1] = h;
+		uniforms.u_seed = this.properties.seed * 128;
+
+		//render
+		var shader = LGraphTexturePerlin._shader;
+		if(!shader)
+			shader = LGraphTexturePerlin._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTexturePerlin.pixel_shader );
+
+		gl.disable( gl.BLEND );
+		gl.disable( gl.DEPTH_TEST );
+
+		temp.drawTo( function() {
+			shader.uniforms( uniforms ).draw( GL.Mesh.getScreenQuad() );
+		});
+
+		this.setOutputData( 0, temp );
+	}
+
+	LGraphTexturePerlin.pixel_shader = "precision highp float;\n\
+			varying vec2 v_coord;\n\
+			uniform vec2 u_offset;\n\
+			uniform float u_scale;\n\
+			uniform float u_persistence;\n\
+			uniform int u_octaves;\n\
+			uniform float u_amplitude;\n\
+			uniform vec2 u_viewport;\n\
+			uniform float u_seed;\n\
+			#define M_PI 3.14159265358979323846\n\
+			\n\
+			float rand(vec2 c){	return fract(sin(dot(c.xy ,vec2( 12.9898 + u_seed,78.233 + u_seed))) * 43758.5453); }\n\
+			\n\
+			float noise(vec2 p, float freq ){\n\
+				float unit = u_viewport.x/freq;\n\
+				vec2 ij = floor(p/unit);\n\
+				vec2 xy = mod(p,unit)/unit;\n\
+				//xy = 3.*xy*xy-2.*xy*xy*xy;\n\
+				xy = .5*(1.-cos(M_PI*xy));\n\
+				float a = rand((ij+vec2(0.,0.)));\n\
+				float b = rand((ij+vec2(1.,0.)));\n\
+				float c = rand((ij+vec2(0.,1.)));\n\
+				float d = rand((ij+vec2(1.,1.)));\n\
+				float x1 = mix(a, b, xy.x);\n\
+				float x2 = mix(c, d, xy.x);\n\
+				return mix(x1, x2, xy.y);\n\
+			}\n\
+			\n\
+			float pNoise(vec2 p, int res){\n\
+				float persistance = u_persistence;\n\
+				float n = 0.;\n\
+				float normK = 0.;\n\
+				float f = 4.;\n\
+				float amp = 1.0;\n\
+				int iCount = 0;\n\
+				for (int i = 0; i<50; i++){\n\
+					n+=amp*noise(p, f);\n\
+					f*=2.;\n\
+					normK+=amp;\n\
+					amp*=persistance;\n\
+					if (iCount >= res)\n\
+						break;\n\
+					iCount++;\n\
+				}\n\
+				float nf = n/normK;\n\
+				return nf*nf*nf*nf;\n\
+			}\n\
+			void main() {\n\
+				vec2 uv = v_coord * u_scale * u_viewport + u_offset * u_scale;\n\
+				vec4 color = vec4( pNoise( uv, u_octaves ) * u_amplitude );\n\
+				gl_FragColor = color;\n\
+			}";
+
+	LiteGraph.registerNodeType("texture/perlin", LGraphTexturePerlin );
+
 
 
 	function LGraphTextureMatte()
@@ -2471,9 +3023,6 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 		this.addOutput("out","Texture");
 		this.properties = { key_color: vec3.fromValues(0.,1.,0.), threshold: 0.8, slope: 0.2, precision: LGraphTexture.DEFAULT };
-
-		if(!LGraphTextureMatte._shader)
-			LGraphTextureMatte._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureMatte.pixel_shader );
 	}
 
 	LGraphTextureMatte.title = "Matte";
@@ -2511,6 +3060,8 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 		var mesh = Mesh.getScreenQuad();
 		var shader = LGraphTextureMatte._shader;
+		if(!shader)
+			shader = LGraphTextureMatte._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureMatte.pixel_shader );
 
 		uniforms.u_key_color = this.properties.key_color;
 		uniforms.u_threshold = this.properties.threshold;

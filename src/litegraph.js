@@ -205,7 +205,7 @@ var LiteGraph = global.LiteGraph = {
 		var node = new base_class( title );
 		node.type = type;
 
-		if(!node.title) node.title = title;
+		if(!node.title && title) node.title = title;
 		if(!node.properties) node.properties = {};
 		if(!node.properties_info) node.properties_info = [];
 		if(!node.flags) node.flags = {};
@@ -1540,7 +1540,7 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 
 function LGraphNode(title)
 {
-	this._ctor();
+	this._ctor(title);
 }
 
 global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
@@ -1612,6 +1612,7 @@ LGraphNode.prototype.configure = function(info)
 
 		if(info[j] == null)
 			continue;
+
 		else if (typeof(info[j]) == 'object') //object
 		{
 			if(this[j] && this[j].configure)
@@ -1622,6 +1623,9 @@ LGraphNode.prototype.configure = function(info)
 		else //value
 			this[j] = info[j];
 	}
+
+	if(!info.title)
+		this.title = this.constructor.title;
 
 	if(this.onConnectionsChange)
 	{
@@ -1690,24 +1694,30 @@ LGraphNode.prototype.configure = function(info)
 
 LGraphNode.prototype.serialize = function()
 {
-	//clear outputs last data (because data in connections is never serialized but stored inside the outputs info)
-	if(this.outputs)
-		for(var i = 0; i < this.outputs.length; i++)
-			delete this.outputs[i]._data;
-
 	//create serialization object
 	var o = {
 		id: this.id,
-		title: this.title,
 		type: this.type,
 		pos: this.pos,
 		size: this.size,
 		data: this.data,
 		flags: LiteGraph.cloneObject(this.flags),
-		inputs: this.inputs,
-		outputs: this.outputs,
 		mode: this.mode
 	};
+
+	if(this.inputs)
+		o.inputs = this.inputs;
+
+	if(this.outputs)
+	{
+		//clear outputs last data (because data in connections is never serialized but stored inside the outputs info)
+		for(var i = 0; i < this.outputs.length; i++)
+			delete this.outputs[i]._data;
+		o.outputs = this.outputs;
+	}
+
+	if( this.title && this.title != this.constructor.title )
+		o.title = this.title;
 
 	if(this.properties)
 		o.properties = LiteGraph.cloneObject(this.properties);
@@ -1821,7 +1831,7 @@ LGraphNode.prototype.setOutputData = function(slot, data)
 }
 
 /**
-* retrieves the input data (data traveling through the connection) from one slot
+* Retrieves the input data (data traveling through the connection) from one slot
 * @method getInputData
 * @param {number} slot
 * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
@@ -1840,10 +1850,10 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 	if(!link) //bug: weird case but it happens sometimes
 		return null;
 
-	//used to extract data from the incomming connection
 	if(!force_update)
 		return link.data;
 
+	//special case: used to extract data from the incomming connection before the graph has been executed
 	var node = this.graph.getNodeById( link.origin_id );
 	if(!node)
 		return link.data;
@@ -1855,6 +1865,22 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 
 	return link.data;
 }
+
+/**
+* Retrieves the input data from one slot using its name instead of slot number
+* @method getInputDataByName
+* @param {String} slot_name
+* @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
+* @return {*} data or if it is not connected returns null
+*/
+LGraphNode.prototype.getInputDataByName = function( slot_name, force_update )
+{
+	var slot = this.findInputSlot( slot_name );
+	if( slot == -1 )
+		return null;
+	return this.getInputData( slot, force_update );
+}
+
 
 /**
 * tells you if there is a connection in one input slot
@@ -1905,6 +1931,31 @@ LGraphNode.prototype.getInputNode = function( slot )
 	return this.graph.getNodeById( link_info.origin_id );
 }
 
+
+/**
+* returns the value of an input with this name, otherwise checks if there is a property with that name
+* @method getInputOrProperty
+* @param {string} name
+* @return {*} value
+*/
+LGraphNode.prototype.getInputOrProperty = function( name )
+{
+	if(!this.inputs || !this.inputs.length)
+		return this.properties ? this.properties[name] : null;
+
+	for(var i = 0, l = this.inputs.length; i < l; ++i)
+		if(name == this.inputs[i].name)
+		{
+			var link_id = this.inputs[i].link;
+			var link = this.graph.links[ link_id ];
+			return link ? link.data : null;
+		}
+	return this.properties[name];
+}
+
+
+
+
 /**
 * tells you the last output data that went in that slot
 * @method getOutputData
@@ -1948,9 +1999,25 @@ LGraphNode.prototype.getOutputInfo = function(slot)
 LGraphNode.prototype.isOutputConnected = function(slot)
 {
 	if(!this.outputs)
-		return null;
+		return false;
 	return (slot < this.outputs.length && this.outputs[slot].links && this.outputs[slot].links.length);
 }
+
+/**
+* tells you if there is any connection in the output slots
+* @method isAnyOutputConnected
+* @return {boolean}
+*/
+LGraphNode.prototype.isAnyOutputConnected = function()
+{
+	if(!this.outputs)
+		return false;
+	for(var i = 0; i < this.outputs.length; ++i)
+		if( this.outputs[i].links && this.outputs[i].links.length )
+			return true;
+	return false;
+}
+
 
 /**
 * retrieves all the nodes connected to this output slot
@@ -6496,6 +6563,7 @@ LiteGraph.extendClass = function ( target, origin )
 		}
 }
 
+//used to create nodes from wrapping functions
 LiteGraph.getParameterNames = function(func) {
     return (func + '')
       .replace(/[/][/].*$/mg,'') // strip single-line comments
@@ -6505,6 +6573,8 @@ LiteGraph.getParameterNames = function(func) {
       .replace(/=[^,]+/g, '') // strip any ES6 defaults
       .split(',').filter(Boolean); // split & filter [""]
 }
+
+Math.clamp = function(v,a,b) { return (a > v ? a : (b < v ? b : v)); }
 
 if( typeof(window) != "undefined" && !window["requestAnimationFrame"] )
 {
