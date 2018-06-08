@@ -131,11 +131,8 @@ GraphicsImage.prototype.loadImage = function( url, callback )
 
 	this.img = document.createElement("img");
 
-	if(url.substr(0,7) == "http://")
-	{
-		if(LiteGraph.proxy) //proxy external files
-			url = LiteGraph.proxy + url.substr(7);
-	}
+	if(url.substr(0,4) == "http" && LiteGraph.proxy)
+		url = LiteGraph.proxy + url.substr( url.indexOf(":") + 3 );
 
 	this.img.src = url;
 	this.boxcolor = "#F95";
@@ -514,7 +511,7 @@ function ImageVideo()
 {
 	this.addInput("t","number");
 	this.addOutputs([["frame","image"],["t","number"],["d","number"]]);
-	this.properties = {"url":""};
+	this.properties = { url:"", use_proxy: true };
 }
 
 ImageVideo.title = "Video";
@@ -559,6 +556,9 @@ ImageVideo.prototype.onStop = function()
 ImageVideo.prototype.loadVideo = function(url)
 {
 	this._video_url = url;
+
+	if(this.properties.use_proxy && url.substr(0,4) == "http" && LiteGraph.proxy )
+		url = LiteGraph.proxy + url.substr( url.indexOf(":") + 3 );
 
 	this._video = document.createElement("video");
 	this._video.src = url;

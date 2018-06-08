@@ -726,8 +726,23 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 	if( L.length != this._nodes.length && LiteGraph.debug )
 		console.warn("something went wrong, nodes missing");
 
+	var l = L.length;
+
 	//save order number in the node
-	for(var i = 0; i < L.length; ++i)
+	for(var i = 0; i < l; ++i)
+		L[i].order = i;
+
+	//sort now by priority
+	L = L.sort(function(A,B){ 
+		var Ap = A.constructor.priority || A.priority || 0;
+		var Bp = B.constructor.priority || B.priority || 0;
+		if(Ap == Bp)
+			return A.order - B.order;
+		return Ap - Bp;
+	});
+
+	//save order number in the node, again...
+	for(var i = 0; i < l; ++i)
 		L[i].order = i;
 
 	return L;
@@ -6269,6 +6284,17 @@ function ContextMenu( values, options )
 			e.preventDefault(); return true;
 		}
 	}, true);
+
+	function on_mouse_wheel(e)
+	{
+		var pos = parseInt( root.style.top );
+		root.style.top = (pos + e.deltaY * 0.1).toFixed() + "px";
+		e.preventDefault();
+		return true;
+	}
+
+	root.addEventListener("wheel", on_mouse_wheel, true);
+	root.addEventListener("mousewheel", on_mouse_wheel, true);
 
 
 	this.root = root;

@@ -728,8 +728,23 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 	if( L.length != this._nodes.length && LiteGraph.debug )
 		console.warn("something went wrong, nodes missing");
 
+	var l = L.length;
+
 	//save order number in the node
-	for(var i = 0; i < L.length; ++i)
+	for(var i = 0; i < l; ++i)
+		L[i].order = i;
+
+	//sort now by priority
+	L = L.sort(function(A,B){ 
+		var Ap = A.constructor.priority || A.priority || 0;
+		var Bp = B.constructor.priority || B.priority || 0;
+		if(Ap == Bp)
+			return A.order - B.order;
+		return Ap - Bp;
+	});
+
+	//save order number in the node, again...
+	for(var i = 0; i < l; ++i)
 		L[i].order = i;
 
 	return L;
@@ -6272,6 +6287,17 @@ function ContextMenu( values, options )
 		}
 	}, true);
 
+	function on_mouse_wheel(e)
+	{
+		var pos = parseInt( root.style.top );
+		root.style.top = (pos + e.deltaY * 0.1).toFixed() + "px";
+		e.preventDefault();
+		return true;
+	}
+
+	root.addEventListener("wheel", on_mouse_wheel, true);
+	root.addEventListener("mousewheel", on_mouse_wheel, true);
+
 
 	this.root = root;
 
@@ -9517,11 +9543,8 @@ GraphicsImage.prototype.loadImage = function( url, callback )
 
 	this.img = document.createElement("img");
 
-	if(url.substr(0,7) == "http://")
-	{
-		if(LiteGraph.proxy) //proxy external files
-			url = LiteGraph.proxy + url.substr(7);
-	}
+	if(url.substr(0,4) == "http" && LiteGraph.proxy)
+		url = LiteGraph.proxy + url.substr( url.indexOf(":") + 3 );
 
 	this.img.src = url;
 	this.boxcolor = "#F95";
@@ -9900,7 +9923,7 @@ function ImageVideo()
 {
 	this.addInput("t","number");
 	this.addOutputs([["frame","image"],["t","number"],["d","number"]]);
-	this.properties = {"url":""};
+	this.properties = { url:"", use_proxy: true };
 }
 
 ImageVideo.title = "Video";
@@ -9945,6 +9968,9 @@ ImageVideo.prototype.onStop = function()
 ImageVideo.prototype.loadVideo = function(url)
 {
 	this._video_url = url;
+
+	if(this.properties.use_proxy && url.substr(0,4) == "http" && LiteGraph.proxy )
+		url = LiteGraph.proxy + url.substr( url.indexOf(":") + 3 );
 
 	this._video = document.createElement("video");
 	this._video.src = url;
@@ -11557,7 +11583,7 @@ if(typeof(GL) != "undefined")
 		}
 		catch(err)
 		{
-			console.error("image comes from an unsafe location, cannot be uploaded to webgl");
+			console.error("image comes from an unsafe location, cannot be uploaded to webgl: " + err);
 			return;
 		}
 
@@ -12274,7 +12300,7 @@ if(typeof(GL) != "undefined")
 		this.addInput("dirt","Texture");
 		this.addOutput("out","Texture");
 		this.addOutput("glow","Texture");
-		this.properties = { intensity: 1, persistence: 0.99, iterations:16, threshold:0, scale: 1, dirt_factor: 0.5, precision: LGraphTexture.DEFAULT };
+		this.properties = { enabled: true, intensity: 1, persistence: 0.99, iterations:16, threshold:0, scale: 1, dirt_factor: 0.5, precision: LGraphTexture.DEFAULT };
 		this._textures = [];
 		this._uniforms = { u_intensity: 1, u_texture: 0, u_glow_texture: 1, u_threshold: 0, u_texel_size: vec2.create() };
 	}
@@ -12306,7 +12332,7 @@ if(typeof(GL) != "undefined")
 		if(!this.isAnyOutputConnected())
 			return; //saves work
 
-		if(this.properties.precision === LGraphTexture.PASS_THROUGH || this.getInputDataByName("enabled" ) === false )
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH || this.getInputOrProperty("enabled" ) === false )
 		{
 			this.setOutputData(0,tex);
 			return;
@@ -12342,7 +12368,7 @@ if(typeof(GL) != "undefined")
 		uniforms.u_intensity = 1;
 		uniforms.u_delta = this.properties.scale; //1
 
-		//downscale upscale shader
+		//downscale/upscale shader
 		var shader = LGraphTextureGlow._shader;
 		if(!shader)
 			shader = LGraphTextureGlow._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureGlow.scale_pixel_shader );
@@ -12785,7 +12811,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		this.addInput("in","Texture");
 		this.addInput("f","number");
 		this.addOutput("out","Texture");
-		this.properties = { factor: 1, precision: LGraphTexture.LOW };
+		this.properties = { enabled: true, factor: 1, precision: LGraphTexture.LOW };
 
 		this._uniforms = { u_texture: 0, u_factor: 1 };
 	}
@@ -12797,6 +12823,8 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
 	};
 
+	LGraphLensFX.prototype.onGetInputs = function() { return [["enabled","boolean"]]; }
+
 	LGraphLensFX.prototype.onExecute = function()
 	{
 		var tex = this.getInputData(0);
@@ -12805,6 +12833,12 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 		if(!this.isOutputConnected(0))
 			return; //saves work
+
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH || this.getInputOrProperty("enabled" ) === false )
+		{
+			this.setOutputData(0, tex );
+			return;
+		}
 
 		var temp = this._temp_texture;
 		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
@@ -12956,7 +12990,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		this.addInput("in","Texture");
 		this.addInput("avg","number");
 		this.addOutput("out","Texture");
-		this.properties = { scale:1, gamma: 1, average_lum: 1, lum_white: 1, precision: LGraphTexture.LOW };
+		this.properties = { enabled: true, scale:1, gamma: 1, average_lum: 1, lum_white: 1, precision: LGraphTexture.LOW };
 
 		this._uniforms = { 
 			u_texture: 0,
@@ -12987,7 +13021,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		if(!this.isOutputConnected(0))
 			return; //saves work
 
-		if(this.properties.precision === LGraphTexture.PASS_THROUGH || this.getInputDataByName("enabled" ) === false )
+		if(this.properties.precision === LGraphTexture.PASS_THROUGH || this.getInputOrProperty("enabled" ) === false )
 		{
 			this.setOutputData(0, tex );
 			return;
