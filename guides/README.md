@@ -26,6 +26,18 @@ Slots have the next information:
  
  To retrieve the data traveling through a link you can call node.getInputData or node.getOutputData
 
+### Define your Graph Node
+
+When creating a class for a graph node here are some useful points:
+
+- The constructor should create the default inputs and outputs (use ```addInput```  and ```addOutput```)
+- Properties that can be edited are stored in ```this.properties = {};```
+- the ```onExecute``` is the method that will be called when the graph is executed
+- you can catch if a property was changed defining a ```onPropertyChanged```
+- you must register your node using ```LiteGraph.registerNodeType("type/name", MyGraphNodeClass );```
+- you can alter the default priority of execution by defining the ```MyGraphNodeClass.priority``` (default is 0)
+- you can overwrite how the node is rendered using the ```onDrawBackground``` and ```onDrawForeground```
+
 
 ## Integration
 

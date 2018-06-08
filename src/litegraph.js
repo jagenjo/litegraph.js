@@ -84,7 +84,7 @@ var LiteGraph = global.LiteGraph = {
 			console.log("Node registered: " + type);
 
 		var categories = type.split("/");
-		var classname = base_class.constructor.name;
+		var classname = base_class.name;
 
 		var pos = type.lastIndexOf("/");
 		base_class.category = type.substr(0,pos);
@@ -205,7 +205,7 @@ var LiteGraph = global.LiteGraph = {
 		var node = new base_class( title );
 		node.type = type;
 
-		if(!node.title) node.title = title;
+		if(!node.title && title) node.title = title;
 		if(!node.properties) node.properties = {};
 		if(!node.properties_info) node.properties_info = [];
 		if(!node.flags) node.flags = {};
@@ -441,7 +441,7 @@ LGraph.prototype.clear = function()
 
 	this.catch_errors = true;
 
-	//globals
+	//subgraph_data
 	this.global_inputs = {};
 	this.global_outputs = {};
 
@@ -1029,7 +1029,7 @@ LGraph.prototype.findNodesByType = function(type)
 
 /**
 * Returns a list of nodes that matches a name
-* @method findNodesByName
+* @method findNodesByTitle
 * @param {String} name the name of the node to search
 * @return {Array} a list with all the nodes with this name
 */
@@ -1051,7 +1051,6 @@ LGraph.prototype.findNodesByTitle = function(title)
 * @param {Array} nodes_list a list with all the nodes to search from, by default is all the nodes in the graph
 * @return {Array} a list with all the nodes that intersect this coordinate
 */
-
 LGraph.prototype.getNodeOnPos = function(x,y, nodes_list)
 {
 	nodes_list = nodes_list || this._nodes;
@@ -1066,7 +1065,13 @@ LGraph.prototype.getNodeOnPos = function(x,y, nodes_list)
 
 // ********** GLOBALS *****************
 
-//Tell this graph has a global input of this type
+/**
+* Tell this graph it has a global graph input of this type
+* @method addGlobalInput
+* @param {String} name
+* @param {String} type
+* @param {*} value [optional]
+*/
 LGraph.prototype.addGlobalInput = function(name, type, value)
 {
 	this.global_inputs[name] = { name: name, type: type, value: value };
@@ -1078,7 +1083,12 @@ LGraph.prototype.addGlobalInput = function(name, type, value)
 		this.onGlobalsChange();
 }
 
-//assign a data to the global input
+/**
+* Assign a data to the global graph input
+* @method setGlobalInputData
+* @param {String} name
+* @param {*} data
+*/
 LGraph.prototype.setGlobalInputData = function(name, data)
 {
 	var input = this.global_inputs[name];
@@ -1087,7 +1097,21 @@ LGraph.prototype.setGlobalInputData = function(name, data)
 	input.value = data;
 }
 
-//assign a data to the global input
+/**
+* Assign a data to the global graph input (same as setGlobalInputData)
+* @method setInputData
+* @param {String} name
+* @param {*} data
+*/
+LGraph.prototype.setInputData = LGraph.prototype.setGlobalInputData;
+
+
+/**
+* Returns the current value of a global graph input
+* @method getGlobalInputData
+* @param {String} name
+* @return {*} the data
+*/
 LGraph.prototype.getGlobalInputData = function(name)
 {
 	var input = this.global_inputs[name];
@@ -1096,7 +1120,12 @@ LGraph.prototype.getGlobalInputData = function(name)
 	return input.value;
 }
 
-//rename the global input
+/**
+* Changes the name of a global graph input
+* @method renameGlobalInput
+* @param {String} old_name
+* @param {String} new_name
+*/
 LGraph.prototype.renameGlobalInput = function(old_name, name)
 {
 	if(name == old_name)
@@ -1121,6 +1150,12 @@ LGraph.prototype.renameGlobalInput = function(old_name, name)
 		this.onGlobalsChange();
 }
 
+/**
+* Changes the type of a global graph input
+* @method changeGlobalInputType
+* @param {String} name
+* @param {String} type
+*/
 LGraph.prototype.changeGlobalInputType = function(name, type)
 {
 	if(!this.global_inputs[name])
@@ -1134,6 +1169,12 @@ LGraph.prototype.changeGlobalInputType = function(name, type)
 		this.onGlobalInputTypeChanged(name, type);
 }
 
+/**
+* Removes a global graph input
+* @method removeGlobalInput
+* @param {String} name
+* @param {String} type
+*/
 LGraph.prototype.removeGlobalInput = function(name)
 {
 	if(!this.global_inputs[name])
@@ -1149,7 +1190,13 @@ LGraph.prototype.removeGlobalInput = function(name)
 	return true;
 }
 
-
+/**
+* Creates a global graph output
+* @method addGlobalOutput
+* @param {String} name
+* @param {String} type
+* @param {*} value
+*/
 LGraph.prototype.addGlobalOutput = function(name, type, value)
 {
 	this.global_outputs[name] = { name: name, type: type, value: value };
@@ -1161,7 +1208,12 @@ LGraph.prototype.addGlobalOutput = function(name, type, value)
 		this.onGlobalsChange();
 }
 
-//assign a data to the global output
+/**
+* Assign a data to the global output
+* @method setGlobalOutputData
+* @param {String} name
+* @param {String} value
+*/
 LGraph.prototype.setGlobalOutputData = function(name, value)
 {
 	var output = this.global_outputs[ name ];
@@ -1170,7 +1222,12 @@ LGraph.prototype.setGlobalOutputData = function(name, value)
 	output.value = value;
 }
 
-//assign a data to the global input
+/**
+* Returns the current value of a global graph output
+* @method getGlobalOutputData
+* @param {String} name
+* @return {*} the data
+*/
 LGraph.prototype.getGlobalOutputData = function(name)
 {
 	var output = this.global_outputs[name];
@@ -1179,8 +1236,21 @@ LGraph.prototype.getGlobalOutputData = function(name)
 	return output.value;
 }
 
+/**
+* Returns the current value of a global graph output (sames as getGlobalOutputData)
+* @method getOutputData
+* @param {String} name
+* @return {*} the data
+*/
+LGraph.prototype.getOutputData = LGraph.prototype.getGlobalOutputData;
 
-//rename the global output
+
+/**
+* Renames a global graph output
+* @method renameGlobalOutput
+* @param {String} old_name
+* @param {String} new_name
+*/
 LGraph.prototype.renameGlobalOutput = function(old_name, name)
 {
 	if(!this.global_outputs[old_name])
@@ -1202,6 +1272,12 @@ LGraph.prototype.renameGlobalOutput = function(old_name, name)
 		this.onGlobalsChange();
 }
 
+/**
+* Changes the type of a global graph output
+* @method changeGlobalOutputType
+* @param {String} name
+* @param {String} type
+*/
 LGraph.prototype.changeGlobalOutputType = function(name, type)
 {
 	if(!this.global_outputs[name])
@@ -1215,6 +1291,11 @@ LGraph.prototype.changeGlobalOutputType = function(name, type)
 		this.onGlobalOutputTypeChanged(name, type);
 }
 
+/**
+* Removes a global graph output
+* @method removeGlobalOutput
+* @param {String} name
+*/
 LGraph.prototype.removeGlobalOutput = function(name)
 {
 	if(!this.global_outputs[name])
@@ -1229,49 +1310,16 @@ LGraph.prototype.removeGlobalOutput = function(name)
 	return true;
 }
 
-
-/**
-* Assigns a value to all the nodes that matches this name. This is used to create global variables of the node that
-* can be easily accesed from the outside of the graph
-* @method setInputData
-* @param {String} name the name of the node
-* @param {*} value value to assign to this node
-*/
-
-LGraph.prototype.setInputData = function(name,value)
-{
-	var nodes = this.findNodesByName( name );
-	for(var i = 0, l = nodes.length; i < l; ++i)
-		nodes[i].setValue(value);
-}
-
-/**
-* Returns the value of the first node with this name. This is used to access global variables of the graph from the outside
-* @method setInputData
-* @param {String} name the name of the node
-* @return {*} value of the node
-*/
-
-LGraph.prototype.getOutputData = function(name)
-{
-	var n = this.findNodesByName(name);
-	if(n.length)
-		return m[0].getValue();
-	return null;
-}
-
-//This feature is not finished yet, is to create graphs where nodes are not executed unless a trigger message is received
-
 LGraph.prototype.triggerInput = function(name,value)
 {
-	var nodes = this.findNodesByName(name);
+	var nodes = this.findNodesByTitle(name);
 	for(var i = 0; i < nodes.length; ++i)
 		nodes[i].onTrigger(value);
 }
 
 LGraph.prototype.setCallback = function(name,func)
 {
-	var nodes = this.findNodesByName(name);
+	var nodes = this.findNodesByTitle(name);
 	for(var i = 0; i < nodes.length; ++i)
 		nodes[i].setTrigger(func);
 }
@@ -1495,7 +1543,7 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 
 function LGraphNode(title)
 {
-	this._ctor();
+	this._ctor(title);
 }
 
 global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
@@ -1567,6 +1615,7 @@ LGraphNode.prototype.configure = function(info)
 
 		if(info[j] == null)
 			continue;
+
 		else if (typeof(info[j]) == 'object') //object
 		{
 			if(this[j] && this[j].configure)
@@ -1577,6 +1626,9 @@ LGraphNode.prototype.configure = function(info)
 		else //value
 			this[j] = info[j];
 	}
+
+	if(!info.title)
+		this.title = this.constructor.title;
 
 	if(this.onConnectionsChange)
 	{
@@ -1645,24 +1697,30 @@ LGraphNode.prototype.configure = function(info)
 
 LGraphNode.prototype.serialize = function()
 {
-	//clear outputs last data (because data in connections is never serialized but stored inside the outputs info)
-	if(this.outputs)
-		for(var i = 0; i < this.outputs.length; i++)
-			delete this.outputs[i]._data;
-
 	//create serialization object
 	var o = {
 		id: this.id,
-		title: this.title,
 		type: this.type,
 		pos: this.pos,
 		size: this.size,
 		data: this.data,
 		flags: LiteGraph.cloneObject(this.flags),
-		inputs: this.inputs,
-		outputs: this.outputs,
 		mode: this.mode
 	};
+
+	if(this.inputs)
+		o.inputs = this.inputs;
+
+	if(this.outputs)
+	{
+		//clear outputs last data (because data in connections is never serialized but stored inside the outputs info)
+		for(var i = 0; i < this.outputs.length; i++)
+			delete this.outputs[i]._data;
+		o.outputs = this.outputs;
+	}
+
+	if( this.title && this.title != this.constructor.title )
+		o.title = this.title;
 
 	if(this.properties)
 		o.properties = LiteGraph.cloneObject(this.properties);
@@ -1776,7 +1834,7 @@ LGraphNode.prototype.setOutputData = function(slot, data)
 }
 
 /**
-* retrieves the input data (data traveling through the connection) from one slot
+* Retrieves the input data (data traveling through the connection) from one slot
 * @method getInputData
 * @param {number} slot
 * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
@@ -1795,10 +1853,10 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 	if(!link) //bug: weird case but it happens sometimes
 		return null;
 
-	//used to extract data from the incomming connection
 	if(!force_update)
 		return link.data;
 
+	//special case: used to extract data from the incomming connection before the graph has been executed
 	var node = this.graph.getNodeById( link.origin_id );
 	if(!node)
 		return link.data;
@@ -1810,6 +1868,22 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 
 	return link.data;
 }
+
+/**
+* Retrieves the input data from one slot using its name instead of slot number
+* @method getInputDataByName
+* @param {String} slot_name
+* @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
+* @return {*} data or if it is not connected returns null
+*/
+LGraphNode.prototype.getInputDataByName = function( slot_name, force_update )
+{
+	var slot = this.findInputSlot( slot_name );
+	if( slot == -1 )
+		return null;
+	return this.getInputData( slot, force_update );
+}
+
 
 /**
 * tells you if there is a connection in one input slot
@@ -1860,6 +1934,31 @@ LGraphNode.prototype.getInputNode = function( slot )
 	return this.graph.getNodeById( link_info.origin_id );
 }
 
+
+/**
+* returns the value of an input with this name, otherwise checks if there is a property with that name
+* @method getInputOrProperty
+* @param {string} name
+* @return {*} value
+*/
+LGraphNode.prototype.getInputOrProperty = function( name )
+{
+	if(!this.inputs || !this.inputs.length)
+		return this.properties ? this.properties[name] : null;
+
+	for(var i = 0, l = this.inputs.length; i < l; ++i)
+		if(name == this.inputs[i].name)
+		{
+			var link_id = this.inputs[i].link;
+			var link = this.graph.links[ link_id ];
+			return link ? link.data : null;
+		}
+	return this.properties[name];
+}
+
+
+
+
 /**
 * tells you the last output data that went in that slot
 * @method getOutputData
@@ -1903,9 +2002,25 @@ LGraphNode.prototype.getOutputInfo = function(slot)
 LGraphNode.prototype.isOutputConnected = function(slot)
 {
 	if(!this.outputs)
-		return null;
+		return false;
 	return (slot < this.outputs.length && this.outputs[slot].links && this.outputs[slot].links.length);
 }
+
+/**
+* tells you if there is any connection in the output slots
+* @method isAnyOutputConnected
+* @return {boolean}
+*/
+LGraphNode.prototype.isAnyOutputConnected = function()
+{
+	if(!this.outputs)
+		return false;
+	for(var i = 0; i < this.outputs.length; ++i)
+		if( this.outputs[i].links && this.outputs[i].links.length )
+			return true;
+	return false;
+}
+
 
 /**
 * retrieves all the nodes connected to this output slot
@@ -2810,6 +2925,12 @@ function LGraphCanvas( canvas, graph, options )
 	this.title_text_font = "bold 14px Arial";
 	this.inner_text_font = "normal 12px Arial";
 	this.default_link_color = "#AAC";
+	this.default_connection_color = {
+		input_off: "#AAB",
+		input_on: "#7F7",
+		output_off: "#AAB",
+		output_on: "#7F7"
+	};
 
 	this.highquality_render = true;
 	this.editor_alpha = 1; //used for transition
@@ -2827,6 +2948,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.dragging_rectangle = null;
 
 	this.always_render_background = false;
+	this.render_canvas_area = true;
 	this.render_connections_shadows = false; //too much cpu
 	this.render_connections_border = true;
 	this.render_curved_connections = true;
@@ -4540,8 +4662,10 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		//ctx.fillRect( this.visible_area[0] + 10, this.visible_area[1] + 10, this.visible_area[2] - 20, this.visible_area[3] - 20);
 
 		//bg
-		ctx.strokeStyle = "#235";
-		ctx.strokeRect(0,0,canvas.width,canvas.height);
+		if (this.render_canvas_area) {
+			ctx.strokeStyle = "#235";
+			ctx.strokeRect(0,0,canvas.width,canvas.height);
+		}
 
 		if(this.render_connections_shadows)
 		{
@@ -4693,7 +4817,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				if ( this.connecting_node && LiteGraph.isValidConnection( slot.type && out_slot.type ) )
 					ctx.globalAlpha = 0.4 * editor_alpha;
 
-				ctx.fillStyle = slot.link != null ? "#7F7" : "#AAA";
+				ctx.fillStyle = slot.link != null ? this.default_connection_color.input_on : this.default_connection_color.input_off;
 
 				var pos = node.getConnectionPos(true,i);
 				pos[0] -= node.pos[0];
@@ -4737,7 +4861,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				pos[0] -= node.pos[0];
 				pos[1] -= node.pos[1];
 
-				ctx.fillStyle = slot.links && slot.links.length ? "#7F7" : "#AAA";
+				ctx.fillStyle = slot.links && slot.links.length ? this.default_connection_color.output_on : this.default_connection_color.output_off;
 				ctx.beginPath();
 				//ctx.rect( node.size[0] - 14,i*14,10,10);
 
@@ -6442,6 +6566,7 @@ LiteGraph.extendClass = function ( target, origin )
 		}
 }
 
+//used to create nodes from wrapping functions
 LiteGraph.getParameterNames = function(func) {
     return (func + '')
       .replace(/[/][/].*$/mg,'') // strip single-line comments
@@ -6451,6 +6576,8 @@ LiteGraph.getParameterNames = function(func) {
       .replace(/=[^,]+/g, '') // strip any ES6 defaults
       .split(',').filter(Boolean); // split & filter [""]
 }
+
+Math.clamp = function(v,a,b) { return (a > v ? a : (b < v ? b : v)); }
 
 if( typeof(window) != "undefined" && !window["requestAnimationFrame"] )
 {
