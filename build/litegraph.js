@@ -1,5 +1,3 @@
-//packer version
-
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -15976,11 +15974,7 @@ LiteGraph.registerNodeType("audio/destination", LGAudioDestination);
 
 
 
-<<<<<<< HEAD
 })( this );
-=======
-})( this );
->>>>>>> heads/upstream/master
 //event related nodes
 (function(global){
 var LiteGraph = global.LiteGraph;
@@ -16239,8 +16233,4 @@ LGSillyClient.prototype.onGetOutputs = function()
 LiteGraph.registerNodeType("network/sillyclient", LGSillyClient );
 
 
-<<<<<<< HEAD
 })(this);
-=======
-})(this);
->>>>>>> heads/upstream/master
