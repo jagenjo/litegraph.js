@@ -2936,7 +2936,7 @@ function LGraphCanvas( canvas, graph, options )
 
 	this.max_zoom = 10;
 	this.min_zoom = 0.1;
-	this.zoom_modify_alpha = false;
+	this.zoom_modify_alpha = true; //otherwise it generates ugly patterns when scaling down too much
 
 	this.title_text_font = "bold 14px Arial";
 	this.inner_text_font = "normal 12px Arial";
