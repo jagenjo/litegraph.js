@@ -336,7 +336,10 @@ var LiteGraph = global.LiteGraph = {
 			!type_b || //generic input
 			type_a == type_b || //same type (is valid for triggers)
 			type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION )
-				return true;
+        return true;
+
+    type_a = String(type_a) //* Enforce string type to handle toLowerCase call (-1 number not ok)
+    type_b = String(type_b)
 
 		type_a = type_a.toLowerCase();
 		type_b = type_b.toLowerCase();
