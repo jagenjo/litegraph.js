@@ -1,8 +1,6 @@
 const express = require('express')
 const app = express()
 
-// app.get('/hello', (req, res) => res.send('Hello World!'))
-
 app.use('/css', express.static('css'))
 app.use('/src', express.static('src'))
 app.use('/external', express.static('external'))
