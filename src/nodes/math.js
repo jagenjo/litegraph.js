@@ -375,7 +375,7 @@ MathScale.prototype.onExecute = function()
 LiteGraph.registerNodeType("math/scale", MathScale );
 
 
-//Math clamp
+//Math Average
 function MathAverageFilter()
 {
 	this.addInput("in","number");
@@ -424,6 +424,35 @@ MathAverageFilter.prototype.onPropertyChanged = function( name, value )
 }
 
 LiteGraph.registerNodeType("math/average", MathAverageFilter );
+
+
+//Math 
+function MathTendTo()
+{
+	this.addInput("in","number");
+	this.addOutput("out","number");
+	this.addProperty( "factor", 0.1 );
+	this.size = [60,20];
+	this._value = null;
+}
+
+MathTendTo.title = "TendTo";
+MathTendTo.desc = "moves the output value always closer to the input";
+
+MathTendTo.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	if(v == null)
+		v = 0;
+	var f = this.properties.factor;
+	if(this._value == null)
+		this._value = v;
+	else
+		this._value = this._value * (1 - f) + v * f;
+	this.setOutputData( 0, this._value );
+}
+
+LiteGraph.registerNodeType("math/tendTo", MathTendTo );
 
 
 //Math operation
