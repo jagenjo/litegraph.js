@@ -12,16 +12,14 @@ module.exports = function (grunt) {
       'src/nodes/gltextures.js',
       'src/nodes/glfx.js',
       'src/nodes/midi.js',
-      'src/nodes/audio.js'
+      'src/nodes/audio.js',
+      'src/nodes/network.js'
     ],
     concat: {
       build: {
         src: '<%= projectFiles %>',
         dest: 'build/litegraph.js'
       }
-    },
-    clean: {
-      build: {src: ['build/*']}
     },
     closureCompiler: {
 
@@ -42,28 +40,8 @@ module.exports = function (grunt) {
     }
   })
 
-  // grunt.registerTask('buildPackage', function () {
-  //   var pkg = grunt.config.data.pkg
-  //   var newPackage = {
-  //     version: pkg.version,
-  //     name: 'litegraph.js', //* Static name without ogranisation
-  //     main: 'litegraph.js',
-  //     description: pkg.description,
-  //     dependencies: pkg.dependencies,
-  //     author: pkg.author,
-  //     license: 'MIT',
-  //     scripts: {
-
-  //     }
-  //   }
-
-  //   grunt.file.write('build/package.json', JSON.stringify(newPackage, undefined, 2))
-  // })
-
   grunt.loadNpmTasks('grunt-contrib-concat')
-  grunt.loadNpmTasks('grunt-contrib-copy')
   grunt.loadNpmTasks('grunt-closure-tools')
-  grunt.loadNpmTasks('grunt-contrib-clean')
 
   grunt.registerTask('build', ['concat:build', 'closureCompiler'])
 }
