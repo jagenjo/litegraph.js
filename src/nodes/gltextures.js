@@ -105,8 +105,9 @@ if(typeof(GL) != "undefined")
 		var type = ref_texture ? ref_texture.type : gl.UNSIGNED_BYTE;
 		switch( precision )
 		{
-			case LGraphTexture.LOW: type = gl.UNSIGNED_BYTE; break;
 			case LGraphTexture.HIGH: type = gl.HIGH_PRECISION_FORMAT; break;
+			case LGraphTexture.LOW:  type = gl.UNSIGNED_BYTE; break;
+			//no default
 		}
 		return type;
 	}
@@ -580,11 +581,11 @@ if(typeof(GL) != "undefined")
 
 	function LGraphTextureShader()
 	{
-		this.addOutput("Texture","Texture");
+		this.addOutput("out","Texture");
 		this.properties = {code:"", width: 512, height: 512, precision: LGraphTexture.DEFAULT };
 
 		this.properties.code = "\nvoid main() {\n  vec2 uv = v_coord;\n  vec3 color = vec3(0.0);\n//your code here\n\ngl_FragColor = vec4(color, 1.0);\n}\n";
-		this._uniforms = { texSize: vec2.create(), time: time };
+		this._uniforms = { in_texture:0, texSize: vec2.create(), time: 0 };
 	}
 
 	LGraphTextureShader.title = "Shader";
@@ -699,6 +700,7 @@ if(typeof(GL) != "undefined")
 			return;
 
 		var tex_slot = 0;
+		var in_tex = null;
 
 		//set uniforms
 		for(var i = 0; i < this.inputs.length; ++i)
@@ -710,27 +712,32 @@ if(typeof(GL) != "undefined")
 
 			if(data.constructor === GL.Texture)
 			{
-				data.bind(slot);
-				data = slot;
-				slot++;
+				data.bind(tex_slot);
+				if(!in_tex)
+					in_tex = data;
+				data = tex_slot;
+				tex_slot++;
 			}
-			shader.setUniform( info.name, data );
+			shader.setUniform( info.name, data ); //data is tex_slot
 		}
 
 		var uniforms = this._uniforms;
-
-		var type = LGraphTexture.getTextureType( this.properties.precision );
+		var type = LGraphTexture.getTextureType( this.properties.precision, in_tex );
 
 		//render to texture
 		var w = this.properties.width|0;
 		var h = this.properties.height|0;
+		if(w == 0)
+			w = in_tex ? in_tex.width : gl.canvas.width;
+		if(h == 0)
+			h = in_tex ? in_tex.height : gl.canvas.height;
 		uniforms.texSize[0] = w;
 		uniforms.texSize[1] = h;
+		uniforms.time = this.graph.getTime();
 
 		if(!this._tex || this._tex.type != type || this._tex.width != w || this._tex.height != h )
 			this._tex = new GL.Texture( w, h, { type: type, format: gl.RGBA, filter: gl.LINEAR });
 		var tex = this._tex;
-		var time = this.graph.getTime();
 		tex.drawTo(function() {
 			shader.uniforms( uniforms ).draw( GL.Mesh.getScreenQuad() );
 		});
@@ -742,7 +749,7 @@ if(typeof(GL) != "undefined")
 			\n\
 			varying vec2 v_coord;\n\
 			uniform float time;\n\
-			";
+	";
 
 	LiteGraph.registerNodeType("texture/shader", LGraphTextureShader );
 
@@ -3023,6 +3030,88 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 	LiteGraph.registerNodeType("texture/perlin", LGraphTexturePerlin );
 
+
+
+	function LGraphTextureCanvas2D()
+	{
+		this.addOutput("out","Texture");
+		this.properties = { code: "", width: 512, height: 512, precision: LGraphTexture.DEFAULT };
+		this._func = null;
+		this._temp_texture = null;
+	}
+
+	LGraphTextureCanvas2D.title = "Canvas2D";
+	LGraphTextureCanvas2D.desc = "Executes Canvas2D code inside a texture or the viewport";
+
+	LGraphTextureCanvas2D.widgets_info = {
+		precision: { widget:"combo", values: LGraphTexture.MODE_VALUES },
+		code: { type: "code" },
+		width: { type: "Number", precision: 0, step: 1 },
+		height: { type: "Number", precision: 0, step: 1 }
+	};
+
+	LGraphTextureCanvas2D.prototype.onPropertyChanged = function(name, value)
+	{
+		if(name == "code" && LiteGraph.allow_scripts )
+		{
+			this._func = null;
+			try
+			{
+				this._func = new Function( "canvas", "ctx", "time", "script", value );
+				this.boxcolor = "#00FF00";
+			}
+			catch (err)
+			{
+				this.boxcolor = "#FF0000";
+				console.error("Error parsing script");
+				console.error(err);
+			}
+		}
+	}
+
+	LGraphTextureCanvas2D.prototype.onExecute = function()
+	{
+		var func = this._func;
+		if(!func || !this.isOutputConnected(0))
+			return;
+
+		if(!global.enableWebGLCanvas)
+		{
+			console.warn("cannot use LGraphTextureCanvas2D if Canvas2DtoWebGL is not included");
+			return;
+		}
+
+		var width = this.properties.width || gl.canvas.width;
+		var height = this.properties.height || gl.canvas.height;
+		var temp = this._temp_texture;
+		if(!temp || temp.width != width || temp.height != height )
+			temp = this._temp_texture = new GL.Texture( width, height, { format: gl.RGBA, filter: gl.LINEAR });
+
+		var that = this;
+		var time = this.graph.getTime();
+		temp.drawTo(function(){
+			gl.start2D();
+			try
+			{
+				if(func.draw)
+					func.draw.call( that, gl.canvas, gl, time, func );
+				else
+					func.call( that, gl.canvas, gl, time, func );
+				that.boxcolor = "#00FF00";
+			}
+			catch (err)
+			{
+				that.boxcolor = "#FF0000";
+				console.error("Error executing script");
+				console.error(err);
+			}
+			gl.finish2D();
+		});
+
+		this.setOutputData( 0, temp );
+	}
+
+	LiteGraph.registerNodeType("texture/canvas2D", LGraphTextureCanvas2D );
 
 
 	function LGraphTextureMatte()

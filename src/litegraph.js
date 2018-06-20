@@ -3764,6 +3764,8 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 	document.removeEventListener("mouseup", this._mouseup_callback, true );
 
 	this.adjustMouseEvent(e);
+	var now = LiteGraph.getTime();
+	e.click_time = (now - this.last_mouseclick);
 
 	if (e.which == 1) //left button
 	{
@@ -3853,9 +3855,7 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 		{
 			//get node over
 			var node = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
-
-			var now = LiteGraph.getTime();
-			if ( !node && (now - this.last_mouseclick) < 300 )
+			if ( !node && e.click_time < 300 )
 				this.deselectAllNodes();
 
 			this.dirty_canvas = true;
