@@ -64,6 +64,7 @@ var LiteGraph = global.LiteGraph;
 	function WidgetToggle()
 	{
 		this.addInput( "", "boolean" );
+		this.addInput( "e", LiteGraph.ACTION );
 		this.addOutput( "v", "boolean" );
 		this.addOutput( "e", LiteGraph.EVENT );
 		this.properties = { font: "", value: false };
@@ -93,6 +94,12 @@ var LiteGraph = global.LiteGraph;
 		ctx.fillStyle = "#AAA";
 		ctx.fillText( this.title, size + 20, h * 0.85 );
 		ctx.textAlign = "left";
+	}
+
+	WidgetToggle.prototype.onAction = function(action)
+	{
+		this.properties.value = !this.properties.value;
+		this.trigger( "e", this.properties.value );
 	}
 
 	WidgetToggle.prototype.onExecute = function()

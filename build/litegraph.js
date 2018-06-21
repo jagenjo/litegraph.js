@@ -7239,7 +7239,6 @@ DelayEvent.prototype.onAction = function(action, param)
 DelayEvent.prototype.onExecute = function()
 {
 	var dt = this.graph.elapsed_time * 1000; //in ms
-		console.log(this._pending);
 
 	for(var i = 0; i < this._pending.length; ++i)
 	{
@@ -7332,6 +7331,7 @@ var LiteGraph = global.LiteGraph;
 	function WidgetToggle()
 	{
 		this.addInput( "", "boolean" );
+		this.addInput( "e", LiteGraph.ACTION );
 		this.addOutput( "v", "boolean" );
 		this.addOutput( "e", LiteGraph.EVENT );
 		this.properties = { font: "", value: false };
@@ -7361,6 +7361,12 @@ var LiteGraph = global.LiteGraph;
 		ctx.fillStyle = "#AAA";
 		ctx.fillText( this.title, size + 20, h * 0.85 );
 		ctx.textAlign = "left";
+	}
+
+	WidgetToggle.prototype.onAction = function(action)
+	{
+		this.properties.value = !this.properties.value;
+		this.trigger( "e", this.properties.value );
 	}
 
 	WidgetToggle.prototype.onExecute = function()
