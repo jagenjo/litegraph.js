@@ -359,12 +359,7 @@ Watch.prototype.onDrawBackground = function(ctx)
 		if (this.properties["value"].constructor === Number )
 			this.inputs[0].label = this.properties["value"].toFixed(3);
 		else
-		{
-			var str = this.properties["value"];
-			if(str && str.length) //convert typed to array
-				str = Array.prototype.slice.call(str).join(",");
-			this.inputs[0].label = str;
-		}
+			this.inputs[0].label = String(this.properties.value);
 	}
 }
 

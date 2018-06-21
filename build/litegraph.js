@@ -439,6 +439,7 @@ LGraph.prototype.clear = function()
 	this.fixedtime =  0;
 	this.fixedtime_lapse = 0.01;
 	this.elapsed_time = 0.01;
+	this.last_update_time = 0;
 	this.starttime = 0;
 
 	this.catch_errors = true;
@@ -511,6 +512,7 @@ LGraph.prototype.start = function(interval)
 
 	//launch
 	this.starttime = LiteGraph.getTime();
+	this.last_update_time = this.starttime;
 	interval = interval || 1;
 	var that = this;
 
@@ -613,12 +615,15 @@ LGraph.prototype.runStep = function( num, do_not_catch_errors )
 		}
 	}
 
-	var elapsed = LiteGraph.getTime() - start;
+	var now = LiteGraph.getTime();
+	var elapsed = now - start;
 	if (elapsed == 0)
 		elapsed = 1;
-	this.elapsed_time = 0.001 * elapsed;
+	this.execution_time = 0.001 * elapsed;
 	this.globaltime += 0.001 * elapsed;
 	this.iteration += 1;
+	this.elapsed_time = (now - this.last_update_time) * 0.001;
+	this.last_update_time = now;
 }
 
 /**
@@ -6987,12 +6992,7 @@ Watch.prototype.onDrawBackground = function(ctx)
 		if (this.properties["value"].constructor === Number )
 			this.inputs[0].label = this.properties["value"].toFixed(3);
 		else
-		{
-			var str = this.properties["value"];
-			if(str && str.length) //convert typed to array
-				str = Array.prototype.slice.call(str).join(",");
-			this.inputs[0].label = str;
-		}
+			this.inputs[0].label = String(this.properties.value);
 	}
 }
 
@@ -7239,6 +7239,7 @@ DelayEvent.prototype.onAction = function(action, param)
 DelayEvent.prototype.onExecute = function()
 {
 	var dt = this.graph.elapsed_time * 1000; //in ms
+		console.log(this._pending);
 
 	for(var i = 0; i < this._pending.length; ++i)
 	{
@@ -7275,7 +7276,7 @@ var LiteGraph = global.LiteGraph;
 	{
 		this.addOutput( "clicked", LiteGraph.EVENT );
 		this.addProperty( "text","" );
-		this.addProperty( "font","40px Arial" );
+		this.addProperty( "font_size", 40 );
 		this.addProperty( "message", "" );
 		this.size = [64,84];
 	}
@@ -7283,6 +7284,7 @@ var LiteGraph = global.LiteGraph;
 	WidgetButton.title = "Button";
 	WidgetButton.desc = "Triggers an event";
 
+	WidgetButton.font = "Arial";
 	WidgetButton.prototype.onDrawForeground = function(ctx)
 	{
 		if(this.flags.collapsed)
@@ -7299,11 +7301,11 @@ var LiteGraph = global.LiteGraph;
 
 		if( this.properties.text || this.properties.text === 0 )
 		{
+			var font_size = this.properties.font_size || 30;
 			ctx.textAlign = "center";
 			ctx.fillStyle = this.clicked ? "black" : "white";
-			if( this.properties.font )
-				ctx.font = this.properties.font;
-			ctx.fillText(this.properties.text, this.size[0] * 0.5, this.size[1] * 0.85 );
+			ctx.font = font_size + "px " + WidgetButton.font;
+			ctx.fillText( this.properties.text, this.size[0] * 0.5, this.size[1] * 0.5 + font_size * 0.3 );
 			ctx.textAlign = "left";
 		}
 	}
@@ -7374,7 +7376,7 @@ var LiteGraph = global.LiteGraph;
 		if(local_pos[0] > 1 && local_pos[1] > 1 && local_pos[0] < (this.size[0] - 2) && local_pos[1] < (this.size[1] - 2) )
 		{
 			this.properties.value = !this.properties.value;
-			this.trigger( "clicked", this.properties.value );
+			this.trigger( "e", this.properties.value );
 			return true;
 		}
 	}

@@ -437,6 +437,7 @@ LGraph.prototype.clear = function()
 	this.fixedtime =  0;
 	this.fixedtime_lapse = 0.01;
 	this.elapsed_time = 0.01;
+	this.last_update_time = 0;
 	this.starttime = 0;
 
 	this.catch_errors = true;
@@ -509,6 +510,7 @@ LGraph.prototype.start = function(interval)
 
 	//launch
 	this.starttime = LiteGraph.getTime();
+	this.last_update_time = this.starttime;
 	interval = interval || 1;
 	var that = this;
 
@@ -611,12 +613,15 @@ LGraph.prototype.runStep = function( num, do_not_catch_errors )
 		}
 	}
 
-	var elapsed = LiteGraph.getTime() - start;
+	var now = LiteGraph.getTime();
+	var elapsed = now - start;
 	if (elapsed == 0)
 		elapsed = 1;
-	this.elapsed_time = 0.001 * elapsed;
+	this.execution_time = 0.001 * elapsed;
 	this.globaltime += 0.001 * elapsed;
 	this.iteration += 1;
+	this.elapsed_time = (now - this.last_update_time) * 0.001;
+	this.last_update_time = now;
 }
 
 /**

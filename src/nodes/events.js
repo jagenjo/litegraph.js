@@ -122,6 +122,7 @@ DelayEvent.prototype.onAction = function(action, param)
 DelayEvent.prototype.onExecute = function()
 {
 	var dt = this.graph.elapsed_time * 1000; //in ms
+		console.log(this._pending);
 
 	for(var i = 0; i < this._pending.length; ++i)
 	{

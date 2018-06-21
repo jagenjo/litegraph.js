@@ -8,7 +8,7 @@ var LiteGraph = global.LiteGraph;
 	{
 		this.addOutput( "clicked", LiteGraph.EVENT );
 		this.addProperty( "text","" );
-		this.addProperty( "font","40px Arial" );
+		this.addProperty( "font_size", 40 );
 		this.addProperty( "message", "" );
 		this.size = [64,84];
 	}
@@ -16,6 +16,7 @@ var LiteGraph = global.LiteGraph;
 	WidgetButton.title = "Button";
 	WidgetButton.desc = "Triggers an event";
 
+	WidgetButton.font = "Arial";
 	WidgetButton.prototype.onDrawForeground = function(ctx)
 	{
 		if(this.flags.collapsed)
@@ -32,11 +33,11 @@ var LiteGraph = global.LiteGraph;
 
 		if( this.properties.text || this.properties.text === 0 )
 		{
+			var font_size = this.properties.font_size || 30;
 			ctx.textAlign = "center";
 			ctx.fillStyle = this.clicked ? "black" : "white";
-			if( this.properties.font )
-				ctx.font = this.properties.font;
-			ctx.fillText(this.properties.text, this.size[0] * 0.5, this.size[1] * 0.85 );
+			ctx.font = font_size + "px " + WidgetButton.font;
+			ctx.fillText( this.properties.text, this.size[0] * 0.5, this.size[1] * 0.5 + font_size * 0.3 );
 			ctx.textAlign = "left";
 		}
 	}
@@ -107,7 +108,7 @@ var LiteGraph = global.LiteGraph;
 		if(local_pos[0] > 1 && local_pos[1] > 1 && local_pos[0] < (this.size[0] - 2) && local_pos[1] < (this.size[1] - 2) )
 		{
 			this.properties.value = !this.properties.value;
-			this.trigger( "clicked", this.properties.value );
+			this.trigger( "e", this.properties.value );
 			return true;
 		}
 	}
