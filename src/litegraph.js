@@ -5849,15 +5849,21 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 
 	function changeSelection( forward )
 	{
+		var prev = selected;
 		if(selected)
 			selected.classList.remove("selected");
 		if(!selected)
-			selected = helper.childNodes[0];
+			selected = forward ? helper.childNodes[0] : helper.childNodes[ helper.childNodes.length ];
 		else
+		{
 			selected = forward ? selected.nextSibling : selected.previousSibling;
+			if(!selected)
+				selected = prev;
+		}
 		if(!selected)
 			return;
 		selected.classList.add("selected");
+		selected.scrollIntoView();
 	}
 
 	function refreshHelper()

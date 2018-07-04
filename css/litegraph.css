@@ -253,6 +253,11 @@
 	vertical-align: top;
 }
 
+.graphdialog .helper {
+	overflow: auto;
+	max-height: 200px;
+}
+
 .graphdialog .help-item {
 	padding-left: 10px;
 }
