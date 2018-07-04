@@ -115,6 +115,7 @@ var LiteGraph = global.LiteGraph;
 		if(local_pos[0] > 1 && local_pos[1] > 1 && local_pos[0] < (this.size[0] - 2) && local_pos[1] < (this.size[1] - 2) )
 		{
 			this.properties.value = !this.properties.value;
+			this.graph._version++;
 			this.trigger( "e", this.properties.value );
 			return true;
 		}
@@ -202,6 +203,7 @@ var LiteGraph = global.LiteGraph;
 
 		var v = Math.clamp( this.properties.value + steps * this.properties.step, this.properties.min, this.properties.max );
 		this.properties.value = v;
+		this.graph._version++;
 		this.setDirtyCanvas(true);
 	}
 
@@ -211,6 +213,7 @@ var LiteGraph = global.LiteGraph;
 		{
 			var steps = pos[1] > this.size[1] * 0.5 ? -1 : 1;
 			this.properties.value = Math.clamp( this.properties.value + steps * this.properties.step, this.properties.min, this.properties.max );
+			this.graph._version++;
 			this.setDirtyCanvas(true);
 		}
 

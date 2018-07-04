@@ -253,3 +253,13 @@
 	vertical-align: top;
 }
 
+.graphdialog .help-item {
+	padding-left: 10px;
+}
+
+.graphdialog .help-item:hover, .graphdialog .help-item.selected {
+	cursor: pointer;
+	background-color: white;
+	color: black;
+}
+
