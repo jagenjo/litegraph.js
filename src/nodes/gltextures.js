@@ -2552,7 +2552,8 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		if(video_streams.length)
 		{
 			var webcam = video_streams[0];
-			webcam.stop();
+			if( webcam.stop )
+				webcam.stop();
 		}
 
 		this._webcam_stream = null;

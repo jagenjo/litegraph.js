@@ -26,17 +26,20 @@
 
 var LiteGraph = global.LiteGraph = {
 
-	NODE_TITLE_HEIGHT: 16,
+	NODE_TITLE_HEIGHT: 20,
 	NODE_SLOT_HEIGHT: 15,
 	NODE_WIDTH: 140,
 	NODE_MIN_WIDTH: 50,
 	NODE_COLLAPSED_RADIUS: 10,
 	NODE_COLLAPSED_WIDTH: 80,
 	CANVAS_GRID_SIZE: 10,
-	NODE_TITLE_COLOR: "#222",
-	NODE_DEFAULT_COLOR: "#999",
+	NODE_TITLE_COLOR: "#999",
+	NODE_TEXT_SIZE: 14,
+	NODE_TEXT_COLOR: "#AAA",
+	NODE_SUBTEXT_SIZE: 12,
+	NODE_DEFAULT_COLOR: "#333",
 	NODE_DEFAULT_BGCOLOR: "#444",
-	NODE_DEFAULT_BOXCOLOR: "#AEF",
+	NODE_DEFAULT_BOXCOLOR: "#CCC",
 	NODE_DEFAULT_SHAPE: "box",
 	MAX_NUMBER_OF_NODES: 1000, //avoid infinite loops
 	DEFAULT_POSITION: [100,100],//default node position
@@ -340,20 +343,24 @@ var LiteGraph = global.LiteGraph = {
 			type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION )
         return true;
 
-    type_a = String(type_a) //* Enforce string type to handle toLowerCase call (-1 number not ok)
-    type_b = String(type_b)
-
+		// Enforce string type to handle toLowerCase call (-1 number not ok)
+		type_a = String(type_a); 
+		type_b = String(type_b);
 		type_a = type_a.toLowerCase();
 		type_b = type_b.toLowerCase();
+
+		// For nodes supporting multiple connection types
 		if( type_a.indexOf(",") == -1 && type_b.indexOf(",") == -1 )
 			return type_a == type_b;
 
+		// Check all permutations to see if one is valid
 		var supported_types_a = type_a.split(",");
 		var supported_types_b = type_b.split(",");
 		for(var i = 0; i < supported_types_a.length; ++i)
 			for(var j = 0; j < supported_types_b.length; ++j)
 				if( supported_types_a[i] == supported_types_b[j] )
 					return true;
+
 		return false;
 	}
 };
@@ -760,6 +767,40 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 		L[i].order = i;
 
 	return L;
+}
+
+/**
+* Returns all the nodes that could affect this one (ancestors) by crawling all the inputs recursively
+* @method getAncestors
+*/
+LGraph.prototype.getAncestors = function( node )
+{
+	var ancestors = [];
+	var pending = [node];
+	var visited = {};
+
+	while (pending.length)
+	{
+		var current = pending.shift();
+		if(!current.inputs)
+			continue;
+		if( !visited[ current.id ] && current != node )
+		{
+			visited[ current.id ] = true;
+			ancestors.push( current );
+		}
+
+		for(var i = 0; i < current.inputs.length;++i)
+		{
+			var input = current.getInputNode(i);
+			if( input && ancestors.indexOf( input ) == -1)
+			{
+				pending.push( input );
+			}
+		}
+	}
+
+	return ancestors;
 }
 
 /**
@@ -1424,7 +1465,7 @@ LGraph.prototype.serialize = function()
 		last_link_id: this.last_link_id,
 		nodes: nodes_info,
 		links: links, 
-		config: this.config,
+		config: this.config
 	};
 
 	return data;
@@ -2348,9 +2389,10 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 	var rows = Math.max( this.inputs ? this.inputs.length : 1, this.outputs ? this.outputs.length : 1);
 	var size = out || new Float32Array([0,0]);
 	rows = Math.max(rows, 1);
-	size[1] = rows * 14 + 6;
+	var font_size = LiteGraph.NODE_TEXT_SIZE; //although it should be graphcanvas.inner_text_font size
+	size[1] = rows * (font_size + 1) + 4;
 
-	var font_size = 14;
+	var font_size = font_size;
 	var title_width = compute_text_size( this.title );
 	var input_width = 0;
 	var output_width = 0;
@@ -2422,7 +2464,7 @@ LGraphNode.prototype.isPointInsideNode = function(x,y, margin)
 	if(this.flags.collapsed)
 	{
 		//if ( distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
-		if( isInsideRectangle( x, y, this.pos[0] - margin, this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT - margin, LiteGraph.NODE_COLLAPSED_WIDTH + 2 * margin, LiteGraph.NODE_TITLE_HEIGHT + 2 * margin ) )
+		if( isInsideRectangle( x, y, this.pos[0] - margin, this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT - margin, (this._collapsed_width||LiteGraph.NODE_COLLAPSED_WIDTH) + 2 * margin, LiteGraph.NODE_TITLE_HEIGHT + 2 * margin ) )
 			return true;
 	}
 	else if ( (this.pos[0] - 4 - margin) < x && (this.pos[0] + this.size[0] + 4 + margin) > x
@@ -2789,7 +2831,7 @@ LGraphNode.prototype.getConnectionPos = function(is_input, slot_number)
 		if(is_input)
 			return [this.pos[0], this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT * 0.5];
 		else
-			return [this.pos[0] + LiteGraph.NODE_COLLAPSED_WIDTH, this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT * 0.5];
+			return [this.pos[0] + (this._collapsed_width || LiteGraph.NODE_COLLAPSED_WIDTH), this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT * 0.5];
 	}
 
 	if(is_input && slot_number == -1)
@@ -2973,8 +3015,8 @@ function LGraphCanvas( canvas, graph, options )
 	this.min_zoom = 0.1;
 	this.zoom_modify_alpha = true; //otherwise it generates ugly patterns when scaling down too much
 
-	this.title_text_font = "bold 14px Arial";
-	this.inner_text_font = "normal 12px Arial";
+	this.title_text_font = "bold "+LiteGraph.NODE_TEXT_SIZE+"px Arial";
+	this.inner_text_font = "normal "+LiteGraph.NODE_SUBTEXT_SIZE+"px Arial";
 	this.node_title_color = LiteGraph.NODE_TITLE_COLOR;
 	this.default_link_color = "#AAC";
 	this.default_connection_color = {
@@ -3007,17 +3049,20 @@ function LGraphCanvas( canvas, graph, options )
 	this.render_curved_connections = true;
 	this.render_connection_arrows = true;
 
+	this.canvas_mouse = [0,0]; //mouse in canvas graph coordinates, where 0,0 is the top-left corner of the blue rectangle
+
 	//to personalize the search box
 	this.onSearchBox = null;
 	this.onSearchBoxSelection = null;
 
 	this.connections_width = 3;
 
-	this.gui_mouse = {
+	this.gui_data = {
 		node: null,
-		blocked: false,
-		position: [0,0],
-		click: false
+		over_node: null,
+		local_position: [0,0],
+		click_position: [0,0],
+		last_frame_click: false
 	};
 	this.current_node = null;
 
@@ -3211,7 +3256,8 @@ LGraphCanvas.prototype.setCanvas = function( canvas, skip_events )
 	var ctx = this.ctx = canvas.getContext("2d");
 	if(ctx == null)
 	{
-		console.warn("This canvas seems to be WebGL, enabling WebGL renderer");
+		if(!canvas.webgl_enabled)
+			console.warn("This canvas seems to be WebGL, enabling WebGL renderer");
 		this.enableWebGL();
 	}
 
@@ -3332,6 +3378,7 @@ LGraphCanvas.prototype.enableWebGL = function()
 	this.ctx.webgl = true;
 	this.bgcanvas = this.canvas;
 	this.bgctx = this.gl;
+	this.canvas.webgl_enabled = true;
 
 	/*
 	GL.create({ canvas: this.bgcanvas });
@@ -3398,7 +3445,7 @@ LGraphCanvas.prototype.UIinit = function()
 * @param {bool} fgcanvas if the foreground canvas is dirty (the one containing the nodes)
 * @param {bool} bgcanvas if the background canvas is dirty (the one containing the wires)
 */
-LGraphCanvas.prototype.setDirty = function(fgcanvas,bgcanvas)
+LGraphCanvas.prototype.setDirty = function( fgcanvas, bgcanvas )
 {
 	if(fgcanvas)
 		this.dirty_canvas = true;
@@ -3480,15 +3527,25 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	ref_window.document.addEventListener("mousemove", this._mousemove_callback, true ); //catch for the entire window
 	ref_window.document.addEventListener("mouseup", this._mouseup_callback, true );
 
-	var n = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
+	var node = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
 	var skip_dragging = false;
 	var skip_action = false;
 	var now = LiteGraph.getTime();
+
+	this.canvas_mouse[0] = e.canvasX;
+	this.canvas_mouse[1] = e.canvasY;
 
     LiteGraph.closeAllContextMenus( ref_window );
 
 	if(e.which == 1) //left button mouse
 	{
+		this.gui_data.clicked_node = node;
+		if(node)
+		{
+			this.gui_data.click_position[0] = e.canvasX - node.pos[0];
+			this.gui_data.click_position[1] = e.canvasY - node.pos[1];
+		}
+
 		if( e.ctrlKey )
 		{
 			this.dragging_rectangle = new Float32Array(4);
@@ -3503,25 +3560,25 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 		//when clicked on top of a node
 		//and it is not interactive
-		if( n && this.allow_interaction && !skip_action )
+		if( node && this.allow_interaction && !skip_action )
 		{
-			if(!this.live_mode && !n.flags.pinned)
-				this.bringToFront(n); //if it wasnt selected?
+			if( !this.live_mode && !node.flags.pinned )
+				this.bringToFront( node ); //if it wasnt selected?
 
 			//not dragging mouse to connect two slots
-			if(!this.connecting_node && !n.flags.collapsed && !this.live_mode)
+			if(!this.connecting_node && !node.flags.collapsed && !this.live_mode)
 			{
 				//search for outputs
-				if(n.outputs)
-					for(var i = 0, l = n.outputs.length; i < l; ++i)
+				if(node.outputs)
+					for(var i = 0, l = node.outputs.length; i < l; ++i)
 					{
-						var output = n.outputs[i];
-						var link_pos = n.getConnectionPos(false,i);
-						if( isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
+						var output = node.outputs[i];
+						var link_pos = node.getConnectionPos(false,i);
+						if( isInsideRectangle( e.canvasX, e.canvasY, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
 						{
-							this.connecting_node = n;
+							this.connecting_node = node;
 							this.connecting_output = output;
-							this.connecting_pos = n.getConnectionPos(false,i);
+							this.connecting_pos = node.getConnectionPos(false,i);
 							this.connecting_slot = i;
 
 							skip_action = true;
@@ -3530,16 +3587,16 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 					}
 
 				//search for inputs
-				if(n.inputs)
-					for(var i = 0, l = n.inputs.length; i < l; ++i)
+				if(node.inputs)
+					for(var i = 0, l = node.inputs.length; i < l; ++i)
 					{
-						var input = n.inputs[i];
-						var link_pos = n.getConnectionPos(true,i);
+						var input = node.inputs[i];
+						var link_pos = node.getConnectionPos( true, i );
 						if( isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
 						{
 							if(input.link !== null)
 							{
-								n.disconnectInput(i);
+								node.disconnectInput(i);
 								this.dirty_bgcanvas = true;
 								skip_action = true;
 							}
@@ -3547,18 +3604,18 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 					}
 
 				//Search for corner
-				if( !skip_action && isInsideRectangle(e.canvasX, e.canvasY, n.pos[0] + n.size[0] - 5, n.pos[1] + n.size[1] - 5 ,5,5 ))
+				if( !skip_action && isInsideRectangle(e.canvasX, e.canvasY, node.pos[0] + node.size[0] - 5, node.pos[1] + node.size[1] - 5 ,5,5 ))
 				{
-					this.resizing_node = n;
+					this.resizing_node = node;
 					this.canvas.style.cursor = "se-resize";
 					skip_action = true;
 				}
 			}
 
 			//Search for corner
-			if( !skip_action && isInsideRectangle(e.canvasX, e.canvasY, n.pos[0], n.pos[1] - LiteGraph.NODE_TITLE_HEIGHT ,LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT ))
+			if( !skip_action && isInsideRectangle(e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT ))
 			{
-				n.collapse();
+				node.collapse();
 				skip_action = true;
 			}
 
@@ -3568,27 +3625,25 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				var block_drag_node = false;
 
 				//widgets
-				this.gui_mouse.node = n;
-				this.gui_mouse.position[0] = e.canvasX - n.pos[0];
-				this.gui_mouse.position[1] = e.canvasY - n.pos[1];
-				this.gui_mouse.clicked = true;
+				this.gui_data.node = node;
+				this.gui_data.last_frame_click = true;
 
-				if( this.gui_mouse.blocked )
-					block_drag_node = true;
+				if( node.gui_rects )
+					block_drag_node = this.testGUIRect( node, this.canvas_mouse );
 
 				//double clicking
-				if ((now - this.last_mouseclick) < 300 && this.selected_nodes[n.id])
+				if ((now - this.last_mouseclick) < 300 && this.selected_nodes[ node.id ])
 				{
 					//double click node
-					if( n.onDblClick)
-						n.onDblClick(e);
-					this.processNodeDblClicked(n);
+					if( node.onDblClick)
+						node.onDblClick(e);
+					this.processNodeDblClicked( node );
 					block_drag_node = true;
 				}
 
 				//if do not capture mouse
 
-				if( n.onMouseDown && n.onMouseDown(e, [e.canvasX - n.pos[0], e.canvasY - n.pos[1]] ) )
+				if( node.onMouseDown && node.onMouseDown( e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]] ) )
 					block_drag_node = true;
 				else if(this.live_mode)
 				{
@@ -3599,10 +3654,9 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				if(!block_drag_node)
 				{
 					if(this.allow_dragnodes)
-						this.node_dragged = n;
-
-					if(!this.selected_nodes[n.id])
-						this.processNodeSelected(n,e);
+						this.node_dragged = node;
+					if(!this.selected_nodes[ node.id ])
+						this.processNodeSelected( node, e );
 				}
 
 				this.dirty_canvas = true;
@@ -3615,7 +3669,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				setTimeout( function(){ that.showSearchBox(e); },10 );
 		}
 
-		if(!skip_action && clicking_canvas_bg && this.allow_dragcanvas)
+		if( !skip_action && clicking_canvas_bg && this.allow_dragcanvas )
 		{
 			this.dragging_canvas = true;
 		}
@@ -3626,7 +3680,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	}
 	else if (e.which == 3) //right button
 	{
-		this.processContextMenu(n,e);
+		this.processContextMenu( node, e );
 	}
 
 	//TODO
@@ -3636,7 +3690,6 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	this.last_mouse[0] = e.localX;
 	this.last_mouse[1] = e.localY;
 	this.last_mouseclick = LiteGraph.getTime();
-	this.canvas_mouse = [e.canvasX, e.canvasY];
 
 	/*
 	if( (this.dirty_canvas || this.dirty_bgcanvas) && this.rendering_timer_id == null)
@@ -3669,7 +3722,8 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 	var mouse = [e.localX, e.localY];
 	var delta = [mouse[0] - this.last_mouse[0], mouse[1] - this.last_mouse[1]];
 	this.last_mouse = mouse;
-	this.canvas_mouse = [e.canvasX, e.canvasY];
+	this.canvas_mouse[0] = e.canvasX;
+	this.canvas_mouse[1] = e.canvasY;
 
 	if( this.dragging_rectangle )
 	{
@@ -3690,12 +3744,12 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 			this.dirty_canvas = true;
 
 		//get node over
-		var n = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
+		var node = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
 
 		//remove mouseover flag
 		for(var i = 0, l = this.graph._nodes.length; i < l; ++i)
 		{
-			if(this.graph._nodes[i].mouseOver && n != this.graph._nodes[i])
+			if(this.graph._nodes[i].mouseOver && node != this.graph._nodes[i])
 			{
 				//mouse leave
 				this.graph._nodes[i].mouseOver = false;
@@ -3707,36 +3761,40 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 		}
 
 		//mouse over a node
-		if(n)
+		if(node)
 		{
 			//this.canvas.style.cursor = "move";
-			if(!n.mouseOver)
+			if(!node.mouseOver)
 			{
 				//mouse enter
-				n.mouseOver = true;
-				this.node_over = n;
+				node.mouseOver = true;
+				this.node_over = node;
 				this.dirty_canvas = true;
 
-				if(n.onMouseEnter) n.onMouseEnter(e);
+				if(node.onMouseEnter) node.onMouseEnter(e);
 			}
 
-			if(n.onMouseMove) n.onMouseMove(e);
+			//in case the node wants to do something
+			if(node.onMouseMove)
+				node.onMouseMove(e);
 
-			//on top of input
+			//if dragging a link 
 			if(this.connecting_node)
 			{
 				var pos = this._highlight_input || [0,0]; //to store the output of isOverNodeInput
 
-				if( this.isOverNodeBox( n, e.canvasX, e.canvasY ) )
+				//on top of input
+				if( this.isOverNodeBox( node, e.canvasX, e.canvasY ) )
 				{
 					//mouse on top of the corner box, dont know what to do
 				}
 				else
 				{
-					var slot = this.isOverNodeInput( n, e.canvasX, e.canvasY, pos );
-					if(slot != -1 && n.inputs[slot])
+					//check if I have a slot below de mouse
+					var slot = this.isOverNodeInput( node, e.canvasX, e.canvasY, pos );
+					if(slot != -1 && node.inputs[slot] )
 					{
-						var slot_type = n.inputs[slot].type;
+						var slot_type = node.inputs[slot].type;
 						if( LiteGraph.isValidConnection( this.connecting_output.type, slot_type ) )
 							this._highlight_input = pos;
 					}
@@ -3746,15 +3804,18 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 			}
 
 			//Search for corner
-			if( isInsideRectangle(e.canvasX, e.canvasY, n.pos[0] + n.size[0] - 5, n.pos[1] + n.size[1] - 5 ,5,5 ))
-				this.canvas.style.cursor = "se-resize";
-			else
-				this.canvas.style.cursor = null;
+			if(this.canvas)
+			{
+				if( isInsideRectangle(e.canvasX, e.canvasY, node.pos[0] + node.size[0] - 5, node.pos[1] + node.size[1] - 5 ,5,5 ))
+					this.canvas.style.cursor = "se-resize";
+				else
+					this.canvas.style.cursor = null;
+			}
 		}
-		else
+		else if(this.canvas)
 			this.canvas.style.cursor = null;
 
-		if(this.node_capturing_input && this.node_capturing_input != n && this.node_capturing_input.onMouseMove)
+		if(this.node_capturing_input && this.node_capturing_input != node && this.node_capturing_input.onMouseMove)
 		{
 			this.node_capturing_input.onMouseMove(e);
 		}
@@ -3831,6 +3892,8 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 
 	if (e.which == 1) //left button
 	{
+		this.gui_data.clicked_node = null;
+
 		if( this.dragging_rectangle )
 		{
 			if(this.graph)
@@ -4380,9 +4443,17 @@ LGraphCanvas.prototype.centerOnNode = function(node)
 
 LGraphCanvas.prototype.adjustMouseEvent = function(e)
 {
-	var b = this.canvas.getBoundingClientRect();
-	e.localX = e.pageX - b.left;
-	e.localY = e.pageY - b.top;
+	if(this.canvas)
+	{
+		var b = this.canvas.getBoundingClientRect();
+		e.localX = e.pageX - b.left;
+		e.localY = e.pageY - b.top;
+	}
+	else
+	{
+		e.localX = e.pageX;
+		e.localY = e.pageY;
+	}
 
 	e.canvasX = e.localX / this.scale - this.offset[0];
 	e.canvasY = e.localY / this.scale - this.offset[1];
@@ -4390,7 +4461,7 @@ LGraphCanvas.prototype.adjustMouseEvent = function(e)
 
 LGraphCanvas.prototype.setZoom = function(value, zooming_center)
 {
-	if(!zooming_center)
+	if(!zooming_center && this.canvas)
 		zooming_center = [this.canvas.width * 0.5,this.canvas.height * 0.5];
 
 	var center = this.convertOffsetToCanvas( zooming_center );
@@ -4475,6 +4546,11 @@ LGraphCanvas.prototype.computeVisibleNodes = function( nodes, out )
 		if(!overlapBounding( this.visible_area, n.getBounding( temp ) ))
 			continue; //out of the visible area
 
+		//test mouse too
+		if( this.canvas_mouse[0] > n.pos[0] && this.canvas_mouse[0] <= (n.pos[0] + n.size[0]) &&
+			this.canvas_mouse[1] > n.pos[1] && this.canvas_mouse[1] <= (n.pos[1] + n.size[1]) )
+				this.gui_data.over_node = n;
+
 		visible_nodes.push(n);
 	}
 	return visible_nodes;
@@ -4509,6 +4585,8 @@ LGraphCanvas.prototype.draw = function(force_canvas, force_bgcanvas)
 
 LGraphCanvas.prototype.drawFrontCanvas = function()
 {
+	this.dirty_canvas = false;
+
 	if(!this.ctx)
 		this.ctx = this.bgcanvas.getContext("2d");
 	var ctx = this.ctx;
@@ -4519,7 +4597,6 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 		ctx.start2D();
 
 	var canvas = this.canvas;
-	this.gui_mouse.blocked = false;
 
 	//reset in case of error
 	ctx.restore();
@@ -4558,7 +4635,7 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 		//apply transformations
 		ctx.save();
 		ctx.scale(this.scale,this.scale);
-		ctx.translate(this.offset[0],this.offset[1]);
+		ctx.translate( this.offset[0],this.offset[1] );
 
 		//draw nodes
 		var drawn_nodes = 0;
@@ -4573,7 +4650,7 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 			ctx.translate( node.pos[0], node.pos[1] );
 
 			//Draw
-			this.drawNode(node, ctx );
+			this.drawNode( node, ctx );
 			drawn_nodes += 1;
 
 			//Restore
@@ -4634,9 +4711,9 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 	if(ctx.finish2D) //this is a function I use in webgl renderer
 		ctx.finish2D();
 
-	this.dirty_canvas = false;
-	this.gui_mouse.node = null;
-	this.gui_mouse.clicked = false;
+	this.gui_data.node = null;
+	this.gui_data.over_node = null;
+	this.gui_data.last_frame_click = false;
 }
 
 LGraphCanvas.prototype.renderInfo = function( ctx, x, y )
@@ -4689,6 +4766,10 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		ctx.lineWidth = 1;
 	}
 
+	var bg_already_painted = false;
+	if(this.onRenderBackground)
+		bg_already_painted = this.onRenderBackground();
+
 	//reset in case of error
 	ctx.restore();
 	ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -4701,7 +4782,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		ctx.translate(this.offset[0],this.offset[1]);
 
 		//render BG
-		if(this.background_image && this.scale > 0.5)
+		if(this.background_image && this.scale > 0.5 && !bg_already_painted)
 		{
 			if (this.zoom_modify_alpha)
 				ctx.globalAlpha = (1.0 - 0.5 / this.scale) * this.editor_alpha;
@@ -4850,33 +4931,27 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	temp_vec2.set( node.size );
 	if(node.flags.collapsed)
 	{
-		size[0] = LiteGraph.NODE_COLLAPSED_WIDTH;
+		ctx.font = this.inner_text_font;
+		node._collapsed_width = Math.min( node.size[0], ctx.measureText(node.title).width + 40 );//LiteGraph.NODE_COLLAPSED_WIDTH;
+		size[0] = node._collapsed_width;
 		size[1] = 0;
 	}
-
-	//Start clipping
-	if(node.flags.clip_area)
+	
+	if(node.flags.clip_area) //Start clipping
 	{
 		ctx.save();
+		ctx.beginPath();
 		if(shape == LiteGraph.BOX_SHAPE)
-		{
-			ctx.beginPath();
 			ctx.rect(0,0,size[0], size[1]);
-		}
 		else if (shape == LiteGraph.ROUND_SHAPE)
-		{
 			ctx.roundRect(0,0,size[0], size[1],10);
-		}
 		else if (shape == LiteGraph.CIRCLE_SHAPE)
-		{
-			ctx.beginPath();
 			ctx.arc(size[0] * 0.5, size[1] * 0.5, size[0] * 0.5, 0, Math.PI*2);
-		}
 		ctx.clip();
 	}
 
 	//draw shape
-	this.drawNodeShape(node, ctx, size, color, node.bgcolor, !render_title, node.selected );
+	this.drawNodeShape( node, ctx, size, color, node.bgcolor, !render_title, node.selected );
 	ctx.shadowColor = "transparent";
 
 	//connection slots
@@ -4922,7 +4997,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 					var text = slot.label != null ? slot.label : slot.name;
 					if(text)
 					{
-						ctx.fillStyle = color;
+						ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
 						ctx.fillText(text,pos[0] + 10,pos[1] + 5);
 					}
 				}
@@ -4968,7 +5043,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 					var text = slot.label != null ? slot.label : slot.name;
 					if(text)
 					{
-						ctx.fillStyle = color;
+						ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
 						ctx.fillText(text, pos[0] - 10,pos[1] + 5);
 					}
 				}
@@ -4977,9 +5052,57 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		ctx.textAlign = "left";
 		ctx.globalAlpha = 1;
 
+		//draw foreground
 		if(node.onDrawForeground)
+		{
+			//immediate gui stuff
+			if( node.gui_rects )
+				node.gui_rects.length = 0;
+			this.gui_data.local_position[0] = this.canvas_mouse[0] - node.pos[0];
+			this.gui_data.local_position[1] = this.canvas_mouse[1] - node.pos[1];
 			node.onDrawForeground( ctx, this );
-	}//!collapsed
+		}
+	}
+	else //if collapsed
+	{
+		if(node.inputs)
+		{
+			for(var i = 0; i < node.inputs.length; i++)
+			{
+				var slot = node.inputs[i];
+				if( slot.link == null )
+					continue;
+				ctx.fillStyle = this.default_connection_color.input_on;
+				ctx.beginPath();
+				if ( slot.type === LiteGraph.EVENT )
+					ctx.rect(0.5, 4 - LiteGraph.NODE_TITLE_HEIGHT + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
+				else
+					ctx.arc( 0, LiteGraph.NODE_TITLE_HEIGHT * -0.5, 4, 0, Math.PI*2 );
+				ctx.fill();
+				break;
+			}
+		}
+
+		if(node.outputs)
+		{
+			for(var i = 0; i < node.outputs.length; i++)
+			{
+				var slot = node.outputs[i];
+				if(!slot.links || !slot.links.length)
+					continue;
+				ctx.fillStyle = this.default_connection_color.output_on;
+				ctx.strokeStyle = "black";
+				ctx.beginPath();
+				if (slot.type === LiteGraph.EVENT)
+					ctx.rect( node._collapsed_width - 4 + 0.5, 4 - LiteGraph.NODE_TITLE_HEIGHT + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
+				else
+					ctx.arc( node._collapsed_width, LiteGraph.NODE_TITLE_HEIGHT * -0.5, 4, 0, Math.PI*2 );
+				ctx.fill();
+				ctx.stroke();
+			}
+		}
+		
+	}
 
 	if(node.flags.clip_area)
 		ctx.restore();
@@ -5004,7 +5127,7 @@ LGraphCanvas.prototype.drawNodeShape = function(node, ctx, size, fgcolor, bgcolo
 
 	var title_height = LiteGraph.NODE_TITLE_HEIGHT;
 
-	//render depending on shape
+	//render node area depending on shape
 	var shape = node._shape || LiteGraph.BOX_SHAPE;
 	if(shape == LiteGraph.BOX_SHAPE)
 	{
@@ -5012,17 +5135,11 @@ LGraphCanvas.prototype.drawNodeShape = function(node, ctx, size, fgcolor, bgcolo
 		ctx.rect(0,no_title ? 0 : -title_height, size[0]+1, no_title ? size[1] : size[1] + title_height);
 		ctx.fill();
 		ctx.shadowColor = "transparent";
-
-		if(selected)
-		{
-			ctx.strokeStyle = "#CCC";
-			ctx.strokeRect(-0.5,no_title ? -0.5 : -title_height + -0.5, size[0]+2, no_title ? (size[1]+2) : (size[1] + title_height+2) - 1);
-			ctx.strokeStyle = fgcolor;
-		}
 	}
 	else if (shape == LiteGraph.ROUND_SHAPE)
 	{
-		ctx.roundRect(0,no_title ? 0 : -title_height,size[0], no_title ? size[1] : size[1] + title_height, 10);
+		ctx.beginPath();
+		ctx.roundRect(0,no_title ? 0 : -title_height,size[0], no_title ? size[1] : size[1] + title_height, title_height*0.5);
 		ctx.fill();
 	}
 	else if (shape == LiteGraph.CIRCLE_SHAPE)
@@ -5031,10 +5148,7 @@ LGraphCanvas.prototype.drawNodeShape = function(node, ctx, size, fgcolor, bgcolo
 		ctx.arc(size[0] * 0.5, size[1] * 0.5, size[0] * 0.5, 0, Math.PI*2);
 		ctx.fill();
 	}
-
 	ctx.shadowColor = "transparent";
-
-	//ctx.stroke();
 
 	//image
 	if (node.bgImage && node.bgImage.width)
@@ -5044,44 +5158,52 @@ LGraphCanvas.prototype.drawNodeShape = function(node, ctx, size, fgcolor, bgcolo
 		node.bgImage = node.loadImage(node.bgImageUrl);
 
 	if( node.onDrawBackground )
+	{
+		//immediate gui stuff
+		if( node.gui_rects )
+			node.gui_rects.length = 0;
+		this.gui_data.local_position[0] = this.canvas_mouse[0] - node.pos[0];
+		this.gui_data.local_position[1] = this.canvas_mouse[1] - node.pos[1];
 		node.onDrawBackground( ctx, this );
+	}
 
 	//title bg (remember, it is rendered ABOVE the node
 	if(!no_title)
 	{
-		ctx.fillStyle = fgcolor || LiteGraph.NODE_DEFAULT_COLOR;
-		var old_alpha = ctx.globalAlpha;
-		ctx.globalAlpha = 0.5 * old_alpha;
-		if(shape == LiteGraph.BOX_SHAPE)
+		if(!node.flags.collapsed)
 		{
+			ctx.fillStyle = fgcolor || LiteGraph.NODE_DEFAULT_COLOR;
+			var old_alpha = ctx.globalAlpha;
+			//ctx.globalAlpha = 0.5 * old_alpha;
 			ctx.beginPath();
-			ctx.rect(0, -title_height, size[0]+1, title_height);
-			ctx.fill()
-			//ctx.stroke();
+			if(shape == LiteGraph.BOX_SHAPE)
+			{
+				ctx.rect(0, -title_height, size[0]+1, title_height);
+				ctx.fill()
+				//ctx.stroke();
+			}
+			else if (shape == LiteGraph.ROUND_SHAPE)
+			{
+				ctx.roundRect(0,-title_height,size[0], title_height,10, node.flags.collapsed ? 10 : 0);
+				ctx.fill();
+			}
+			/*
+			else if (shape == LiteGraph.CIRCLE_SHAPE)
+			{
+				ctx.beginPath();
+				ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 6) *0.5,0,Math.PI*2);
+				ctx.fill();
+			}
+			*/
 		}
-		else if (shape == LiteGraph.ROUND_SHAPE)
-		{
-			ctx.roundRect(0,-title_height,size[0], title_height,10,0);
-			//ctx.fillRect(0,8,size[0],NODE_TITLE_HEIGHT - 12);
-			ctx.fill();
-			//ctx.stroke();
-		}
-		/*
-		else if (shape == LiteGraph.CIRCLE_SHAPE)
-		{
-			ctx.beginPath();
-			ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 6) *0.5,0,Math.PI*2);
-			ctx.fill();
-		}
-		*/
 
 		//title box
 		ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
 		ctx.beginPath();
 		if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CIRCLE_SHAPE)
-			ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 6) *0.5,0,Math.PI*2);
+			ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 8) *0.5,0,Math.PI*2);
 		else
-			ctx.rect(3,-title_height + 3,title_height - 6,title_height - 6);
+			ctx.rect(4,-title_height + 4,title_height - 8,title_height - 8);
 		ctx.fill();
 		ctx.globalAlpha = old_alpha;
 
@@ -5090,13 +5212,43 @@ LGraphCanvas.prototype.drawNodeShape = function(node, ctx, size, fgcolor, bgcolo
 		var title = node.getTitle();
 		if(title && this.scale > 0.5)
 		{
-			ctx.fillStyle = this.node_title_color;
-			ctx.fillText( title, 16, 13 - title_height );
+			if( node.flags.collapsed )
+			{
+				ctx.textAlign =  "center";
+				ctx.fillStyle = this.node_title_color;
+				var measure = ctx.measureText(title);
+				ctx.fillText( title, title_height + measure.width * 0.5, -title_height * 0.2 );
+				ctx.textAlign =  "left";
+			}
+			else
+			{
+				ctx.textAlign =  "left";
+				ctx.fillStyle = this.node_title_color;
+				ctx.fillText( title, title_height, -title_height * 0.2 );
+			}
 		}
+	}
+
+	//render selection marker
+	if(selected)
+	{
+		ctx.lineWidth = 1;
+		ctx.beginPath();
+		if(shape == LiteGraph.BOX_SHAPE)
+			ctx.rect(-4,-4 + (no_title ? 0 : -title_height), 8 + size[0]+1, 8 + (no_title ? size[1] : size[1] + title_height));
+		else if (shape == LiteGraph.ROUND_SHAPE)
+			ctx.roundRect(-4, -4 + (no_title ? 0 : -title_height), 8 + size[0], 8 + (no_title ? size[1] : size[1] + title_height), title_height*0.7);
+		else if (shape == LiteGraph.CIRCLE_SHAPE)
+			ctx.arc(size[0] * 0.5, size[1] * 0.5, size[0] * 0.5 + 4, 0, Math.PI*2);
+		ctx.strokeStyle = "#DDD";
+		ctx.stroke();
+		ctx.strokeStyle = fgcolor;
 	}
 }
 
 /* Renders the node when collapsed */
+// NOT IN USE RIGHT NOW, DEPRECATED!!!!!!!!!!!!!!!!!!!!!
+/*
 LGraphCanvas.prototype.drawNodeCollapsed = function(node, ctx, fgcolor, bgcolor)
 {
 	//draw default collapsed shape
@@ -5104,10 +5256,10 @@ LGraphCanvas.prototype.drawNodeCollapsed = function(node, ctx, fgcolor, bgcolor)
 	ctx.fillStyle = bgcolor || LiteGraph.NODE_DEFAULT_BGCOLOR;
 
 	var collapsed_radius = LiteGraph.NODE_COLLAPSED_RADIUS;
-
-	//circle shape
+	
 	var shape = node._shape || LiteGraph.BOX_SHAPE;
-	if(shape == LiteGraph.CIRCLE_SHAPE)
+
+	if(shape == LiteGraph.CIRCLE_SHAPE) //circle shape
 	{
 		ctx.beginPath();
 		ctx.arc(node.size[0] * 0.5, node.size[1] * 0.5, collapsed_radius,0,Math.PI * 2);
@@ -5123,7 +5275,7 @@ LGraphCanvas.prototype.drawNodeCollapsed = function(node, ctx, fgcolor, bgcolor)
 	else if(shape == LiteGraph.ROUND_SHAPE) //rounded box
 	{
 		ctx.beginPath();
-		ctx.roundRect(node.size[0] * 0.5 - collapsed_radius, node.size[1] * 0.5 - collapsed_radius, 2*collapsed_radius,2*collapsed_radius,5);
+		ctx.roundRect(node.size[0] * 0.5 - collapsed_radius, node.size[1] * 0.5 - collapsed_radius, 2*collapsed_radius,2*collapsed_radius,collapsed_radius*0.5);
 		ctx.fill();
 		ctx.shadowColor = "rgba(0,0,0,0)";
 		ctx.stroke();
@@ -5149,6 +5301,7 @@ LGraphCanvas.prototype.drawNodeCollapsed = function(node, ctx, fgcolor, bgcolor)
 		ctx.fill();
 	}
 }
+*/
 
 //OPTIMIZE THIS: precatch connections position instead of recomputing them every time
 LGraphCanvas.prototype.drawConnections = function(ctx)
@@ -5318,13 +5471,44 @@ LGraphCanvas.prototype.computeConnectionPoint = function(a,b,t)
 	return [x,y];
 }
 
+LGraphCanvas.prototype.addGUIRect = function( node, rect )
+{
+	if(!node.gui_rects)
+		node.gui_rects = [];
+	if(node.gui_rects.length > 10) //safety first
+		return;
+	node.gui_rects.push( rect );
+}
+
+LGraphCanvas.prototype.testGUIRect = function( node, pos )
+{
+	if(!node.gui_rects || !node.gui_rects.length)
+		return false;
+
+	var x = pos[0] - node.pos[0];
+	var y = pos[1] - node.pos[1];
+
+	for(var i = 0; i < node.gui_rects.length; ++i)
+	{
+		var rect = node.gui_rects[i];
+		if( x > rect[0] && x < (rect[0] + rect[2]) && y > rect[1] && y < (rect[1] + rect[3]) )
+			return true
+	}
+	return false;
+}
+
 LGraphCanvas.prototype.guiButton = function( ctx, rect, text, callback )
 {
-	var mouse = this.gui_mouse;
+	if(!rect)
+		throw("No area");
 
-	var mouse_over = mouse.position[0] >= rect[0] && mouse.position[1] >= rect[1] && mouse.position[0] < rect[0] + rect[2] && mouse.position[1] < rect[1] + rect[3];
-	//if(mouse_over) this.setDirty(true,false);
-	var clicked = mouse.node == this.current_node && mouse.clicked && mouse_over;
+	var gui_data = this.gui_data;
+
+	var node = this.current_node;
+	this.addGUIRect( node, rect );
+
+	var mouse_over = gui_data.local_position[0] >= rect[0] && gui_data.local_position[1] >= rect[1] && gui_data.local_position[0] < rect[0] + rect[2] && gui_data.local_position[1] < rect[1] + rect[3];
+	var clicked = gui_data.over_node == node && gui_data.last_frame_click && mouse_over;
 
 	ctx.fillStyle = clicked ? "#AAA" : ( mouse_over ? "#555" : "#333" );
 	ctx.fillRect( rect[0], rect[1], rect[2], rect[3] );
@@ -5336,10 +5520,77 @@ LGraphCanvas.prototype.guiButton = function( ctx, rect, text, callback )
 
 	if(clicked)
 	{
-		mouse.blocked = true;
+		this.node_dragged = null;
 		if(callback)
-			setTimeout( function(){ callback(this.current_node,text,mouse); }),1;
+			setTimeout( function(){ callback( this.current_node, text, gui_data.local_position ); },1 );
+		return true;
 	}
+	return false;
+}
+
+LGraphCanvas.prototype.guiSlider = function( ctx, rect, value, left_value, right_value, text )
+{
+	if(!rect)
+		throw("No area");
+
+	var gui_data = this.gui_data;
+	var node = this.current_node;
+	this.addGUIRect( node, rect );
+
+	var node = this.current_node;
+	var mouse_over = gui_data.local_position[0] >= rect[0] && gui_data.local_position[1] >= rect[1] && gui_data.local_position[0] < rect[0] + rect[2] && gui_data.local_position[1] - 2 < rect[1] + rect[3];
+	var clicked = gui_data.over_node == node && gui_data.last_frame_click && mouse_over;
+	var dragging = false;
+	
+	if( gui_data.clicked_node == node )
+		dragging = gui_data.click_position[0] >= rect[0] && gui_data.click_position[1] >= rect[1] && gui_data.click_position[0] < rect[0] + rect[2] && gui_data.click_position[1] - 2 < rect[1] + rect[3];
+
+	if(left_value === undefined)
+		left_value = 0;
+	if(right_value === undefined)
+		right_value = 1;
+	value = Number(value);
+	left_value = Number(left_value);
+	right_value = Number(right_value);
+
+	var range = right_value - left_value;
+	var norm_value = (value - left_value) / range;
+	if(norm_value < 0) norm_value = 0;
+	if(norm_value > 1) norm_value = 1;
+
+	var margin = Math.max(1,rect[3]*0.05);
+
+	if(clicked || dragging)
+	{
+		norm_value = ( gui_data.local_position[0] - (rect[0] + margin)) / (rect[2] - margin*2);
+		if(norm_value < 0) norm_value = 0;
+		if(norm_value > 1) norm_value = 1;
+		value = norm_value * range + left_value;
+		this.dirty_canvas = true;
+	}
+
+	//bg
+	ctx.fillStyle = "#AAA";
+	ctx.fillRect( rect[0], rect[1], rect[2], rect[3] );
+
+	//slider
+	ctx.fillStyle = "#111";
+	ctx.fillRect( rect[0] + margin, rect[1] + margin, rect[2] - margin*2, rect[3] - margin*2 );
+	ctx.fillStyle = (mouse_over && !gui_data.clicked_node) || dragging ? "#FE8" : "#666";
+	ctx.fillRect( rect[0] + margin, rect[1] + margin, Math.max(2, (rect[2] - margin*2) * norm_value ), rect[3] - margin*2 );
+
+	ctx.font = (rect[3]*0.5).toFixed(0) + "px Arial";
+	ctx.fillStyle = "#111";
+	if(text != null)
+	{
+		ctx.textAlign = "left";
+		ctx.fillText( String(text), rect[0] + 10, rect[1] + rect[3] * 0.7 );
+	}
+	ctx.textAlign = "right";
+	ctx.fillStyle = "#666";
+	ctx.fillText( value.toFixed(2), rect[0] + rect[2] - 10, rect[1] + rect[3] * 0.7 );
+
+	return value;
 }
 
 /*
@@ -5428,8 +5679,8 @@ LGraphCanvas.prototype.touchHandler = function(event)
          switch(event.type)
     {
         case "touchstart": type = "mousedown"; break;
-        case "touchmove":  type="mousemove"; break;
-        case "touchend":   type="mouseup"; break;
+        case "touchmove":  type = "mousemove"; break;
+        case "touchend":   type = "mouseup"; break;
         default: return;
     }
 
@@ -5851,15 +6102,21 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 
 	function changeSelection( forward )
 	{
+		var prev = selected;
 		if(selected)
 			selected.classList.remove("selected");
 		if(!selected)
-			selected = helper.childNodes[0];
+			selected = forward ? helper.childNodes[0] : helper.childNodes[ helper.childNodes.length ];
 		else
+		{
 			selected = forward ? selected.nextSibling : selected.previousSibling;
+			if(!selected)
+				selected = prev;
+		}
 		if(!selected)
 			return;
 		selected.classList.add("selected");
+		selected.scrollIntoView();
 	}
 
 	function refreshHelper()
@@ -5904,6 +6161,13 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	if(node.properties[ property ] !== null)
 		type = typeof(node.properties[ property ]);
 
+	//for arrays
+	if(type == "object")
+	{
+		if( node.properties[ property ].length )
+			type = "array";
+	}
+
 	var info = null;
 	if(node.getPropertyInfo)
 		info = node.getPropertyInfo(property);
@@ -5924,7 +6188,7 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 
 	var input_html = "";
 
-	if(type == "string" || type == "number")
+	if(type == "string" || type == "number" || type == "array")
 		input_html = "<input autofocus type='text' class='value'/>";
 	else if(type == "enum" && info.values)
 	{
@@ -5939,6 +6203,11 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	else if(type == "boolean")
 	{
 		input_html = "<input autofocus type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
+	}
+	else
+	{
+		console.warn("unknown type: " + type );
+		return;
 	}
 
 	var dialog = this.createDialog( "<span class='name'>" + property + "</span>"+input_html+"<button>OK</button>" , options );
@@ -5990,6 +6259,8 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	{
 		if(typeof( node.properties[ property ] ) == "number")
 			value = Number(value);
+		if(type == "array")
+			value = value.split(",").map(Number);
 		node.properties[ property ] = value;
 		if(node._graph)
 			node._graph._version++;
@@ -6089,7 +6360,7 @@ LGraphCanvas.onMenuNodeColors = function( value, options, e, menu, node )
 	for(var i in LGraphCanvas.node_colors)
 	{
 		var color = LGraphCanvas.node_colors[i];
-		var value = {value:i, content:"<span style='display: block; color:"+color.color+"; background-color:"+color.bgcolor+"'>"+i+"</span>"};
+		var value = {value:i, content:"<span style='display: block; color: #999; padding-left: 4px; border-left: 8px solid "+color.color+"; background-color:"+color.bgcolor+"'>"+i+"</span>"};
 		values.push(value);
 	}
 	new LiteGraph.ContextMenu( values, { event: e, callback: inner_clicked, parentMenu: menu, node: node });
@@ -6152,14 +6423,13 @@ LGraphCanvas.onMenuNodeClone = function( value, options, e, menu, node )
 }
 
 LGraphCanvas.node_colors = {
-	"red": { color:"#FAA", bgcolor:"#944" },
-	"green": { color:"#AFA", bgcolor:"#494" },
-	"blue": { color:"#AAF", bgcolor:"#449" },
-	"cyan": { color:"#AFF", bgcolor:"#499" },
-	"purple": { color:"#FAF", bgcolor:"#949" },
-	"yellow": { color:"#FFA", bgcolor:"#994" },
-	"black": { color:"#777", bgcolor:"#000" },
-	"white": { color:"#FFF", bgcolor:"#AAA" }
+	"red": { color:"#322", bgcolor:"#533" },
+	"green": { color:"#232", bgcolor:"#353" },
+	"blue": { color:"#223", bgcolor:"#335" },
+	"cyan": { color:"#233", bgcolor:"#355" },
+	"purple": { color:"#323", bgcolor:"#535" },
+	"yellow": { color:"#432", bgcolor:"#653" },
+	"black": { color:"#222", bgcolor:"#000" }
 };
 
 LGraphCanvas.prototype.getCanvasMenuOptions = function()
@@ -6327,7 +6597,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 
 
 //API *************************************************
-//function roundRect(ctx, x, y, width, height, radius, radius_low) {
+//like rect but rounded corners
 if(this.CanvasRenderingContext2D)
 CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius, radius_low) {
   if ( radius === undefined ) {
@@ -6337,7 +6607,6 @@ CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, ra
   if(radius_low === undefined)
 	 radius_low  = radius;
 
-  this.beginPath();
   this.moveTo(x + radius, y);
   this.lineTo(x + width - radius, y);
   this.quadraticCurveTo(x + width, y, x + width, y + radius);
@@ -6974,7 +7243,7 @@ Subgraph.prototype.onDrawForeground = function( ctx, graphcanvas )
 {
 	var node = this;
 	ctx.globalAlpha = 0.75;
-	graphcanvas.guiButton(ctx, [0,this.size[1] - 20,this.size[0],19], "Open", function(){ graphcanvas.openSubgraph(node.subgraph); });
+	graphcanvas.guiButton( ctx, [0,this.size[1] - 20, this.size[0], 19 ], "Open", function(){ graphcanvas.openSubgraph(node.subgraph); });
 	ctx.globalAlpha = 1;
 }
 
@@ -7354,7 +7623,6 @@ NodeScript.prototype.onExecute = function()
 }
 
 LiteGraph.registerNodeType("basic/script", NodeScript );
-
 
 
 })(this);
@@ -7918,6 +8186,33 @@ var LiteGraph = global.LiteGraph;
 	}
 
 	LiteGraph.registerNodeType("widget/knob", WidgetKnob);
+
+
+
+	//Show value inside the debug console
+	function WidgetSliderGUI()
+	{
+		this.addOutput("v","number");
+		this.properties = {
+			value: 0.5,
+			min: 0,
+			max: 1,
+			text: "V"
+		};
+		this.size = [80,60];
+	}
+
+	WidgetSliderGUI.title = "Internal Slider";
+
+	WidgetSliderGUI.prototype.onDrawBackground = function( ctx, graphcanvas )
+	{
+		var node = this;
+		ctx.globalAlpha = 0.75;
+		this.properties.value = graphcanvas.guiSlider( ctx, [2, 2, this.size[0] - 4, this.size[1] - 4], this.properties.value, this.properties.min, this.properties.max, this.properties.text );
+		ctx.globalAlpha = 1;
+	}
+
+	LiteGraph.registerNodeType("widget/internal_slider", WidgetSliderGUI );
 
 	//Widget H SLIDER
 	function WidgetHSlider()
@@ -13113,7 +13408,8 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		if(video_streams.length)
 		{
 			var webcam = video_streams[0];
-			webcam.stop();
+			if( webcam.stop )
+				webcam.stop();
 		}
 
 		this._webcam_stream = null;

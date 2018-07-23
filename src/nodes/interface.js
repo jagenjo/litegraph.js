@@ -409,6 +409,33 @@ var LiteGraph = global.LiteGraph;
 
 	LiteGraph.registerNodeType("widget/knob", WidgetKnob);
 
+
+
+	//Show value inside the debug console
+	function WidgetSliderGUI()
+	{
+		this.addOutput("v","number");
+		this.properties = {
+			value: 0.5,
+			min: 0,
+			max: 1,
+			text: "V"
+		};
+		this.size = [80,60];
+	}
+
+	WidgetSliderGUI.title = "Internal Slider";
+
+	WidgetSliderGUI.prototype.onDrawBackground = function( ctx, graphcanvas )
+	{
+		var node = this;
+		ctx.globalAlpha = 0.75;
+		this.properties.value = graphcanvas.guiSlider( ctx, [2, 2, this.size[0] - 4, this.size[1] - 4], this.properties.value, this.properties.min, this.properties.max, this.properties.text );
+		ctx.globalAlpha = 1;
+	}
+
+	LiteGraph.registerNodeType("widget/internal_slider", WidgetSliderGUI );
+
 	//Widget H SLIDER
 	function WidgetHSlider()
 	{

@@ -111,7 +111,7 @@ Subgraph.prototype.onDrawForeground = function( ctx, graphcanvas )
 {
 	var node = this;
 	ctx.globalAlpha = 0.75;
-	graphcanvas.guiButton(ctx, [0,this.size[1] - 20,this.size[0],19], "Open", function(){ graphcanvas.openSubgraph(node.subgraph); });
+	graphcanvas.guiButton( ctx, [0,this.size[1] - 20, this.size[0], 19 ], "Open", function(){ graphcanvas.openSubgraph(node.subgraph); });
 	ctx.globalAlpha = 1;
 }
 
@@ -491,7 +491,6 @@ NodeScript.prototype.onExecute = function()
 }
 
 LiteGraph.registerNodeType("basic/script", NodeScript );
-
 
 
 })(this);
