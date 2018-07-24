@@ -414,25 +414,32 @@ var LiteGraph = global.LiteGraph;
 	//Show value inside the debug console
 	function WidgetSliderGUI()
 	{
-		this.addOutput("v","number");
+		this.addOutput("","number");
 		this.properties = {
 			value: 0.5,
 			min: 0,
 			max: 1,
-			text: "V"
+			text: "V",
+			y: 2
 		};
+		var that = this;
 		this.size = [80,60];
+		this.slider = this.addWidget("slider","V", this.properties.value, function(v){ that.properties.value = v; }, this.properties  );
 	}
 
 	WidgetSliderGUI.title = "Internal Slider";
 
-	WidgetSliderGUI.prototype.onDrawBackground = function( ctx, graphcanvas )
+	WidgetSliderGUI.prototype.onPropertyChanged = function(name,value)
 	{
-		var node = this;
-		ctx.globalAlpha = 0.75;
-		this.properties.value = graphcanvas.guiSlider( ctx, [2, 2, this.size[0] - 4, this.size[1] - 4], this.properties.value, this.properties.min, this.properties.max, this.properties.text );
-		ctx.globalAlpha = 1;
+		if(name == "value")
+			this.slider.value = value;
 	}
+
+	WidgetSliderGUI.prototype.onExecute = function()
+	{
+		this.setOutputData(0,this.properties.value);
+	}
+
 
 	LiteGraph.registerNodeType("widget/internal_slider", WidgetSliderGUI );
 

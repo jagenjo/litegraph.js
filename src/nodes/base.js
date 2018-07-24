@@ -39,6 +39,8 @@ function Subgraph()
 	this.subgraph.onGlobalOutputAdded = this.onSubgraphNewGlobalOutput.bind(this);
 	this.subgraph.onGlobalOutputRenamed = this.onSubgraphRenamedGlobalOutput.bind(this);
 	this.subgraph.onGlobalOutputTypeChanged = this.onSubgraphTypeChangeGlobalOutput.bind(this);
+
+	this.addWidget("button","Open Graph",null,function( widget, graphcanvas ){ graphcanvas.openSubgraph(that.subgraph) });
 	
 	this.bgcolor = "#353";
 }
@@ -109,10 +111,12 @@ Subgraph.prototype.getExtraMenuOptions = function(graphcanvas)
 
 Subgraph.prototype.onDrawForeground = function( ctx, graphcanvas )
 {
+	/*
 	var node = this;
 	ctx.globalAlpha = 0.75;
 	graphcanvas.guiButton( ctx, [0,this.size[1] - 20, this.size[0], 19 ], "Open", function(){ graphcanvas.openSubgraph(node.subgraph); });
 	ctx.globalAlpha = 1;
+	*/
 }
 
 Subgraph.prototype.onResize = function(size)
