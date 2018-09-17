@@ -3098,7 +3098,7 @@ global.LGraphGroup = LiteGraph.LGraphGroup = LGraphGroup;
 
 LGraphGroup.prototype._ctor = function( title )
 {
-	this.title = title || "Unnamed";
+	this.title = title || "Group";
 	this._bounding = new Float32Array([10,10,140,80]);
 	this._pos = this._bounding.subarray(0,2);
 	this._size = this._bounding.subarray(2,4);
@@ -5865,15 +5865,22 @@ LGraphCanvas.prototype.drawGroups = function(canvas, ctx)
 
 		ctx.fillStyle = group.color || "#335";
 		ctx.strokeStyle = group.color || "#335";
-
+		var pos = group._pos;
+		var size = group._size;
 		ctx.globalAlpha = 0.25;
 		ctx.beginPath();
-		ctx.rect( group._pos[0], group._pos[1], group.size[0], group.size[1] );
+		ctx.rect( pos[0], pos[1], size[0], size[1] );
 		ctx.fill();
 		ctx.globalAlpha = 1;
 		ctx.stroke();
 
-		ctx.fillText( group.title, group._pos[0] + 4, group._pos[1] + 24 );
+		ctx.beginPath();
+		ctx.moveTo( pos[0] + size[0], pos[1] + size[1] );
+		ctx.lineTo( pos[0] + size[0] - 10, pos[1] + size[1] );
+		ctx.lineTo( pos[0] + size[0], pos[1] + size[1] - 10 );
+		ctx.fill();
+
+		ctx.fillText( group.title, pos[0] + 4, pos[1] + 24 );
 	}
 
 	ctx.restore();
