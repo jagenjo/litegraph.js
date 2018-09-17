@@ -409,8 +409,6 @@ var LiteGraph = global.LiteGraph;
 
 	LiteGraph.registerNodeType("widget/knob", WidgetKnob);
 
-
-
 	//Show value inside the debug console
 	function WidgetSliderGUI()
 	{
@@ -419,8 +417,7 @@ var LiteGraph = global.LiteGraph;
 			value: 0.5,
 			min: 0,
 			max: 1,
-			text: "V",
-			y: 2
+			text: "V"
 		};
 		var that = this;
 		this.size = [80,60];
