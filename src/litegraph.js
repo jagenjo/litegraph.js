@@ -5869,7 +5869,7 @@ LGraphCanvas.prototype.drawGroups = function(canvas, ctx)
 		var size = group._size;
 		ctx.globalAlpha = 0.25;
 		ctx.beginPath();
-		ctx.rect( pos[0], pos[1], size[0], size[1] );
+		ctx.rect( pos[0] + 0.5, pos[1] + 0.5, size[0], size[1] );
 		ctx.fill();
 		ctx.globalAlpha = 1;
 		ctx.stroke();
@@ -6678,7 +6678,7 @@ LGraphCanvas.onMenuNodeColors = function( value, options, e, menu, node )
 			delete node.color;
 			delete node.bgcolor;
 		}
-		node.setDirtyCanvas(true);
+		node.setDirtyCanvas(true,true);
 	}
 
 	return false;
