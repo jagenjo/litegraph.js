@@ -133,6 +133,18 @@ graph.start()
 It includes several commands in the utils folder to generate doc, check errors and build minifyed version.
 
 
+## Demo
+-----
+The demo includes three examples: Audio, Audio Delay and Audio Reverb. In order to try them on your local computer, you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
+```sh
+$ git clone git@github.com:jagenjo/litegraph.js.git
+$ cd litegraph.js
+$ npm install
+$ node utils/server.js
+Example app listening on port 80!
+```
+Open your browser and point it to http://localhost. You can select demo from the dropdown at the top of the page.
+
 ## Feedback
 --------
 
