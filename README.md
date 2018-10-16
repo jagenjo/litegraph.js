@@ -135,7 +135,7 @@ It includes several commands in the utils folder to generate doc, check errors a
 
 ## Demo
 -----
-The demo includes three examples: Audio, Audio Delay and Audio Reverb. In order to try them on your local computer, you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
+The demo includes some examples of graphs. In order to try them on your local computer, you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
 ```sh
 $ git clone git@github.com:jagenjo/litegraph.js.git
 $ cd litegraph.js
@@ -153,6 +153,7 @@ You can write any feedback to javi.agenjo@gmail.com
 ## Contributors
 
 - kriffe
+- rappestad
 
 
 
