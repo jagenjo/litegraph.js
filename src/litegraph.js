@@ -440,15 +440,15 @@ LGraph.prototype.clear = function()
 	this.stop();
 	this.status = LGraph.STATUS_STOPPED;
 
-	this.last_node_id = 0;
-	this.last_link_id = 0;
+	this.last_node_id = 1;
+	this.last_link_id = 1;
 
 	this._version = -1; //used to detect changes
 
 	//nodes
 	this._nodes = [];
 	this._nodes_by_id = {};
-	this._nodes_in_order = null; //nodes that are executable sorted in execution order
+	this._nodes_in_order = []; //nodes that are executable sorted in execution order
 	this._nodes_executable = null; //nodes that contain onExecute
 
 	//other scene stuff
@@ -1287,7 +1287,7 @@ LGraph.prototype.changeGlobalInputType = function(name, type)
 	if(!this.global_inputs[name])
 		return false;
 
-	if(this.global_inputs[name].type == type || this.global_inputs[name].type.toLowerCase() == type.toLowerCase() )
+	if(this.global_inputs[name].type && this.global_inputs[name].type.toLowerCase() == type.toLowerCase() )
 		return;
 
 	this.global_inputs[name].type = type;
@@ -1413,7 +1413,7 @@ LGraph.prototype.changeGlobalOutputType = function(name, type)
 	if(!this.global_outputs[name])
 		return false;
 
-	if(this.global_outputs[name].type.toLowerCase() == type.toLowerCase() )
+	if(this.global_outputs[name].type && this.global_outputs[name].type.toLowerCase() == type.toLowerCase() )
 		return;
 
 	this.global_outputs[name].type = type;
@@ -2079,7 +2079,7 @@ LGraphNode.prototype.getInputNode = function( slot )
 	if(slot >= this.inputs.length)
 		return null;
 	var input = this.inputs[slot];
-	if(!input || !input.link)
+	if(!input || input.link === null)
 		return null;
 	var link_info = this.graph.links[ input.link ];
 	if(!link_info)
@@ -2523,8 +2523,8 @@ LGraphNode.prototype.addWidget = function( type, name, value, callback, options 
 		options: options || {}
 	};
 
-	if(options.y)
-		w.y = options.y;
+	if(w.options.y !== undefined )
+		w.y = w.options.y;
 
 	if( type == "combo" && !w.options.values )
 		throw("LiteGraph addWidget('combo',...) requires to pass values in options: { values:['red','blue'] }");
@@ -2647,6 +2647,13 @@ LGraphNode.prototype.connect = function( slot, target_node, target_slot )
 {
 	target_slot = target_slot || 0;
 
+	if(!this.graph) //could be connected before adding it to a graph
+	{
+		console.log("Connect: Error, node doesnt belong to any graph. Nodes must be added first to a graph before connecting them."); //due to link ids being associated with graphs
+		return false;
+	}
+
+
 	//seek for the output slot
 	if( slot.constructor === String )
 	{
@@ -2668,7 +2675,7 @@ LGraphNode.prototype.connect = function( slot, target_node, target_slot )
 	if(target_node && target_node.constructor === Number)
 		target_node = this.graph.getNodeById( target_node );
 	if(!target_node)
-		throw("Node not found");
+		throw("target node is null");
 
 	//avoid loopback
 	if(target_node == this)
@@ -3734,6 +3741,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	var skip_dragging = false;
 	var skip_action = false;
 	var now = LiteGraph.getTime();
+	var is_double_click = (now - this.last_mouseclick) < 300;
 
 	this.canvas_mouse[0] = e.canvasX;
 	this.canvas_mouse[1] = e.canvasY;
@@ -3829,7 +3837,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				}
 
 				//double clicking
-				if ((now - this.last_mouseclick) < 300 && this.selected_nodes[ node.id ])
+				if (is_double_click && this.selected_nodes[ node.id ])
 				{
 					//double click node
 					if( node.onDblClick)
@@ -3873,6 +3881,10 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				else
 					this.selected_group.recomputeInsideNodes();
 			}
+
+			if( is_double_click )
+				this.showSearchBox( e );
+			
 			clicking_canvas_bg = true;
 		}
 
@@ -5434,7 +5446,7 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 			}
 			else if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CARD_SHAPE)
 			{
-				ctx.roundRect(0,-title_height,size[0], title_height, this.round_radius, node.flags.collapsed ? this.round_radius : 0);
+				ctx.roundRect(0,-title_height,size[0]+1, title_height, this.round_radius, node.flags.collapsed ? this.round_radius : 0);
 				ctx.fill();
 			}
 
