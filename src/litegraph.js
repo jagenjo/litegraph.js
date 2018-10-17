@@ -3785,6 +3785,14 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 							this.connecting_pos = node.getConnectionPos(false,i);
 							this.connecting_slot = i;
 
+                            if (is_double_click) {
+                                if (node.onOutputDblClick)
+                                    node.onOutputDblClick(i, e);
+                            } else {
+                                if (node.onOutputClick)
+                                    node.onOutputClick(i, e);
+                            }
+
 							skip_action = true;
 							break;
 						}
@@ -3798,6 +3806,14 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 						var link_pos = node.getConnectionPos( true, i );
 						if( isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
 						{
+                            if (is_double_click) {
+                                if (node.onInputDblClick)
+                                    node.onInputDblClick(i, e);
+                            } else {
+                                if (node.onInputClick)
+                                    node.onInputClick(i, e);
+                            }
+
 							if(input.link !== null)
 							{
 								node.disconnectInput(i);
