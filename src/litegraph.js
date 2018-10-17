@@ -2456,6 +2456,7 @@ LGraphNode.prototype.addConnection = function(name,type,pos,direction)
 * @param {number} minHeight
 * @return {number} the total size
 */
+LGraphNode.prototype.computeSize = function( minHeight, out )
 {
 	var rows = Math.max( this.inputs ? this.inputs.length : 1, this.outputs ? this.outputs.length : 1);
 	var size = out || new Float32Array([0,0]);
