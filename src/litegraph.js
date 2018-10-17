@@ -5314,7 +5314,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				var slot = node.inputs[i];
 				if( slot.link == null )
 					continue;
-				ctx.fillStyle = this.default_connection_color.input_on;
+				ctx.fillStyle = slot.colorOn || this.default_connection_color.input_on;
 				ctx.beginPath();
 				if ( slot.type === LiteGraph.EVENT )
 					ctx.rect(0.5, 4 - LiteGraph.NODE_TITLE_HEIGHT + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
@@ -5332,7 +5332,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				var slot = node.outputs[i];
 				if(!slot.links || !slot.links.length)
 					continue;
-				ctx.fillStyle = this.default_connection_color.output_on;
+				ctx.fillStyle = slot.colorOn || this.default_connection_color.output_on;
 				ctx.strokeStyle = "black";
 				ctx.beginPath();
 				if (slot.type === LiteGraph.EVENT)
