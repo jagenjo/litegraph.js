@@ -5250,8 +5250,6 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
                     ctx.lineTo(pos[0] - 4, (pos[1] + 6) + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] - 6) + 0.5);
                     ctx.closePath();
-
-                    ctx.fill();
                 } else {
                     ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
                 }
@@ -5299,9 +5297,6 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
                     ctx.lineTo(pos[0] - 4, (pos[1] + 6) + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] - 6) + 0.5);
                     ctx.closePath();
-
-                    ctx.stroke();
-                    ctx.fill();
                 } else {
                     ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
                 }
