@@ -131,7 +131,7 @@
 .litegraph .litemenu-entry:hover:not(.disabled):not(.separator) {
 	background-color: #444 !important;
 	color: #EEE;
-	transition: * 0.4s;
+	transition: all 0.4s;
 }
 
 .litegraph .litemenu-entry .property_name {
@@ -218,7 +218,7 @@ litegraph.litesearchbox .helper {
 	user-select: none;
 	-moz-user-select: none;
 	-webkit-user-select: none;
-	transition: * linear 0.5s;
+	transition: all linear 0.5s;
 }
 
 .graphmenu-entry.event, .litemenu-entry.event {
