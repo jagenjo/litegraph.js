@@ -5245,7 +5245,6 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
                     ctx.rect((pos[0] - 6) + 0.5, (pos[1] - 5) + 0.5, 14, 10);
                 } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
-                    ctx.beginPath();
                     ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] + 6) + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] - 6) + 0.5);
@@ -5292,7 +5291,6 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
 					ctx.rect((pos[0] - 6) + 0.5,(pos[1] - 5) + 0.5,14,10);
                 } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
-                    ctx.beginPath();
                     ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] + 6) + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] - 6) + 0.5);
