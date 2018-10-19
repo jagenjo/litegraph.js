@@ -6344,8 +6344,8 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input_html = "";
 
 	var dialog = document.createElement("div");
-	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value'/><div class='helper'></div>";
+	dialog.className = "litegraph litesearchbox";
+	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus onblur='this.focus()' type='text' class='value'/><div class='helper'></div>";
 	dialog.close = function()
 	{
 		that.search_box = null;
@@ -6481,7 +6481,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 					var help = document.createElement("div");
 					if(!first) first = i;
 					help.innerText = i;
-					help.className = "help-item";
+					help.className = "litegraph lite-search-item";
 					help.addEventListener("click", function(e){
 						select( this.innerText );
 					});
