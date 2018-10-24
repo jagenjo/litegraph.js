@@ -4,7 +4,7 @@ A library in Javascript to create graphs in the browser similar to [PureData](ht
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
-![Node Graph](imgs/node_graph_example.PNG "WebGLStudio")
+![Node Graph](imgs/node_graph_example.png "WebGLStudio")
 
 ## Installation
 
@@ -154,6 +154,7 @@ You can write any feedback to javi.agenjo@gmail.com
 
 - kriffe
 - rappestad
+- InventivetalentDev
 
 
 
