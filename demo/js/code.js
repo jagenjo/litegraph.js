@@ -43,8 +43,10 @@ function addDemo( name, url )
 }
 
 //some examples
+addDemo("Features", "examples/features.json");
 addDemo("Audio", "examples/audio.json");
 addDemo("Audio Delay", "examples/audio_delay.json");
 addDemo("Audio Reverb", "examples/audio_reverb.json");
+
 
 

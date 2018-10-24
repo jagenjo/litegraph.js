@@ -1,3 +1,5 @@
+//packer version
+
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -25,7 +27,7 @@
 var LiteGraph = global.LiteGraph = {
 
 	CANVAS_GRID_SIZE: 10,
-
+	
 	NODE_TITLE_HEIGHT: 20,
 	NODE_SLOT_HEIGHT: 15,
 	NODE_WIDGET_HEIGHT: 20,
@@ -2981,7 +2983,7 @@ LGraphNode.prototype.getConnectionPos = function( is_input, slot_number )
 			return [this.pos[0] + (slot_number + 0.5) * (this.size[0] / (this.inputs.length)), this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT ];
 		return [this.pos[0] + (slot_number + 0.5) * (this.size[0] / (this.outputs.length)), this.pos[1] + this.size[1] ];
 	}
-
+	
 	//default
 	if(is_input)
 		return [this.pos[0] , this.pos[1] + 10 + slot_number * LiteGraph.NODE_SLOT_HEIGHT + (this.constructor.slot_start_y || 0) ];
@@ -3894,7 +3896,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 			if( is_double_click )
 				this.showSearchBox( e );
-
+			
 			clicking_canvas_bg = true;
 		}
 
@@ -5981,7 +5983,7 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 }
 
 /**
-* process an event on widgets
+* process an event on widgets 
 * @method processNodeWidgets
 **/
 LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_widget )
@@ -7066,7 +7068,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 	var ref_window = canvas.getCanvasWindow();
 
 	var menu_info = null;
-	var options = { event: event, callback: inner_option_clicked, node: node };
+	var options = { event: event, callback: inner_option_clicked, extra: node };
 
 	//check if mouse is in input
 	var slot = null;
@@ -7093,14 +7095,10 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 			menu_info = this.getNodeMenuOptions(node);
 		else 
 		{
+			menu_info = this.getCanvasMenuOptions();
 			var group = this.graph.getGroupOnPos( event.canvasX, event.canvasY );
 			if( group ) //on group
-			{
-				options.node = group;
-				menu_info = this.getGroupMenuOptions( group );
-			}
-			else
-				menu_info = this.getCanvasMenuOptions();
+				menu_info.push({content:"Group", has_submenu: true, submenu: { title:"Group", extra: group, options: this.getGroupMenuOptions( group ) }});
 		}
 	}
 
@@ -7513,7 +7511,7 @@ ContextMenu.prototype.addItem = function( name, value, options )
 		{
 			if (value.callback && !options.ignore_item_callbacks && value.disabled !== true )  //item callback
 			{
-				var r = value.callback.call( this, value, options, e, that, options.node );
+				var r = value.callback.call( this, value, options, e, that, options.extra );
 				if(r === true)
 					close_parent = false;
 			}
@@ -7527,6 +7525,7 @@ ContextMenu.prototype.addItem = function( name, value, options )
 					parentMenu: that,
 					ignore_item_callbacks: value.submenu.ignore_item_callbacks,
 					title: value.submenu.title,
+					extra: value.submenu.extra,
 					autoopen: options.autoopen
 				});
 				close_parent = false;
