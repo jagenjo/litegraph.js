@@ -131,7 +131,7 @@
 .litegraph .litemenu-entry:hover:not(.disabled):not(.separator) {
 	background-color: #444 !important;
 	color: #EEE;
-	transition: * 0.4s;
+	transition: all 0.4s;
 }
 
 .litegraph .litemenu-entry .property_name {
@@ -151,6 +151,49 @@
 	padding-right: 10px;
 }
 
+.litegraph.litesearchbox {
+	font-family:Tahoma, sans-serif;
+	position: absolute;
+	background-color: rgba(0,0,0,0.5);
+	padding-top: 4px;
+}
+
+.litegraph.litesearchbox input, .litegraph.litesearchbox select {
+	margin-top: 3px;
+	min-width: 60px;
+	min-height: 1.5em;
+	background-color: black;
+	border: 0;
+	color: white;
+	padding-left: 10px;
+	margin-right: 5px;
+}
+
+.litegraph.litesearchbox .name {
+	display: inline-block;
+	min-width: 60px;
+	min-height: 1.5em;
+	padding-left: 10px;
+}
+
+litegraph.litesearchbox .helper {
+	overflow: auto;
+	max-height: 200px;
+	margin-top: 2px;
+}
+
+.litegraph.lite-search-item {
+	font-family:Tahoma, sans-serif;
+	background-color: rgba(0,0,0,0.5);
+	color: white;
+	padding-top: 2px;
+}
+
+.litegraph.lite-search-item:hover, .litegraph.lite-search-item.selected {
+	cursor: pointer;
+	background-color: white;
+	color: black;
+}
 
 /* OLD */
 
@@ -175,7 +218,7 @@
 	user-select: none;
 	-moz-user-select: none;
 	-webkit-user-select: none;
-	transition: * linear 0.5s;
+	transition: all linear 0.5s;
 }
 
 .graphmenu-entry.event, .litemenu-entry.event {
