@@ -26,6 +26,8 @@
 
 var LiteGraph = global.LiteGraph = {
 
+	CANVAS_GRID_SIZE: 10,
+	
 	NODE_TITLE_HEIGHT: 20,
 	NODE_SLOT_HEIGHT: 15,
 	NODE_WIDGET_HEIGHT: 20,
@@ -33,7 +35,6 @@ var LiteGraph = global.LiteGraph = {
 	NODE_MIN_WIDTH: 50,
 	NODE_COLLAPSED_RADIUS: 10,
 	NODE_COLLAPSED_WIDTH: 80,
-	CANVAS_GRID_SIZE: 10,
 	NODE_TITLE_COLOR: "#999",
 	NODE_TEXT_SIZE: 14,
 	NODE_TEXT_COLOR: "#AAA",
@@ -42,10 +43,12 @@ var LiteGraph = global.LiteGraph = {
 	NODE_DEFAULT_BGCOLOR: "#444",
 	NODE_DEFAULT_BOXCOLOR: "#888",
 	NODE_DEFAULT_SHAPE: "box",
+
+	LINK_COLOR: "#AAD",
+	EVENT_LINK_COLOR: "#F85",
+
 	MAX_NUMBER_OF_NODES: 1000, //avoid infinite loops
 	DEFAULT_POSITION: [100,100],//default node position
-	node_images_path: "",
-
 	VALID_SHAPES: ["default","box","round","card"], //,"circle"
 
 	//shapes are used for nodes but also for slots
@@ -73,6 +76,7 @@ var LiteGraph = global.LiteGraph = {
 	AUTOHIDE_TITLE: 3,
 
 	proxy: null, //used to redirect calls
+	node_images_path: "",
 
 	debug: false,
 	throw_errors: true,
@@ -3240,7 +3244,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.title_text_font = "bold "+LiteGraph.NODE_TEXT_SIZE+"px Arial";
 	this.inner_text_font = "normal "+LiteGraph.NODE_SUBTEXT_SIZE+"px Arial";
 	this.node_title_color = LiteGraph.NODE_TITLE_COLOR;
-	this.default_link_color = "#AAC";
+	this.default_link_color = LiteGraph.LINK_COLOR;
 	this.default_connection_color = {
 		input_off: "#AAB",
 		input_on: "#7F7",
@@ -4994,9 +4998,9 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 			var link_color = null;
 			switch( this.connecting_output.type )
 			{
-				case LiteGraph.EVENT: link_color = "#F85"; break;
+				case LiteGraph.EVENT: link_color = LiteGraph.EVENT_LINK_COLOR; break;
 				default:
-					link_color = "#AFA";
+					link_color = this.default_link_color;
 			}
 			//the connection being dragged by the mouse
 			this.renderLink( ctx, this.connecting_pos, [this.canvas_mouse[0],this.canvas_mouse[1]], null, false, null, link_color );
@@ -5716,7 +5720,7 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 	//choose color
 	if( !color && link )
 		color = LGraphCanvas.link_type_colors[ link.type ];
-	if(!color)
+	if( !color )
 		color = this.default_link_color;
 
 	if( link != null && this.highlighted_links[ link.id ] )
