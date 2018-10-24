@@ -94,9 +94,9 @@ function TestWidgetsNode()
 	this.size = this.computeSize();
 }
 
-TestWidgetsNode.title = "Test Widgets";
+TestWidgetsNode.title = "Widgets";
 
-LiteGraph.registerNodeType("widget/test", TestWidgetsNode );
+LiteGraph.registerNodeType("features/widgets", TestWidgetsNode );
 
 
 //Show value inside the debug console

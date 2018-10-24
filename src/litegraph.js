@@ -7066,7 +7066,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 	var ref_window = canvas.getCanvasWindow();
 
 	var menu_info = null;
-	var options = { event: event, callback: inner_option_clicked, node: node };
+	var options = { event: event, callback: inner_option_clicked, extra: node };
 
 	//check if mouse is in input
 	var slot = null;
@@ -7093,14 +7093,10 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 			menu_info = this.getNodeMenuOptions(node);
 		else 
 		{
+			menu_info = this.getCanvasMenuOptions();
 			var group = this.graph.getGroupOnPos( event.canvasX, event.canvasY );
 			if( group ) //on group
-			{
-				options.node = group;
-				menu_info = this.getGroupMenuOptions( group );
-			}
-			else
-				menu_info = this.getCanvasMenuOptions();
+				menu_info.push({content:"Group", has_submenu: true, submenu: { title:"Group", extra: group, options: this.getGroupMenuOptions( group ) }});
 		}
 	}
 
@@ -7513,7 +7509,7 @@ ContextMenu.prototype.addItem = function( name, value, options )
 		{
 			if (value.callback && !options.ignore_item_callbacks && value.disabled !== true )  //item callback
 			{
-				var r = value.callback.call( this, value, options, e, that, options.node );
+				var r = value.callback.call( this, value, options, e, that, options.extra );
 				if(r === true)
 					close_parent = false;
 			}
@@ -7527,6 +7523,7 @@ ContextMenu.prototype.addItem = function( name, value, options )
 					parentMenu: that,
 					ignore_item_callbacks: value.submenu.ignore_item_callbacks,
 					title: value.submenu.title,
+					extra: value.submenu.extra,
 					autoopen: options.autoopen
 				});
 				close_parent = false;
