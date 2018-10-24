@@ -46,6 +46,7 @@ var LiteGraph = global.LiteGraph = {
 
 	LINK_COLOR: "#AAD",
 	EVENT_LINK_COLOR: "#F85",
+	CONNECTING_LINK_COLOR: "#AFA",
 
 	MAX_NUMBER_OF_NODES: 1000, //avoid infinite loops
 	DEFAULT_POSITION: [100,100],//default node position
@@ -69,6 +70,12 @@ var LiteGraph = global.LiteGraph = {
 	ON_EVENT: 1,
 	NEVER: 2,
 	ON_TRIGGER: 3,
+
+	UP: 1,
+	DOWN:2,
+	LEFT:3,
+	RIGHT:4,
+	CENTER:5,
 
 	NORMAL_TITLE: 0,
 	NO_TITLE: 1,
@@ -2969,9 +2976,18 @@ LGraphNode.prototype.getConnectionPos = function( is_input, slot_number )
 	else if(!is_input && this.outputs.length > slot_number && this.outputs[slot_number].pos)
 		return [this.pos[0] + this.outputs[slot_number].pos[0],this.pos[1] + this.outputs[slot_number].pos[1]];
 
-	if(!is_input) //output
-		return [this.pos[0] + this.size[0] + 1, this.pos[1] + 10 + slot_number * LiteGraph.NODE_SLOT_HEIGHT + (this.constructor.slot_start_y || 0)];
-	return [this.pos[0] , this.pos[1] + 10 + slot_number * LiteGraph.NODE_SLOT_HEIGHT + (this.constructor.slot_start_y || 0) ];
+	//horizontal distributed slots
+	if(this.flags.horizontal)
+	{
+		if(is_input)
+			return [this.pos[0] + (slot_number + 0.5) * (this.size[0] / (this.inputs.length)), this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT ];
+		return [this.pos[0] + (slot_number + 0.5) * (this.size[0] / (this.outputs.length)), this.pos[1] + this.size[1] ];
+	}
+	
+	//default
+	if(is_input)
+		return [this.pos[0] , this.pos[1] + 10 + slot_number * LiteGraph.NODE_SLOT_HEIGHT + (this.constructor.slot_start_y || 0) ];
+	return [this.pos[0] + this.size[0] + 1, this.pos[1] + 10 + slot_number * LiteGraph.NODE_SLOT_HEIGHT + (this.constructor.slot_start_y || 0)];
 }
 
 /* Force align to grid */
@@ -5000,10 +5016,10 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 			{
 				case LiteGraph.EVENT: link_color = LiteGraph.EVENT_LINK_COLOR; break;
 				default:
-					link_color = this.default_link_color;
+					link_color = LiteGraph.CONNECTING_LINK_COLOR;
 			}
 			//the connection being dragged by the mouse
-			this.renderLink( ctx, this.connecting_pos, [this.canvas_mouse[0],this.canvas_mouse[1]], null, false, null, link_color );
+			this.renderLink( ctx, this.connecting_pos, [this.canvas_mouse[0],this.canvas_mouse[1]], null, false, null, link_color, this.connecting_output.dir || (this.connecting_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT), LiteGraph.CENTER );
 
 			ctx.beginPath();
 				if( this.connecting_output.type === LiteGraph.EVENT || this.connecting_output.shape === LiteGraph.BOX_SHAPE )
@@ -5285,7 +5301,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	ctx.shadowColor = "transparent";
 
 	//connection slots
-	ctx.textAlign = "left";
+	ctx.textAlign = node.flags.horizontal ? "center" : "left";
 	ctx.font = this.inner_text_font;
 
 	var render_text = this.scale > 0.6;
@@ -5309,7 +5325,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				if ( this.connecting_node && LiteGraph.isValidConnection( slot.type && out_slot.type ) )
 					ctx.globalAlpha = 0.4 * editor_alpha;
 
-				ctx.fillStyle = slot.link != null ? (slot.colorOn || this.default_connection_color.input_on) : (slot.colorOff || this.default_connection_color.input_off);
+				ctx.fillStyle = slot.link != null ? (slot.color_on || this.default_connection_color.input_on) : (slot.color_off || this.default_connection_color.input_off);
 
 				var pos = node.getConnectionPos( true, i );
 				pos[0] -= node.pos[0];
@@ -5339,7 +5355,10 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 					if(text)
 					{
 						ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
-						ctx.fillText(text,pos[0] + 10,pos[1] + 5);
+						if( node.flags.horizontal || slot.dir == LiteGraph.UP )
+							ctx.fillText(text,pos[0],pos[1] - 10);
+						else
+							ctx.fillText(text,pos[0] + 10,pos[1] + 5);
 					}
 				}
 			}
@@ -5348,7 +5367,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		if(this.connecting_node)
 			ctx.globalAlpha = 0.4 * editor_alpha;
 
-		ctx.textAlign = "right";
+		ctx.textAlign = node.flags.horizontal ? "center" : "right";
 		ctx.strokeStyle = "black";
 		if(node.outputs)
 			for(var i = 0; i < node.outputs.length; i++)
@@ -5361,7 +5380,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				if( max_y < pos[1] + LiteGraph.NODE_SLOT_HEIGHT*0.5)
 					max_y = pos[1] + LiteGraph.NODE_SLOT_HEIGHT*0.5;
 
-				ctx.fillStyle = slot.links && slot.links.length ? (slot.colorOn || this.default_connection_color.output_on) : (slot.colorOff || this.default_connection_color.output_off);
+				ctx.fillStyle = slot.links && slot.links.length ? (slot.color_on || this.default_connection_color.output_on) : (slot.color_off || this.default_connection_color.output_off);
 				ctx.beginPath();
 				//ctx.rect( node.size[0] - 14,i*14,10,10);
 
@@ -5391,7 +5410,10 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 					if(text)
 					{
 						ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
-						ctx.fillText(text, pos[0] - 10,pos[1] + 5);
+						if( node.flags.horizontal || slot.dir == LiteGraph.DOWN )
+							ctx.fillText(text,pos[0],pos[1] - 8);
+						else
+							ctx.fillText(text, pos[0] - 10,pos[1] + 5);
 					}
 				}
 			}
@@ -5420,7 +5442,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				var slot = node.inputs[i];
 				if( slot.link == null )
 					continue;
-				ctx.fillStyle = slot.colorOn || this.default_connection_color.input_on;
+				ctx.fillStyle = slot.color_on || this.default_connection_color.input_on;
 				ctx.beginPath();
 				if ( slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
 					ctx.rect(0.5, 4 - LiteGraph.NODE_TITLE_HEIGHT + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
@@ -5444,7 +5466,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				var slot = node.outputs[i];
 				if(!slot.links || !slot.links.length)
 					continue;
-				ctx.fillStyle = slot.colorOn || this.default_connection_color.output_on;
+				ctx.fillStyle = slot.color_on || this.default_connection_color.output_on;
 				ctx.strokeStyle = "black";
 				ctx.beginPath();
 				if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
@@ -5627,6 +5649,7 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 			areah += title_height;
 		}
 		ctx.lineWidth = 1;
+		ctx.globalAlpha = 0.8;
 		ctx.beginPath();
 		if(shape == LiteGraph.BOX_SHAPE)
 			ctx.rect(-6 + areax,-6 + areay, 12 + areaw, 12 + areah );
@@ -5636,9 +5659,10 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 			ctx.roundRect(-6 + areax,-6 + areay, 12 + areaw, 12 + areah , this.round_radius * 2, 2);
 		else if (shape == LiteGraph.CIRCLE_SHAPE)
 			ctx.arc(size[0] * 0.5, size[1] * 0.5, size[0] * 0.5 + 6, 0, Math.PI*2);
-		ctx.strokeStyle = "#DDD";
+		ctx.strokeStyle = "#FFF";
 		ctx.stroke();
 		ctx.strokeStyle = fgcolor;
+		ctx.globalAlpha = 1;
 	}
 }
 
@@ -5682,15 +5706,20 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 					start_node_slotpos = [start_node.pos[0] + 10, start_node.pos[1] + 10];
 				else
 					start_node_slotpos = start_node.getConnectionPos(false, start_node_slot);
+				var end_node_slotpos = node.getConnectionPos(true,i);
+				var start_slot = start_node.outputs[start_node_slot];
+				var end_slot = node.inputs[i];
+				var start_dir = start_slot.dir || (start_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT);
+				var end_dir = end_slot.dir || (node.flags.horizontal ? LiteGraph.UP : LiteGraph.LEFT);
 
-				this.renderLink( ctx, start_node_slotpos, node.getConnectionPos(true,i), link );
+				this.renderLink( ctx, start_node_slotpos, end_node_slotpos, link, false, 0, null, start_dir, end_dir );
 
 				//event triggered rendered on top
 				if(link && link._last_time && (now - link._last_time) < 1000 )
 				{
 					var f = 2.0 - (now - link._last_time) * 0.002;
 					var color = "rgba(255,255,255, " + f.toFixed(2) + ")";
-					this.renderLink( ctx, start_node_slotpos, node.getConnectionPos(true,i), link, true, f, color );
+					this.renderLink( ctx, start_node_slotpos, end_node_slotpos, link, true, f, color, start_dir, end_dir );
 				}
 			}
 	}
@@ -5701,7 +5730,7 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 * draws a link between two points
 * @method renderLink
 **/
-LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow, color )
+LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow, color, start_dir, end_dir )
 {
 	if(!this.highquality_render)
 	{
@@ -5711,6 +5740,9 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 		ctx.stroke();
 		return;
 	}
+
+	start_dir = start_dir || LiteGraph.RIGHT;
+	end_dir = end_dir || LiteGraph.LEFT;
 
 	var dist = distance(a,b);
 
@@ -5732,9 +5764,27 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 	if(this.render_curved_connections) //splines
 	{
 		ctx.moveTo(a[0],a[1]);
-		ctx.bezierCurveTo(a[0] + dist*0.25, a[1],
-							b[0] - dist*0.25 , b[1],
-							b[0] ,b[1] );
+		var start_offset_x = 0;
+		var start_offset_y = 0;
+		var end_offset_x = 0;
+		var end_offset_y = 0;
+		switch(start_dir)
+		{
+			case LiteGraph.LEFT: start_offset_x = dist*-0.25; break;
+			case LiteGraph.RIGHT: start_offset_x = dist*0.25; break;
+			case LiteGraph.UP: start_offset_y = dist*-0.25; break;
+			case LiteGraph.DOWN: start_offset_y = dist*0.25; break;
+		}
+		switch(end_dir)
+		{
+			case LiteGraph.LEFT: end_offset_x = dist*-0.25; break;
+			case LiteGraph.RIGHT: end_offset_x = dist*0.25; break;
+			case LiteGraph.UP: end_offset_y = dist*-0.25; break;
+			case LiteGraph.DOWN: end_offset_y = dist*0.25; break;
+		}
+		ctx.bezierCurveTo(a[0] + start_offset_x, a[1] + start_offset_y,
+							b[0] + end_offset_x , b[1] + end_offset_y,
+							b[0], b[1] );
 	}
 	else //lines
 	{
@@ -5763,8 +5813,8 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 		if(this.render_connection_arrows && this.scale > 0.6)
 		{
 			//compute two points in the connection
-			var pos = this.computeConnectionPoint(a,b,0.5);
-			var pos2 = this.computeConnectionPoint(a,b,0.51);
+			var pos = this.computeConnectionPoint(a, b, 0.5, start_dir, end_dir);
+			var pos2 = this.computeConnectionPoint(a, b, 0.51, start_dir, end_dir);
 
 			//compute the angle between them so the arrow points in the right direction
 			var angle = 0;
@@ -5792,7 +5842,7 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 		for(var i = 0; i < 5; ++i)
 		{
 			var f = (LiteGraph.getTime() * 0.001 + (i * 0.2)) % 1;
-			var pos = this.computeConnectionPoint(a,b,f);
+			var pos = this.computeConnectionPoint(a,b,f, start_dir, end_dir);
 			ctx.beginPath();
 			ctx.arc(pos[0],pos[1],5,0,2*Math.PI);
 			ctx.fill();
@@ -5800,13 +5850,31 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 	}
 }
 
-LGraphCanvas.prototype.computeConnectionPoint = function(a,b,t)
+LGraphCanvas.prototype.computeConnectionPoint = function(a,b,t,start_dir,end_dir)
 {
+	start_dir = start_dir || LiteGraph.RIGHT;
+	end_dir = end_dir || LiteGraph.LEFT;
+
 	var dist = distance(a,b);
 	var p0 = a;
-	var p1 = [ a[0] + dist*0.25, a[1] ];
-	var p2 = [ b[0] - dist*0.25, b[1] ];
+	var p1 = [ a[0], a[1] ];
+	var p2 = [ b[0], b[1] ];
 	var p3 = b;
+
+	switch(start_dir)
+	{
+		case LiteGraph.LEFT: p1[0] += dist*-0.25; break;
+		case LiteGraph.RIGHT: p1[0] += dist*0.25; break;
+		case LiteGraph.UP: p1[1] += dist*-0.25; break;
+		case LiteGraph.DOWN: p1[1] += dist*0.25; break;
+	}
+	switch(end_dir)
+	{
+		case LiteGraph.LEFT: p2[0] += dist*-0.25; break;
+		case LiteGraph.RIGHT: p2[0] += dist*0.25; break;
+		case LiteGraph.UP: p2[1] += dist*-0.25; break;
+		case LiteGraph.DOWN: p2[1] += dist*0.25; break;
+	}
 
 	var c1 = (1-t)*(1-t)*(1-t);
 	var c2 = 3*((1-t)*(1-t))*t;
