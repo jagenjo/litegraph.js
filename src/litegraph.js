@@ -6455,7 +6455,7 @@ LGraphCanvas.onShowTitleEditor = function( value, options, e, menu, node )
 
 	var dialog = document.createElement("div");
 	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>Title</span><input autofocus type='text' class='value'/><button>OK</button>";
+	dialog.innerHTML = "<span class='name'>Title</span><input autofocus onblur='this.focus()' type='text' class='value'/><button>OK</button>";
 	var input = dialog.querySelector("input");
 	if(input)
 	{
@@ -6515,8 +6515,8 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input_html = "";
 
 	var dialog = document.createElement("div");
-	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value'/><div class='helper'></div>";
+	dialog.className = "litegraph litesearchbox";
+	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus onblur='this.focus()' type='text' class='value'/><div class='helper'></div>";
 	dialog.close = function()
 	{
 		that.search_box = null;
@@ -6652,7 +6652,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 					var help = document.createElement("div");
 					if(!first) first = i;
 					help.innerText = i;
-					help.className = "help-item";
+					help.className = "litegraph lite-search-item";
 					help.addEventListener("click", function(e){
 						select( this.innerText );
 					});
@@ -6704,10 +6704,10 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	var input_html = "";
 
 	if(type == "string" || type == "number" || type == "array")
-		input_html = "<input autofocus type='text' class='value'/>";
+		input_html = "<input autofocus onblur='this.focus()' type='text' class='value'/>";
 	else if(type == "enum" && info.values)
 	{
-		input_html = "<select autofocus type='text' class='value'>";
+		input_html = "<select autofocus onblur='this.focus()' type='text' class='value'>";
 		for(var i in info.values)
 		{
 			var v = info.values.constructor === Array ? info.values[i] : i;
@@ -6717,7 +6717,7 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	}
 	else if(type == "boolean")
 	{
-		input_html = "<input autofocus type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
+		input_html = "<input autofocus onblur='this.focus()' type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
 	}
 	else
 	{
