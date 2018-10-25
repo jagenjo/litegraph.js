@@ -5936,6 +5936,8 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 	posY += 2;
 	var H = LiteGraph.NODE_WIDGET_HEIGHT;
 	var show_text = this.scale > 0.5;
+	ctx.save();
+	ctx.globalAlpha = this.editor_alpha;
 
 	for(var i = 0; i < widgets.length; ++i)
 	{
@@ -6019,19 +6021,22 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 				ctx.roundRect( 10, posY, width - 20, H,H*0.5 );
 				ctx.fill();
 				ctx.stroke();
-				ctx.fillStyle = "#999";
-				if(w.name != null)
-					ctx.fillText( w.name, 20, y + H*0.7 );
-				ctx.fillStyle = "#DDD";
-				ctx.textAlign = "right";
-				ctx.fillText( w.value, width - 20, y + H*0.7 );
+				if(show_text)
+				{
+					ctx.fillStyle = "#999";
+					if(w.name != null)
+						ctx.fillText( w.name, 20, y + H*0.7 );
+					ctx.fillStyle = "#DDD";
+					ctx.textAlign = "right";
+					ctx.fillText( w.value, width - 20, y + H*0.7 );
+				}
 				break;
 			default:
 				break;
 		}
 		posY += H + 4;
 	}
-	ctx.textAlign = "left";
+	ctx.restore();
 }
 
 /**
@@ -6129,7 +6134,7 @@ LGraphCanvas.prototype.drawGroups = function(canvas, ctx)
 	var groups = this.graph._groups;
 
 	ctx.save();
-	ctx.globalAlpha = 0.5;
+	ctx.globalAlpha = 0.5 * this.editor_alpha;
 	ctx.font = "24px Arial";
 
 	for(var i = 0; i < groups.length; ++i)
@@ -6143,11 +6148,11 @@ LGraphCanvas.prototype.drawGroups = function(canvas, ctx)
 		ctx.strokeStyle = group.color || "#335";
 		var pos = group._pos;
 		var size = group._size;
-		ctx.globalAlpha = 0.25;
+		ctx.globalAlpha = 0.25 * this.editor_alpha;
 		ctx.beginPath();
 		ctx.rect( pos[0] + 0.5, pos[1] + 0.5, size[0], size[1] );
 		ctx.fill();
-		ctx.globalAlpha = 1;
+		ctx.globalAlpha = this.editor_alpha;;
 		ctx.stroke();
 
 		ctx.beginPath();
