@@ -39,7 +39,7 @@ var LiteGraph = global.LiteGraph = {
 	NODE_SUBTEXT_SIZE: 12,
 	NODE_DEFAULT_COLOR: "#333",
 	NODE_DEFAULT_BGCOLOR: "#444",
-	NODE_DEFAULT_BOXCOLOR: "#888",
+	NODE_DEFAULT_BOXCOLOR: "#666",
 	NODE_DEFAULT_SHAPE: "box",
 
 	LINK_COLOR: "#AAD",
@@ -3291,6 +3291,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.render_connections_border = true;
 	this.render_curved_connections = true;
 	this.render_connection_arrows = true;
+	this.render_execution_order = false;
 
 	this.canvas_mouse = [0,0]; //mouse in canvas graph coordinates, where 0,0 is the top-left corner of the blue rectangle
 
@@ -5000,12 +5001,17 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 			ctx.restore();
 		}
 
+		//on top (debug)
+		if( this.render_execution_order)
+			this.drawExecutionOrder(ctx);
+
+
 		//connections ontop?
 		if(this.graph.config.links_ontop)
 			if(!this.live_mode)
 				this.drawConnections(ctx);
 
-		//current connection
+		//current connection (the one being dragged by the mouse)
 		if(this.connecting_pos != null)
 		{
 			ctx.lineWidth = this.connections_width;
@@ -5229,25 +5235,6 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	if (node.mouseOver)
 		glow = true;
 
-	if(node.selected)
-	{
-		/*
-		ctx.shadowColor = "#EEEEFF";//glow ? "#AAF" : "#000";
-		ctx.shadowOffsetX = 0;
-		ctx.shadowOffsetY = 0;
-		ctx.shadowBlur = 1;
-		*/
-	}
-	else if(this.render_shadows)
-	{
-		ctx.shadowColor = "rgba(0,0,0,0.5)";
-		ctx.shadowOffsetX = 2;
-		ctx.shadowOffsetY = 2;
-		ctx.shadowBlur = 3;
-	}
-	else
-		ctx.shadowColor = "transparent";
-
 	//only render if it forces it to do it
 	if(this.live_mode)
 	{
@@ -5267,6 +5254,16 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 
 	var editor_alpha = this.editor_alpha;
 	ctx.globalAlpha = editor_alpha;
+
+	if(this.render_shadows)
+	{
+		ctx.shadowColor = "rgba(0,0,0,0.5)";
+		ctx.shadowOffsetX = 2 * this.scale;
+		ctx.shadowOffsetY = 2 * this.scale;
+		ctx.shadowBlur = 3 * this.scale;
+	}
+	else
+		ctx.shadowColor = "transparent";
 
 	//clip if required (mask)
 	var shape = node._shape || LiteGraph.BOX_SHAPE;
@@ -5420,7 +5417,11 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		ctx.globalAlpha = 1;
 
 		if(node.widgets)
+		{
+			if( node.flags.horizontal || node.flags.widgets_up )
+				max_y = 2;
 			this.drawNodeWidgets( node, max_y, ctx, (this.node_widget && this.node_widget[0] == node) ? this.node_widget[1] : null );
+		}
 
 		//draw foreground
 		if(node.onDrawForeground)
@@ -5602,13 +5603,31 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 		}
 
 		//title box
-		ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
-		ctx.beginPath();
 		if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CIRCLE_SHAPE || shape == LiteGraph.CARD_SHAPE)
-			ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 8) *0.5,0,Math.PI*2);
+		{
+			if( this.scale > 0.5 )
+			{
+				ctx.fillStyle = "black";
+				ctx.beginPath();
+				ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 8) *0.5,0,Math.PI*2);
+				ctx.fill();
+			}
+
+			ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
+			ctx.beginPath();
+			ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 8) *0.4,0,Math.PI*2);
+			ctx.fill();
+		}
 		else
-			ctx.rect(4,-title_height + 4,title_height - 8,title_height - 8);
-		ctx.fill();
+		{
+			if( this.scale > 0.5 )
+			{
+				ctx.fillStyle = "black";
+				ctx.fillRect(4,-title_height + 4,title_height - 8,title_height - 8);
+			}
+			ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
+			ctx.fillRect(5,-title_height + 5,title_height - 10,title_height - 10);
+		}
 		ctx.globalAlpha = old_alpha;
 
 		//title text
@@ -5883,6 +5902,30 @@ LGraphCanvas.prototype.computeConnectionPoint = function(a,b,t,start_dir,end_dir
 	var y = c1*p0[1] + c2*p1[1] + c3*p2[1] + c4*p3[1];
 	return [x,y];
 }
+
+LGraphCanvas.prototype.drawExecutionOrder = function(ctx)
+{
+	ctx.shadowColor = "transparent";
+	ctx.globalAlpha = 0.25;
+
+	ctx.textAlign = "center";
+	ctx.strokeStyle = "white";
+	ctx.globalAlpha = 0.75;
+
+	var visible_nodes = this.visible_nodes;
+	for (var i = 0; i < visible_nodes.length; ++i)
+	{
+		var node = visible_nodes[i];
+		ctx.fillStyle = "black";
+		ctx.fillRect( node.pos[0] - LiteGraph.NODE_TITLE_HEIGHT, node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT );
+		if(node.order == 0)
+			ctx.strokeRect( node.pos[0] - LiteGraph.NODE_TITLE_HEIGHT + 0.5, node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT );
+		ctx.fillStyle = "#FFF";
+		ctx.fillText( node.order, node.pos[0] + LiteGraph.NODE_TITLE_HEIGHT * -0.5, node.pos[1] - 6 );
+	}
+	ctx.globalAlpha = 1;
+}
+
 
 /**
 * draws the widgets stored inside a node
@@ -6455,7 +6498,7 @@ LGraphCanvas.onShowTitleEditor = function( value, options, e, menu, node )
 
 	var dialog = document.createElement("div");
 	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>Title</span><input autofocus onblur='this.focus()' type='text' class='value'/><button>OK</button>";
+	dialog.innerHTML = "<span class='name'>Title</span><input autofocus type='text' class='value'/><button>OK</button>";
 	var input = dialog.querySelector("input");
 	if(input)
 	{
@@ -6515,8 +6558,8 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input_html = "";
 
 	var dialog = document.createElement("div");
-	dialog.className = "litegraph litesearchbox";
-	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus onblur='this.focus()' type='text' class='value'/><div class='helper'></div>";
+	dialog.className = "graphdialog";
+	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value'/><div class='helper'></div>";
 	dialog.close = function()
 	{
 		that.search_box = null;
@@ -6652,7 +6695,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 					var help = document.createElement("div");
 					if(!first) first = i;
 					help.innerText = i;
-					help.className = "litegraph lite-search-item";
+					help.className = "help-item";
 					help.addEventListener("click", function(e){
 						select( this.innerText );
 					});
@@ -6704,10 +6747,10 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	var input_html = "";
 
 	if(type == "string" || type == "number" || type == "array")
-		input_html = "<input autofocus onblur='this.focus()' type='text' class='value'/>";
+		input_html = "<input autofocus type='text' class='value'/>";
 	else if(type == "enum" && info.values)
 	{
-		input_html = "<select autofocus onblur='this.focus()' type='text' class='value'>";
+		input_html = "<select autofocus type='text' class='value'>";
 		for(var i in info.values)
 		{
 			var v = info.values.constructor === Array ? info.values[i] : i;
@@ -6717,7 +6760,7 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 	}
 	else if(type == "boolean")
 	{
-		input_html = "<input autofocus onblur='this.focus()' type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
+		input_html = "<input autofocus type='checkbox' class='value' "+(node.properties[property] ? "checked" : "")+"/>";
 	}
 	else
 	{
@@ -7096,7 +7139,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 			menu_info = this.getCanvasMenuOptions();
 			var group = this.graph.getGroupOnPos( event.canvasX, event.canvasY );
 			if( group ) //on group
-				menu_info.push({content:"Group", has_submenu: true, submenu: { title:"Group", extra: group, options: this.getGroupMenuOptions( group ) }});
+				menu_info.push(null,{content:"Edit Group", has_submenu: true, submenu: { title:"Group", extra: group, options: this.getGroupMenuOptions( group ) }});
 		}
 	}
 

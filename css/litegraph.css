@@ -131,7 +131,7 @@
 .litegraph .litemenu-entry:hover:not(.disabled):not(.separator) {
 	background-color: #444 !important;
 	color: #EEE;
-	transition: all 0.4s;
+	transition: all 0.2s;
 }
 
 .litegraph .litemenu-entry .property_name {

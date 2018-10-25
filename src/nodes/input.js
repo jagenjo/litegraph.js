@@ -161,6 +161,9 @@ GamepadInput.prototype.getGamepad = function()
 
 GamepadInput.prototype.onDrawBackground = function(ctx)
 {
+	if(this.flags.collapsed)
+		return;
+
 	//render gamepad state?
 	var la = this._left_axis;
 	var ra = this._right_axis;

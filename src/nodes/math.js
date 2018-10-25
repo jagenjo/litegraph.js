@@ -92,10 +92,19 @@ function MathRange()
 	this.addProperty( "in_max", 1 );
 	this.addProperty( "out_min", 0 );
 	this.addProperty( "out_max", 1 );
+
+	this.size = [80,20];
 }
 
 MathRange.title = "Range";
 MathRange.desc = "Convert a number from one range to another";
+
+MathRange.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return (this._last_v || 0).toFixed(2);
+	return this.title;
+}
 
 MathRange.prototype.onExecute = function()
 {
