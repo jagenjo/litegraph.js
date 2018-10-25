@@ -43,6 +43,7 @@ var LiteGraph = global.LiteGraph = {
 	NODE_DEFAULT_BGCOLOR: "#444",
 	NODE_DEFAULT_BOXCOLOR: "#666",
 	NODE_DEFAULT_SHAPE: "box",
+	DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.5)",
 
 	LINK_COLOR: "#AAD",
 	EVENT_LINK_COLOR: "#F85",
@@ -5250,22 +5251,22 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		return;
 	}
 
-	//custom draw collapsed method
-	if(node.flags.collapsed && node.onDrawCollaped && node.onDrawCollapsed(ctx, this) == true)
-		return;
-
 	var editor_alpha = this.editor_alpha;
 	ctx.globalAlpha = editor_alpha;
 
 	if(this.render_shadows)
 	{
-		ctx.shadowColor = "rgba(0,0,0,0.5)";
+		ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
 		ctx.shadowOffsetX = 2 * this.scale;
 		ctx.shadowOffsetY = 2 * this.scale;
 		ctx.shadowBlur = 3 * this.scale;
 	}
 	else
 		ctx.shadowColor = "transparent";
+
+	//custom draw collapsed method (draw after shadows because they are affected)
+	if(node.flags.collapsed && node.onDrawCollaped && node.onDrawCollapsed(ctx, this) == true)
+		return;
 
 	//clip if required (mask)
 	var shape = node._shape || LiteGraph.BOX_SHAPE;
@@ -5564,6 +5565,9 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 		//title bar
 		if(title_mode != LiteGraph.TRANSPARENT_TITLE) //!node.flags.collapsed)
 		{
+			if(node.flags.collapsed)
+				ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
+	
 			//* gradient test
 			if(this.use_gradients)
 			{
@@ -5593,15 +5597,7 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 				ctx.roundRect(0,-title_height,size[0]+1, title_height, this.round_radius, node.flags.collapsed ? this.round_radius : 0);
 				ctx.fill();
 			}
-
-			/*
-			else if (shape == LiteGraph.CIRCLE_SHAPE)
-			{
-				ctx.beginPath();
-				ctx.arc(title_height *0.5, title_height * -0.5, (title_height - 6) *0.5,0,Math.PI*2);
-				ctx.fill();
-			}
-			*/
+			ctx.shadowColor = "transparent";
 		}
 
 		//title box
@@ -6026,7 +6022,8 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 				ctx.fill();
 				ctx.stroke();
 				ctx.fillStyle = "#999";
-				ctx.fillText( w.title || "Value", 20, y + H*0.7 );
+				if(w.name != null)
+					ctx.fillText( w.name, 20, y + H*0.7 );
 				ctx.fillStyle = "#DDD";
 				ctx.textAlign = "right";
 				ctx.fillText( w.value, width - 20, y + H*0.7 );
