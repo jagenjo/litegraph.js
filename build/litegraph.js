@@ -6017,6 +6017,20 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 						ctx.fillText( w.value, width - 40, y + H*0.7 );
 				}
 				break;
+			case "text":
+				ctx.textAlign = "left";
+				ctx.strokeStyle = "#AAA";
+				ctx.fillStyle = "#111";
+				ctx.beginPath();
+				ctx.roundRect( 10, posY, width - 20, H,H*0.5 );
+				ctx.fill();
+				ctx.stroke();
+				ctx.fillStyle = "#999";
+				ctx.fillText( w.title || "Value", 20, y + H*0.7 );
+				ctx.fillStyle = "#DDD";
+				ctx.textAlign = "right";
+				ctx.fillText( w.value, width - 20, y + H*0.7 );
+				break;
 			default:
 				break;
 		}
@@ -6093,8 +6107,12 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 						}
 					}
 					if(w.callback)
-						setTimeout( function(){	w.callback( w.value, that, node, pos ); }, 20 );
+						setTimeout( (function(){ this.callback( this.value, that, node, pos ); }).bind(w), 20 );
 					this.dirty_canvas = true;
+					break;
+				case "text":
+					if( event.type == "mousedown" )
+						this.prompt( "Value", w.value, (function(v){ this.value = v; }).bind(w), event );
 					break;
 			}
 
@@ -6554,14 +6572,99 @@ LGraphCanvas.onShowTitleEditor = function( value, options, e, menu, node )
 	}
 }
 
+LGraphCanvas.prototype.prompt = function( title, value, callback, event )
+{
+	var that = this;
+	var input_html = "";
+	title = title || "";
+
+	var dialog = document.createElement("div");
+	dialog.className = "graphdialog rounded";
+	dialog.innerHTML = "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
+	dialog.close = function()
+	{
+		that.prompt_box = null;
+		dialog.parentNode.removeChild( dialog );
+	}
+
+	dialog.addEventListener("mouseleave",function(e){
+		 dialog.close();
+	});
+
+	if(that.prompt_box)
+		that.prompt_box.close();
+	that.prompt_box = dialog;
+
+	var first = null;
+	var timeout = null;
+	var selected = null;
+
+	var name_element = dialog.querySelector(".name");
+	name_element.innerText = title;
+	var value_element = dialog.querySelector(".value");
+	value_element.value = value;
+
+	var input = dialog.querySelector("input");
+	input.addEventListener("keydown", function(e){
+		if(e.keyCode == 27) //ESC
+			dialog.close();
+		else if(e.keyCode == 13)
+		{
+			if( callback )
+				callback( this.value );
+			dialog.close();
+		}
+		else
+			return;
+		e.preventDefault();
+		e.stopPropagation();
+	});
+
+	var button = dialog.querySelector("button");
+	button.addEventListener("click", function(e){
+		if( callback )
+			callback( input.value );
+		that.setDirty(true);
+		dialog.close();		
+	});
+
+	var graphcanvas = LGraphCanvas.active_canvas;
+	var canvas = graphcanvas.canvas;
+
+	var rect = canvas.getBoundingClientRect();
+	var offsetx = -20;
+	var offsety = -20;
+	if(rect)
+	{
+		offsetx -= rect.left;
+		offsety -= rect.top;
+	}
+
+	if( event )
+	{
+		dialog.style.left = (event.pageX + offsetx) + "px";
+		dialog.style.top = (event.pageY + offsety)+ "px";
+	}
+	else
+	{
+		dialog.style.left = (canvas.width * 0.5 + offsetx) + "px";
+		dialog.style.top = (canvas.height * 0.5 + offsety) + "px";
+	}
+
+	canvas.parentNode.appendChild( dialog );
+	setTimeout( function(){	input.focus(); },10 );
+
+	return dialog;
+}
+
 LGraphCanvas.prototype.showSearchBox = function(event)
 {
 	var that = this;
 	var input_html = "";
 
 	var dialog = document.createElement("div");
-	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value'/><div class='helper'></div>";
+	dialog.className = "graphdialog rounded";
+	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/><div class='helper'></div>";
 	dialog.close = function()
 	{
 		that.search_box = null;
@@ -6638,7 +6741,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	}
 
 	canvas.parentNode.appendChild( dialog );
-	input.focus();
+	setTimeout( function(){	input.focus(); },10 );
 
 	function select( name )
 	{

@@ -269,9 +269,15 @@ litegraph.litesearchbox .helper {
 	position: absolute;
 	top: 10px;
 	left: 10px;
-	height: 2em;
+	min-height: 2em;
 	background-color: #333;
 	font-size: 1.2em;
+	box-shadow: 0 0 10px black !important;
+}
+
+.graphdialog.rounded {
+	border-radius: 12px;
+	padding-right: 2px;
 }
 
 .graphdialog .name {
@@ -282,18 +288,23 @@ litegraph.litesearchbox .helper {
 }
 
 .graphdialog input, .graphdialog select {
-	margin-top: 3px;
+	margin: 3px;
 	min-width: 60px;
 	min-height: 1.5em;
 	background-color: black;
 	border: 0;
 	color: white;
 	padding-left: 10px;
+    outline: none;
 }
 
 .graphdialog button {
 	margin-top: 3px;
 	vertical-align: top;
+}
+
+.graphdialog button.rounded, .graphdialog input.rounded {
+	border-radius: 0 12px 12px 0;
 }
 
 .graphdialog .helper {
