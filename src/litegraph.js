@@ -4656,15 +4656,15 @@ LGraphCanvas.prototype.selectNodes = function( nodes, add_to_current_selection )
 		this.selected_nodes[ node.id ] = node;
 
 		if(node.inputs)
-			for(var i = 0; i < node.inputs.length; ++i)
-				this.highlighted_links[ node.inputs[i].link ] = true;
+			for(var j = 0; j < node.inputs.length; ++j)
+				this.highlighted_links[ node.inputs[j].link ] = true;
 		if(node.outputs)
-			for(var i = 0; i < node.outputs.length; ++i)
+			for(var j = 0; j < node.outputs.length; ++j)
 			{
-				var out = node.outputs[i];
+				var out = node.outputs[j];
 				if( out.links )
-					for(var j = 0; j < out.links.length; ++j)
-						this.highlighted_links[ out.links[j] ] = true;
+					for(var k = 0; k < out.links.length; ++k)
+						this.highlighted_links[ out.links[k] ] = true;
 			}
 
 	}
