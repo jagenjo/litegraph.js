@@ -21,7 +21,7 @@ Try it in the [demo site](http://tamats.com/projects/litegraph/demo).
 - Easy to integrate in any application
 
 ## Nodes provided
-Although it is easy to create new nodes, LiteGraph comes with some default nodes that could be useful for many cases:
+Although it is easy to create new node types, LiteGraph comes with some default nodes that could be useful for many cases:
 - Interface (Widgets)
 - Math (trigonometry, math operations)
 - Audio (AudioAPI and MIDI)
@@ -115,7 +115,7 @@ LiteGraph.wrapFunctionAsNode("math/sum",sum, ["Number","Number"],"Number");
 
 ## Server side
 
-It also works server-side using Node although some nodes do not work in server (audio, graphics, input, etc).
+It also works server-side using NodeJS although some nodes do not work in server (audio, graphics, input, etc).
 
 ```js
 var LiteGraph = require("./litegraph.js").LiteGraph;
