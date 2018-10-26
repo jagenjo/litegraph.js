@@ -6663,7 +6663,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input_html = "";
 
 	var dialog = document.createElement("div");
-	dialog.className = "graphdialog rounded";
+	dialog.className = "litegraph litesearchbox graphdialog rounded";
 	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/><div class='helper'></div>";
 	dialog.close = function()
 	{
@@ -6688,6 +6688,9 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input = dialog.querySelector("input");
 	if(input)
 	{
+		input.addEventListener("blur", function(e){
+			this.focus();
+		});
 		input.addEventListener("keydown", function(e){
 
 			if(e.keyCode == 38) //UP
@@ -6741,7 +6744,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	}
 
 	canvas.parentNode.appendChild( dialog );
-	setTimeout( function(){	input.focus(); },10 );
+	input.focus();
 
 	function select( name )
 	{
@@ -6800,7 +6803,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 					var help = document.createElement("div");
 					if(!first) first = i;
 					help.innerText = i;
-					help.className = "help-item";
+					help.className = "litegraph lite-search-item";
 					help.addEventListener("click", function(e){
 						select( this.innerText );
 					});
