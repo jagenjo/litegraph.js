@@ -176,7 +176,7 @@
 	padding-left: 10px;
 }
 
-litegraph.litesearchbox .helper {
+.litegraph.litesearchbox .helper {
 	overflow: auto;
 	max-height: 200px;
 	margin-top: 2px;
