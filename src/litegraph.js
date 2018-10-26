@@ -7228,7 +7228,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 	{
 		menu_info = [];
 		menu_info.push( slot.locked ? "Cannot remove"  : { content: "Remove Slot", slot: slot } );
-		menu_info.push( { content: "Rename Slot", slot: slot } );
+		menu_info.push( slot.nameLocked ? "Cannot rename" : { content: "Rename Slot", slot: slot } );
 		options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
 		if(slot.input && slot.input.type == LiteGraph.ACTION)
 			options.title = "Action";
