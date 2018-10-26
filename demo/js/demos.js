@@ -90,13 +90,14 @@ function TestWidgetsNode()
 	this.slider = this.addWidget("slider","Slider", 0.5, function(v){}, { min: 0, max: 1} );
 	this.number = this.addWidget("number","Number", 0.5, function(v){}, { min: 0, max: 100} );
 	this.combo = this.addWidget("combo","Combo", "red", function(v){}, { values:["red","green","blue"]} );
+	this.text = this.addWidget("text","Text", "edit me", function(v){}, {} );
 	this.button = this.addWidget("button","Button", null, function(v){}, {} );
 	this.size = this.computeSize();
 }
 
-TestWidgetsNode.title = "Test Widgets";
+TestWidgetsNode.title = "Widgets";
 
-LiteGraph.registerNodeType("widget/test", TestWidgetsNode );
+LiteGraph.registerNodeType("features/widgets", TestWidgetsNode );
 
 
 //Show value inside the debug console

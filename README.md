@@ -4,7 +4,29 @@ A library in Javascript to create graphs in the browser similar to [PureData](ht
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
+Try it in the [demo site](http://tamats.com/projects/litegraph/demo).
+
 ![Node Graph](imgs/node_graph_example.png "WebGLStudio")
+
+## Features
+- Renders on Canvas2D (zoom in, zoom out, panning)
+- Easy to use editor (searchbox, keyboard shortcuts, multiple selection, context menu, ...)
+- Optimized to support hundreds of nodes per graph (on editor but also on execution)
+- Customizable theme (colors, shapes, background)
+- Callbacks to personalize every action/drawing/event
+- Subgraphs (nodes that contain graphs themselves)
+- Live mode system (hides the graph but calls nodes to render whatever they want, useful to create UI)
+- Graphs can be executed in NodeJS
+- Highly customizable nodes (color, shape, slots vertical or horizontal, widgets, custom rendering)
+- Easy to integrate in any application
+
+## Nodes provided
+Although it is easy to create new node types, LiteGraph comes with some default nodes that could be useful for many cases:
+- Interface (Widgets)
+- Math (trigonometry, math operations)
+- Audio (AudioAPI and MIDI)
+- 3D Graphics (Postprocessing in WebGL)
+- Input (read Gamepad)
 
 ## Installation
 
@@ -93,7 +115,7 @@ LiteGraph.wrapFunctionAsNode("math/sum",sum, ["Number","Number"],"Number");
 
 ## Server side
 
-It also works server-side using Node although some nodes do not work in server (audio, graphics, input, etc).
+It also works server-side using NodeJS although some nodes do not work in server (audio, graphics, input, etc).
 
 ```js
 var LiteGraph = require("./litegraph.js").LiteGraph;
