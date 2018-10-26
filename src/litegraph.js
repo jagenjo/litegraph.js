@@ -6523,6 +6523,9 @@ LGraphCanvas.onShowTitleEditor = function( value, options, e, menu, node )
 	if(input)
 	{
 		input.value = node.title;
+        input.addEventListener("blur", function(e){
+            this.focus();
+        });
 		input.addEventListener("keydown", function(e){
 			if(e.keyCode != 13)
 				return;
@@ -6688,9 +6691,9 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input = dialog.querySelector("input");
 	if(input)
 	{
-		input.addEventListener("blur", function(e){
-			this.focus();
-		});
+        input.addEventListener("blur", function(e){
+            this.focus();
+        });
 		input.addEventListener("keydown", function(e){
 
 			if(e.keyCode == 38) //UP
@@ -6902,6 +6905,9 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 		var input = dialog.querySelector("input");
 		if(input)
 		{
+            input.addEventListener("blur", function(e){
+                this.focus();
+            });
 			input.value = node.properties[ property ] !== undefined ? node.properties[ property ] : "";
 			input.addEventListener("keydown", function(e){
 				if(e.keyCode != 13)
