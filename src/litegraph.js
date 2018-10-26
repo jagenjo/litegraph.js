@@ -7272,7 +7272,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 		{
 			var info = v.slot;
             var slot_info = info.input ? node.getInputInfo( info.slot ) : node.getOutputInfo( info.slot );
-			var dialog = that.createDialog( "<span class='name'>Name</span><input type='text'/><button>OK</button>" , options );
+			var dialog = that.createDialog( "<span class='name'>Name</span><input autofocus type='text'/><button>OK</button>" , options );
 			var input = dialog.querySelector("input");
 			if(input && slot_info){
 				input.value = slot_info.label;
