@@ -1195,7 +1195,7 @@ LGraph.prototype.getGroupOnPos = function(x,y)
 	for (var i = this._groups.length - 1; i >= 0; i--)
 	{
 		var g = this._groups[i];
-		if(g.isPointInside( x, y, 2 ))
+		if(g.isPointInside( x, y, 2, true ))
 			return g;
 	}
 	return null;
@@ -2570,11 +2570,13 @@ LGraphNode.prototype.getBounding = function( out )
 * @param {number} y
 * @return {boolean}
 */
-LGraphNode.prototype.isPointInside = function(x,y, margin)
+LGraphNode.prototype.isPointInside = function(x,y, margin, skip_title )
 {
 	margin = margin || 0;
 
 	var margin_top = this.graph && this.graph.isLive() ? 0 : 20;
+	if(skip_title)
+		margin_top = 0;
 	if(this.flags && this.flags.collapsed)
 	{
 		//if ( distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
@@ -3859,7 +3861,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				}
 
 				//if do not capture mouse
-				if( node.onMouseDown && node.onMouseDown( e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]] ) )
+				if( node.onMouseDown && node.onMouseDown( e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this ) )
 					block_drag_node = true;
 				else if(this.live_mode)
 				{
@@ -4031,7 +4033,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 
 			//in case the node wants to do something
 			if(node.onMouseMove)
-				node.onMouseMove(e);
+				node.onMouseMove(e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this);
 
 			//if dragging a link 
 			if(this.connecting_node)
@@ -4252,7 +4254,7 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 			this.dragging_canvas = false;
 
 			if( this.node_over && this.node_over.onMouseUp )
-				this.node_over.onMouseUp(e, [e.canvasX - this.node_over.pos[0], e.canvasY - this.node_over.pos[1]] );
+				this.node_over.onMouseUp(e, [e.canvasX - this.node_over.pos[0], e.canvasY - this.node_over.pos[1]], this );
 			if( this.node_capturing_input && this.node_capturing_input.onMouseUp )
 				this.node_capturing_input.onMouseUp(e, [e.canvasX - this.node_capturing_input.pos[0], e.canvasY - this.node_capturing_input.pos[1]] );
 		}
@@ -5114,10 +5116,18 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 
 	if(this._graph_stack && this._graph_stack.length)
 	{
-		ctx.strokeStyle = this._graph_stack[ this._graph_stack.length - 1].bgcolor;
+		ctx.save();
+		var parent_graph = this._graph_stack[ this._graph_stack.length - 1];
+		var subgraph_node = this.graph._subgraph_node;
+		ctx.strokeStyle = subgraph_node.bgcolor;
 		ctx.lineWidth = 10;
 		ctx.strokeRect(1,1,canvas.width-2,canvas.height-2);
 		ctx.lineWidth = 1;
+		ctx.font = "40px Arial"
+		ctx.textAlign = "center";
+		ctx.fillStyle = subgraph_node.bgcolor;
+		ctx.fillText( subgraph_node.getTitle(), canvas.width * 0.5, 40 );
+		ctx.restore();
 	}
 
 	var bg_already_painted = false;
@@ -5519,6 +5529,7 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 	var areaw = size[0]+1;
 	var areah = render_title ? size[1] + title_height : size[1];
 
+	//full node shape
 	if(!node.flags.collapsed)
 	{
 		if(shape == LiteGraph.BOX_SHAPE || this.scale < 0.5)
@@ -5651,6 +5662,9 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 				}
 			}
 		}
+
+		if(node.onDrawTitle)
+			node.onDrawTitle(ctx);
 	}
 
 	//render selection marker
@@ -7123,7 +7137,7 @@ LGraphCanvas.prototype.getCanvasMenuOptions = function()
 		];
 
 		if(this._graph_stack && this._graph_stack.length > 0)
-			options = [{content:"Close subgraph", callback: this.closeSubgraph.bind(this) },null].concat(options);
+			options.push(null,{content:"Close subgraph", callback: this.closeSubgraph.bind(this) });
 	}
 
 	if(this.getExtraMenuOptions)
