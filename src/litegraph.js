@@ -4656,15 +4656,15 @@ LGraphCanvas.prototype.selectNodes = function( nodes, add_to_current_selection )
 		this.selected_nodes[ node.id ] = node;
 
 		if(node.inputs)
-			for(var i = 0; i < node.inputs.length; ++i)
-				this.highlighted_links[ node.inputs[i].link ] = true;
+			for(var j = 0; j < node.inputs.length; ++j)
+				this.highlighted_links[ node.inputs[j].link ] = true;
 		if(node.outputs)
-			for(var i = 0; i < node.outputs.length; ++i)
+			for(var j = 0; j < node.outputs.length; ++j)
 			{
-				var out = node.outputs[i];
+				var out = node.outputs[j];
 				if( out.links )
-					for(var j = 0; j < out.links.length; ++j)
-						this.highlighted_links[ out.links[j] ] = true;
+					for(var k = 0; k < out.links.length; ++k)
+						this.highlighted_links[ out.links[k] ] = true;
 			}
 
 	}
@@ -6523,6 +6523,9 @@ LGraphCanvas.onShowTitleEditor = function( value, options, e, menu, node )
 	if(input)
 	{
 		input.value = node.title;
+        input.addEventListener("blur", function(e){
+            this.focus();
+        });
 		input.addEventListener("keydown", function(e){
 			if(e.keyCode != 13)
 				return;
@@ -6663,7 +6666,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input_html = "";
 
 	var dialog = document.createElement("div");
-	dialog.className = "graphdialog rounded";
+	dialog.className = "litegraph litesearchbox graphdialog rounded";
 	dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/><div class='helper'></div>";
 	dialog.close = function()
 	{
@@ -6688,6 +6691,9 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	var input = dialog.querySelector("input");
 	if(input)
 	{
+        input.addEventListener("blur", function(e){
+            this.focus();
+        });
 		input.addEventListener("keydown", function(e){
 
 			if(e.keyCode == 38) //UP
@@ -6741,7 +6747,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	}
 
 	canvas.parentNode.appendChild( dialog );
-	setTimeout( function(){	input.focus(); },10 );
+	input.focus();
 
 	function select( name )
 	{
@@ -6800,7 +6806,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 					var help = document.createElement("div");
 					if(!first) first = i;
 					help.innerText = i;
-					help.className = "help-item";
+					help.className = "litegraph lite-search-item";
 					help.addEventListener("click", function(e){
 						select( this.innerText );
 					});
@@ -6899,6 +6905,9 @@ LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options
 		var input = dialog.querySelector("input");
 		if(input)
 		{
+            input.addEventListener("blur", function(e){
+                this.focus();
+            });
 			input.value = node.properties[ property ] !== undefined ? node.properties[ property ] : "";
 			input.addEventListener("keydown", function(e){
 				if(e.keyCode != 13)
@@ -7228,7 +7237,7 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 	{
 		menu_info = [];
 		menu_info.push( slot.locked ? "Cannot remove"  : { content: "Remove Slot", slot: slot } );
-		menu_info.push( { content: "Rename Slot", slot: slot } );
+		menu_info.push( slot.nameLocked ? "Cannot rename" : { content: "Rename Slot", slot: slot } );
 		options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
 		if(slot.input && slot.input.type == LiteGraph.ACTION)
 			options.title = "Action";
@@ -7271,12 +7280,15 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 		else if( v.content == "Rename Slot")
 		{
 			var info = v.slot;
-			var dialog = that.createDialog( "<span class='name'>Name</span><input type='text'/><button>OK</button>" , options );
+            var slot_info = info.input ? node.getInputInfo( info.slot ) : node.getOutputInfo( info.slot );
+			var dialog = that.createDialog( "<span class='name'>Name</span><input autofocus type='text'/><button>OK</button>" , options );
 			var input = dialog.querySelector("input");
+			if(input && slot_info){
+				input.value = slot_info.label;
+			}
 			dialog.querySelector("button").addEventListener("click",function(e){
 				if(input.value)
 				{
-					var slot_info = info.input ? node.getInputInfo( info.slot ) : node.getOutputInfo( info.slot );
 					if( slot_info )
 						slot_info.label = input.value;
 					that.setDirty(true);
