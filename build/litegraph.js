@@ -1,3 +1,5 @@
+//packer version
+
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -1195,7 +1197,7 @@ LGraph.prototype.getGroupOnPos = function(x,y)
 	for (var i = this._groups.length - 1; i >= 0; i--)
 	{
 		var g = this._groups[i];
-		if(g.isPointInside( x, y, 2 ))
+		if(g.isPointInside( x, y, 2, true ))
 			return g;
 	}
 	return null;
@@ -2476,7 +2478,9 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 	var size = out || new Float32Array([0,0]);
 	rows = Math.max(rows, 1);
 	var font_size = LiteGraph.NODE_TEXT_SIZE; //although it should be graphcanvas.inner_text_font size
-	size[1] = (this.constructor.slot_start_y || 0) + rows * (font_size + 1) + ( this.widgets ? this.widgets.length : 0 ) * (LiteGraph.NODE_WIDGET_HEIGHT + 4 ) + 4;
+	size[1] = (this.constructor.slot_start_y || 0) + rows * (font_size + 1) + 4;
+	if( this.widgets && this.widgets.length )
+		size[1] += this.widgets.length * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 8;
 
 	var font_size = font_size;
 	var title_width = compute_text_size( this.title );
@@ -2505,6 +2509,8 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 
 	size[0] = Math.max( input_width + output_width + 10, title_width );
 	size[0] = Math.max( size[0], LiteGraph.NODE_WIDTH );
+	if(this.widgets && this.widgets.length)
+		size[0] = Math.max( size[0], LiteGraph.NODE_WIDTH * 1.5 );
 
 	if(this.onResize)
 		this.onResize(size);
@@ -2570,11 +2576,13 @@ LGraphNode.prototype.getBounding = function( out )
 * @param {number} y
 * @return {boolean}
 */
-LGraphNode.prototype.isPointInside = function(x,y, margin)
+LGraphNode.prototype.isPointInside = function(x,y, margin, skip_title )
 {
 	margin = margin || 0;
 
 	var margin_top = this.graph && this.graph.isLive() ? 0 : 20;
+	if(skip_title)
+		margin_top = 0;
 	if(this.flags && this.flags.collapsed)
 	{
 		//if ( distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
@@ -3859,7 +3867,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				}
 
 				//if do not capture mouse
-				if( node.onMouseDown && node.onMouseDown( e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]] ) )
+				if( node.onMouseDown && node.onMouseDown( e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this ) )
 					block_drag_node = true;
 				else if(this.live_mode)
 				{
@@ -4031,7 +4039,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 
 			//in case the node wants to do something
 			if(node.onMouseMove)
-				node.onMouseMove(e);
+				node.onMouseMove(e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this);
 
 			//if dragging a link 
 			if(this.connecting_node)
@@ -4252,7 +4260,7 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 			this.dragging_canvas = false;
 
 			if( this.node_over && this.node_over.onMouseUp )
-				this.node_over.onMouseUp(e, [e.canvasX - this.node_over.pos[0], e.canvasY - this.node_over.pos[1]] );
+				this.node_over.onMouseUp(e, [e.canvasX - this.node_over.pos[0], e.canvasY - this.node_over.pos[1]], this );
 			if( this.node_capturing_input && this.node_capturing_input.onMouseUp )
 				this.node_capturing_input.onMouseUp(e, [e.canvasX - this.node_capturing_input.pos[0], e.canvasY - this.node_capturing_input.pos[1]] );
 		}
@@ -5114,10 +5122,18 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 
 	if(this._graph_stack && this._graph_stack.length)
 	{
-		ctx.strokeStyle = this._graph_stack[ this._graph_stack.length - 1].bgcolor;
+		ctx.save();
+		var parent_graph = this._graph_stack[ this._graph_stack.length - 1];
+		var subgraph_node = this.graph._subgraph_node;
+		ctx.strokeStyle = subgraph_node.bgcolor;
 		ctx.lineWidth = 10;
 		ctx.strokeRect(1,1,canvas.width-2,canvas.height-2);
 		ctx.lineWidth = 1;
+		ctx.font = "40px Arial"
+		ctx.textAlign = "center";
+		ctx.fillStyle = subgraph_node.bgcolor;
+		ctx.fillText( subgraph_node.getTitle(), canvas.width * 0.5, 40 );
+		ctx.restore();
 	}
 
 	var bg_already_painted = false;
@@ -5243,7 +5259,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		{
 			ctx.shadowColor = "transparent";
 			if(node.onDrawForeground)
-				node.onDrawForeground(ctx, this);
+				node.onDrawForeground(ctx, this, this.canvas );
 		}
 
 		return;
@@ -5426,12 +5442,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 
 		//draw foreground
 		if(node.onDrawForeground)
-		{
-			//immediate gui stuff
-			if( node.gui_rects )
-				node.gui_rects.length = 0;
-			node.onDrawForeground( ctx, this );
-		}
+			node.onDrawForeground( ctx, this, this.canvas );
 	}
 	else //if collapsed
 	{
@@ -5519,6 +5530,7 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 	var areaw = size[0]+1;
 	var areah = render_title ? size[1] + title_height : size[1];
 
+	//full node shape
 	if(!node.flags.collapsed)
 	{
 		if(shape == LiteGraph.BOX_SHAPE || this.scale < 0.5)
@@ -5550,12 +5562,7 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 		node.bgImage = node.loadImage(node.bgImageUrl);
 
 	if( node.onDrawBackground )
-	{
-		//immediate gui stuff
-		if( node.gui_rects )
-			node.gui_rects.length = 0;
-		node.onDrawBackground( ctx, this );
-	}
+		node.onDrawBackground( ctx, this, this.canvas );
 
 	//title bg (remember, it is rendered ABOVE the node)
 	if(render_title || title_mode == LiteGraph.TRANSPARENT_TITLE )
@@ -5651,6 +5658,9 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 				}
 			}
 		}
+
+		if(node.onDrawTitle)
+			node.onDrawTitle(ctx);
 	}
 
 	//render selection marker
@@ -5968,6 +5978,28 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 					ctx.fillText( w.name, width*0.5, y + H*0.7 );
 				}
 				break;
+			case "toggle":
+				ctx.textAlign = "left";
+				ctx.strokeStyle = "#AAA";
+				ctx.fillStyle = "#111";
+				ctx.beginPath();
+				ctx.roundRect( 10, posY, width - 20, H,H*0.5 );
+				ctx.fill();
+				ctx.stroke();
+				ctx.fillStyle = w.value ? "#89A" : "#333";
+				ctx.beginPath();
+				ctx.arc( width - 20, y + H*0.5, H * 0.36, 0, Math.PI * 2 );
+				ctx.fill();
+				if(show_text)
+				{
+					ctx.fillStyle = "#999";
+					if(w.name != null)
+						ctx.fillText( w.name, 20, y + H*0.7 );
+					ctx.fillStyle = w.value ? "#DDD" : "#888";
+					ctx.textAlign = "right";
+					ctx.fillText( w.value ? (w.options.on || "true") : (w.options.off || "false"), width - 30, y + H*0.7 );
+				}
+				break;
 			case "slider": 
 				ctx.fillStyle = "#111";
 				ctx.fillRect(10,y,width-20,H);
@@ -6109,6 +6141,10 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					if(w.callback)
 						setTimeout( (function(){ this.callback( this.value, that, node, pos ); }).bind(w), 20 );
 					this.dirty_canvas = true;
+					break;
+				case "toggle":
+					if( event.type == "mousedown" )
+						w.value = !w.value;
 					break;
 				case "text":
 					if( event.type == "mousedown" )
@@ -7132,7 +7168,7 @@ LGraphCanvas.prototype.getCanvasMenuOptions = function()
 		];
 
 		if(this._graph_stack && this._graph_stack.length > 0)
-			options = [{content:"Close subgraph", callback: this.closeSubgraph.bind(this) },null].concat(options);
+			options.push(null,{content:"Close subgraph", callback: this.closeSubgraph.bind(this) });
 	}
 
 	if(this.getExtraMenuOptions)
@@ -7884,13 +7920,38 @@ function Subgraph()
 	this.subgraph.onGlobalOutputRenamed = this.onSubgraphRenamedGlobalOutput.bind(this);
 	this.subgraph.onGlobalOutputTypeChanged = this.onSubgraphTypeChangeGlobalOutput.bind(this);
 
-	this.addWidget("button","Open Graph",null,function( widget, graphcanvas ){ graphcanvas.openSubgraph(that.subgraph) });
-	
-	this.bgcolor = "#353";
+	this.color = "#335";
+	this.bgcolor = "#557";
 }
 
 Subgraph.title = "Subgraph";
 Subgraph.desc = "Graph inside a node";
+
+Subgraph.prototype.onDrawTitle = function(ctx)
+{
+	if(this.flags.collapsed)
+		return;
+
+	ctx.fillStyle = "#AAA";
+	var w = LiteGraph.NODE_TITLE_HEIGHT;
+	var x = this.size[0] - w;
+	ctx.fillRect( x, -w, w,w );
+	ctx.fillStyle = "#333";
+	ctx.beginPath();
+	ctx.moveTo( x+w*0.2, -w*0.6 );
+	ctx.lineTo( x+w*0.8, -w*0.6 );
+	ctx.lineTo( x+w*0.5, -w*0.3 );
+	ctx.fill();
+}
+
+Subgraph.prototype.onMouseDown = function(e,pos,graphcanvas)
+{
+	if( !this.flags.collapsed && pos[0] > this.size[0] - LiteGraph.NODE_TITLE_HEIGHT && pos[1] < 0 )
+	{
+		var that = this;
+		setTimeout(function(){ graphcanvas.openSubgraph( that.subgraph ); },10 );
+	}
+}
 
 Subgraph.prototype.onSubgraphNewGlobalInput = function(name, type)
 {
@@ -7951,16 +8012,6 @@ Subgraph.prototype.getExtraMenuOptions = function(graphcanvas)
 			graphcanvas.openSubgraph( that.subgraph );
 		}
 	}];
-}
-
-Subgraph.prototype.onDrawForeground = function( ctx, graphcanvas )
-{
-	/*
-	var node = this;
-	ctx.globalAlpha = 0.75;
-	graphcanvas.guiButton( ctx, [0,this.size[1] - 20, this.size[0], 19 ], "Open", function(){ graphcanvas.openSubgraph(node.subgraph); });
-	ctx.globalAlpha = 1;
-	*/
 }
 
 Subgraph.prototype.onResize = function(size)

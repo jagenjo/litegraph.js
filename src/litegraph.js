@@ -2476,7 +2476,9 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 	var size = out || new Float32Array([0,0]);
 	rows = Math.max(rows, 1);
 	var font_size = LiteGraph.NODE_TEXT_SIZE; //although it should be graphcanvas.inner_text_font size
-	size[1] = (this.constructor.slot_start_y || 0) + rows * (font_size + 1) + ( this.widgets ? this.widgets.length : 0 ) * (LiteGraph.NODE_WIDGET_HEIGHT + 4 ) + 4;
+	size[1] = (this.constructor.slot_start_y || 0) + rows * (font_size + 1) + 4;
+	if( this.widgets && this.widgets.length )
+		size[1] += this.widgets.length * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 8;
 
 	var font_size = font_size;
 	var title_width = compute_text_size( this.title );
@@ -2505,6 +2507,8 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 
 	size[0] = Math.max( input_width + output_width + 10, title_width );
 	size[0] = Math.max( size[0], LiteGraph.NODE_WIDTH );
+	if(this.widgets && this.widgets.length)
+		size[0] = Math.max( size[0], LiteGraph.NODE_WIDTH * 1.5 );
 
 	if(this.onResize)
 		this.onResize(size);
@@ -5253,7 +5257,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		{
 			ctx.shadowColor = "transparent";
 			if(node.onDrawForeground)
-				node.onDrawForeground(ctx, this);
+				node.onDrawForeground(ctx, this, this.canvas );
 		}
 
 		return;
@@ -5436,12 +5440,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 
 		//draw foreground
 		if(node.onDrawForeground)
-		{
-			//immediate gui stuff
-			if( node.gui_rects )
-				node.gui_rects.length = 0;
-			node.onDrawForeground( ctx, this );
-		}
+			node.onDrawForeground( ctx, this, this.canvas );
 	}
 	else //if collapsed
 	{
@@ -5561,12 +5560,7 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 		node.bgImage = node.loadImage(node.bgImageUrl);
 
 	if( node.onDrawBackground )
-	{
-		//immediate gui stuff
-		if( node.gui_rects )
-			node.gui_rects.length = 0;
-		node.onDrawBackground( ctx, this );
-	}
+		node.onDrawBackground( ctx, this, this.canvas );
 
 	//title bg (remember, it is rendered ABOVE the node)
 	if(render_title || title_mode == LiteGraph.TRANSPARENT_TITLE )
@@ -5982,6 +5976,28 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 					ctx.fillText( w.name, width*0.5, y + H*0.7 );
 				}
 				break;
+			case "toggle":
+				ctx.textAlign = "left";
+				ctx.strokeStyle = "#AAA";
+				ctx.fillStyle = "#111";
+				ctx.beginPath();
+				ctx.roundRect( 10, posY, width - 20, H,H*0.5 );
+				ctx.fill();
+				ctx.stroke();
+				ctx.fillStyle = w.value ? "#89A" : "#333";
+				ctx.beginPath();
+				ctx.arc( width - 20, y + H*0.5, H * 0.36, 0, Math.PI * 2 );
+				ctx.fill();
+				if(show_text)
+				{
+					ctx.fillStyle = "#999";
+					if(w.name != null)
+						ctx.fillText( w.name, 20, y + H*0.7 );
+					ctx.fillStyle = w.value ? "#DDD" : "#888";
+					ctx.textAlign = "right";
+					ctx.fillText( w.value ? (w.options.on || "true") : (w.options.off || "false"), width - 30, y + H*0.7 );
+				}
+				break;
 			case "slider": 
 				ctx.fillStyle = "#111";
 				ctx.fillRect(10,y,width-20,H);
@@ -6123,6 +6139,10 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					if(w.callback)
 						setTimeout( (function(){ this.callback( this.value, that, node, pos ); }).bind(w), 20 );
 					this.dirty_canvas = true;
+					break;
+				case "toggle":
+					if( event.type == "mousedown" )
+						w.value = !w.value;
 					break;
 				case "text":
 					if( event.type == "mousedown" )
