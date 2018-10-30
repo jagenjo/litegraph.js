@@ -537,10 +537,10 @@ LGraph.prototype.detachCanvas = function(graphcanvas)
 /**
 * Starts running this graph every interval milliseconds.
 * @method start
-* @param {number} interval amount of milliseconds between executions, default is 1
+* @param {number} interval amount of milliseconds between executions, if -1 then it renders to the monitor refresh rate, default is 1
 */
 
-LGraph.prototype.start = function(interval)
+LGraph.prototype.start = function( interval )
 {
 	if( this.status == LGraph.STATUS_RUNNING )
 		return;
@@ -557,10 +557,23 @@ LGraph.prototype.start = function(interval)
 	interval = interval || 1;
 	var that = this;
 
-	this.execution_timer_id = setInterval( function() {
-		//execute
-		that.runStep(1, !this.catch_errors );
-	},interval);
+	if(interval == -1 && typeof(window) != "undefined" && window.requestAnimationFrame )
+	{
+		function on_frame()
+		{
+			if(that.execution_timer_id != -1)
+				return;
+			window.requestAnimationFrame(on_frame);
+			that.runStep(1, !this.catch_errors );
+		}
+		this.execution_timer_id = -1;
+		on_frame();
+	}
+	else
+		this.execution_timer_id = setInterval( function() {
+			//execute
+			that.runStep(1, !this.catch_errors );
+		},interval);
 }
 
 /**
@@ -579,8 +592,11 @@ LGraph.prototype.stop = function()
 		this.onStopEvent();
 
 	if(this.execution_timer_id != null)
-		clearInterval(this.execution_timer_id);
-	this.execution_timer_id = null;
+	{
+		if( this.execution_timer_id != -1 )
+			clearInterval(this.execution_timer_id);
+		this.execution_timer_id = null;
+	}
 
 	this.sendEventToAllNodes("onStop");
 }
@@ -3195,7 +3211,7 @@ LGraphGroup.prototype.serialize = function()
 	var b = this._bounding;
 	return {
 		title: this.title,
-		bounding: [ b[0], b[1], b[2], b[3] ],
+		bounding: [ Math.round(b[0]), Math.round(b[1]), Math.round(b[2]), Math.round(b[3]) ],
 		color: this.color
 	};
 }
@@ -3978,7 +3994,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 		this.dragging_rectangle[3] = e.canvasY - this.dragging_rectangle[1];
 		this.dirty_canvas = true;
 	}
-	else if (this.selected_group)
+	else if (this.selected_group) //moving/resizing a group
 	{
 		if( this.selected_group_resizing )
 			this.selected_group.size = [ e.canvasX - this.selected_group.pos[0], e.canvasY - this.selected_group.pos[1] ];
@@ -4084,21 +4100,11 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 
 		if(this.node_dragged && !this.live_mode)
 		{
-			/*
-			this.node_dragged.pos[0] += delta[0] / this.scale;
-			this.node_dragged.pos[1] += delta[1] / this.scale;
-			this.node_dragged.pos[0] = Math.round(this.node_dragged.pos[0]);
-			this.node_dragged.pos[1] = Math.round(this.node_dragged.pos[1]);
-			*/
-
 			for(var i in this.selected_nodes)
 			{
 				var n = this.selected_nodes[i];
-
 				n.pos[0] += delta[0] / this.scale;
 				n.pos[1] += delta[1] / this.scale;
-				//n.pos[0] = Math.round(n.pos[0]);
-				//n.pos[1] = Math.round(n.pos[1]);
 			}
 
 			this.dirty_canvas = true;
@@ -4125,16 +4131,8 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 		}
 	}
 
-	/*
-	if((this.dirty_canvas || this.dirty_bgcanvas) && this.rendering_timer_id == null)
-		this.draw();
-	*/
-
 	e.preventDefault();
-	//e.stopPropagation();
 	return false;
-	//this is not really optimal
-	//this.graph.change();
 }
 
 /**
@@ -4162,7 +4160,18 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 	if (e.which == 1) //left button
 	{
 		this.node_widget = null;
-		this.selected_group = null;
+
+		if( this.selected_group )
+		{
+			var diffx = this.selected_group.pos[0] - Math.round( this.selected_group.pos[0] );
+			var diffy = this.selected_group.pos[1] - Math.round( this.selected_group.pos[1] );
+			this.selected_group.move( diffx, diffy, e.ctrlKey );
+			this.selected_group.pos[0] = Math.round( this.selected_group.pos[0] );
+			this.selected_group.pos[1] = Math.round( this.selected_group.pos[1] );
+			if( this.selected_group._nodes.length )
+				this.dirty_canvas = true;
+			this.selected_group = null;
+		}
 		this.selected_group_resizing = false;
 
 		if( this.dragging_rectangle )
@@ -7751,7 +7760,7 @@ ContextMenu.prototype.close = function(e, ignore_parent_menu)
 }
 
 //this code is used to trigger events easily (used in the context menu mouseleave
-ContextMenu.trigger = function(element, event_name, params, origin)
+ContextMenu.trigger = function( element, event_name, params, origin )
 {
 	var evt = document.createEvent( 'CustomEvent' );
 	evt.initCustomEvent( event_name, true,true, params ); //canBubble, cancelable, detail

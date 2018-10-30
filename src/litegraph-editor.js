@@ -123,7 +123,7 @@ Editor.prototype.onPlayButton = function()
 	if(graph.status == LGraph.STATUS_STOPPED)
 	{
 		button.innerHTML = "<img src='imgs/icon-stop.png'/> Stop";
-		graph.start(1); 
+		graph.start(-1); 
 	}
 	else
 	{
