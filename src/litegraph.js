@@ -537,7 +537,7 @@ LGraph.prototype.detachCanvas = function(graphcanvas)
 /**
 * Starts running this graph every interval milliseconds.
 * @method start
-* @param {number} interval amount of milliseconds between executions, if -1 then it renders to the monitor refresh rate, default is 1
+* @param {number} interval amount of milliseconds between executions, if 0 then it renders to the monitor refresh rate
 */
 
 LGraph.prototype.start = function( interval )
@@ -554,10 +554,10 @@ LGraph.prototype.start = function( interval )
 	//launch
 	this.starttime = LiteGraph.getTime();
 	this.last_update_time = this.starttime;
-	interval = interval || 1;
+	interval = interval || 0;
 	var that = this;
 
-	if(interval == -1 && typeof(window) != "undefined" && window.requestAnimationFrame )
+	if(interval == 0 && typeof(window) != "undefined" && window.requestAnimationFrame )
 	{
 		function on_frame()
 		{
@@ -4181,21 +4181,25 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 				var nodes = this.graph._nodes;
 				var node_bounding = new Float32Array(4);
 				this.deselectAllNodes();
-				if( this.dragging_rectangle[2] < 0 ) //flip if negative width
-					this.dragging_rectangle[0] += this.dragging_rectangle[2];
-				if( this.dragging_rectangle[3] < 0 ) //flip if negative height
-					this.dragging_rectangle[1] += this.dragging_rectangle[3];
-				this.dragging_rectangle[2] = Math.abs( this.dragging_rectangle[2] * this.scale ); //abs to convert negative width
-				this.dragging_rectangle[3] = Math.abs( this.dragging_rectangle[3] * this.scale ); //abs to convert negative height
+				//compute bounding and flip if left to right
+				var w = Math.abs( this.dragging_rectangle[2] );
+				var h = Math.abs( this.dragging_rectangle[3] );
+				var startx = this.dragging_rectangle[2] < 0 ? this.dragging_rectangle[0] - w : this.dragging_rectangle[0];
+				var starty = this.dragging_rectangle[3] < 0 ? this.dragging_rectangle[1] - h : this.dragging_rectangle[1];
+				this.dragging_rectangle[0] = startx; this.dragging_rectangle[1] = starty; this.dragging_rectangle[2] = w; this.dragging_rectangle[3] = h;
 
+				//test against all nodes (not visible becasue the rectangle maybe start outside
+				var to_select = [];
 				for(var i = 0; i < nodes.length; ++i)
 				{
 					var node = nodes[i];
 					node.getBounding( node_bounding );
 					if(!overlapBounding( this.dragging_rectangle, node_bounding ))
 						continue; //out of the visible area
-					this.selectNode( node, true );
+					to_select.push(node);
 				}
+				if(to_select.length)
+					this.selectNodes(to_select);
 			}
 			this.dragging_rectangle = null;
 		}

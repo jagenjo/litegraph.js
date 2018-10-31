@@ -147,14 +147,14 @@ TimerEvent.prototype.onExecute = function()
 
 	if( this.time < this.last_interval || isNaN(this.last_interval) )
 	{
-		if( this.inputs[1] )
+		if( this.inputs && this.inputs.length > 1 && this.inputs[1] )
 			this.setOutputData(1,false);
 		return;
 	}
 	this.triggered = true;
 	this.time = this.time % this.last_interval;
 	this.trigger( "on_tick", this.properties.event );
-	if( this.inputs[1] )
+	if( this.inputs && this.inputs.length > 1 && this.inputs[1] )
 		this.setOutputData( 1, true );
 }
 

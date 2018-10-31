@@ -187,3 +187,6 @@ TestSlotsNode.title = "Flat Slots";
 
 
 LiteGraph.registerNodeType("features/slots", TestSlotsNode );
+
+
+
