@@ -9,6 +9,39 @@ To extend the other classes all the methods contained in LGraphNode.prototype ar
 
 When you create a new node type you do not have to inherit from that class, when the node is registered all the methods are copied to your node prototype.
 
+Here is an example of how to create your own node:
+
+```javascript
+//node constructor class
+function MyAddNode()
+{
+  this.addInput("A","number");
+  this.addInput("B","number");
+  this.addOutput("A+B","number");
+  this.properties = { precision: 1 };
+}
+
+//name to show
+MyAddNode.title = "Sum";
+
+//function to call when the node is executed
+MyAddNode.prototype.onExecute = function()
+{
+  var A = this.getInputData(0);
+  if( A === undefined )
+    A = 0;
+  var B = this.getInputData(1);
+  if( B === undefined )
+    B = 0;
+  this.setOutputData( 0, A + B );
+}
+
+//register in the system
+LiteGraph.registerNodeType("basic/sum", MyAddNode );
+
+```
+
+
 ## Node settings
 
 There are several settings that could be defined per node:
