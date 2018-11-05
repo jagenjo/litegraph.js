@@ -98,11 +98,19 @@ node.onDrawForeground = function(canvas, ctx)
 
 You can also grab events from the mouse in case your node has some sort of special interactivity.
 
-node.onMouseDown = function(e)
+```js
+node.onMouseDown = function( event, canvas_pos, graphcanvas )
 {
-
+    return true; //return true is the event was used by your node, to block other behaviours
 }
+```
 
+Other methods are:
+- onMouseMove
+- onMouseUp
+- onMouseEnter
+- onMouseLeave
+- onKey
 
 ## Integration
 
