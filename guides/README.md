@@ -49,9 +49,9 @@ There are several settings that could be defined per node:
 * **properties**: object containing the properties that could be configured by the user
 * **shape**: the shape of the object (could be LiteGraph.BOX,LiteGraph.ROUND,LiteGraph.CARD)
 * **flags**: several flags
-⋅⋅* **resizable**: if it can be resized dragging the corner
-⋅⋅* **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
-⋅⋅* **clip_area**: clips the content when rendering the node
+  * **resizable**: if it can be resized dragging the corner
+  * **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
+  * **clip_area**: clips the content when rendering the node
 
 There are several callbacks that could be defined:
 * **onAdded**: when added to graph
