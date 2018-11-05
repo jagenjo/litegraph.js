@@ -98,8 +98,10 @@ node.onDrawForeground = function(canvas, ctx)
 
 You can also grab events from the mouse in case your node has some sort of special interactivity.
 
+The second parameter is the position in node coordinates, where 0,0 represents the top-left corner of the node content (below the title).
+
 ```js
-node.onMouseDown = function( event, canvas_pos, graphcanvas )
+node.onMouseDown = function( event, pos, graphcanvas )
 {
     return true; //return true is the event was used by your node, to block other behaviours
 }
