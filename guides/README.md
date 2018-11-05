@@ -25,8 +25,8 @@ There are several callbacks that could be defined:
 * **onRemoved**: when removed from graph
 * **onStart**:	when the graph starts playing
 * **onStop**:	when the graph stops playing
-* **onDrawForeground**: render the inside widgets inside the node
-* **onDrawBackground**: render the background area inside the node (only in edit mode)
+* **onDrawBackground**: render something inside the node (not visible in Live mode)
+* **onDrawForeground**: render something inside the node
 * **onMouseDown,onMouseMove,onMouseUp,onMouseEnter,onMouseLeave**
 * **onDblClick**: double clicked in the editor
 * **onExecute**: execute the node
@@ -75,6 +75,33 @@ When creating a class for a graph node here are some useful points:
 - you must register your node using ```LiteGraph.registerNodeType("type/name", MyGraphNodeClass );```
 - you can alter the default priority of execution by defining the ```MyGraphNodeClass.priority``` (default is 0)
 - you can overwrite how the node is rendered using the ```onDrawBackground``` and ```onDrawForeground```
+
+### Custom Node Appearance
+
+You can draw something inside a node using the callbacks ```onDrawForeground``` and ```onDrawBackground```. The only difference is that onDrawForeground gets called in Live Mode and onDrawBackground not.
+
+You do not have to worry about the coordinates system, [0,0] is the top-left corner of the node content area (not the title).
+
+```js
+node.onDrawForeground = function(canvas, ctx)
+{
+  if(this.flags.collapsed)
+    return;
+  ctx.save();
+  ctx.fillColor = "black";
+  ctx.fillRect(0,0,10,this.size[1]);
+  ctx.restore();
+}
+```
+
+### Custom Node Behaviour 
+
+You can also grab events from the mouse in case your node has some sort of special interactivity.
+
+node.onMouseDown = function(e)
+{
+
+}
 
 
 ## Integration
