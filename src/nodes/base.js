@@ -356,12 +356,6 @@ Constant.prototype.onDrawBackground = function(ctx)
 	this.outputs[0].label = this.properties["value"].toFixed(3);
 }
 
-Constant.prototype.onWidget = function(e,widget)
-{
-	if(widget.name == "value")
-		this.setValue(widget.value);
-}
-
 LiteGraph.registerNodeType("basic/const", Constant);
 
 
@@ -370,8 +364,7 @@ function Watch()
 {
 	this.size = [60,20];
 	this.addInput("value",0,{label:""});
-	this.addOutput("value",0,{label:""});
-	this.addProperty( "value", "" );
+	this.value = 0;
 }
 
 Watch.title = "Watch";
@@ -379,20 +372,32 @@ Watch.desc = "Show value of input";
 
 Watch.prototype.onExecute = function()
 {
-	this.properties.value = this.getInputData(0);
-	this.setOutputData(0, this.properties.value);
+	if( this.inputs[0] )	
+		this.value = this.getInputData(0);
+}
+
+Watch.toString = function( o )
+{
+	if( o == null )
+		return "null";
+	else if (o.constructor === Number )
+		return o.toFixed(3);
+	else if (o.constructor === Array )
+	{
+		var str = "[";
+		for(var i = 0; i < o.length; ++i)
+			str += Watch.toString(o[i]) + ((i+1) != o.length ? "," : "");
+		str += "]";
+		return str;
+	}
+	else
+		return String(o);
 }
 
 Watch.prototype.onDrawBackground = function(ctx)
 {
 	//show the current value
-	if(this.inputs[0] && this.properties["value"] != null)	
-	{
-		if (this.properties["value"].constructor === Number )
-			this.inputs[0].label = this.properties["value"].toFixed(3);
-		else
-			this.inputs[0].label = String(this.properties.value);
-	}
+	this.inputs[0].label = Watch.toString(this.value);
 }
 
 LiteGraph.registerNodeType("basic/watch", Watch);

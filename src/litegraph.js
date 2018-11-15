@@ -1187,13 +1187,13 @@ LGraph.prototype.findNodesByTitle = function(title)
 * @param {Array} nodes_list a list with all the nodes to search from, by default is all the nodes in the graph
 * @return {LGraphNode} the node at this position or null
 */
-LGraph.prototype.getNodeOnPos = function(x,y, nodes_list)
+LGraph.prototype.getNodeOnPos = function( x, y, nodes_list, margin )
 {
 	nodes_list = nodes_list || this._nodes;
 	for (var i = nodes_list.length - 1; i >= 0; i--)
 	{
 		var n = nodes_list[i];
-		if(n.isPointInside( x, y, 2 ))
+		if(n.isPointInside( x, y, margin ))
 			return n;
 	}
 	return null;
@@ -1921,7 +1921,10 @@ LGraphNode.prototype.serialize = function()
 		o.shape = this.shape;
 
 	if(this.onSerialize)
-		this.onSerialize(o);
+	{
+		if( this.onSerialize(o) )
+			console.warn("node onSerialize shouldnt return anything, data should be stored in the object pass in the first parameter");
+	}
 
 	return o;
 }
@@ -2560,6 +2563,8 @@ LGraphNode.prototype.addWidget = function( type, name, value, callback, options 
 	if(w.options.y !== undefined )
 		w.y = w.options.y;
 
+	if( !callback )
+		console.warn("LiteGraph addWidget('button',...) without a callback");
 	if( type == "combo" && !w.options.values )
 		throw("LiteGraph addWidget('combo',...) requires to pass values in options: { values:['red','blue'] }");
 	this.widgets.push(w);
@@ -2590,7 +2595,7 @@ LGraphNode.prototype.getBounding = function( out )
 * @param {number} y
 * @return {boolean}
 */
-LGraphNode.prototype.isPointInside = function(x,y, margin, skip_title )
+LGraphNode.prototype.isPointInside = function( x, y, margin, skip_title )
 {
 	margin = margin || 0;
 
@@ -2830,7 +2835,7 @@ LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 
 	//get output slot
 	var output = this.outputs[slot];
-	if(!output.links || output.links.length == 0)
+	if(!output || !output.links || output.links.length == 0)
 		return false;
 
 	//one of the output links in this slot
@@ -3773,7 +3778,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	ref_window.document.addEventListener("mousemove", this._mousemove_callback, true ); //catch for the entire window
 	ref_window.document.addEventListener("mouseup", this._mouseup_callback, true );
 
-	var node = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes );
+	var node = this.graph.getNodeOnPos( e.canvasX, e.canvasY, this.visible_nodes, 5 );
 	var skip_dragging = false;
 	var skip_action = false;
 	var now = LiteGraph.getTime();
@@ -3808,74 +3813,79 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 			//not dragging mouse to connect two slots
 			if(!this.connecting_node && !node.flags.collapsed && !this.live_mode)
 			{
-				//search for outputs
-				if(node.outputs)
-					for(var i = 0, l = node.outputs.length; i < l; ++i)
-					{
-						var output = node.outputs[i];
-						var link_pos = node.getConnectionPos(false,i);
-						if( isInsideRectangle( e.canvasX, e.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30,20) )
-						{
-							this.connecting_node = node;
-							this.connecting_output = output;
-							this.connecting_pos = node.getConnectionPos(false,i);
-							this.connecting_slot = i;
-
-                            if (is_double_click) {
-                                if (node.onOutputDblClick)
-                                    node.onOutputDblClick(i, e);
-                            } else {
-                                if (node.onOutputClick)
-                                    node.onOutputClick(i, e);
-                            }
-
-							skip_action = true;
-							break;
-						}
-					}
-
-				//search for inputs
-				if(node.inputs)
-					for(var i = 0, l = node.inputs.length; i < l; ++i)
-					{
-						var input = node.inputs[i];
-						var link_pos = node.getConnectionPos( true, i );
-						if( isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30,20) )
-						{
-                            if (is_double_click) {
-                                if (node.onInputDblClick)
-                                    node.onInputDblClick(i, e);
-                            } else {
-                                if (node.onInputClick)
-                                    node.onInputClick(i, e);
-                            }
-
-							if(input.link !== null)
-							{
-								var link_info = this.graph.links[ input.link ]; //before disconnecting
-								node.disconnectInput(i);
-
-								if( this.allow_reconnect_links || e.shiftKey )
-								{
-									this.connecting_node = this.graph._nodes_by_id[ link_info.origin_id ];
-									this.connecting_slot = link_info.origin_slot;
-									this.connecting_output = this.connecting_node.outputs[ this.connecting_slot ];
-									this.connecting_pos = this.connecting_node.getConnectionPos( false, this.connecting_slot);
-								}
-
-								this.dirty_bgcanvas = true;
-								skip_action = true;
-							}
-						}
-					}
-
-				//Search for corner
-				if( !skip_action && node.flags.resizable !== false && isInsideRectangle(e.canvasX, e.canvasY, node.pos[0] + node.size[0] - 5, node.pos[1] + node.size[1] - 5 ,5,5 ))
+				//Search for corner for resize
+				if( !skip_action && node.flags.resizable !== false && isInsideRectangle( e.canvasX, e.canvasY, node.pos[0] + node.size[0] - 5, node.pos[1] + node.size[1] - 5 ,10,10 ))
 				{
 					this.resizing_node = node;
 					this.canvas.style.cursor = "se-resize";
 					skip_action = true;
 				}
+				else
+				{
+					//search for outputs
+					if(node.outputs)
+						for(var i = 0, l = node.outputs.length; i < l; ++i)
+						{
+							var output = node.outputs[i];
+							var link_pos = node.getConnectionPos(false,i);
+							if( isInsideRectangle( e.canvasX, e.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30,20) )
+							{
+								this.connecting_node = node;
+								this.connecting_output = output;
+								this.connecting_pos = node.getConnectionPos(false,i);
+								this.connecting_slot = i;
+
+								if( e.shiftKey )
+									node.disconnectOutput(i);
+
+								if (is_double_click) {
+									if (node.onOutputDblClick)
+										node.onOutputDblClick(i, e);
+								} else {
+									if (node.onOutputClick)
+										node.onOutputClick(i, e);
+								}
+
+								skip_action = true;
+								break;
+							}
+						}
+
+					//search for inputs
+					if(node.inputs)
+						for(var i = 0, l = node.inputs.length; i < l; ++i)
+						{
+							var input = node.inputs[i];
+							var link_pos = node.getConnectionPos( true, i );
+							if( isInsideRectangle(e.canvasX, e.canvasY, link_pos[0] - 15, link_pos[1] - 10, 30,20) )
+							{
+								if (is_double_click) {
+									if (node.onInputDblClick)
+										node.onInputDblClick(i, e);
+								} else {
+									if (node.onInputClick)
+										node.onInputClick(i, e);
+								}
+
+								if(input.link !== null)
+								{
+									var link_info = this.graph.links[ input.link ]; //before disconnecting
+									node.disconnectInput(i);
+
+									if( this.allow_reconnect_links || e.shiftKey )
+									{
+										this.connecting_node = this.graph._nodes_by_id[ link_info.origin_id ];
+										this.connecting_slot = link_info.origin_slot;
+										this.connecting_output = this.connecting_node.outputs[ this.connecting_slot ];
+										this.connecting_pos = this.connecting_node.getConnectionPos( false, this.connecting_slot);
+									}
+
+									this.dirty_bgcanvas = true;
+									skip_action = true;
+								}
+							}
+						}
+				} //not resizing
 			}
 
 			//Search for corner
@@ -3910,7 +3920,9 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 				//if do not capture mouse
 				if( node.onMouseDown && node.onMouseDown( e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this ) )
+				{
 					block_drag_node = true;
+				}
 				else if(this.live_mode)
 				{
 					clicking_canvas_bg = true;
@@ -3971,6 +3983,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	this.last_mouse[0] = e.localX;
 	this.last_mouse[1] = e.localY;
 	this.last_mouseclick = LiteGraph.getTime();
+	this.last_mouse_dragging = true;
 
 	/*
 	if( (this.dirty_canvas || this.dirty_bgcanvas) && this.rendering_timer_id == null)
@@ -4009,6 +4022,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 	this.last_mouse = mouse;
 	this.canvas_mouse[0] = e.canvasX;
 	this.canvas_mouse[1] = e.canvasY;
+	e.dragging = this.last_mouse_dragging;
 
 	if( this.node_widget )
 	{
@@ -4114,11 +4128,11 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 				if( isInsideRectangle(e.canvasX, e.canvasY, node.pos[0] + node.size[0] - 5, node.pos[1] + node.size[1] - 5 ,5,5 ))
 					this.canvas.style.cursor = "se-resize";
 				else
-					this.canvas.style.cursor = null;
+					this.canvas.style.cursor = "";
 			}
 		}
 		else if(this.canvas)
-			this.canvas.style.cursor = null;
+			this.canvas.style.cursor = "";
 
 		if(this.node_capturing_input && this.node_capturing_input != node && this.node_capturing_input.onMouseMove)
 		{
@@ -4184,6 +4198,7 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 	this.adjustMouseEvent(e);
 	var now = LiteGraph.getTime();
 	e.click_time = (now - this.last_mouseclick);
+	this.last_mouse_dragging = false;
 
 	if (e.which == 1) //left button
 	{
@@ -7331,6 +7346,8 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 	if(slot) //on slot
 	{
 		menu_info = [];
+		if(slot && slot.output && slot.output.links && slot.output.links.length)
+			menu_info.push( { content: "Disconnect Links", slot: slot } );
 		menu_info.push( slot.locked ? "Cannot remove"  : { content: "Remove Slot", slot: slot } );
 		menu_info.push( slot.nameLocked ? "Cannot rename" : { content: "Rename Slot", slot: slot } );
 		options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
@@ -7370,6 +7387,15 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 				node.removeInput( info.slot );
 			else if(info.output)
 				node.removeOutput( info.slot );
+			return;
+		}
+		else if(v.content == "Disconnect Links")
+		{
+			var info = v.slot;
+			if(info.output)
+				node.disconnectOutput( info.slot );
+			else if(info.input)
+				node.disconnectInput( info.slot );
 			return;
 		}
 		else if( v.content == "Rename Slot")
