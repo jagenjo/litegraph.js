@@ -40,13 +40,38 @@ function Subgraph()
 	this.subgraph.onGlobalOutputRenamed = this.onSubgraphRenamedGlobalOutput.bind(this);
 	this.subgraph.onGlobalOutputTypeChanged = this.onSubgraphTypeChangeGlobalOutput.bind(this);
 
-	this.addWidget("button","Open Graph",null,function( widget, graphcanvas ){ graphcanvas.openSubgraph(that.subgraph) });
-	
-	this.bgcolor = "#353";
+	this.color = "#335";
+	this.bgcolor = "#557";
 }
 
 Subgraph.title = "Subgraph";
 Subgraph.desc = "Graph inside a node";
+
+Subgraph.prototype.onDrawTitle = function(ctx)
+{
+	if(this.flags.collapsed)
+		return;
+
+	ctx.fillStyle = "#AAA";
+	var w = LiteGraph.NODE_TITLE_HEIGHT;
+	var x = this.size[0] - w;
+	ctx.fillRect( x, -w, w,w );
+	ctx.fillStyle = "#333";
+	ctx.beginPath();
+	ctx.moveTo( x+w*0.2, -w*0.6 );
+	ctx.lineTo( x+w*0.8, -w*0.6 );
+	ctx.lineTo( x+w*0.5, -w*0.3 );
+	ctx.fill();
+}
+
+Subgraph.prototype.onMouseDown = function(e,pos,graphcanvas)
+{
+	if( !this.flags.collapsed && pos[0] > this.size[0] - LiteGraph.NODE_TITLE_HEIGHT && pos[1] < 0 )
+	{
+		var that = this;
+		setTimeout(function(){ graphcanvas.openSubgraph( that.subgraph ); },10 );
+	}
+}
 
 Subgraph.prototype.onSubgraphNewGlobalInput = function(name, type)
 {
@@ -107,16 +132,6 @@ Subgraph.prototype.getExtraMenuOptions = function(graphcanvas)
 			graphcanvas.openSubgraph( that.subgraph );
 		}
 	}];
-}
-
-Subgraph.prototype.onDrawForeground = function( ctx, graphcanvas )
-{
-	/*
-	var node = this;
-	ctx.globalAlpha = 0.75;
-	graphcanvas.guiButton( ctx, [0,this.size[1] - 20, this.size[0], 19 ], "Open", function(){ graphcanvas.openSubgraph(node.subgraph); });
-	ctx.globalAlpha = 1;
-	*/
 }
 
 Subgraph.prototype.onResize = function(size)

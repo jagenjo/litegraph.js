@@ -1,6 +1,8 @@
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
 function Editor( container_id, options )
 {
+	options = options || {};
+
 	//fill container
 	var html = "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
 	html += "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
@@ -12,6 +14,7 @@ function Editor( container_id, options )
 	root.innerHTML = html;
 
 	this.tools = root.querySelector(".tools");
+	this.footer = root.querySelector(".footer");
 
 	var canvas = root.querySelector(".graphcanvas");
 
@@ -28,10 +31,12 @@ function Editor( container_id, options )
 	this.addToolsButton("playnode_button","Play","imgs/icon-play.png", this.onPlayButton.bind(this), ".tools-right" );
 	this.addToolsButton("playstepnode_button","Step","imgs/icon-playstep.png", this.onPlayStepButton.bind(this), ".tools-right" );
 	
-	this.addToolsButton("livemode_button","Live","imgs/icon-record.png", this.onLiveButton.bind(this), ".tools-right" );
-	this.addToolsButton("maximize_button","","imgs/icon-maximize.png", this.onFullscreenButton.bind(this), ".tools-right" );
-
-	this.addMiniWindow(300,200);
+	if(!options.skip_livemode)
+		this.addToolsButton("livemode_button","Live","imgs/icon-record.png", this.onLiveButton.bind(this), ".tools-right" );
+	if(!options.skip_maximize)
+		this.addToolsButton("maximize_button","","imgs/icon-maximize.png", this.onFullscreenButton.bind(this), ".tools-right" );
+	if(options.miniwindow)
+		this.addMiniWindow(300,200);
 
 	//append to DOM
 	var	parent = document.getElementById(container_id);
@@ -123,7 +128,7 @@ Editor.prototype.onPlayButton = function()
 	if(graph.status == LGraph.STATUS_STOPPED)
 	{
 		button.innerHTML = "<img src='imgs/icon-stop.png'/> Stop";
-		graph.start(1); 
+		graph.start(); 
 	}
 	else
 	{
