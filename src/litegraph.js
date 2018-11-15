@@ -6770,6 +6770,9 @@ LGraphCanvas.prototype.prompt = function( title, value, callback, event )
 	return dialog;
 }
 
+
+LGraphCanvas.search_filter = false;
+LGraphCanvas.search_limit = -1;
 LGraphCanvas.prototype.showSearchBox = function(event)
 {
 	var that = this;
@@ -6898,30 +6901,48 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 		selected.scrollIntoView();
 	}
 
-	function refreshHelper()
-	{
-		timeout = null;
-		var str = input.value;
-		first = null;
-		helper.innerHTML = "";
-		if(!str)
-			return;
+	function refreshHelper() {
+        timeout = null;
+        var str = input.value;
+        first = null;
+        helper.innerHTML = "";
+        if (!str)
+            return;
 
-		if( that.onSearchBox )
-			that.onSearchBox( help, str, graphcanvas );
-		else
-			for( var i in LiteGraph.registered_node_types )
-				if(i.indexOf(str) != -1)
-				{
-					var help = document.createElement("div");
-					if(!first) first = i;
-					help.innerText = i;
-					help.className = "litegraph lite-search-item";
-					help.addEventListener("click", function(e){
-						select( this.innerText );
-					});
-					helper.appendChild(help);
+        if (that.onSearchBox){
+            that.onSearchBox(help, str, graphcanvas);
+    	} else {
+        	function addResult(result) {
+                var help = document.createElement("div");
+                if (!first) first = result;
+                help.innerText = result;
+                help.className = "litegraph lite-search-item";
+                help.addEventListener("click", function (e) {
+                    select(this.innerText);
+                });
+                helper.appendChild(help);
+			}
+            let c = 0;
+        	if(LGraphCanvas.search_filter) {
+        		str = str.toLowerCase();
+
+        		var keys = Object.keys(LiteGraph.registered_node_types);
+        		var filtered = keys.filter(function (item) {
+					return item.toLowerCase().indexOf(str) !== -1;
+                });
+        		for(var i = 0; i < filtered.length; i++) {
+                    addResult(filtered[i]);
+                    if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit) break;
 				}
+			} else {
+                for (var i in LiteGraph.registered_node_types) {
+                    if (i.indexOf(str) != -1) {
+                        addResult(i);
+                        if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit) break;
+                    }
+                }
+            }
+        }
 	}
 
 	return dialog;
