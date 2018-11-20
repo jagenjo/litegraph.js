@@ -1767,7 +1767,6 @@ LGraphNode.prototype._ctor = function( title )
 	this.properties = {}; //for the values
 	this.properties_info = []; //for the info
 
-	this.data = null; //persistent local data
 	this.flags = {};
 }
 
@@ -1888,7 +1887,6 @@ LGraphNode.prototype.serialize = function()
 		type: this.type,
 		pos: this.pos,
 		size: this.size,
-		data: this.data,
 		flags: LiteGraph.cloneObject(this.flags),
 		mode: this.mode
 	};
