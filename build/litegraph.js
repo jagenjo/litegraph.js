@@ -5833,6 +5833,7 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 
 			var start_slot = start_node.outputs[start_node_slot];
 			var end_slot = node.inputs[i];
+			if(!start_slot || !end_slot) continue;
 			var start_dir = start_slot.dir || (start_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT);
 			var end_dir = end_slot.dir || (node.flags.horizontal ? LiteGraph.UP : LiteGraph.LEFT);
 
