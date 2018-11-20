@@ -1,3 +1,5 @@
+//packer version
+
 (function(global){
 // *************************************************************
 //   LiteGraph CLASS                                     *******
@@ -2357,6 +2359,7 @@ LGraphNode.prototype.addOutput = function(name,type,extra_info)
 	if(this.onOutputAdded)
 		this.onOutputAdded(o);
 	this.size = this.computeSize();
+	this.setDirtyCanvas(true,true);
 	return o;
 }
 
@@ -2383,6 +2386,7 @@ LGraphNode.prototype.addOutputs = function(array)
 	}
 
 	this.size = this.computeSize();
+	this.setDirtyCanvas(true,true);
 }
 
 /**
@@ -2394,9 +2398,24 @@ LGraphNode.prototype.removeOutput = function(slot)
 {
 	this.disconnectOutput(slot);
 	this.outputs.splice(slot,1);
+	for(var i = slot; i < this.outputs.length; ++i)
+	{
+		if( !this.outputs[i] || !this.outputs[i].links )
+			continue;
+		var links = this.outputs[i].links;
+		for(var j = 0; j < links.length; ++j)
+		{
+			var link = this.graph.links[ links[j] ];
+			if(!link)
+				continue;
+			link.origin_slot -= 1;
+		}
+	}
+
 	this.size = this.computeSize();
 	if(this.onOutputRemoved)
 		this.onOutputRemoved(slot);
+	this.setDirtyCanvas(true,true);
 }
 
 /**
@@ -2420,6 +2439,7 @@ LGraphNode.prototype.addInput = function(name,type,extra_info)
 	this.size = this.computeSize();
 	if(this.onInputAdded)
 		this.onInputAdded(o);
+	this.setDirtyCanvas(true,true);
 	return o;
 }
 
@@ -2446,6 +2466,7 @@ LGraphNode.prototype.addInputs = function(array)
 	}
 
 	this.size = this.computeSize();
+	this.setDirtyCanvas(true,true);
 }
 
 /**
@@ -2457,9 +2478,19 @@ LGraphNode.prototype.removeInput = function(slot)
 {
 	this.disconnectInput(slot);
 	this.inputs.splice(slot,1);
+	for(var i = slot; i < this.inputs.length; ++i)
+	{
+		if(!this.inputs[i])
+			continue;
+		var link = this.graph.links[ this.inputs[i].link ];
+		if(!link)
+			continue;
+		link.target_slot -= 1;
+	}
 	this.size = this.computeSize();
 	if(this.onInputRemoved)
 		this.onInputRemoved(slot);
+	this.setDirtyCanvas(true,true);
 }
 
 /**
@@ -6913,17 +6944,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
         if (that.onSearchBox){
             that.onSearchBox(help, str, graphcanvas);
     	} else {
-        	function addResult(result) {
-                var help = document.createElement("div");
-                if (!first) first = result;
-                help.innerText = result;
-                help.className = "litegraph lite-search-item";
-                help.addEventListener("click", function (e) {
-                    select(this.innerText);
-                });
-                helper.appendChild(help);
-			}
-            let c = 0;
+            var c = 0;
         	if(LGraphCanvas.search_filter) {
         		str = str.toLowerCase();
 
@@ -6933,17 +6954,30 @@ LGraphCanvas.prototype.showSearchBox = function(event)
                 });
         		for(var i = 0; i < filtered.length; i++) {
                     addResult(filtered[i]);
-                    if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit) break;
+                    if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit)
+						break;
 				}
 			} else {
                 for (var i in LiteGraph.registered_node_types) {
                     if (i.indexOf(str) != -1) {
                         addResult(i);
-                        if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit) break;
+                        if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit)
+							break;
                     }
                 }
             }
         }
+
+		function addResult(result) {
+			var help = document.createElement("div");
+			if (!first) first = result;
+			help.innerText = result;
+			help.className = "litegraph lite-search-item";
+			help.addEventListener("click", function (e) {
+				select(this.innerText);
+			});
+			helper.appendChild(help);
+		}
 	}
 
 	return dialog;
