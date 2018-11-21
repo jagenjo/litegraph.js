@@ -461,6 +461,15 @@ LGraph.prototype.clear = function()
 
 	this._version = -1; //used to detect changes
 
+	//safe clear
+	if(this._nodes)
+	for(var i = 0; i < this._nodes.length; ++i)
+	{
+		var node = this._nodes[i];
+		if(node.onRemoved)
+			node.onRemoved();
+	}
+
 	//nodes
 	this._nodes = [];
 	this._nodes_by_id = {};
@@ -11460,10 +11469,6 @@ ImageWebcam.desc = "Webcam image";
 
 ImageWebcam.prototype.openStream = function()
 {
-	//Vendor prefixes hell
-	navigator.getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
-	window.URL = window.URL || window.webkitURL;
-
 	if (!navigator.getUserMedia) {
 	  //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
 	  return;
@@ -11472,13 +11477,13 @@ ImageWebcam.prototype.openStream = function()
 	this._waiting_confirmation = true;
 
 	// Not showing vendor prefixes.
-	navigator.getUserMedia({video: true}, this.streamReady.bind(this), onFailSoHard);		
+	navigator.mediaDevices.getUserMedia({audio: false, video: true}).then( this.streamReady.bind(this) ).catch( onFailSoHard );
 
 	var that = this;
 	function onFailSoHard(e) {
 		console.log('Webcam rejected', e);
 		that._webcam_stream = false;
-		that.box_color = "red";
+		that.boxcolor = "red";
 	};
 }
 
@@ -11502,7 +11507,7 @@ ImageWebcam.prototype.streamReady = function(localMediaStream)
 	{
 		video = document.createElement("video");
 		video.autoplay = true;
-		video.src = window.URL.createObjectURL(localMediaStream);
+		video.srcObject = localMediaStream;
 		this._video = video;
 		//document.body.appendChild( video ); //debug
 		//when video info is loaded (size and so)
@@ -11511,7 +11516,7 @@ ImageWebcam.prototype.streamReady = function(localMediaStream)
 			console.log(e);
 		};
 	}
-},
+}
 
 ImageWebcam.prototype.onExecute = function()
 {
@@ -14058,9 +14063,6 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LGraphTextureWebcam.prototype.openStream = function()
 	{
 		//Vendor prefixes hell
-		navigator.getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
-		window.URL = window.URL || window.webkitURL;
-
 		if (!navigator.getUserMedia) {
 		  //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
 		  return;
@@ -14070,12 +14072,12 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		var that = this;
 
 		// Not showing vendor prefixes.
-		navigator.getUserMedia({video: true}, this.streamReady.bind(this), onFailSoHard);		
+		navigator.mediaDevices.getUserMedia({audio: false, video: true}).then( this.streamReady.bind(this) ).catch( onFailSoHard );
 
 		function onFailSoHard(e) {
 			console.log('Webcam rejected', e);
 			that._webcam_stream = false;
-			that.box_color = "red";
+			that.boxcolor = "red";
 		};
 	}
 
@@ -14089,7 +14091,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		{
 			video = document.createElement("video");
 			video.autoplay = true;
-		    video.src = window.URL.createObjectURL( localMediaStream );
+		    video.srcObject = localMediaStream;
 			this._video = video;
 			//document.body.appendChild( video ); //debug
 			//when video info is loaded (size and so)
@@ -14105,12 +14107,11 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		if(!this._webcam_stream)
 			return;
 
-		var video_streams = this._webcam_stream.getVideoTracks();
-		if(video_streams.length)
+		var tracks = this._webcam_stream.getTracks();
+		if(tracks.length)
 		{
-			var webcam = video_streams[0];
-			if( webcam.stop )
-				webcam.stop();
+			for(var i = 0;i < tracks.length; ++i)
+				tracks[i].stop();
 		}
 
 		this._webcam_stream = null;
@@ -14128,11 +14129,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		//render to graph canvas
 		ctx.save();
 		if(!ctx.webgl) //reverse image
-		{
-			ctx.translate(0,this.size[1]);
-			ctx.scale(1,-1);
 			ctx.drawImage(this._video, 0, 0, this.size[0], this.size[1]);
-		}
 		else
 		{
 			if(this._temp_texture)
@@ -16671,6 +16668,153 @@ LGAudioSource.prototype.onDropFile = function(file)
 LGAudioSource.title = "Source";
 LGAudioSource.desc = "Plays audio";
 LiteGraph.registerNodeType("audio/source", LGAudioSource);
+
+
+//****************************************************
+
+function LGAudioMediaSource()
+{
+	this.properties = {
+		gain: 0.5
+	};
+
+	this._audionodes = [];
+	this._media_stream = null;
+
+	this.addOutput( "out", "audio" );
+	this.addInput( "gain", "number" );
+
+	//create gain node to control volume
+	var context = LGAudio.getAudioContext();
+	this.audionode = context.createGain();
+	this.audionode.graphnode = this;
+	this.audionode.gain.value = this.properties.gain;
+}
+
+
+LGAudioMediaSource.prototype.onAdded = function(graph)
+{
+	if(graph.status === LGraph.STATUS_RUNNING)
+		this.onStart();
+}
+
+LGAudioMediaSource.prototype.onStart = function()
+{
+	if(this._media_stream == null && !this._waiting_confirmation)
+		this.openStream();
+}
+
+LGAudioMediaSource.prototype.onStop = function()
+{
+	this.audionode.gain.value = 0;
+}
+
+LGAudioMediaSource.prototype.onPause = function()
+{
+	this.audionode.gain.value = 0;
+}
+
+LGAudioMediaSource.prototype.onUnpause = function()
+{
+	this.audionode.gain.value = this.properties.gain;
+}
+
+LGAudioMediaSource.prototype.onRemoved = function()
+{
+	this.audionode.gain.value = 0;
+	if( this.audiosource_node )
+	{
+		this.audiosource_node.disconnect( this.audionode );
+		this.audiosource_node = null;
+	}
+	if(this._media_stream)
+	{
+		var tracks = this._media_stream.getTracks();
+		if(tracks.length)
+			tracks[0].stop();
+	}
+}
+
+LGAudioMediaSource.prototype.openStream = function()
+{
+	if (!navigator.mediaDevices) {
+	  console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
+	  return;
+	}
+
+	this._waiting_confirmation = true;
+
+	// Not showing vendor prefixes.
+	navigator.mediaDevices.getUserMedia({audio: true, video: false}).then( this.streamReady.bind(this) ).catch( onFailSoHard );
+
+	var that = this;
+	function onFailSoHard(err) {
+		console.log('Media rejected', err);
+		that._media_stream = false;
+		that.boxcolor = "red";
+	};
+}
+
+LGAudioMediaSource.prototype.streamReady = function( localMediaStream )
+{
+	this._media_stream = localMediaStream;
+	//this._waiting_confirmation = false;
+
+	//init context
+	if( this.audiosource_node )
+		this.audiosource_node.disconnect( this.audionode );
+	var context = LGAudio.getAudioContext();
+	this.audiosource_node = context.createMediaStreamSource( localMediaStream );
+	this.audiosource_node.graphnode = this;
+	this.audiosource_node.connect( this.audionode );
+	this.boxcolor = "white";
+}
+
+LGAudioMediaSource.prototype.onExecute = function()
+{
+	if(this._media_stream == null && !this._waiting_confirmation)
+		this.openStream();
+
+
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; ++i)
+		{
+			var input = this.inputs[i];
+			if(input.link == null)
+				continue;
+			var v = this.getInputData(i);
+			if( v === undefined )
+				continue;
+			if( input.name == "gain" )
+				this.audionode.gain.value = this.properties.gain = v;
+		}
+}
+
+LGAudioMediaSource.prototype.onAction = function(event)
+{
+	if(event == "Play")
+		this.audionode.gain.value = this.properties.gain;
+	else if(event == "Stop")
+		this.audionode.gain.value = 0;
+}
+
+LGAudioMediaSource.prototype.onPropertyChanged = function( name, value )
+{
+	if(name == "gain")
+		this.audionode.gain.value = value;
+}
+
+//Helps connect/disconnect AudioNodes when new connections are made in the node
+LGAudioMediaSource.prototype.onConnectionsChange = LGAudio.onConnectionsChange;
+
+LGAudioMediaSource.prototype.onGetInputs = function()
+{
+	return [["playbackRate","number"],["Play",LiteGraph.ACTION],["Stop",LiteGraph.ACTION]];
+}
+
+LGAudioMediaSource.title = "MediaSource";
+LGAudioMediaSource.desc = "Plays microphone";
+LiteGraph.registerNodeType("audio/media_source", LGAudioMediaSource);
 
 
 //*****************************************************

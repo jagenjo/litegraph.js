@@ -690,10 +690,6 @@ ImageWebcam.desc = "Webcam image";
 
 ImageWebcam.prototype.openStream = function()
 {
-	//Vendor prefixes hell
-	navigator.getUserMedia = (navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia);
-	window.URL = window.URL || window.webkitURL;
-
 	if (!navigator.getUserMedia) {
 	  //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
 	  return;
@@ -702,13 +698,13 @@ ImageWebcam.prototype.openStream = function()
 	this._waiting_confirmation = true;
 
 	// Not showing vendor prefixes.
-	navigator.getUserMedia({video: true}, this.streamReady.bind(this), onFailSoHard);		
+	navigator.mediaDevices.getUserMedia({audio: false, video: true}).then( this.streamReady.bind(this) ).catch( onFailSoHard );
 
 	var that = this;
 	function onFailSoHard(e) {
 		console.log('Webcam rejected', e);
 		that._webcam_stream = false;
-		that.box_color = "red";
+		that.boxcolor = "red";
 	};
 }
 
@@ -732,7 +728,7 @@ ImageWebcam.prototype.streamReady = function(localMediaStream)
 	{
 		video = document.createElement("video");
 		video.autoplay = true;
-		video.src = window.URL.createObjectURL(localMediaStream);
+		video.srcObject = localMediaStream;
 		this._video = video;
 		//document.body.appendChild( video ); //debug
 		//when video info is loaded (size and so)
@@ -741,7 +737,7 @@ ImageWebcam.prototype.streamReady = function(localMediaStream)
 			console.log(e);
 		};
 	}
-},
+}
 
 ImageWebcam.prototype.onExecute = function()
 {

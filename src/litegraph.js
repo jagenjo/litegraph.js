@@ -459,6 +459,15 @@ LGraph.prototype.clear = function()
 
 	this._version = -1; //used to detect changes
 
+	//safe clear
+	if(this._nodes)
+	for(var i = 0; i < this._nodes.length; ++i)
+	{
+		var node = this._nodes[i];
+		if(node.onRemoved)
+			node.onRemoved();
+	}
+
 	//nodes
 	this._nodes = [];
 	this._nodes_by_id = {};
