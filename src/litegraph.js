@@ -2276,8 +2276,9 @@ LGraphNode.prototype.trigger = function( action, param )
 * @method triggerSlot
 * @param {Number} slot the index of the output slot
 * @param {*} param
+* @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
 */
-LGraphNode.prototype.triggerSlot = function( slot, param )
+LGraphNode.prototype.triggerSlot = function( slot, param, link_id )
 {
 	if( !this.outputs )
 		return;
@@ -2296,16 +2297,18 @@ LGraphNode.prototype.triggerSlot = function( slot, param )
 	//for every link attached here
 	for(var k = 0; k < links.length; ++k)
 	{
+		var id = links[k];
+		if( link_id != null && link_id != id ) //to skip links
+			continue;
 		var link_info = this.graph.links[ links[k] ];
 		if(!link_info) //not connected
 			continue;
+		link_info._last_time = LiteGraph.getTime();
 		var node = this.graph.getNodeById( link_info.target_id );
 		if(!node) //node not found?
 			continue;
 
 		//used to mark events in graph
-		link_info._last_time = LiteGraph.getTime();
-
 		var target_connection = node.inputs[ link_info.target_slot ];
 
 		if(node.onAction)
@@ -5850,8 +5853,10 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 			if(link && link._last_time && (now - link._last_time) < 1000 )
 			{
 				var f = 2.0 - (now - link._last_time) * 0.002;
-				var color = "rgba(255,255,255, " + f.toFixed(2) + ")";
-				this.renderLink( ctx, start_node_slotpos, end_node_slotpos, link, true, f, color, start_dir, end_dir );
+				var tmp = ctx.globalAlpha;
+				ctx.globalAlpha = tmp * f;
+				this.renderLink( ctx, start_node_slotpos, end_node_slotpos, link, true, f, "white", start_dir, end_dir );
+				ctx.globalAlpha = tmp;
 			}
 		}
 	}
