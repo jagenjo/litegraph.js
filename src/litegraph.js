@@ -6258,11 +6258,15 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					break;
 				case "toggle":
 					if( event.type == "mousedown" )
+					{
 						w.value = !w.value;
+						if(w.callback)
+							setTimeout( function(){	w.callback( w.value, that, node, pos ); }, 20 );
+					}
 					break;
 				case "text":
 					if( event.type == "mousedown" )
-						this.prompt( "Value", w.value, (function(v){ this.value = v; }).bind(w), event );
+						this.prompt( "Value", w.value, (function(v){ this.value = v; if(w.callback) w.callback(v, that, node ); }).bind(w), event );
 					break;
 			}
 

@@ -1643,6 +1643,75 @@ if(typeof(GL) != "undefined")
 
 	LiteGraph.registerNodeType("texture/channelsTexture", LGraphChannelsTexture );
 
+	// Texture Color *****************************************
+	function LGraphTextureColor()
+	{
+		this.addOutput("Texture","Texture");
+
+		this._tex_color = vec4.create();
+		this.properties = { color: vec4.create(), precision: LGraphTexture.DEFAULT };
+	}
+
+	LGraphTextureColor.title = "Color";
+	LGraphTextureColor.desc = "Generates a 1x1 texture with a constant color";
+
+	LGraphTextureColor.widgets_info = { 
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureColor.prototype.onDrawBackground = function( ctx )
+	{
+		var c = this.properties.color;
+		ctx.fillStyle = "rgb(" + Math.floor(Math.clamp(c[0],0,1)*255) + "," + Math.floor(Math.clamp(c[1],0,1)*255) + "," + Math.floor(Math.clamp(c[2],0,1)*255) + ")";
+		if(this.flags.collapsed)
+			this.boxcolor = ctx.fillStyle;
+		else
+			ctx.fillRect(0,0,this.size[0],this.size[1]);
+	}
+
+	LGraphTextureColor.prototype.onExecute = function()
+	{
+		var type = this.properties.precision == LGraphTexture.HIGH ? LGraphTexture.HIGH_PRECISION_FORMAT : gl.UNSIGNED_BYTE;
+
+		if(!this._tex || this._tex.type != type )
+			this._tex = new GL.Texture(1,1,{ format: gl.RGBA, type: type, minFilter: gl.NEAREST });
+		var color = this.properties.color;
+
+		if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var v = this.getInputData(i);
+			if(v === undefined)
+				continue;
+			switch(input.name)
+			{
+				case 'RGB':
+				case 'RGBA':
+					color.set(v);
+					break;
+				case 'R': color[0] = v; break;
+				case 'G': color[1] = v; break;
+				case 'B': color[2] = v; break;
+				case 'A': color[3] = v; break;
+			}
+		}
+		
+		if( vec4.sqrDist( this._tex_color, color) > 0.001 )
+		{
+			this._tex_color.set( color );
+			this._tex.fill( color );
+		}
+		this.setOutputData(0, this._tex);
+	}
+
+	LGraphTextureColor.prototype.onGetInputs = function()
+	{
+		return [["RGB","vec3"],["RGBA","vec4"],["R","number"],["G","number"],["B","number"],["A","number"]];
+	}
+
+	LiteGraph.registerNodeType("texture/color", LGraphTextureColor );
+
 	// Texture Channels to Texture *****************************************
 	function LGraphTextureGradient()
 	{
@@ -1743,10 +1812,8 @@ if(typeof(GL) != "undefined")
 		this.addInput("Mixer","Texture");
 
 		this.addOutput("Texture","Texture");
-		this.properties = { precision: LGraphTexture.DEFAULT };
-
-		if(!LGraphTextureMix._shader)
-			LGraphTextureMix._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureMix.pixel_shader );
+		this.properties = { factor: 0.5, precision: LGraphTexture.DEFAULT };
+		this._uniforms = { u_textureA:0, u_textureB:1, u_textureMix:2, u_mix: vec4.create() };
 	}
 
 	LGraphTextureMix.title = "Mix";
@@ -1770,8 +1837,13 @@ if(typeof(GL) != "undefined")
 		}
 
 		var texB = this.getInputData(1);
+		if(!texA || !texB )
+			return;
+
 		var texMix = this.getInputData(2);
-		if(!texA || !texB || !texMix) return;
+
+		var factor = this.getInputData(3);
+
 
 		this._tex = LGraphTexture.getTargetTexture( texA, this._tex, this.properties.precision );
 
@@ -1779,16 +1851,37 @@ if(typeof(GL) != "undefined")
 		gl.disable( gl.DEPTH_TEST );
 
 		var mesh = Mesh.getScreenQuad();
-		var shader = LGraphTextureMix._shader;
+		var shader = null;
+		var uniforms = this._uniforms;
+		if(texMix)
+		{
+			shader = LGraphTextureMix._shader_tex;
+			if(!shader)
+				shader = LGraphTextureMix._shader_tex = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureMix.pixel_shader, {"MIX_TEX":""});
+		}
+		else
+		{
+			shader = LGraphTextureMix._shader_factor;
+			if(!shader)
+				shader = LGraphTextureMix._shader_factor = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureMix.pixel_shader );
+			var f = factor == null ? this.properties.factor : factor;
+			uniforms.u_mix.set([f,f,f,f]);
+		}
 
 		this._tex.drawTo( function() {
 			texA.bind(0);
 			texB.bind(1);
-			texMix.bind(2);
-			shader.uniforms({u_textureA:0,u_textureB:1,u_textureMix:2}).draw(mesh);
+			if(texMix)
+				texMix.bind(2);
+			shader.uniforms( uniforms ).draw(mesh);
 		});
 
 		this.setOutputData(0, this._tex);
+	}
+
+	LGraphTextureMix.prototype.onGetInputs = function()
+	{
+		return [["factor","number"]];
 	}
 
 	LGraphTextureMix.pixel_shader = "precision highp float;\n\
@@ -1796,10 +1889,19 @@ if(typeof(GL) != "undefined")
 			varying vec2 v_coord;\n\
 			uniform sampler2D u_textureA;\n\
 			uniform sampler2D u_textureB;\n\
-			uniform sampler2D u_textureMix;\n\
+			#ifdef MIX_TEX\n\
+				uniform sampler2D u_textureMix;\n\
+			#else\n\
+				uniform vec4 u_mix;\n\
+			#endif\n\
 			\n\
 			void main() {\n\
-			   gl_FragColor = mix( texture2D(u_textureA, v_coord), texture2D(u_textureB, v_coord), texture2D(u_textureMix, v_coord) );\n\
+				#ifdef MIX_TEX\n\
+				   vec4 f = texture2D(u_textureMix, v_coord);\n\
+				#else\n\
+				   vec4 f = u_mix;\n\
+				#endif\n\
+			   gl_FragColor = mix( texture2D(u_textureA, v_coord), texture2D(u_textureB, v_coord), f );\n\
 			}\n\
 			";
 
@@ -2728,7 +2830,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		this.addInput("exp","number");
 		this.addOutput("out","Texture");
 		this.properties = { exposition: 1, precision: LGraphTexture.LOW };
-		this._uniforms = { u_texture: 0, u_exposition: exp };
+		this._uniforms = { u_texture: 0, u_exposition: 1 };
 	}
 
 	LGraphExposition.title = "Exposition";
