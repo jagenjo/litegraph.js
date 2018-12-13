@@ -42,6 +42,7 @@ var LiteGraph = global.LiteGraph = {
 	NODE_DEFAULT_BOXCOLOR: "#666",
 	NODE_DEFAULT_SHAPE: "box",
 	DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.5)",
+	DEFAULT_GROUP_FONT: 24,
 
 	LINK_COLOR: "#AAD",
 	EVENT_LINK_COLOR: "#F85",
@@ -3227,11 +3228,12 @@ global.LGraphGroup = LiteGraph.LGraphGroup = LGraphGroup;
 LGraphGroup.prototype._ctor = function( title )
 {
 	this.title = title || "Group";
+	this.font_size = 24;
+	this.color = LGraphCanvas.node_colors.pale_blue ? LGraphCanvas.node_colors.pale_blue.groupcolor : "#AAA";
 	this._bounding = new Float32Array([10,10,140,80]);
 	this._pos = this._bounding.subarray(0,2);
 	this._size = this._bounding.subarray(2,4);
 	this._nodes = [];
-	this.color = LGraphCanvas.node_colors.pale_blue ? LGraphCanvas.node_colors.pale_blue.groupcolor : "#AAA";
 	this.graph = null;
 
 	Object.defineProperty( this, "pos", {
@@ -3270,6 +3272,7 @@ LGraphGroup.prototype.configure = function(o)
 	this.title = o.title;
 	this._bounding.set( o.bounding );
 	this.color = o.color;
+	this.font = o.font;
 }
 
 LGraphGroup.prototype.serialize = function()
@@ -3278,7 +3281,8 @@ LGraphGroup.prototype.serialize = function()
 	return {
 		title: this.title,
 		bounding: [ Math.round(b[0]), Math.round(b[1]), Math.round(b[2]), Math.round(b[3]) ],
-		color: this.color
+		color: this.color,
+		font: this.font
 	};
 }
 
@@ -6318,7 +6322,6 @@ LGraphCanvas.prototype.drawGroups = function(canvas, ctx)
 
 	ctx.save();
 	ctx.globalAlpha = 0.5 * this.editor_alpha;
-	ctx.font = "24px Arial";
 
 	for(var i = 0; i < groups.length; ++i)
 	{
@@ -6344,7 +6347,9 @@ LGraphCanvas.prototype.drawGroups = function(canvas, ctx)
 		ctx.lineTo( pos[0] + size[0], pos[1] + size[1] - 10 );
 		ctx.fill();
 
-		ctx.fillText( group.title, pos[0] + 4, pos[1] + 24 );
+		var font_size = (group.font_size || LiteGraph.DEFAULT_GROUP_FONT_SIZE);
+		ctx.font = font_size + "px Arial";
+		ctx.fillText( group.title, pos[0] + 4, pos[1] + font_size );
 	}
 
 	ctx.restore();
@@ -6697,17 +6702,21 @@ LGraphCanvas.onResizeNode = function( value, options, e, menu, node )
 }
 
 
-LGraphCanvas.onShowTitleEditor = function( value, options, e, menu, node )
+LGraphCanvas.onShowPropertyEditor = function( item, options, e, menu, node )
 {
 	var input_html = "";
+	var property = item.property || "title";
+	var value = node[ property ];
 
 	var dialog = document.createElement("div");
 	dialog.className = "graphdialog";
-	dialog.innerHTML = "<span class='name'>Title</span><input autofocus type='text' class='value'/><button>OK</button>";
+	dialog.innerHTML = "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
+	var title = dialog.querySelector(".name");
+	title.innerText = property;
 	var input = dialog.querySelector("input");
 	if(input)
 	{
-		input.value = node.title;
+		input.value = value;
         input.addEventListener("blur", function(e){
             this.focus();
         });
@@ -6754,7 +6763,11 @@ LGraphCanvas.onShowTitleEditor = function( value, options, e, menu, node )
 
 	function setValue(value)
 	{
-		node.title = value;
+		if( item.type == "Number" )
+			value = Number(value);
+		else if( item.type == "Boolean" )
+			value = Boolean(value);
+		node[ property ] = value;
 		dialog.parentNode.removeChild( dialog );
 		node.setDirtyCanvas(true,true);
 	}
@@ -7416,7 +7429,7 @@ LGraphCanvas.prototype.getNodeMenuOptions = function( node )
 			null,
 			{content:"Properties", has_submenu: true, callback: LGraphCanvas.onShowMenuNodeProperties },
 			null,
-			{content:"Title", callback: LGraphCanvas.onShowTitleEditor },
+			{content:"Title", callback: LGraphCanvas.onShowPropertyEditor },
 			{content:"Mode", has_submenu: true, callback: LGraphCanvas.onMenuNodeMode },
 			{content:"Resize", callback: LGraphCanvas.onResizeNode },
 			{content:"Collapse", callback: LGraphCanvas.onMenuNodeCollapse },
@@ -7464,8 +7477,9 @@ LGraphCanvas.prototype.getNodeMenuOptions = function( node )
 LGraphCanvas.prototype.getGroupMenuOptions = function( node )
 {
 	var o = [
-		{content:"Title", callback: LGraphCanvas.onShowTitleEditor },
+		{content:"Title", callback: LGraphCanvas.onShowPropertyEditor },
 		{content:"Color", has_submenu: true, callback: LGraphCanvas.onMenuNodeColors },
+		{content:"Font size", property: "font_size", type:"Number", callback: LGraphCanvas.onShowPropertyEditor },
 		null,
 		{content:"Remove", callback: LGraphCanvas.onMenuNodeRemove }
 	];
