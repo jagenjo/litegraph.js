@@ -86,10 +86,12 @@ var LiteGraph = global.LiteGraph = {
 
 	debug: false,
 	throw_errors: true,
-	allow_scripts: true,
+	allow_scripts: false,
 	registered_node_types: {}, //nodetypes by string
 	node_types_by_file_extension: {}, //used for droping files in the canvas
 	Nodes: {}, //node types by classname
+
+	searchbox_extras: {}, //used to add extra features to the search box
 
 	/**
 	* Register a node class so it can be listed when the user wants to create a new one
@@ -389,6 +391,11 @@ var LiteGraph = global.LiteGraph = {
 					return true;
 
 		return false;
+	},
+
+	registerSearchboxExtra: function( node_type, description, data )
+	{
+		this.searchbox_extras[ description ] = { type: node_type, desc: description, data: data };
 	}
 };
 
@@ -3382,6 +3389,12 @@ function LGraphCanvas( canvas, graph, options )
 	this.onSearchBox = null;
 	this.onSearchBoxSelection = null;
 
+	//callbacks
+	this.onMouse = null;
+	this.onDrawBackground = null; //to render background objects (behind nodes and connections) in the canvas affected by transform
+	this.onDrawForeground = null; //to render foreground objects (above nodes and connections) in the canvas affected by transform
+	this.onDrawOverlay = null; //to render foreground objects not affected by transform (for GUIs)
+
 	this.connections_width = 3;
 	this.round_radius = 8;
 
@@ -3405,7 +3418,7 @@ function LGraphCanvas( canvas, graph, options )
 
 global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
-LGraphCanvas.link_type_colors = {"-1":"#F85",'number':"#AAC","node":"#DCA"};
+LGraphCanvas.link_type_colors = {"-1":"#F85",'number':"#AAA","node":"#DCA"};
 LGraphCanvas.gradients = {}; //cache of gradients
 
 /**
@@ -3827,6 +3840,12 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	this.canvas_mouse[1] = e.canvasY;
 
     LiteGraph.closeAllContextMenus( ref_window );
+
+	if(this.onMouse)
+	{
+		if( this.onMouse(e) == true )
+			return;
+	}
 
 	if(e.which == 1) //left button mouse
 	{
@@ -4986,7 +5005,7 @@ LGraphCanvas.prototype.computeVisibleNodes = function( nodes, out )
 		var n = nodes[i];
 
 		//skip rendering nodes in live mode
-		if(this.live_mode && !n.onDrawBackground && !n.onDrawForeground)
+		if( this.live_mode && !n.onDrawBackground && !n.onDrawForeground )
 			continue;
 
 		if(!overlapBounding( this.visible_area, n.getBounding( temp ) ))
@@ -5133,7 +5152,7 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 					link_color = LiteGraph.CONNECTING_LINK_COLOR;
 			}
 			//the connection being dragged by the mouse
-			this.renderLink( ctx, this.connecting_pos, [this.canvas_mouse[0],this.canvas_mouse[1]], null, false, null, link_color, this.connecting_output.dir || (this.connecting_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT), LiteGraph.CENTER );
+			this.renderLink( ctx, this.connecting_pos, [ this.canvas_mouse[0], this.canvas_mouse[1] ], null, false, null, link_color, this.connecting_output.dir || (this.connecting_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT), LiteGraph.CENTER );
 
 			ctx.beginPath();
 				if( this.connecting_output.type === LiteGraph.EVENT || this.connecting_output.shape === LiteGraph.BOX_SHAPE )
@@ -5157,9 +5176,14 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 			ctx.strokeRect( this.dragging_rectangle[0], this.dragging_rectangle[1], this.dragging_rectangle[2], this.dragging_rectangle[3] );
 		}
 
+		if( this.onDrawForeground )
+			this.onDrawForeground( ctx, this.visible_rect );
 
 		ctx.restore();
 	}
+
+	if( this.onDrawOverlay )
+		this.onDrawOverlay( ctx );
 
 	if(this.dirty_area)
 	{
@@ -5296,8 +5320,13 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		if(this.graph._groups.length && !this.live_mode)
 			this.drawGroups(canvas, ctx);
 
-		if(this.onBackgroundRender)
-			this.onBackgroundRender(canvas, ctx);
+		if( this.onDrawBackground )
+			this.onDrawBackground( ctx, this.visible_area );
+		if( this.onBackgroundRender ) //LEGACY
+		{
+			console.error("WARNING! onBackgroundRender deprecated, now is named onDrawBackground ");
+			this.onBackgroundRender = null;
+		}
 
 		//DEBUG: show clipping area
 		//ctx.fillStyle = "red";
@@ -6817,7 +6846,6 @@ LGraphCanvas.prototype.prompt = function( title, value, callback, event )
 }
 
 
-LGraphCanvas.search_filter = false;
 LGraphCanvas.search_limit = -1;
 LGraphCanvas.prototype.showSearchBox = function(event)
 {
@@ -6866,7 +6894,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 				if(selected)
 					select( selected.innerHTML )
 				else if(first)
-					select(first);
+					select( first );
 				else
 					dialog.close();
 			}
@@ -6916,11 +6944,38 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 				that.onSearchBoxSelection( name, event, graphcanvas );
 			else
 			{
+				var extra = LiteGraph.searchbox_extras[ name ];
+				if( extra )
+					name = extra.type;
+
 				var node = LiteGraph.createNode( name );
 				if(node)
 				{
 					node.pos = graphcanvas.convertEventToCanvas( event );
 					graphcanvas.graph.add( node );
+				}
+
+				if( extra && extra.data )
+				{
+					if(extra.data.properties)
+						for(var i in extra.data.properties)
+							node.addProperty( extra.data.properties[i][0], extra.data.properties[i][0] );
+					if(extra.data.inputs)
+					{
+						node.inputs = [];
+						for(var i in extra.data.inputs)
+							node.addOutput( extra.data.inputs[i][0],extra.data.inputs[i][1] );
+					}
+					if(extra.data.outputs)
+					{
+						node.outputs = [];
+						for(var i in extra.data.outputs)
+							node.addOutput( extra.data.outputs[i][0],extra.data.outputs[i][1] );
+					}
+					if(extra.data.title)
+						node.title = extra.data.title;
+					if(extra.data.json)
+						node.configure( extra.data.json );
 				}
 			}
 		}
@@ -6955,24 +7010,41 @@ LGraphCanvas.prototype.showSearchBox = function(event)
         if (!str)
             return;
 
-        if (that.onSearchBox){
-            that.onSearchBox(help, str, graphcanvas);
+        if (that.onSearchBox) {
+            var list = that.onSearchBox( help, str, graphcanvas );
+			if(list)
+				for( var i = 0; i < list.length; ++i )
+					addResult( list[i] );
     	} else {
             var c = 0;
-        	if(LGraphCanvas.search_filter) {
-        		str = str.toLowerCase();
+       		str = str.toLowerCase();
+			//extras
+			for(var i in LiteGraph.searchbox_extras)
+			{
+				var extra = LiteGraph.searchbox_extras[i];
+				if( extra.desc.toLowerCase().indexOf(str) === -1 )
+					continue;
+				addResult( extra.desc, "searchbox_extra" );
+				if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit )
+					break;
+			}
 
-        		var keys = Object.keys(LiteGraph.registered_node_types);
+        	if(Array.prototype.filter)//filter supported
+			{
+				//types
+        		var keys = Object.keys( LiteGraph.registered_node_types );
         		var filtered = keys.filter(function (item) {
 					return item.toLowerCase().indexOf(str) !== -1;
                 });
-        		for(var i = 0; i < filtered.length; i++) {
+        		for(var i = 0; i < filtered.length; i++)
+				{
                     addResult(filtered[i]);
                     if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit)
 						break;
 				}
 			} else {
-                for (var i in LiteGraph.registered_node_types) {
+                for (var i in LiteGraph.registered_node_types)
+				{
                     if (i.indexOf(str) != -1) {
                         addResult(i);
                         if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit)
@@ -6982,13 +7054,18 @@ LGraphCanvas.prototype.showSearchBox = function(event)
             }
         }
 
-		function addResult(result) {
+		function addResult( type, className )
+		{
 			var help = document.createElement("div");
-			if (!first) first = result;
-			help.innerText = result;
+			if (!first)
+				first = type;
+			help.innerText = type;
+			help.dataset["type"] = escape(type);
 			help.className = "litegraph lite-search-item";
+			if( className )
+				help.className +=  " " + className;
 			help.addEventListener("click", function (e) {
-				select(this.innerText);
+				select( unescape( this.dataset["type"] ) );
 			});
 			helper.appendChild(help);
 		}
@@ -7349,6 +7426,20 @@ LGraphCanvas.prototype.getNodeMenuOptions = function( node )
 			null
 		];
 
+	if(node.onGetInputs)
+	{
+		var inputs = node.onGetInputs();
+		if(inputs && inputs.length)
+			options[0].disabled = false;
+	}
+
+	if(node.onGetOutputs)
+	{
+		var outputs = node.onGetOutputs();
+		if(outputs && outputs.length )
+			options[1].disabled = false;
+	}
+
 	if(node.getExtraMenuOptions)
 	{
 		var extra = node.getExtraMenuOptions(this);
@@ -7363,20 +7454,6 @@ LGraphCanvas.prototype.getNodeMenuOptions = function( node )
 			options.push({content:"Clone", callback: LGraphCanvas.onMenuNodeClone });
 	if( node.removable !== false )
 			options.push(null,{content:"Remove", callback: LGraphCanvas.onMenuNodeRemove });
-
-	if(node.onGetInputs)
-	{
-		var inputs = node.onGetInputs();
-		if(inputs && inputs.length)
-			options[0].disabled = false;
-	}
-
-	if(node.onGetOutputs)
-	{
-		var outputs = node.onGetOutputs();
-		if(outputs && outputs.length )
-			options[1].disabled = false;
-	}
 
 	if(node.graph && node.graph.onGetNodeMenuOptions )
 		node.graph.onGetNodeMenuOptions( options, node );

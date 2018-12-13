@@ -591,6 +591,14 @@ MathCompare.prototype.onGetOutputs = function()
 
 LiteGraph.registerNodeType("math/compare",MathCompare);
 
+LiteGraph.registerSearchboxExtra("math/compare","==", { outputs:[["A==B","boolean"]], title: "A==B" });
+LiteGraph.registerSearchboxExtra("math/compare","!=", { outputs:[["A!=B","boolean"]], title: "A!=B" });
+LiteGraph.registerSearchboxExtra("math/compare",">", { outputs:[["A>B","boolean"]], title: "A>B" });
+LiteGraph.registerSearchboxExtra("math/compare","<", { outputs:[["A<B","boolean"]], title: "A<B" });
+LiteGraph.registerSearchboxExtra("math/compare",">=", { outputs:[["A>=B","boolean"]], title: "A>=B" });
+LiteGraph.registerSearchboxExtra("math/compare","<=", { outputs:[["A<=B","boolean"]], title: "A<=B" });
+
+
 function MathCondition()
 {
 	this.addInput("A","number");
@@ -725,54 +733,67 @@ MathTrigonometry.prototype.onGetOutputs = function()
 
 LiteGraph.registerNodeType("math/trigonometry", MathTrigonometry );
 
+LiteGraph.registerSearchboxExtra("math/trigonometry","SIN()", { outputs:[["sin","number"]], title: "SIN()" });
+LiteGraph.registerSearchboxExtra("math/trigonometry","COS()", { outputs:[["cos","number"]], title: "COS()"  });
+LiteGraph.registerSearchboxExtra("math/trigonometry","TAN()", { outputs:[["tan","number"]], title: "TAN()"  });
 
 
 //math library for safe math operations without eval
-if(typeof(math) != undefined)
+function MathFormula()
 {
-	function MathFormula()
-	{
-		this.addInputs("x","number");
-		this.addInputs("y","number");
-		this.addOutputs("","number");
-		this.properties = {x:1.0, y:1.0, formula:"x+y"};
-	}
-
-	MathFormula.title = "Formula";
-	MathFormula.desc = "Compute safe formula";
-		
-	MathFormula.prototype.onExecute = function()
-	{
-		var x = this.getInputData(0);
-		var y = this.getInputData(1);
-		if(x != null)
-			this.properties["x"] = x;
-		else
-			x = this.properties["x"];
-
-		if(y!=null)
-			this.properties["y"] = y;
-		else
-			y = this.properties["y"];
-
-		var f = this.properties["formula"];
-		var value = math.eval(f,{x:x,y:y,T: this.graph.globaltime });
-		this.setOutputData(0, value );
-	}
-
-	MathFormula.prototype.onDrawBackground = function()
-	{
-		var f = this.properties["formula"];
-		this.outputs[0].label = f;
-	}
-
-	MathFormula.prototype.onGetOutputs = function()
-	{
-		return [["A-B","number"],["A*B","number"],["A/B","number"]];
-	}
-
-	LiteGraph.registerNodeType("math/formula", MathFormula );
+	this.addInput("x","number");
+	this.addInput("y","number");
+	this.addOutput("","number");
+	this.properties = {x:1.0, y:1.0, formula:"x+y"};
+	this.addWidget("toggle","allow",LiteGraph.allow_scripts,function(v){ LiteGraph.allow_scripts = v; });
+	this._func = null;
 }
+
+MathFormula.title = "Formula";
+MathFormula.desc = "Compute formula";
+	
+MathFormula.prototype.onExecute = function()
+{
+	if(!LiteGraph.allow_scripts)
+		return;
+
+	var x = this.getInputData(0);
+	var y = this.getInputData(1);
+	if(x != null)
+		this.properties["x"] = x;
+	else
+		x = this.properties["x"];
+
+	if(y!=null)
+		this.properties["y"] = y;
+	else
+		y = this.properties["y"];
+
+	var f = this.properties["formula"];
+
+	if(!this._func || this._func_code != this.properties.formula)
+	{
+		this._func = new Function( "x","y","TIME", "return " + this.properties.formula );
+		this._func_code = this.properties.formula;
+	}
+
+	var value = this._func(x,y,this.graph.globaltime);
+	this.setOutputData(0, value );
+}
+
+MathFormula.prototype.getTitle = function()
+{
+	return this._func_code || "";
+}
+
+MathFormula.prototype.onDrawBackground = function()
+{
+	var f = this.properties["formula"];
+	if(this.outputs && this.outputs.length)
+		this.outputs[0].label = f;
+}
+
+LiteGraph.registerNodeType("math/formula", MathFormula );
 
 
 function Math3DVec2ToXYZ()

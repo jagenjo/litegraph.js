@@ -6,6 +6,9 @@ global.LGraphTexture = null;
 
 if(typeof(GL) != "undefined")
 {
+
+	LGraphCanvas.link_type_colors["Texture"] = "#AEF";
+
 	function LGraphTexture()
 	{
 		this.addOutput("Texture","Texture");
@@ -2593,7 +2596,9 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	function LGraphTextureWebcam()
 	{
 		this.addOutput("Webcam","Texture");
-		this.properties = { texture_name: "" };
+		this.properties = { texture_name: "", facingMode: "user" };
+		this.boxcolor = "black";
+		this.version = 0;
 	}
 
 	LGraphTextureWebcam.title = "Webcam";
@@ -2602,30 +2607,48 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 	LGraphTextureWebcam.prototype.openStream = function()
 	{
-		//Vendor prefixes hell
 		if (!navigator.getUserMedia) {
 		  //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
 		  return;
 		}
 
 		this._waiting_confirmation = true;
-		var that = this;
 
 		// Not showing vendor prefixes.
-		navigator.mediaDevices.getUserMedia({audio: false, video: true}).then( this.streamReady.bind(this) ).catch( onFailSoHard );
+		var constraints = { audio: false, video: { facingMode: this.properties.facingMode } };
+		navigator.mediaDevices.getUserMedia( constraints ).then( this.streamReady.bind(this) ).catch( onFailSoHard );
 
+		var that = this;
 		function onFailSoHard(e) {
 			console.log('Webcam rejected', e);
 			that._webcam_stream = false;
 			that.boxcolor = "red";
+			that.trigger("stream_error");
 		};
+	}
+
+	LGraphTextureWebcam.prototype.closeStream = function()
+	{
+		if(this._webcam_stream)
+		{
+			var tracks = this._webcam_stream.getTracks();
+			if(tracks.length)
+			{
+				for(var i = 0;i < tracks.length; ++i)
+					tracks[i].stop();
+			}
+			this._webcam_stream = null;
+			this._video = null;
+			this.boxcolor = "black";
+			this.trigger("stream_closed");
+		}
 	}
 
 	LGraphTextureWebcam.prototype.streamReady = function(localMediaStream)
 	{
 		this._webcam_stream = localMediaStream;
 		//this._waiting_confirmation = false;
-
+		this.boxcolor = "green";
 	    var video = this._video;
 		if(!video)
 		{
@@ -2639,6 +2662,17 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 				// Ready to go. Do some stuff.
 				console.log(e);
 			};
+		}
+		this.trigger("stream_ready",video);
+	}
+
+	LGraphTextureWebcam.prototype.onPropertyChanged = function(name,value)
+	{
+		if(name == "facingMode")
+		{
+			this.properties.facingMode = value;
+			this.closeStream();
+			this.openStream();
 		}
 	}
 
@@ -2672,8 +2706,8 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			ctx.drawImage(this._video, 0, 0, this.size[0], this.size[1]);
 		else
 		{
-			if(this._temp_texture)
-				ctx.drawImage(this._temp_texture, 0, 0, this.size[0], this.size[1]);
+			if(this._video_texture)
+				ctx.drawImage(this._video_texture, 0, 0, this.size[0], this.size[1]);
 		}
 		ctx.restore();
 	}
@@ -2689,19 +2723,35 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		var width = this._video.videoWidth;
 		var height = this._video.videoHeight;
 
-		var temp = this._temp_texture;
+		var temp = this._video_texture;
 		if(!temp || temp.width != width || temp.height != height )
-			this._temp_texture = new GL.Texture( width, height, { format: gl.RGB, filter: gl.LINEAR });
+			this._video_texture = new GL.Texture( width, height, { format: gl.RGB, filter: gl.LINEAR });
 
-		this._temp_texture.uploadImage( this._video );
+		this._video_texture.uploadImage( this._video );
+		this._video_texture.version = ++this.version;
 		
 		if(this.properties.texture_name)
 		{
 			var container = LGraphTexture.getTexturesContainer();
-			container[ this.properties.texture_name ] = this._temp_texture;
+			container[ this.properties.texture_name ] = this._video_texture;
 		}
 
-		this.setOutputData(0,this._temp_texture);
+		this.setOutputData(0,this._video_texture);
+		for(var i = 1; i < this.outputs.length; ++i)
+		{
+			if(!this.outputs[i])
+				continue;
+			switch( this.outputs[i].name )
+			{
+				case "width": this.setOutputData(i,this._video.videoWidth);break;
+				case "height": this.setOutputData(i,this._video.videoHeight);break;
+			}
+		}
+	}
+
+	LGraphTextureWebcam.prototype.onGetOutputs = function()
+	{
+		return [["width","number"],["height","number"],["stream_ready",LiteGraph.EVENT],["stream_closed",LiteGraph.EVENT],["stream_error",LiteGraph.EVENT]];
 	}
 
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );

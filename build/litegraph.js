@@ -88,10 +88,12 @@ var LiteGraph = global.LiteGraph = {
 
 	debug: false,
 	throw_errors: true,
-	allow_scripts: true,
+	allow_scripts: false,
 	registered_node_types: {}, //nodetypes by string
 	node_types_by_file_extension: {}, //used for droping files in the canvas
 	Nodes: {}, //node types by classname
+
+	searchbox_extras: {}, //used to add extra features to the search box
 
 	/**
 	* Register a node class so it can be listed when the user wants to create a new one
@@ -391,6 +393,11 @@ var LiteGraph = global.LiteGraph = {
 					return true;
 
 		return false;
+	},
+
+	registerSearchboxExtra: function( node_type, description, data )
+	{
+		this.searchbox_extras[ description ] = { type: node_type, desc: description, data: data };
 	}
 };
 
@@ -3384,6 +3391,12 @@ function LGraphCanvas( canvas, graph, options )
 	this.onSearchBox = null;
 	this.onSearchBoxSelection = null;
 
+	//callbacks
+	this.onMouse = null;
+	this.onDrawBackground = null; //to render background objects (behind nodes and connections) in the canvas affected by transform
+	this.onDrawForeground = null; //to render foreground objects (above nodes and connections) in the canvas affected by transform
+	this.onDrawOverlay = null; //to render foreground objects not affected by transform (for GUIs)
+
 	this.connections_width = 3;
 	this.round_radius = 8;
 
@@ -3407,7 +3420,7 @@ function LGraphCanvas( canvas, graph, options )
 
 global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
-LGraphCanvas.link_type_colors = {"-1":"#F85",'number':"#AAC","node":"#DCA"};
+LGraphCanvas.link_type_colors = {"-1":"#F85",'number':"#AAA","node":"#DCA"};
 LGraphCanvas.gradients = {}; //cache of gradients
 
 /**
@@ -3829,6 +3842,12 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 	this.canvas_mouse[1] = e.canvasY;
 
     LiteGraph.closeAllContextMenus( ref_window );
+
+	if(this.onMouse)
+	{
+		if( this.onMouse(e) == true )
+			return;
+	}
 
 	if(e.which == 1) //left button mouse
 	{
@@ -4988,7 +5007,7 @@ LGraphCanvas.prototype.computeVisibleNodes = function( nodes, out )
 		var n = nodes[i];
 
 		//skip rendering nodes in live mode
-		if(this.live_mode && !n.onDrawBackground && !n.onDrawForeground)
+		if( this.live_mode && !n.onDrawBackground && !n.onDrawForeground )
 			continue;
 
 		if(!overlapBounding( this.visible_area, n.getBounding( temp ) ))
@@ -5135,7 +5154,7 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 					link_color = LiteGraph.CONNECTING_LINK_COLOR;
 			}
 			//the connection being dragged by the mouse
-			this.renderLink( ctx, this.connecting_pos, [this.canvas_mouse[0],this.canvas_mouse[1]], null, false, null, link_color, this.connecting_output.dir || (this.connecting_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT), LiteGraph.CENTER );
+			this.renderLink( ctx, this.connecting_pos, [ this.canvas_mouse[0], this.canvas_mouse[1] ], null, false, null, link_color, this.connecting_output.dir || (this.connecting_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT), LiteGraph.CENTER );
 
 			ctx.beginPath();
 				if( this.connecting_output.type === LiteGraph.EVENT || this.connecting_output.shape === LiteGraph.BOX_SHAPE )
@@ -5159,9 +5178,14 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 			ctx.strokeRect( this.dragging_rectangle[0], this.dragging_rectangle[1], this.dragging_rectangle[2], this.dragging_rectangle[3] );
 		}
 
+		if( this.onDrawForeground )
+			this.onDrawForeground( ctx, this.visible_rect );
 
 		ctx.restore();
 	}
+
+	if( this.onDrawOverlay )
+		this.onDrawOverlay( ctx );
 
 	if(this.dirty_area)
 	{
@@ -5298,8 +5322,13 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		if(this.graph._groups.length && !this.live_mode)
 			this.drawGroups(canvas, ctx);
 
-		if(this.onBackgroundRender)
-			this.onBackgroundRender(canvas, ctx);
+		if( this.onDrawBackground )
+			this.onDrawBackground( ctx, this.visible_area );
+		if( this.onBackgroundRender ) //LEGACY
+		{
+			console.error("WARNING! onBackgroundRender deprecated, now is named onDrawBackground ");
+			this.onBackgroundRender = null;
+		}
 
 		//DEBUG: show clipping area
 		//ctx.fillStyle = "red";
@@ -6819,7 +6848,6 @@ LGraphCanvas.prototype.prompt = function( title, value, callback, event )
 }
 
 
-LGraphCanvas.search_filter = false;
 LGraphCanvas.search_limit = -1;
 LGraphCanvas.prototype.showSearchBox = function(event)
 {
@@ -6868,7 +6896,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 				if(selected)
 					select( selected.innerHTML )
 				else if(first)
-					select(first);
+					select( first );
 				else
 					dialog.close();
 			}
@@ -6918,11 +6946,38 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 				that.onSearchBoxSelection( name, event, graphcanvas );
 			else
 			{
+				var extra = LiteGraph.searchbox_extras[ name ];
+				if( extra )
+					name = extra.type;
+
 				var node = LiteGraph.createNode( name );
 				if(node)
 				{
 					node.pos = graphcanvas.convertEventToCanvas( event );
 					graphcanvas.graph.add( node );
+				}
+
+				if( extra && extra.data )
+				{
+					if(extra.data.properties)
+						for(var i in extra.data.properties)
+							node.addProperty( extra.data.properties[i][0], extra.data.properties[i][0] );
+					if(extra.data.inputs)
+					{
+						node.inputs = [];
+						for(var i in extra.data.inputs)
+							node.addOutput( extra.data.inputs[i][0],extra.data.inputs[i][1] );
+					}
+					if(extra.data.outputs)
+					{
+						node.outputs = [];
+						for(var i in extra.data.outputs)
+							node.addOutput( extra.data.outputs[i][0],extra.data.outputs[i][1] );
+					}
+					if(extra.data.title)
+						node.title = extra.data.title;
+					if(extra.data.json)
+						node.configure( extra.data.json );
 				}
 			}
 		}
@@ -6957,24 +7012,41 @@ LGraphCanvas.prototype.showSearchBox = function(event)
         if (!str)
             return;
 
-        if (that.onSearchBox){
-            that.onSearchBox(help, str, graphcanvas);
+        if (that.onSearchBox) {
+            var list = that.onSearchBox( help, str, graphcanvas );
+			if(list)
+				for( var i = 0; i < list.length; ++i )
+					addResult( list[i] );
     	} else {
             var c = 0;
-        	if(LGraphCanvas.search_filter) {
-        		str = str.toLowerCase();
+       		str = str.toLowerCase();
+			//extras
+			for(var i in LiteGraph.searchbox_extras)
+			{
+				var extra = LiteGraph.searchbox_extras[i];
+				if( extra.desc.toLowerCase().indexOf(str) === -1 )
+					continue;
+				addResult( extra.desc, "searchbox_extra" );
+				if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit )
+					break;
+			}
 
-        		var keys = Object.keys(LiteGraph.registered_node_types);
+        	if(Array.prototype.filter)//filter supported
+			{
+				//types
+        		var keys = Object.keys( LiteGraph.registered_node_types );
         		var filtered = keys.filter(function (item) {
 					return item.toLowerCase().indexOf(str) !== -1;
                 });
-        		for(var i = 0; i < filtered.length; i++) {
+        		for(var i = 0; i < filtered.length; i++)
+				{
                     addResult(filtered[i]);
                     if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit)
 						break;
 				}
 			} else {
-                for (var i in LiteGraph.registered_node_types) {
+                for (var i in LiteGraph.registered_node_types)
+				{
                     if (i.indexOf(str) != -1) {
                         addResult(i);
                         if(LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit)
@@ -6984,13 +7056,18 @@ LGraphCanvas.prototype.showSearchBox = function(event)
             }
         }
 
-		function addResult(result) {
+		function addResult( type, className )
+		{
 			var help = document.createElement("div");
-			if (!first) first = result;
-			help.innerText = result;
+			if (!first)
+				first = type;
+			help.innerText = type;
+			help.dataset["type"] = escape(type);
 			help.className = "litegraph lite-search-item";
+			if( className )
+				help.className +=  " " + className;
 			help.addEventListener("click", function (e) {
-				select(this.innerText);
+				select( unescape( this.dataset["type"] ) );
 			});
 			helper.appendChild(help);
 		}
@@ -7351,6 +7428,20 @@ LGraphCanvas.prototype.getNodeMenuOptions = function( node )
 			null
 		];
 
+	if(node.onGetInputs)
+	{
+		var inputs = node.onGetInputs();
+		if(inputs && inputs.length)
+			options[0].disabled = false;
+	}
+
+	if(node.onGetOutputs)
+	{
+		var outputs = node.onGetOutputs();
+		if(outputs && outputs.length )
+			options[1].disabled = false;
+	}
+
 	if(node.getExtraMenuOptions)
 	{
 		var extra = node.getExtraMenuOptions(this);
@@ -7365,20 +7456,6 @@ LGraphCanvas.prototype.getNodeMenuOptions = function( node )
 			options.push({content:"Clone", callback: LGraphCanvas.onMenuNodeClone });
 	if( node.removable !== false )
 			options.push(null,{content:"Remove", callback: LGraphCanvas.onMenuNodeRemove });
-
-	if(node.onGetInputs)
-	{
-		var inputs = node.onGetInputs();
-		if(inputs && inputs.length)
-			options[0].disabled = false;
-	}
-
-	if(node.onGetOutputs)
-	{
-		var outputs = node.onGetOutputs();
-		if(outputs && outputs.length )
-			options[1].disabled = false;
-	}
 
 	if(node.graph && node.graph.onGetNodeMenuOptions )
 		node.graph.onGetNodeMenuOptions( options, node );
@@ -10255,6 +10332,14 @@ MathCompare.prototype.onGetOutputs = function()
 
 LiteGraph.registerNodeType("math/compare",MathCompare);
 
+LiteGraph.registerSearchboxExtra("math/compare","==", { outputs:[["A==B","boolean"]], title: "A==B" });
+LiteGraph.registerSearchboxExtra("math/compare","!=", { outputs:[["A!=B","boolean"]], title: "A!=B" });
+LiteGraph.registerSearchboxExtra("math/compare",">", { outputs:[["A>B","boolean"]], title: "A>B" });
+LiteGraph.registerSearchboxExtra("math/compare","<", { outputs:[["A<B","boolean"]], title: "A<B" });
+LiteGraph.registerSearchboxExtra("math/compare",">=", { outputs:[["A>=B","boolean"]], title: "A>=B" });
+LiteGraph.registerSearchboxExtra("math/compare","<=", { outputs:[["A<=B","boolean"]], title: "A<=B" });
+
+
 function MathCondition()
 {
 	this.addInput("A","number");
@@ -10389,54 +10474,67 @@ MathTrigonometry.prototype.onGetOutputs = function()
 
 LiteGraph.registerNodeType("math/trigonometry", MathTrigonometry );
 
+LiteGraph.registerSearchboxExtra("math/trigonometry","SIN()", { outputs:[["sin","number"]], title: "SIN()" });
+LiteGraph.registerSearchboxExtra("math/trigonometry","COS()", { outputs:[["cos","number"]], title: "COS()"  });
+LiteGraph.registerSearchboxExtra("math/trigonometry","TAN()", { outputs:[["tan","number"]], title: "TAN()"  });
 
 
 //math library for safe math operations without eval
-if(typeof(math) != undefined)
+function MathFormula()
 {
-	function MathFormula()
-	{
-		this.addInputs("x","number");
-		this.addInputs("y","number");
-		this.addOutputs("","number");
-		this.properties = {x:1.0, y:1.0, formula:"x+y"};
-	}
-
-	MathFormula.title = "Formula";
-	MathFormula.desc = "Compute safe formula";
-		
-	MathFormula.prototype.onExecute = function()
-	{
-		var x = this.getInputData(0);
-		var y = this.getInputData(1);
-		if(x != null)
-			this.properties["x"] = x;
-		else
-			x = this.properties["x"];
-
-		if(y!=null)
-			this.properties["y"] = y;
-		else
-			y = this.properties["y"];
-
-		var f = this.properties["formula"];
-		var value = math.eval(f,{x:x,y:y,T: this.graph.globaltime });
-		this.setOutputData(0, value );
-	}
-
-	MathFormula.prototype.onDrawBackground = function()
-	{
-		var f = this.properties["formula"];
-		this.outputs[0].label = f;
-	}
-
-	MathFormula.prototype.onGetOutputs = function()
-	{
-		return [["A-B","number"],["A*B","number"],["A/B","number"]];
-	}
-
-	LiteGraph.registerNodeType("math/formula", MathFormula );
+	this.addInput("x","number");
+	this.addInput("y","number");
+	this.addOutput("","number");
+	this.properties = {x:1.0, y:1.0, formula:"x+y"};
+	this.addWidget("toggle","allow",LiteGraph.allow_scripts,function(v){ LiteGraph.allow_scripts = v; });
+	this._func = null;
 }
+
+MathFormula.title = "Formula";
+MathFormula.desc = "Compute formula";
+	
+MathFormula.prototype.onExecute = function()
+{
+	if(!LiteGraph.allow_scripts)
+		return;
+
+	var x = this.getInputData(0);
+	var y = this.getInputData(1);
+	if(x != null)
+		this.properties["x"] = x;
+	else
+		x = this.properties["x"];
+
+	if(y!=null)
+		this.properties["y"] = y;
+	else
+		y = this.properties["y"];
+
+	var f = this.properties["formula"];
+
+	if(!this._func || this._func_code != this.properties.formula)
+	{
+		this._func = new Function( "x","y","TIME", "return " + this.properties.formula );
+		this._func_code = this.properties.formula;
+	}
+
+	var value = this._func(x,y,this.graph.globaltime);
+	this.setOutputData(0, value );
+}
+
+MathFormula.prototype.getTitle = function()
+{
+	return this._func_code || "";
+}
+
+MathFormula.prototype.onDrawBackground = function()
+{
+	var f = this.properties["formula"];
+	if(this.outputs && this.outputs.length)
+		this.outputs[0].label = f;
+}
+
+LiteGraph.registerNodeType("math/formula", MathFormula );
 
 
 function Math3DVec2ToXYZ()
@@ -10843,9 +10941,12 @@ GraphicsPlot.prototype.onDrawBackground = function(ctx)
 	ctx.lineTo(size[0], offset);
 	ctx.stroke();
 
+	if( this.inputs )
 	for(var i = 0; i < 4; ++i)
 	{
 		var values = this.values[i];
+		if( !this.inputs[i] || !this.inputs[i].link )
+			continue;
 		ctx.strokeStyle = colors[i];
 		ctx.beginPath();
 		var v = values[0] * scale * -1 + offset;
@@ -11470,7 +11571,9 @@ LiteGraph.registerNodeType("graphics/video", ImageVideo );
 function ImageWebcam()
 {
 	this.addOutput("Webcam","image");
-	this.properties = {};
+	this.properties = { facingMode: "user" };
+	this.boxcolor = "black";
+	this.frame = 0;
 }
 
 ImageWebcam.title = "Webcam";
@@ -11487,30 +11590,55 @@ ImageWebcam.prototype.openStream = function()
 	this._waiting_confirmation = true;
 
 	// Not showing vendor prefixes.
-	navigator.mediaDevices.getUserMedia({audio: false, video: true}).then( this.streamReady.bind(this) ).catch( onFailSoHard );
+	var constraints = { audio: false, video: { facingMode: this.properties.facingMode } };
+	navigator.mediaDevices.getUserMedia( constraints ).then( this.streamReady.bind(this) ).catch( onFailSoHard );
 
 	var that = this;
 	function onFailSoHard(e) {
 		console.log('Webcam rejected', e);
 		that._webcam_stream = false;
 		that.boxcolor = "red";
+		that.trigger("stream_error");
 	};
+}
+
+ImageWebcam.prototype.closeStream = function()
+{
+	if(this._webcam_stream)
+	{
+		var tracks = this._webcam_stream.getTracks();
+		if(tracks.length)
+		{
+			for(var i = 0;i < tracks.length; ++i)
+				tracks[i].stop();
+		}
+		this._webcam_stream = null;
+		this._video = null;
+		this.boxcolor = "black";
+		this.trigger("stream_closed");
+	}
+}
+
+ImageWebcam.prototype.onPropertyChanged = function(name,value)
+{
+	if(name == "facingMode")
+	{
+		this.properties.facingMode = value;
+		this.closeStream();
+		this.openStream();
+	}
 }
 
 ImageWebcam.prototype.onRemoved = function()
 {
-	if(this._webcam_stream)
-	{
-		this._webcam_stream.stop();
-		this._webcam_stream = null;
-		this._video = null;
-	}
+	this.closeStream();
 }
 
 ImageWebcam.prototype.streamReady = function(localMediaStream)
 {
 	this._webcam_stream = localMediaStream;
 	//this._waiting_confirmation = false;
+	this.boxcolor = "green";
 
 	var video = this._video;
 	if(!video)
@@ -11526,6 +11654,8 @@ ImageWebcam.prototype.streamReady = function(localMediaStream)
 			console.log(e);
 		};
 	}
+
+	this.trigger("stream_ready",video);
 }
 
 ImageWebcam.prototype.onExecute = function()
@@ -11533,11 +11663,23 @@ ImageWebcam.prototype.onExecute = function()
 	if(this._webcam_stream == null && !this._waiting_confirmation)
 		this.openStream();
 
-	if(!this._video || !this._video.videoWidth) return;
+	if(!this._video || !this._video.videoWidth)
+		return;
 
+	this._video.frame = ++this.frame;
 	this._video.width = this._video.videoWidth;
 	this._video.height = this._video.videoHeight;
 	this.setOutputData(0, this._video);
+	for(var i = 1; i < this.outputs.length; ++i)
+	{
+		if(!this.outputs[i])
+			continue;
+		switch( this.outputs[i].name )
+		{
+			case "width": this.setOutputData(i,this._video.videoWidth);break;
+			case "height": this.setOutputData(i,this._video.videoHeight);break;
+		}
+	}
 }
 
 ImageWebcam.prototype.getExtraMenuOptions = function(graphcanvas)
@@ -11565,6 +11707,11 @@ ImageWebcam.prototype.onDrawBackground = function(ctx)
 	ctx.restore();
 }
 
+ImageWebcam.prototype.onGetOutputs = function()
+{
+	return [["width","number"],["height","number"],["stream_ready",LiteGraph.EVENT],["stream_closed",LiteGraph.EVENT],["stream_error",LiteGraph.EVENT]];
+}
+
 LiteGraph.registerNodeType("graphics/webcam", ImageWebcam );
 
 
@@ -11578,6 +11725,9 @@ global.LGraphTexture = null;
 
 if(typeof(GL) != "undefined")
 {
+
+	LGraphCanvas.link_type_colors["Texture"] = "#AEF";
+
 	function LGraphTexture()
 	{
 		this.addOutput("Texture","Texture");
@@ -14165,7 +14315,9 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	function LGraphTextureWebcam()
 	{
 		this.addOutput("Webcam","Texture");
-		this.properties = { texture_name: "" };
+		this.properties = { texture_name: "", facingMode: "user" };
+		this.boxcolor = "black";
+		this.version = 0;
 	}
 
 	LGraphTextureWebcam.title = "Webcam";
@@ -14174,30 +14326,48 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 	LGraphTextureWebcam.prototype.openStream = function()
 	{
-		//Vendor prefixes hell
 		if (!navigator.getUserMedia) {
 		  //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
 		  return;
 		}
 
 		this._waiting_confirmation = true;
-		var that = this;
 
 		// Not showing vendor prefixes.
-		navigator.mediaDevices.getUserMedia({audio: false, video: true}).then( this.streamReady.bind(this) ).catch( onFailSoHard );
+		var constraints = { audio: false, video: { facingMode: this.properties.facingMode } };
+		navigator.mediaDevices.getUserMedia( constraints ).then( this.streamReady.bind(this) ).catch( onFailSoHard );
 
+		var that = this;
 		function onFailSoHard(e) {
 			console.log('Webcam rejected', e);
 			that._webcam_stream = false;
 			that.boxcolor = "red";
+			that.trigger("stream_error");
 		};
+	}
+
+	LGraphTextureWebcam.prototype.closeStream = function()
+	{
+		if(this._webcam_stream)
+		{
+			var tracks = this._webcam_stream.getTracks();
+			if(tracks.length)
+			{
+				for(var i = 0;i < tracks.length; ++i)
+					tracks[i].stop();
+			}
+			this._webcam_stream = null;
+			this._video = null;
+			this.boxcolor = "black";
+			this.trigger("stream_closed");
+		}
 	}
 
 	LGraphTextureWebcam.prototype.streamReady = function(localMediaStream)
 	{
 		this._webcam_stream = localMediaStream;
 		//this._waiting_confirmation = false;
-
+		this.boxcolor = "green";
 	    var video = this._video;
 		if(!video)
 		{
@@ -14211,6 +14381,17 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 				// Ready to go. Do some stuff.
 				console.log(e);
 			};
+		}
+		this.trigger("stream_ready",video);
+	}
+
+	LGraphTextureWebcam.prototype.onPropertyChanged = function(name,value)
+	{
+		if(name == "facingMode")
+		{
+			this.properties.facingMode = value;
+			this.closeStream();
+			this.openStream();
 		}
 	}
 
@@ -14244,8 +14425,8 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			ctx.drawImage(this._video, 0, 0, this.size[0], this.size[1]);
 		else
 		{
-			if(this._temp_texture)
-				ctx.drawImage(this._temp_texture, 0, 0, this.size[0], this.size[1]);
+			if(this._video_texture)
+				ctx.drawImage(this._video_texture, 0, 0, this.size[0], this.size[1]);
 		}
 		ctx.restore();
 	}
@@ -14261,19 +14442,35 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		var width = this._video.videoWidth;
 		var height = this._video.videoHeight;
 
-		var temp = this._temp_texture;
+		var temp = this._video_texture;
 		if(!temp || temp.width != width || temp.height != height )
-			this._temp_texture = new GL.Texture( width, height, { format: gl.RGB, filter: gl.LINEAR });
+			this._video_texture = new GL.Texture( width, height, { format: gl.RGB, filter: gl.LINEAR });
 
-		this._temp_texture.uploadImage( this._video );
+		this._video_texture.uploadImage( this._video );
+		this._video_texture.version = ++this.version;
 		
 		if(this.properties.texture_name)
 		{
 			var container = LGraphTexture.getTexturesContainer();
-			container[ this.properties.texture_name ] = this._temp_texture;
+			container[ this.properties.texture_name ] = this._video_texture;
 		}
 
-		this.setOutputData(0,this._temp_texture);
+		this.setOutputData(0,this._video_texture);
+		for(var i = 1; i < this.outputs.length; ++i)
+		{
+			if(!this.outputs[i])
+				continue;
+			switch( this.outputs[i].name )
+			{
+				case "width": this.setOutputData(i,this._video.videoWidth);break;
+				case "height": this.setOutputData(i,this._video.videoHeight);break;
+			}
+		}
+	}
+
+	LGraphTextureWebcam.prototype.onGetOutputs = function()
+	{
+		return [["width","number"],["height","number"],["stream_ready",LiteGraph.EVENT],["stream_closed",LiteGraph.EVENT],["stream_error",LiteGraph.EVENT]];
 	}
 
 	LiteGraph.registerNodeType("texture/webcam", LGraphTextureWebcam );
