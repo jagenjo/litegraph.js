@@ -7853,7 +7853,15 @@ function ContextMenu( values, options )
 	root.addEventListener("mouseleave", function(e) {
 		if(that.lock)
 			return;
-		that.close(e);
+		if(root.closing_timer)
+			clearTimeout( root.closing_timer );
+		root.closing_timer = setTimeout( that.close.bind(that), 500 );
+		//that.close(e);
+	});
+
+	root.addEventListener("mouseenter", function(e) {
+		if(root.closing_timer)
+			clearTimeout( root.closing_timer );
 	});
 
 	//insert before checking position
@@ -7949,6 +7957,7 @@ ContextMenu.prototype.addItem = function( name, value, options )
 		var value = this.value;
 		if(!value || !value.has_submenu)
 			return;
+		//if it is a submenu, autoopen like the item was clicked
 		inner_onclick.call(this,e);
 	}
 
