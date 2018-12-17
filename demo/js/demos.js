@@ -156,6 +156,12 @@ TestSpecialNode.prototype.onDrawBackground = function(ctx)
 	ctx.moveTo(this.size[0]-40,0);
 	ctx.lineTo(this.size[0]-45,20);
 	ctx.stroke();
+
+	if( this.mouseOver )
+	{
+		ctx.fillStyle = "#AAA";
+		ctx.fillText( "Example of helper", 0, this.size[1] + 14 );
+	}
 }
 
 TestSpecialNode.prototype.onMouseDown = function(e, pos)
@@ -167,6 +173,12 @@ TestSpecialNode.prototype.onMouseDown = function(e, pos)
 		this.enabled = !this.enabled;
 	else if( pos[0] > this.size[0] - 40)
 		this.visible = !this.visible;
+}
+
+TestSpecialNode.prototype.onBounding = function(rect)
+{
+	if(!this.flags.collapsed && this.mouseOver )
+		rect[3] = this.size[1] + 20;
 }
 
 LiteGraph.registerNodeType("features/shape", TestSpecialNode );

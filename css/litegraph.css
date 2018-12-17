@@ -227,7 +227,7 @@
 	user-select: none;
 	-moz-user-select: none;
 	-webkit-user-select: none;
-	transition: all linear 0.5s;
+	transition: all linear 0.3s;
 }
 
 .graphmenu-entry.event, .litemenu-entry.event {
