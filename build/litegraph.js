@@ -2672,6 +2672,14 @@ LGraphNode.prototype.addWidget = function( type, name, value, callback, options 
 	return w;
 }
 
+LGraphNode.prototype.addCustomWidget = function( custom_widget )
+{
+	if(!this.widgets)
+		this.widgets = [];
+	this.widgets.push(custom_widget);
+	return custom_widget;
+}
+
 
 /**
 * returns the bounding of the object, used for rendering purposes
@@ -3633,11 +3641,17 @@ LGraphCanvas.prototype.closeSubgraph = function()
 {
 	if(!this._graph_stack || this._graph_stack.length == 0)
 		return;
+	var subraph_node = this.graph._subgraph_node;
 	var graph = this._graph_stack.pop();
 	this.selected_nodes = {};
 	this.highlighted_links = {};
 	graph.attachCanvas(this);
 	this.setDirty(true,true);
+	if( subraph_node )
+	{
+		this.centerOnNode( subraph_node );
+		this.selectNodes( [subraph_node] );
+	}
 }
 
 /**
@@ -5722,7 +5736,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 			ctx.fillStyle = slot.color_on || this.default_connection_color.input_on;
 			ctx.beginPath();
 			if ( slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
-				ctx.rect(x + 0.5, y + 4 - LiteGraph.NODE_TITLE_HEIGHT * 0.5 + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
+				ctx.rect(x - 7 + 0.5, y + 4 - LiteGraph.NODE_TITLE_HEIGHT * 0.5 + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
 			} else if (slot.shape === LiteGraph.ARROW_SHAPE) {
 				ctx.moveTo(x + 8, y);
 				ctx.lineTo(x + -4, y - 4);
@@ -5747,7 +5761,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 			ctx.strokeStyle = "black";
 			ctx.beginPath();
 			if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
-				ctx.rect( x - 4 + 0.5, 4 - LiteGraph.NODE_TITLE_HEIGHT * 0.5 + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
+				ctx.rect( x - 7 + 0.5, y + 4 - LiteGraph.NODE_TITLE_HEIGHT * 0.5 + 0.5,14,LiteGraph.NODE_TITLE_HEIGHT - 8);
 			} else if (slot.shape === LiteGraph.ARROW_SHAPE) {
 				ctx.moveTo(x + 6, y);
 				ctx.lineTo(x - 6, y - 4);
@@ -5759,8 +5773,6 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 			ctx.fill();
 			ctx.stroke();
 		}
-
-		
 	}
 
 	if(node.flags.clip_area)
@@ -6350,6 +6362,8 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 				}
 				break;
 			default:
+				if(w.draw)
+					w.draw(ctx,node,w,y,H);
 				break;
 		}
 		posY += H + 4;
@@ -6454,6 +6468,10 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 				case "text":
 					if( event.type == "mousedown" )
 						this.prompt( "Value", w.value, (function(v){ this.value = v; if(w.callback) w.callback(v, that, node ); }).bind(w), event );
+					break;
+				default: 
+					if( w.mouse )
+						w.mouse( ctx, event, [x,y], node );
 					break;
 			}
 
