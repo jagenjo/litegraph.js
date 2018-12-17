@@ -64,6 +64,13 @@ Subgraph.prototype.onDrawTitle = function(ctx)
 	ctx.fill();
 }
 
+Subgraph.prototype.onDblClick = function(e,pos,graphcanvas)
+{
+	var that = this;
+	setTimeout(function(){ graphcanvas.openSubgraph( that.subgraph ); },10 );
+}
+
+
 Subgraph.prototype.onMouseDown = function(e,pos,graphcanvas)
 {
 	if( !this.flags.collapsed && pos[0] > this.size[0] - LiteGraph.NODE_TITLE_HEIGHT && pos[1] < 0 )

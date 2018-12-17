@@ -19,6 +19,10 @@
 	background-color: #2E2E2E !important;
 }
 
+.litegraph.litecontextmenu.dark {
+	background-color: #000 !important;
+}
+
 .litegraph.litecontextmenu .litemenu-title img {
 	margin-top: 2px;
 	margin-left: 2px;
@@ -33,6 +37,11 @@
 .litegraph.litecontextmenu .litemenu-entry.submenu {
 	background-color: #2E2E2E !important;
 }
+
+.litegraph.litecontextmenu.dark .litemenu-entry.submenu {
+	background-color: #000 !important;
+}
+
 
 .litegraph .litemenubar ul {
 	font-family:Tahoma, sans-serif;

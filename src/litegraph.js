@@ -3975,7 +3975,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				{
 					//double click node
 					if( node.onDblClick)
-						node.onDblClick(e);
+						node.onDblClick(e,[e.canvasX - node.pos[0], e.canvasY - node.pos[1]],graphcanvas);
 					this.processNodeDblClicked( node );
 					block_drag_node = true;
 				}
@@ -5262,7 +5262,10 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		ctx.font = "40px Arial"
 		ctx.textAlign = "center";
 		ctx.fillStyle = subgraph_node.bgcolor;
-		ctx.fillText( subgraph_node.getTitle(), canvas.width * 0.5, 40 );
+		var title = "";
+		for(var i = 1; i < this._graph_stack.length; ++i)
+			title += this._graph_stack[i]._subgraph_node.getTitle() + " >> ";
+		ctx.fillText( title + subgraph_node.getTitle(), canvas.width * 0.5, 40 );
 		ctx.restore();
 	}
 
@@ -6231,6 +6234,7 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 	var y = pos[1] - node.pos[1];
 	var width = node.size[0];
 	var that = this;
+	var ref_window = this.getCanvasWindow();
 
 	for(var i = 0; i < node.widgets.length; ++i)
 	{
@@ -6266,6 +6270,10 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					}
 					else if( event.type == "mousedown" )
 					{
+						var values = w.options.values;
+						if(values && values.constructor === Function)
+							values = w.options.values( w, node );
+
 						var delta = ( x < 40 ? -1 : ( x > width - 40 ? 1 : 0) );
 						if (w.type == "number")
 						{
@@ -6277,12 +6285,22 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 						}
 						else if(delta)
 						{
-							var index = w.options.values.indexOf( w.value ) + delta;
-							if( index >= w.options.values.length )
+							var index = values.indexOf( w.value ) + delta;
+							if( index >= values.length )
 								index = 0;
 							if( index < 0 )
-								index = w.options.values.length - 1;
-							w.value = w.options.values[ index ];
+								index = values.length - 1;
+							w.value = values[ index ];
+						}
+						else
+						{
+							var menu = new LiteGraph.ContextMenu( values, { event: event, className: "dark", callback: inner_clicked.bind(w) }, ref_window );
+							function inner_clicked( v, option, event )
+							{
+								this.value = v;
+								that.dirty_canvas = true;
+								return false;
+							}
 						}
 					}
 					if(w.callback)
@@ -7768,6 +7786,8 @@ function ContextMenu( values, options )
 
 	var root = document.createElement("div");
 	root.className = "litegraph litecontextmenu litemenubar-panel";
+	if( options.className) 
+		root.className += " " + options.className;
 	root.style.minWidth = 100;
 	root.style.minHeight = 100;
 	root.style.pointerEvents = "none";
