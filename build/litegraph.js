@@ -1535,14 +1535,14 @@ LGraph.prototype.isLive = function()
 }
 
 /**
-* clears the triggered slot animation in all links
+* clears the triggered slot animation in all links (stop visual animation)
 * @method clearTriggeredSlots
 */
 LGraph.prototype.clearTriggeredSlots = function()
 {
 	for(var i in this.links)
 	{
-		var link_info = this.links[k];
+		var link_info = this.links[i];
 		if( !link_info )
 			continue;
 		if( link_info._last_time )
@@ -8179,6 +8179,9 @@ ContextMenu.prototype.close = function(e, ignore_parent_menu)
 	}
 	if(this.current_submenu)
 		this.current_submenu.close(e, true);
+
+	if(this.root.closing_timer)
+		clearTimeout( this.root.closing_timer );
 }
 
 //this code is used to trigger events easily (used in the context menu mouseleave
