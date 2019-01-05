@@ -2645,7 +2645,7 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 * Allows to pass 
 * 
 * @method addWidget
-* @return {Float32Array[4]} the total size
+* @return {Object} the created widget
 */
 LGraphNode.prototype.addWidget = function( type, name, value, callback, options )
 {
