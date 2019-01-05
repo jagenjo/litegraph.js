@@ -6,16 +6,17 @@ function MIDIEvent( data )
 {
 	this.channel = 0;
 	this.cmd = 0;
+	this.data = new Uint32Array(3);
 
 	if(data)
 		this.setup(data)
-	else
-		this.data = [0,0,0];
 }
+
+LiteGraph.MIDIEvent = MIDIEvent;
 
 MIDIEvent.prototype.setup = function( raw_data )
 {
-	this.data = raw_data;
+	this.data.set(raw_data);
 
 	var midiStatus = raw_data[0];
 	this.status = midiStatus;
@@ -50,6 +51,32 @@ Object.defineProperty( MIDIEvent.prototype, "velocity", {
 });
 
 MIDIEvent.notes = ["A","A#","B","C","C#","D","D#","E","F","F#","G","G#"];
+MIDIEvent.note_to_index = {"A":0,"A#":1,"B":2,"C":3,"C#":4,"D":5,"D#":6,"E":7,"F":8,"F#":9,"G":10,"G#":11};
+
+Object.defineProperty( MIDIEvent.prototype, "note", {
+	get: function() {
+		if(this.cmd != MIDIEvent.NOTEON)
+			return -1;
+		return MIDIEvent.toNoteString( this.data[1], true );
+	},
+	set: function(v) {
+		throw("notes cannot be assigned this way, must modify the data[1]");
+	},
+	enumerable: true
+});
+
+Object.defineProperty( MIDIEvent.prototype, "octave", {
+	get: function() {
+		if(this.cmd != MIDIEvent.NOTEON)
+			return -1;
+		var octave = this.data[1] - 24;
+		return Math.floor(octave / 12 + 1);
+	},
+	set: function(v) {
+		throw("octave cannot be assigned this way, must modify the data[1]");
+	},
+	enumerable: true
+});
 
 //returns HZs
 MIDIEvent.prototype.getPitch = function()
@@ -121,14 +148,39 @@ MIDIEvent.computeCommandFromString = function( str )
 	}
 }
 
-MIDIEvent.toNoteString = function(d)
+//transform from a pitch number to string like "C4"
+MIDIEvent.toNoteString = function( d, skip_octave )
 {
+	d = Math.round(d); //in case it has decimals
 	var note = d - 21;
-	var octave = d - 24;
+	var octave = Math.floor((d - 24) / 12 + 1);
 	note = note % 12;
 	if(note < 0)
 		note = 12 + note;
-	return MIDIEvent.notes[ note ] + Math.floor(octave / 12 + 1);
+	return MIDIEvent.notes[ note ] + (skip_octave ? "" : octave);
+}
+
+MIDIEvent.NoteStringToPitch = function(str)
+{
+	str = str.toUpperCase();
+	var note = str[0];
+	var octave = 4;
+	
+	if(str[1] == "#")
+	{
+		note += "#";
+		if( str.length > 2 )
+			octave = Number( str[2] );
+	}
+	else
+	{
+		if( str.length > 1 )
+			octave = Number( str[1] );
+	}
+	var pitch = MIDIEvent.note_to_index[note];
+	if(pitch == null)
+		return null;
+	return ((octave - 1) * 12) + pitch + 21;
 }
 
 MIDIEvent.prototype.toString = function()
@@ -482,7 +534,7 @@ LGMIDIOut.prototype.getPropertyInfo = function(name)
 
 LGMIDIOut.prototype.onAction = function(event, midi_event )
 {
-	console.log(midi_event);
+	//console.log(midi_event);
 	if(!this._midi)
 		return;
 	if(event == "send")
@@ -581,7 +633,7 @@ function LGMIDIEvent()
 {
 	this.properties = {
 		channel: 0,
-		cmd: "CC",
+		cmd: 144, //0x90
 		value1: 1,
 		value2: 1
 	};
@@ -589,6 +641,8 @@ function LGMIDIEvent()
 	this.addInput( "send", LiteGraph.EVENT );
 	this.addInput( "assign", LiteGraph.EVENT );
 	this.addOutput( "on_midi", LiteGraph.EVENT );
+
+	this.midi_event = new MIDIEvent();
 }
 
 LGMIDIEvent.title = "MIDIEvent";
@@ -606,7 +660,7 @@ LGMIDIEvent.prototype.onAction = function( event, midi_event )
 	}
 
 	//send
-	var midi_event = new MIDIEvent();
+	var midi_event = this.midi_event;
 	midi_event.channel = this.properties.channel;
 	if(this.properties.cmd && this.properties.cmd.constructor === String)
 		midi_event.setCommandFromString( this.properties.cmd );
@@ -615,12 +669,35 @@ LGMIDIEvent.prototype.onAction = function( event, midi_event )
 	midi_event.data[0] = midi_event.cmd | midi_event.channel;
 	midi_event.data[1] = Number(this.properties.value1);
 	midi_event.data[2] = Number(this.properties.value2);
+
 	this.trigger("on_midi",midi_event);
 }
 
 LGMIDIEvent.prototype.onExecute = function()
 {
 	var props = this.properties;
+
+	if(this.inputs)
+	{
+		for(var i = 0; i < this.inputs.length; ++i)
+		{
+			var input = this.inputs[i];
+			if(input.link == -1)
+				continue;
+			switch (input.name)
+			{
+				case "note": 
+					var v = this.getInputData(i);
+					if(v != null)
+					{
+						if(v.constructor === String)
+							v = MIDIEvent.NoteStringToPitch(v);
+						this.properties.value1 = (v|0)%255;
+					}
+					break;
+			}
+		}
+	}
 
 	if(this.outputs)
 	{
@@ -657,6 +734,9 @@ LGMIDIEvent.prototype.onPropertyChanged = function(name,value)
 		this.properties.cmd = MIDIEvent.computeCommandFromString( value );
 }
 
+LGMIDIEvent.prototype.onGetInputs = function() {
+	return [ ["note","number"] ];
+}
 
 LGMIDIEvent.prototype.onGetOutputs = function() {
 	return [
@@ -699,6 +779,232 @@ LGMIDICC.prototype.onExecute = function()
 }
 
 LiteGraph.registerNodeType("midi/cc", LGMIDICC);
+
+
+function LGMIDIGenerator()
+{
+	this.addInput( "generate", LiteGraph.ACTION );
+	this.addInput( "scale", "string" );
+	this.addInput( "octave", "number" );
+	this.addOutput( "note", LiteGraph.EVENT );
+	this.properties = {
+		notes: "A,A#,B,C,C#,D,D#,E,F,F#,G,G#",
+		octave: 2,
+		mode: "sequence"
+	};
+
+	this.notes_pitches = LGMIDIGenerator.processScale( this.properties.notes );
+	this.sequence_index = 0;
+}
+
+LGMIDIGenerator.title = "MIDI Generator";
+LGMIDIGenerator.desc = "Generates a random MIDI note";
+
+LGMIDIGenerator.processScale = function(scale)
+{
+	var notes = scale.split(",");
+	for(var i = 0; i < notes.length; ++i)
+		notes[i] = MIDIEvent.note_to_index[ notes[i] ] || 0;
+	return notes;
+}
+
+LGMIDIGenerator.prototype.onPropertyChanged = function(name,value)
+{
+	if(name == "notes")
+		this.notes_pitches = LGMIDIGenerator.processScale( value );
+}
+
+LGMIDIGenerator.prototype.onExecute = function()
+{
+	var octave = this.getInputData(2);
+	if(octave != null)
+		this.properties.octave = octave;
+
+	var scale = this.getInputData(1);
+	if(scale)
+		this.notes_pitches = LGMIDIGenerator.processScale( scale );
+}
+
+LGMIDIGenerator.prototype.onAction = function( event, midi_event )
+{
+	//var range = this.properties.max - this.properties.min;
+	//var pitch = this.properties.min + ((Math.random() * range)|0);
+	var pitch = 0;
+	var range = this.notes_pitches.length;
+	
+	if( this.properties.mode == "sequence" )
+	{
+		var index = this.sequence_index = (this.sequence_index + 1) % range;
+		pitch = this.notes_pitches[ index ] + ( (this.properties.octave-1) * 12) + 33;
+	}
+	else if( this.properties.mode == "random" )
+	{
+		var index = Math.floor(Math.random()*range);
+		pitch = this.notes_pitches[ index ] + ( (this.properties.octave-1) * 12) + 33;
+	}
+	var note = new MIDIEvent(); 
+	note.setup([ MIDIEvent.NOTEON, pitch, 10 ]);
+	this.trigger("note", note);
+}
+
+
+LiteGraph.registerNodeType("midi/generator", LGMIDIGenerator);
+
+function LGMIDITranspose()
+{
+	this.properties = {
+		amount: 0
+	};
+	this.addInput( "in", LiteGraph.ACTION );
+	this.addInput( "amount", "number" );
+	this.addOutput( "out", LiteGraph.EVENT );
+
+	this.midi_event = new MIDIEvent();
+}
+
+LGMIDITranspose.title = "MIDI Transpose";
+LGMIDITranspose.desc = "Transpose a MIDI note";
+
+LGMIDITranspose.prototype.onAction = function( event, midi_event )
+{
+	this.midi_event.setup( midi_event.data );
+	this.midi_event.data[1] = Math.round( this.midi_event.data[1] + this.properties.amount );
+	this.trigger("out", this.midi_event );
+}
+
+LGMIDITranspose.prototype.onExecute = function()
+{
+	var amount = this.getInputData(1);
+	if(amount!= null)
+		this.properties.amount = amount;
+}
+
+LiteGraph.registerNodeType("midi/transpose", LGMIDITranspose);
+
+
+function LGMIDIQuantize()
+{
+	this.properties = {
+		scale: "A,A#,B,C,C#,D,D#,E,F,F#,G,G#"
+	};
+	this.addInput( "note", LiteGraph.ACTION );
+	this.addInput( "scale", "string" );
+	this.addOutput( "out", LiteGraph.EVENT );
+	
+	this.valid_notes = new Array(12);
+	this.offset_notes = new Array(12);
+	this.processScale( this.properties.scale );
+	this.midi_event = new MIDIEvent();
+}
+
+LGMIDIQuantize.title = "MIDI Quantize Pitch";
+LGMIDIQuantize.desc = "Transpose a MIDI note tp fit an scale";
+
+LGMIDIQuantize.prototype.onPropertyChanged = function(name,value)
+{
+	if(name == "scale")
+		this.processScale( value );
+}
+
+
+LGMIDIQuantize.prototype.processScale = function( scale )
+{
+	this._current_scale = scale;
+	this.notes_pitches = LGMIDIGenerator.processScale( scale );
+	for(var i = 0; i < 12; ++i)
+		this.valid_notes[i] = this.notes_pitches.indexOf(i) != -1;
+	for(var i = 0; i < 12; ++i)
+	{
+		if (this.valid_notes[ i ])
+		{
+			this.offset_notes[i] = 0;
+			continue;
+		}
+		for(var j = 1; j < 12; ++j)
+		{
+			if( this.valid_notes[ (i - j)%12 ] )
+			{
+				this.offset_notes[i] = -j;
+				break;
+			}
+			if( this.valid_notes[ (i + j)%12 ] )
+			{
+				this.offset_notes[i] = j;
+				break;
+			}
+		}
+	}
+}
+
+LGMIDIQuantize.prototype.onAction = function( event, midi_event )
+{
+	this.midi_event.setup( midi_event.data );
+	var note = midi_event.note;
+	var index = MIDIEvent.note_to_index[ note ];
+	var offset = this.offset_notes[index];
+	this.midi_event.data[1] += offset;
+	this.trigger("out", this.midi_event );
+}
+
+LGMIDIQuantize.prototype.onExecute = function()
+{
+	var scale = this.getInputData(1);
+	if(scale != null && scale != this._current_scale )
+		this.processScale( scale );
+}
+
+LiteGraph.registerNodeType("midi/quantize", LGMIDIQuantize);
+
+
+function LGMIDIPlay()
+{
+	this.properties = {
+		volume: 0.5,
+		duration: 1
+	};
+	this.addInput( "note", LiteGraph.ACTION );
+	this.addInput( "volume", "number" );
+	this.addInput( "duration", "number" );
+	this.addOutput( "note", LiteGraph.EVENT );
+
+	if(typeof(AudioSynth) == "undefined")
+	{
+		console.error("Audiosynth.js not included, LGMidiPlay requires that library");
+		this.boxcolor = "red";
+	}
+	else
+	{
+		var Synth = this.synth = new AudioSynth();
+		this.instrument = Synth.createInstrument('piano');
+	}
+}
+
+LGMIDIPlay.title = "MIDI Play";
+LGMIDIPlay.desc = "Plays a MIDI note";
+
+LGMIDIPlay.prototype.onAction = function( event, midi_event )
+{
+	if(!this.instrument)
+		return;
+	var note = midi_event.note; //C#
+	if( !note || note == "undefined" || note.constructor !== String )
+		return;
+	this.instrument.play( note, midi_event.octave, this.properties.duration, this.properties.volume );
+	this.trigger("note", midi_event );
+}
+
+LGMIDIPlay.prototype.onExecute = function()
+{
+	var volume  = this.getInputData(1);
+	if(volume != null)
+		this.properties.volume = volume;
+
+	var duration = this.getInputData(2);
+	if(duration != null)
+		this.properties.duration = duration;
+}
+
+LiteGraph.registerNodeType("midi/play", LGMIDIPlay);
 
 
 

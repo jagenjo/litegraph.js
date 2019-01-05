@@ -98,6 +98,8 @@ GraphicsImage.prototype.onAdded = function()
 
 GraphicsImage.prototype.onDrawBackground = function(ctx)
 {
+	if(this.flags.collapsed)
+		return;
 	if(this.img && this.size[0] > 5 && this.size[1] > 5)
 		ctx.drawImage(this.img, 0,0,this.size[0],this.size[1]);
 }
@@ -244,7 +246,7 @@ LiteGraph.registerNodeType("color/palette", ColorPalette );
 
 function ImageFrame()
 {
-	this.addInput("","image");
+	this.addInput("","image,canvas");
 	this.size = [200,200];
 }
 
@@ -255,7 +257,7 @@ ImageFrame.widgets = [{name:"resize",text:"Resize box",type:"button"},{name:"vie
 
 ImageFrame.prototype.onDrawBackground = function(ctx)
 {
-	if(this.frame)
+	if(this.frame && !this.flags.collapsed)
 		ctx.drawImage(this.frame, 0,0,this.size[0],this.size[1]);
 }
 
@@ -298,86 +300,6 @@ LiteGraph.registerNodeType("graphics/frame", ImageFrame );
 
 
 
-/*
-LiteGraph.registerNodeType("visualization/graph", {
-		desc: "Shows a graph of the inputs",
-
-		inputs: [["",0],["",0],["",0],["",0]],
-		size: [200,200],
-		properties: {min:-1,max:1,bgColor:"#000"},
-		onDrawBackground: function(ctx)
-		{
-			var colors = ["#FFF","#FAA","#AFA","#AAF"];
-
-			if(this.properties.bgColor != null && this.properties.bgColor != "")
-			{
-				ctx.fillStyle="#000";
-				ctx.fillRect(2,2,this.size[0] - 4, this.size[1]-4);
-			}
-
-			if(this.data)
-			{
-				var min = this.properties["min"];
-				var max = this.properties["max"];
-
-				for(var i in this.data)
-				{
-					var data = this.data[i];
-					if(!data) continue;
-
-					if(this.getInputInfo(i) == null) continue;
-
-					ctx.strokeStyle = colors[i];
-					ctx.beginPath();
-
-					var d = data.length / this.size[0];
-					for(var j = 0; j < data.length; j += d)
-					{
-						var value = data[ Math.floor(j) ];
-						value = (value - min) / (max - min);
-						if (value > 1.0) value = 1.0;
-						else if(value < 0) value = 0;
-
-						if(j == 0)
-							ctx.moveTo( j / d, (this.size[1] - 5) - (this.size[1] - 10) * value);
-						else
-							ctx.lineTo( j / d, (this.size[1] - 5) - (this.size[1] - 10) * value);
-					}
-
-					ctx.stroke();
-				}
-			}
-
-			//ctx.restore();
-		},
-
-		onExecute: function()
-		{
-			if(!this.data) this.data = [];
-
-			for(var i in this.inputs)
-			{
-				var value = this.getInputData(i);
-
-				if(typeof(value) == "number")
-				{
-					value = value ? value : 0;
-					if(!this.data[i])
-						this.data[i] = [];
-					this.data[i].push(value);
-
-					if(this.data[i].length > (this.size[1] - 4))
-						this.data[i] = this.data[i].slice(1,this.data[i].length);
-				}
-				else
-					this.data[i] = value;
-			}
-
-			if(this.data.length)
-				this.setDirtyCanvas(true);
-		}
-	});
-*/
 
 function ImageFade()
 {
@@ -508,6 +430,105 @@ ImageCrop.prototype.onPropertyChanged = function(name,value)
 }
 
 LiteGraph.registerNodeType("graphics/cropImage", ImageCrop );
+
+//CANVAS stuff
+
+function CanvasNode()
+{
+	this.addInput("clear", LiteGraph.ACTION );
+	this.addOutput("","canvas");
+	this.properties = {width:512,height:512,autoclear:true};
+
+	this.canvas = document.createElement("canvas");
+	this.ctx = this.canvas.getContext("2d");
+}
+
+CanvasNode.title = "Canvas";
+CanvasNode.desc = "Canvas to render stuff";
+
+CanvasNode.prototype.onExecute = function()
+{
+	var canvas = this.canvas;
+	var w = (this.properties.width)|0;
+	var h = (this.properties.height)|0;
+	if( canvas.width != w )
+		canvas.width = w;
+	if( canvas.height != h )
+		canvas.height = h;
+
+	if(this.properties.autoclear)
+		this.ctx.clearRect(0,0,canvas.width,canvas.height);
+	this.setOutputData(0,canvas);
+}
+
+CanvasNode.prototype.onAction = function( action, param )
+{
+	if(action == "clear")
+		this.ctx.clearRect(0,0,this.canvas.width,this.canvas.height);
+}
+
+LiteGraph.registerNodeType("graphics/canvas", CanvasNode );
+
+function DrawImageNode()
+{
+	this.addInput("canvas", "canvas" );
+	this.addInput("img", "image,canvas" );
+	this.addInput("x", "number" );
+	this.addInput("y", "number" );
+	this.properties = {x:0,y:0,opacity:1};
+}
+
+DrawImageNode.title = "DrawImage";
+DrawImageNode.desc = "Draws image into a canvas";
+
+DrawImageNode.prototype.onExecute = function()
+{
+	var canvas = this.getInputData(0);
+	if(!canvas)
+		return;
+
+	var img = this.getInputOrProperty("img");
+	if(!img)
+		return;
+
+	var x = this.getInputOrProperty("x");
+	var y = this.getInputOrProperty("y");
+	var ctx = canvas.getContext("2d");
+	ctx.drawImage( img, x, y );
+}
+
+LiteGraph.registerNodeType("graphics/drawImage", DrawImageNode );
+
+
+function DrawRectangleNode()
+{
+	this.addInput("canvas", "canvas" );
+	this.addInput("x", "number" );
+	this.addInput("y", "number" );
+	this.addInput("w", "number" );
+	this.addInput("h", "number" );
+	this.properties = { x:0,y:0,w:10,h:10,color:"white",opacity:1 };
+}
+
+DrawRectangleNode.title = "DrawRectangle";
+DrawRectangleNode.desc = "Draws rectangle in canvas";
+
+DrawRectangleNode.prototype.onExecute = function()
+{
+	var canvas = this.getInputData(0);
+	if(!canvas)
+		return;
+
+	var x = this.getInputOrProperty("x");
+	var y = this.getInputOrProperty("y");
+	var w = this.getInputOrProperty("w");
+	var h = this.getInputOrProperty("h");
+	var ctx = canvas.getContext("2d");
+	ctx.fillRect( x, y, w, h );
+}
+
+LiteGraph.registerNodeType("graphics/drawRectangle", DrawRectangleNode );
+
 
 
 function ImageVideo()

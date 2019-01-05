@@ -20,6 +20,39 @@ LogEvent.prototype.onAction = function( action, param )
 LiteGraph.registerNodeType("events/log", LogEvent );
 
 
+//Sequencer for events
+function Sequencer()
+{
+	this.addInput("", LiteGraph.ACTION);
+	this.addInput("", LiteGraph.ACTION);
+	this.addInput("", LiteGraph.ACTION);
+	this.addInput("", LiteGraph.ACTION);
+	this.addInput("", LiteGraph.ACTION);
+	this.addInput("", LiteGraph.ACTION);
+	this.addOutput("", LiteGraph.EVENT);
+	this.addOutput("", LiteGraph.EVENT);
+	this.addOutput("", LiteGraph.EVENT);
+	this.addOutput("", LiteGraph.EVENT);
+	this.addOutput("", LiteGraph.EVENT);
+	this.addOutput("", LiteGraph.EVENT);
+	this.size = [120,30];
+	this.flags = { horizontal: true, render_box: false };
+}
+
+Sequencer.title = "Sequencer";
+Sequencer.desc = "Trigger events when an event arrives";
+
+Sequencer.prototype.getTitle = function() { return ""; }
+
+Sequencer.prototype.onAction = function( action, param )
+{
+	if(this.outputs)
+		for(var i = 0; i < this.outputs.length; ++i)
+			this.triggerSlot( i, param );
+}
+
+LiteGraph.registerNodeType("events/sequencer", Sequencer );
+
 //Filter events
 function FilterEvent()
 {
@@ -58,6 +91,52 @@ FilterEvent.prototype.onAction = function( action, param )
 }
 
 LiteGraph.registerNodeType("events/filter", FilterEvent );
+
+
+//Show value inside the debug console
+function EventCounter()
+{
+	this.addInput("inc", LiteGraph.ACTION);
+	this.addInput("dec", LiteGraph.ACTION);
+	this.addInput("reset", LiteGraph.ACTION);
+	this.addOutput("change", LiteGraph.EVENT);
+	this.addOutput("num", "number");
+	this.num = 0;
+}
+
+EventCounter.title = "Counter";
+EventCounter.desc = "Counts events";
+
+EventCounter.prototype.onAction = function(action, param)
+{
+	var v = this.num;
+	if(action == "inc")
+		this.num += 1;
+	else if(action == "dec")
+		this.num -= 1;
+	else if(action == "reset")
+		this.num = 0;
+	if(this.num != v)
+		this.trigger("change",this.num);
+}
+
+EventCounter.prototype.onDrawBackground = function(ctx)
+{
+	if(this.flags.collapsed)
+		return;
+	ctx.fillStyle = "#AAA";
+	ctx.font = "20px Arial";
+	ctx.textAlign = "center";
+	ctx.fillText( this.num, this.size[0] * 0.5, this.size[1] * 0.5 );
+}
+
+
+EventCounter.prototype.onExecute = function()
+{
+	this.setOutputData(1,this.num);
+}
+
+LiteGraph.registerNodeType("events/counter", EventCounter );
 
 //Show value inside the debug console
 function DelayEvent()
@@ -142,15 +221,19 @@ TimerEvent.prototype.onDrawBackground = function()
 TimerEvent.prototype.onExecute = function()
 {
 	var dt = this.graph.elapsed_time * 1000; //in ms
+
+	var trigger = this.time == 0;
+
 	this.time += dt;
 	this.last_interval = Math.max(1, this.getInputOrProperty("interval") | 0);
 
-	if( this.time < this.last_interval || isNaN(this.last_interval) )
+	if( !trigger && ( this.time < this.last_interval || isNaN(this.last_interval)) )
 	{
 		if( this.inputs && this.inputs.length > 1 && this.inputs[1] )
 			this.setOutputData(1,false);
 		return;
 	}
+
 	this.triggered = true;
 	this.time = this.time % this.last_interval;
 	this.trigger( "on_tick", this.properties.event );

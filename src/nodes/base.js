@@ -334,36 +334,55 @@ LiteGraph.registerNodeType("graph/output", GlobalOutput);
 
 
 //Constant
-function Constant()
+function ConstantNumber()
 {
 	this.addOutput("value","number");
 	this.addProperty( "value", 1.0 );
-	this.editable = { property:"value", type:"number" };
 }
 
-Constant.title = "Const";
-Constant.desc = "Constant value";
+ConstantNumber.title = "Const Number";
+ConstantNumber.desc = "Constant number";
 
-
-Constant.prototype.setValue = function(v)
-{
-	if( typeof(v) == "string") v = parseFloat(v);
-	this.properties["value"] = v;
-	this.setDirtyCanvas(true);
-};
-
-Constant.prototype.onExecute = function()
+ConstantNumber.prototype.onExecute = function()
 {
 	this.setOutputData(0, parseFloat( this.properties["value"] ) );
 }
 
-Constant.prototype.onDrawBackground = function(ctx)
+ConstantNumber.prototype.onDrawBackground = function(ctx)
 {
 	//show the current value
 	this.outputs[0].label = this.properties["value"].toFixed(3);
 }
 
-LiteGraph.registerNodeType("basic/const", Constant);
+LiteGraph.registerNodeType("basic/const", ConstantNumber);
+
+function ConstantString()
+{
+	this.addOutput("","string");
+	this.addProperty( "value", "" );
+	this.widget = this.addWidget("text","value","", this.setValue.bind(this) );
+	this.widgets_up = true;
+}
+
+ConstantString.title = "Const String";
+ConstantString.desc = "Constant string";
+
+ConstantString.prototype.setValue = function(v)
+{
+	this.properties.value = v;
+}
+
+ConstantString.prototype.onPropertyChanged = function(name,value)
+{
+	this.widget.value = value;
+}
+
+ConstantString.prototype.onExecute = function()
+{
+	this.setOutputData(0, this.properties["value"] );
+}
+
+LiteGraph.registerNodeType("basic/string", ConstantString );
 
 
 //Watch a value in the editor

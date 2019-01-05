@@ -191,7 +191,7 @@ function TestSlotsNode()
 	this.addInput("C","number");
 	this.addOutput("A","number");
 	this.addOutput("B","number");
-	this.flags = { horizontal: true };
+	this.horizontal = true;
 	this.size = [100,40];
 }
 

@@ -5,6 +5,10 @@ window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
 window.addEventListener("resize", function() { editor.graphcanvas.resize(); } );
 window.addEventListener("keydown", editor.graphcanvas.processKey.bind(editor.graphcanvas) );
+window.onbeforeunload = function(){
+	var data = JSON.stringify( graph.serialize() );
+	localStorage.setItem("litegraphg demo backup", data );
+}
 
 //create scene selector
 var elem = document.createElement("span");
@@ -18,6 +22,8 @@ select.addEventListener("change", function(e){
 	
 	if(url)
 		graph.load( url );
+	else if(option.callback)
+		option.callback();
 	else
 		graph.clear();
 });
@@ -37,7 +43,10 @@ elem.querySelector("#load").addEventListener("click",function(){
 function addDemo( name, url )
 {
 	var option = document.createElement("option");
-	option.dataset["url"] = url;
+	if(url.constructor === String)
+		option.dataset["url"] = url;
+	else
+		option.callback = url;
 	option.innerHTML = name;
 	select.appendChild( option );
 }
@@ -48,6 +57,14 @@ addDemo("Benchmark", "examples/benchmark.json");
 addDemo("Audio", "examples/audio.json");
 addDemo("Audio Delay", "examples/audio_delay.json");
 addDemo("Audio Reverb", "examples/audio_reverb.json");
+addDemo("MIDI Generation", "examples/midi_generation.json");
+addDemo("autobackup", function(){
+	var data = localStorage.getItem("litegraphg demo backup");
+	if(!data)
+		return;
+	var graph_data = JSON.parse(data);
+	graph.configure( graph_data );
+});
 
 
 
