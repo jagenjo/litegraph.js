@@ -147,6 +147,29 @@ Other methods are:
 - onMouseLeave
 - onKey
 
+### Node Widgets
+
+You can add widgets inside the node to edit text, values, etc.
+
+To do so you must create them in the constructor by calling ```node.addWidget```, the returned value is the object containing all the info about the widget, it is handy to store it in case you want to change the value later from code.
+
+The sintax is:
+
+```js
+function MyNodeType()
+{
+  this.slider_widget = this.addWidget("slider","Slider", 0.5, function(value, widget, node){ /* do something with the value */ }, { min: 0, max: 1} );
+}
+```
+
+This is the list of supported widgets:
+* **"number"** to change a value of a number, the syntax is ```this.addWidget("number","Number", current_value, callback, { min: 0, max: 100, step: 1} );```
+* **"slider"** to change a number by draging the mouse, the syntax is the same as number.
+* **"combo"** to select between multiple choices, the syntax is: ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```
+* **"text"** to edit a short string
+* **"toggle"** like a checkbox
+* **"button"**
+
 ## Integration
 
 To integrate in you HTML application:
