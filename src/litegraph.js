@@ -5837,7 +5837,11 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 	if(render_title || title_mode == LiteGraph.TRANSPARENT_TITLE )
 	{
 		//title bar
-		if(title_mode != LiteGraph.TRANSPARENT_TITLE) //!node.flags.collapsed)
+		if(node.onDrawTitleBar)
+		{
+			node.onDrawTitleBar(ctx, title_height, size, this.scale, fgcolor);
+		}
+		else if(title_mode != LiteGraph.TRANSPARENT_TITLE) //!node.flags.collapsed)
 		{
 			if(node.flags.collapsed)
 				ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
@@ -5869,7 +5873,11 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 		}
 
 		//title box
-		if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CIRCLE_SHAPE || shape == LiteGraph.CARD_SHAPE)
+		if(node.onDrawTitleBox)
+		{
+			node.onDrawTitleBox(ctx, title_height, size, this.scale);
+		}
+		else if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CIRCLE_SHAPE || shape == LiteGraph.CARD_SHAPE)
 		{
 			if( this.scale > 0.5 )
 			{
@@ -5897,6 +5905,10 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 		ctx.globalAlpha = old_alpha;
 
 		//title text
+		if(node.onDrawTitleText)
+		{
+			node.onDrawTitleText(ctx, title_height, size, this.scale, this.title_text_font, selected);
+		}
 		if( this.scale > 0.5 )
 		{
 			ctx.font = this.title_text_font;
