@@ -4092,7 +4092,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				{
 					//double click node
 					if( node.onDblClick)
-						node.onDblClick(e,[e.canvasX - node.pos[0], e.canvasY - node.pos[1]],graphcanvas);
+						node.onDblClick(e,[e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this);
 					this.processNodeDblClicked( node );
 					block_drag_node = true;
 				}
