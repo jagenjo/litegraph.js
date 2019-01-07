@@ -1719,11 +1719,16 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 	input|output: every connection
 		+  { name:string, type:string, pos: [x,y]=Optional, direction: "input"|"output", links: Array });
 
-	flags:
+	general properties:
 		+ clip_area: if you render outside the node, it will be cliped
 		+ unsafe_execution: not allowed for safe execution
 		+ skip_repeated_outputs: when adding new outputs, it wont show if there is one already connected
 		+ resizable: if set to false it wont be resizable with the mouse
+		+ horizontal: slots are distributed horizontally
+		+ widgets_up: widgets start from the top of the node
+	
+	flags object:
+		+ collapsed: if it is collapsed
 
 	supported callbacks:
 		+ onAdded: when added to graph
@@ -2168,13 +2173,16 @@ LGraphNode.prototype.getInputOrProperty = function( name )
 		return this.properties ? this.properties[name] : null;
 
 	for(var i = 0, l = this.inputs.length; i < l; ++i)
-		if(name == this.inputs[i].name)
+	{
+		var input_info = this.inputs[i];
+		if(name == input_info.name && input_info.link != null)
 		{
-			var link_id = this.inputs[i].link;
-			var link = this.graph.links[ link_id ];
-			return link ? link.data : null;
+			var link = this.graph.links[ input_info.link ];
+			if(link)
+				return link.data;
 		}
-	return this.properties[name];
+	}
+	return this.properties[ name ];
 }
 
 
@@ -3985,7 +3993,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 			if(!this.connecting_node && !node.flags.collapsed && !this.live_mode)
 			{
 				//Search for corner for resize
-				if( !skip_action && node.flags.resizable !== false && isInsideRectangle( e.canvasX, e.canvasY, node.pos[0] + node.size[0] - 5, node.pos[1] + node.size[1] - 5 ,10,10 ))
+				if( !skip_action && node.resizable !== false && isInsideRectangle( e.canvasX, e.canvasY, node.pos[0] + node.size[0] - 5, node.pos[1] + node.size[1] - 5 ,10,10 ))
 				{
 					this.resizing_node = node;
 					this.canvas.style.cursor = "se-resize";
@@ -5535,6 +5543,8 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	var shape = node._shape || LiteGraph.BOX_SHAPE;
 	var size = temp_vec2;
 	temp_vec2.set( node.size );
+	var horizontal = node.horizontal || node.flags.horizontal;
+
 	if( node.flags.collapsed )
 	{
 		ctx.font = this.inner_text_font;
@@ -5544,7 +5554,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		size[1] = 0;
 	}
 	
-	if( node.flags.clip_area ) //Start clipping
+	if( node.clip_area ) //Start clipping
 	{
 		ctx.save();
 		ctx.beginPath();
@@ -5562,7 +5572,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	ctx.shadowColor = "transparent";
 
 	//connection slots
-	ctx.textAlign = node.flags.horizontal ? "center" : "left";
+	ctx.textAlign = horizontal ? "center" : "left";
 	ctx.font = this.inner_text_font;
 
 	var render_text = this.scale > 0.6;
@@ -5597,8 +5607,12 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 
 				ctx.beginPath();
 
-				if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
-                    ctx.rect((pos[0] - 6) + 0.5, (pos[1] - 5) + 0.5, 14, 10);
+				if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE)
+				{
+					if (horizontal)
+	                    ctx.rect((pos[0] - 5) + 0.5, (pos[1] - 8) + 0.5, 10, 14);
+					else
+	                    ctx.rect((pos[0] - 6) + 0.5, (pos[1] - 5) + 0.5, 14, 10);
                 } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
                     ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] + 6) + 0.5);
@@ -5617,7 +5631,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 					if(text)
 					{
 						ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
-						if( node.flags.horizontal || slot.dir == LiteGraph.UP )
+						if( horizontal || slot.dir == LiteGraph.UP )
 							ctx.fillText(text,pos[0],pos[1] - 10);
 						else
 							ctx.fillText(text,pos[0] + 10,pos[1] + 5);
@@ -5629,7 +5643,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		if(this.connecting_node)
 			ctx.globalAlpha = 0.4 * editor_alpha;
 
-		ctx.textAlign = node.flags.horizontal ? "center" : "right";
+		ctx.textAlign = horizontal ? "center" : "right";
 		ctx.strokeStyle = "black";
 		if(node.outputs)
 			for(var i = 0; i < node.outputs.length; i++)
@@ -5646,8 +5660,12 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 				ctx.beginPath();
 				//ctx.rect( node.size[0] - 14,i*14,10,10);
 
-				if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE) {
-					ctx.rect((pos[0] - 6) + 0.5,(pos[1] - 5) + 0.5,14,10);
+				if (slot.type === LiteGraph.EVENT || slot.shape === LiteGraph.BOX_SHAPE)
+				{
+					if( horizontal )
+						ctx.rect((pos[0] - 5) + 0.5,(pos[1] - 8) + 0.5,10,14);
+					else
+						ctx.rect((pos[0] - 6) + 0.5,(pos[1] - 5) + 0.5,14,10);
                 } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
                     ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
                     ctx.lineTo(pos[0] - 4, (pos[1] + 6) + 0.5);
@@ -5672,7 +5690,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 					if(text)
 					{
 						ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
-						if( node.flags.horizontal || slot.dir == LiteGraph.DOWN )
+						if( horizontal || slot.dir == LiteGraph.DOWN )
 							ctx.fillText(text,pos[0],pos[1] - 8);
 						else
 							ctx.fillText(text, pos[0] - 10,pos[1] + 5);
@@ -5685,7 +5703,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 
 		if(node.widgets)
 		{
-			if( node.flags.horizontal || node.flags.widgets_up )
+			if( horizontal || node.widgets_up  )
 				max_y = 2;
 			this.drawNodeWidgets( node, max_y, ctx, (this.node_widget && this.node_widget[0] == node) ? this.node_widget[1] : null );
 		}
@@ -5726,7 +5744,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		{
 			var x = 0;
 			var y = LiteGraph.NODE_TITLE_HEIGHT * -0.5; //center
-			if( node.flags.horizontal )
+			if( horizontal )
 			{
 				x = node._collapsed_width * 0.5;
 				y = -LiteGraph.NODE_TITLE_HEIGHT;		
@@ -5750,7 +5768,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		{
 			var x = node._collapsed_width;
 			var y = LiteGraph.NODE_TITLE_HEIGHT * -0.5; //center
-			if( node.flags.horizontal )
+			if( horizontal )
 			{
 				x = node._collapsed_width * 0.5;
 				y = 0;
@@ -5773,7 +5791,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		}
 	}
 
-	if(node.flags.clip_area)
+	if(node.clip_area)
 		ctx.restore();
 
 	ctx.globalAlpha = 1.0;
@@ -5875,9 +5893,9 @@ LGraphCanvas.prototype.drawNodeShape = function( node, ctx, size, fgcolor, bgcol
 		//title box
 		if(node.onDrawTitleBox)
 		{
-			node.onDrawTitleBox(ctx, title_height, size, this.scale);
+			node.onDrawTitleBox( ctx, title_height, size, this.scale );
 		}
-		else if (shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CIRCLE_SHAPE || shape == LiteGraph.CARD_SHAPE)
+		else if ( shape == LiteGraph.ROUND_SHAPE || shape == LiteGraph.CIRCLE_SHAPE || shape == LiteGraph.CARD_SHAPE )
 		{
 			if( this.scale > 0.5 )
 			{
@@ -6353,6 +6371,7 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 						ctx.fillText( w.value, width - 40, y + H*0.7 );
 				}
 				break;
+			case "string":
 			case "text":
 				ctx.textAlign = "left";
 				ctx.strokeStyle = "#AAA";
@@ -6475,6 +6494,7 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 							setTimeout( function(){	w.callback( w.value, that, node, pos ); }, 20 );
 					}
 					break;
+				case "string":
 				case "text":
 					if( event.type == "mousedown" )
 						this.prompt( "Value", w.value, (function(v){ this.value = v; if(w.callback) w.callback(v, that, node ); }).bind(w), event );

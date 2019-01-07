@@ -81,6 +81,23 @@ Bypass.prototype.onExecute = function()
 LiteGraph.registerNodeType("math/bypass", Bypass );
 
 
+function ToNumber()
+{
+	this.addInput("in");
+	this.addOutput("out");
+}
+
+ToNumber.title = "to Number";
+ToNumber.desc = "Cast to number";
+
+ToNumber.prototype.onExecute = function()
+{
+	var v = this.getInputData(0);
+	this.setOutputData(0, Number(v) );
+}
+
+LiteGraph.registerNodeType("math/to_number", ToNumber );
+
 
 function MathRange()
 {
