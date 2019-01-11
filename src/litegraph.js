@@ -3698,6 +3698,7 @@ LGraphCanvas.prototype.setCanvas = function( canvas, skip_events )
 	//this.canvas.tabindex = "1000";
 	canvas.className += " lgraphcanvas";
 	canvas.data = this;
+	canvas.tabindex = '1'; //to allow key events
 
 	//bg canvas: used for non changing stuff
 	this.bgcanvas = null;
@@ -3959,6 +3960,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 	this.canvas_mouse[0] = e.canvasX;
 	this.canvas_mouse[1] = e.canvasY;
+	this.canvas.focus();
 
     LiteGraph.closeAllContextMenus( ref_window );
 
@@ -4891,12 +4893,12 @@ LGraphCanvas.prototype.selectNodes = function( nodes, add_to_current_selection )
 	for(var i = 0; i < nodes.length; ++i)
 	{
 		var node = nodes[i];
-		if(node.selected)
+		if(node.is_selected)
 			continue;
 
-		if( !node.selected && node.onSelected )
+		if( !node.is_selected && node.onSelected )
 			node.onSelected();
-		node.selected = true;
+		node.is_selected = true;
 		this.selected_nodes[ node.id ] = node;
 
 		if(node.inputs)
@@ -4922,11 +4924,11 @@ LGraphCanvas.prototype.selectNodes = function( nodes, add_to_current_selection )
 **/
 LGraphCanvas.prototype.deselectNode = function( node )
 {
-	if(!node.selected)
+	if(!node.is_selected)
 		return;
 	if(node.onDeselected)
 		node.onDeselected();
-	node.selected = false;
+	node.is_selected = false;
 
 	//remove highlighted
 	if(node.inputs)
@@ -4954,11 +4956,11 @@ LGraphCanvas.prototype.deselectAllNodes = function()
 	for(var i = 0, l = nodes.length; i < l; ++i)
 	{
 		var node = nodes[i];
-		if(!node.selected)
+		if(!node.is_selected)
 			continue;
 		if(node.onDeselected)
 			node.onDeselected();
-		node.selected = false;
+		node.is_selected = false;
 	}
 	this.selected_nodes = {};
 	this.highlighted_links = {};
@@ -5568,7 +5570,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	}
 
 	//draw shape
-	this.drawNodeShape( node, ctx, size, color, bgcolor, node.selected, node.mouseOver );
+	this.drawNodeShape( node, ctx, size, color, bgcolor, node.is_selected, node.mouseOver );
 	ctx.shadowColor = "transparent";
 
 	//connection slots
@@ -7073,6 +7075,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	dialog.close = function()
 	{
 		that.search_box = null;
+		setTimeout( function(){ that.canvas.focus(); },10 ); //important, if canvas loses focus keys wont be captured
 		dialog.parentNode.removeChild( dialog );
 	}
 

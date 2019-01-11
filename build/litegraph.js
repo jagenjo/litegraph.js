@@ -3700,6 +3700,7 @@ LGraphCanvas.prototype.setCanvas = function( canvas, skip_events )
 	//this.canvas.tabindex = "1000";
 	canvas.className += " lgraphcanvas";
 	canvas.data = this;
+	canvas.tabindex = '1'; //to allow key events
 
 	//bg canvas: used for non changing stuff
 	this.bgcanvas = null;
@@ -3961,6 +3962,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 
 	this.canvas_mouse[0] = e.canvasX;
 	this.canvas_mouse[1] = e.canvasY;
+	this.canvas.focus();
 
     LiteGraph.closeAllContextMenus( ref_window );
 
@@ -4893,12 +4895,12 @@ LGraphCanvas.prototype.selectNodes = function( nodes, add_to_current_selection )
 	for(var i = 0; i < nodes.length; ++i)
 	{
 		var node = nodes[i];
-		if(node.selected)
+		if(node.is_selected)
 			continue;
 
-		if( !node.selected && node.onSelected )
+		if( !node.is_selected && node.onSelected )
 			node.onSelected();
-		node.selected = true;
+		node.is_selected = true;
 		this.selected_nodes[ node.id ] = node;
 
 		if(node.inputs)
@@ -4924,11 +4926,11 @@ LGraphCanvas.prototype.selectNodes = function( nodes, add_to_current_selection )
 **/
 LGraphCanvas.prototype.deselectNode = function( node )
 {
-	if(!node.selected)
+	if(!node.is_selected)
 		return;
 	if(node.onDeselected)
 		node.onDeselected();
-	node.selected = false;
+	node.is_selected = false;
 
 	//remove highlighted
 	if(node.inputs)
@@ -4956,11 +4958,11 @@ LGraphCanvas.prototype.deselectAllNodes = function()
 	for(var i = 0, l = nodes.length; i < l; ++i)
 	{
 		var node = nodes[i];
-		if(!node.selected)
+		if(!node.is_selected)
 			continue;
 		if(node.onDeselected)
 			node.onDeselected();
-		node.selected = false;
+		node.is_selected = false;
 	}
 	this.selected_nodes = {};
 	this.highlighted_links = {};
@@ -5570,7 +5572,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	}
 
 	//draw shape
-	this.drawNodeShape( node, ctx, size, color, bgcolor, node.selected, node.mouseOver );
+	this.drawNodeShape( node, ctx, size, color, bgcolor, node.is_selected, node.mouseOver );
 	ctx.shadowColor = "transparent";
 
 	//connection slots
@@ -7075,6 +7077,7 @@ LGraphCanvas.prototype.showSearchBox = function(event)
 	dialog.close = function()
 	{
 		that.search_box = null;
+		setTimeout( function(){ that.canvas.focus(); },10 ); //important, if canvas loses focus keys wont be captured
 		dialog.parentNode.removeChild( dialog );
 	}
 
@@ -16230,7 +16233,10 @@ if(typeof(GL) != "undefined")
 })(this);
 (function( global )
 {
+
 var LiteGraph = global.LiteGraph;
+var MIDI_COLOR = "#243";
+
 
 function MIDIEvent( data )
 {
@@ -16649,6 +16655,8 @@ LGMIDIIn.MIDIInterface = MIDIInterface;
 
 LGMIDIIn.title = "MIDI Input";
 LGMIDIIn.desc = "Reads MIDI from a input port";
+LGMIDIIn.color = MIDI_COLOR;
+
 
 LGMIDIIn.prototype.getPropertyInfo = function(name)
 {
@@ -16743,6 +16751,7 @@ LGMIDIOut.MIDIInterface = MIDIInterface;
 
 LGMIDIOut.title = "MIDI Output";
 LGMIDIOut.desc = "Sends MIDI to output channel";
+LGMIDIOut.color = MIDI_COLOR;
 
 LGMIDIOut.prototype.getPropertyInfo = function(name)
 {
@@ -16792,6 +16801,8 @@ function LGMIDIShow()
 
 LGMIDIShow.title = "MIDI Show";
 LGMIDIShow.desc = "Shows MIDI in the graph";
+LGMIDIShow.color = MIDI_COLOR;
+
 
 LGMIDIShow.prototype.onAction = function(event, midi_event )
 {
@@ -16839,6 +16850,7 @@ function LGMIDIFilter()
 
 LGMIDIFilter.title = "MIDI Filter";
 LGMIDIFilter.desc = "Filters MIDI messages";
+LGMIDIFilter.color = MIDI_COLOR;
 
 LGMIDIFilter.prototype.onAction = function(event, midi_event )
 {
@@ -16877,6 +16889,7 @@ function LGMIDIEvent()
 
 LGMIDIEvent.title = "MIDIEvent";
 LGMIDIEvent.desc = "Create a MIDI Event";
+LGMIDIEvent.color = MIDI_COLOR;
 
 LGMIDIEvent.prototype.onAction = function( event, midi_event )
 {
@@ -16999,6 +17012,7 @@ function LGMIDICC()
 
 LGMIDICC.title = "MIDICC";
 LGMIDICC.desc = "gets a Controller Change";
+LGMIDICC.color = MIDI_COLOR;
 
 LGMIDICC.prototype.onExecute = function()
 {
@@ -17020,6 +17034,7 @@ function LGMIDIGenerator()
 	this.properties = {
 		notes: "A,A#,B,C,C#,D,D#,E,F,F#,G,G#",
 		octave: 2,
+		duration: 0.5,
 		mode: "sequence"
 	};
 
@@ -17029,12 +17044,19 @@ function LGMIDIGenerator()
 
 LGMIDIGenerator.title = "MIDI Generator";
 LGMIDIGenerator.desc = "Generates a random MIDI note";
+LGMIDIGenerator.color = MIDI_COLOR;
 
 LGMIDIGenerator.processScale = function(scale)
 {
 	var notes = scale.split(",");
 	for(var i = 0; i < notes.length; ++i)
-		notes[i] = MIDIEvent.note_to_index[ notes[i] ] || 0;
+	{
+		var n = notes[i];
+		if( (n.length == 2 && n[1] != "#" ) || n.length > 2)
+			notes[i] = -LiteGraph.MIDIEvent.NoteStringToPitch(n);
+		else
+			notes[i] = MIDIEvent.note_to_index[ n ] || 0;
+	}
 	return notes;
 }
 
@@ -17061,20 +17083,30 @@ LGMIDIGenerator.prototype.onAction = function( event, midi_event )
 	//var pitch = this.properties.min + ((Math.random() * range)|0);
 	var pitch = 0;
 	var range = this.notes_pitches.length;
+	var index = 0;
 	
 	if( this.properties.mode == "sequence" )
-	{
-		var index = this.sequence_index = (this.sequence_index + 1) % range;
-		pitch = this.notes_pitches[ index ] + ( (this.properties.octave-1) * 12) + 33;
-	}
+		index = this.sequence_index = (this.sequence_index + 1) % range;
 	else if( this.properties.mode == "random" )
-	{
-		var index = Math.floor(Math.random()*range);
-		pitch = this.notes_pitches[ index ] + ( (this.properties.octave-1) * 12) + 33;
-	}
-	var note = new MIDIEvent(); 
-	note.setup([ MIDIEvent.NOTEON, pitch, 10 ]);
-	this.trigger("note", note);
+		index = Math.floor(Math.random()*range);
+
+	var note = this.notes_pitches[ index ];
+	if(note >= 0)
+		pitch = note + ( (this.properties.octave-1) * 12) + 33;
+	else
+		pitch = -note;
+
+	var midi_event = new MIDIEvent(); 
+	midi_event.setup([ MIDIEvent.NOTEON, pitch, 10 ]);
+	var duration = this.properties.duration || 1;
+	this.trigger("note", midi_event);
+
+	//noteoff
+	setTimeout( (function(){
+		var midi_event = new MIDIEvent(); 
+		midi_event.setup([ MIDIEvent.NOTEOFF, pitch, 0 ]);
+		this.trigger("note", midi_event);
+	}).bind(this), duration * 1000 );
 }
 
 
@@ -17094,12 +17126,22 @@ function LGMIDITranspose()
 
 LGMIDITranspose.title = "MIDI Transpose";
 LGMIDITranspose.desc = "Transpose a MIDI note";
+LGMIDITranspose.color = MIDI_COLOR;
 
 LGMIDITranspose.prototype.onAction = function( event, midi_event )
 {
-	this.midi_event.setup( midi_event.data );
-	this.midi_event.data[1] = Math.round( this.midi_event.data[1] + this.properties.amount );
-	this.trigger("out", this.midi_event );
+	if( !midi_event || midi_event.constructor !== MIDIEvent )
+		return;
+
+	if( midi_event.data[0] == MIDIEvent.NOTEON || midi_event.data[0] == MIDIEvent.NOTEOFF )
+	{
+		this.midi_event = new MIDIEvent();
+		this.midi_event.setup( midi_event.data );
+		this.midi_event.data[1] = Math.round( this.midi_event.data[1] + this.properties.amount );
+		this.trigger("out", this.midi_event );
+	}
+	else
+		this.trigger("out", midi_event );
 }
 
 LGMIDITranspose.prototype.onExecute = function()
@@ -17124,11 +17166,11 @@ function LGMIDIQuantize()
 	this.valid_notes = new Array(12);
 	this.offset_notes = new Array(12);
 	this.processScale( this.properties.scale );
-	this.midi_event = new MIDIEvent();
 }
 
 LGMIDIQuantize.title = "MIDI Quantize Pitch";
 LGMIDIQuantize.desc = "Transpose a MIDI note tp fit an scale";
+LGMIDIQuantize.color = MIDI_COLOR;
 
 LGMIDIQuantize.prototype.onPropertyChanged = function(name,value)
 {
@@ -17168,12 +17210,21 @@ LGMIDIQuantize.prototype.processScale = function( scale )
 
 LGMIDIQuantize.prototype.onAction = function( event, midi_event )
 {
-	this.midi_event.setup( midi_event.data );
-	var note = midi_event.note;
-	var index = MIDIEvent.note_to_index[ note ];
-	var offset = this.offset_notes[index];
-	this.midi_event.data[1] += offset;
-	this.trigger("out", this.midi_event );
+	if( !midi_event || midi_event.constructor !== MIDIEvent )
+		return;
+
+	if( midi_event.data[0] == MIDIEvent.NOTEON || midi_event.data[0] == MIDIEvent.NOTEOFF )
+	{
+		this.midi_event = new MIDIEvent();
+		this.midi_event.setup( midi_event.data );
+		var note = midi_event.note;
+		var index = MIDIEvent.note_to_index[ note ];
+		var offset = this.offset_notes[index];
+		this.midi_event.data[1] += offset;
+		this.trigger("out", this.midi_event );
+	}
+	else
+		this.trigger("out", midi_event );
 }
 
 LGMIDIQuantize.prototype.onExecute = function()
@@ -17211,15 +17262,20 @@ function LGMIDIPlay()
 
 LGMIDIPlay.title = "MIDI Play";
 LGMIDIPlay.desc = "Plays a MIDI note";
+LGMIDIPlay.color = MIDI_COLOR;
 
 LGMIDIPlay.prototype.onAction = function( event, midi_event )
 {
-	if(!this.instrument)
+	if( !midi_event || midi_event.constructor !== MIDIEvent )
 		return;
-	var note = midi_event.note; //C#
-	if( !note || note == "undefined" || note.constructor !== String )
-		return;
-	this.instrument.play( note, midi_event.octave, this.properties.duration, this.properties.volume );
+
+	if( this.instrument && midi_event.data[0] == MIDIEvent.NOTEON )
+	{
+		var note = midi_event.note; //C#
+		if( !note || note == "undefined" || note.constructor !== String )
+			return;
+		this.instrument.play( note, midi_event.octave, this.properties.duration, this.properties.volume );
+	}
 	this.trigger("note", midi_event );
 }
 
@@ -17235,6 +17291,169 @@ LGMIDIPlay.prototype.onExecute = function()
 }
 
 LiteGraph.registerNodeType("midi/play", LGMIDIPlay);
+
+
+
+function LGMIDIKeys()
+{
+	this.properties = {
+		num_octaves: 2,
+		start_octave: 2
+	}
+	this.addInput( "note", LiteGraph.ACTION );
+	this.addInput( "reset", LiteGraph.ACTION );
+	this.addOutput( "note", LiteGraph.EVENT );
+	this.size = [400,100];
+	this.keys = [];
+	this._last_key = -1;
+}
+
+LGMIDIKeys.title = "MIDI Keys";
+LGMIDIKeys.desc = "Keyboard to play notes";
+LGMIDIKeys.color = MIDI_COLOR;
+
+LGMIDIKeys.keys = [ 
+	{x:0,w:1,h:1,t:0},
+	{x:0.75,w:0.5,h:0.6,t:1},
+	{x:1,w:1,h:1,t:0},
+	{x:1.75,w:0.5,h:0.6,t:1},
+	{x:2,w:1,h:1,t:0},
+	{x:2.75,w:0.5,h:0.6,t:1},
+	{x:3,w:1,h:1,t:0},
+	{x:4,w:1,h:1,t:0},
+	{x:4.75,w:0.5,h:0.6,t:1},
+	{x:5,w:1,h:1,t:0},
+	{x:5.75,w:0.5,h:0.6,t:1},
+	{x:6,w:1,h:1,t:0}];
+
+LGMIDIKeys.prototype.onDrawBackground = function(ctx)
+{
+	if(this.flags.collapsed)
+		return;
+
+	var num_keys = this.properties.num_octaves * 12;
+	this.keys.length = num_keys;
+	var key_width = this.size[0] / (this.properties.num_octaves * 7);
+	var key_height = this.size[1];
+
+	for(var k = 0; k < 2; k++) //draw first whites (0) then blacks (1)
+		for(var i = 0; i < num_keys; ++i)
+		{
+			var key_info = LGMIDIKeys.keys[i%12];
+			if( key_info.t != k )
+				continue;
+			var octave = Math.floor(i/12);
+			var x = octave * 7 * key_width + key_info.x * key_width;
+			if(k == 0)
+				ctx.fillStyle = this.keys[i] ? "#CCC" : "white";
+			else
+				ctx.fillStyle = this.keys[i] ? "#333" : "black";
+			ctx.fillRect( x+1, 0, key_width * key_info.w - 2, key_height * key_info.h ); 
+		}
+}
+
+LGMIDIKeys.prototype.getKeyIndex = function(pos)
+{
+	var num_keys = this.properties.num_octaves * 12;
+	var key_width = this.size[0] / (this.properties.num_octaves * 7);
+	var key_height = this.size[1];
+
+	for(var k = 1; k >= 0; k--) //test blacks first (1) then whites (0)
+		for(var i = 0; i < this.keys.length; ++i)
+		{
+			var key_info = LGMIDIKeys.keys[i%12];
+			if( key_info.t != k )
+				continue;
+			var octave = Math.floor(i/12);
+			var x = octave * 7 * key_width + key_info.x * key_width;
+			var w = key_width * key_info.w;
+			var h = key_height * key_info.h;
+			if( pos[0] < x || pos[0] > (x + w) || pos[1] > h )
+				continue;
+			return i;
+		}
+	return -1;
+}
+
+LGMIDIKeys.prototype.onAction = function(event, params)
+{
+	if(event == "reset")
+	{
+		for(var i = 0; i < this.keys.length; ++i)
+			this.keys[i] = false;
+		return;
+	}
+
+	if( !params || params.constructor !== MIDIEvent )
+		return;
+	var midi_event = params;
+	var start_note = (this.properties.start_octave - 1) * 12 + 29;
+	var index = midi_event.data[1] - start_note;
+	if( index >= 0 && index < this.keys.length )
+	{
+		if(midi_event.data[0] == MIDIEvent.NOTEON)
+			this.keys[index] = true;
+		else if(midi_event.data[0] == MIDIEvent.NOTEOFF)
+			this.keys[index] = false;
+	}
+
+	this.trigger("note",midi_event);
+}
+
+
+LGMIDIKeys.prototype.onMouseDown = function(e, pos)
+{
+	if(pos[1] < 0)
+		return;
+	var index = this.getKeyIndex( pos );
+	this.keys[ index ] = true;
+	this._last_key = index;
+	var pitch = (this.properties.start_octave - 1) * 12 + 29 + index;
+	var midi_event = new MIDIEvent();
+	midi_event.setup([MIDIEvent.NOTEON, pitch, 100]);
+	this.trigger("note",midi_event);
+	return true;
+}
+
+LGMIDIKeys.prototype.onMouseMove = function(e, pos)
+{
+	if(pos[1] < 0 || this._last_key == -1)
+		return;
+	this.setDirtyCanvas(true);
+	var index = this.getKeyIndex( pos );
+	if (this._last_key == index)
+		return true;
+	this.keys[ this._last_key ] = false;
+	var pitch = (this.properties.start_octave - 1) * 12 + 29 + this._last_key;
+	var midi_event = new MIDIEvent();
+	midi_event.setup([MIDIEvent.NOTEOFF, pitch, 100]);
+	this.trigger("note",midi_event);
+
+	this.keys[ index ] = true;
+	var pitch = (this.properties.start_octave - 1) * 12 + 29 + index;
+	var midi_event = new MIDIEvent();
+	midi_event.setup([MIDIEvent.NOTEON, pitch, 100]);
+	this.trigger("note",midi_event);
+
+	this._last_key = index;
+	return true;
+}
+
+LGMIDIKeys.prototype.onMouseUp = function(e, pos)
+{
+	if(pos[1] < 0)
+		return;
+	var index = this.getKeyIndex( pos );
+	this.keys[ index ] = false;
+	this._last_key = -1;
+	var pitch = (this.properties.start_octave - 1) * 12 + 29 + index;
+	var midi_event = new MIDIEvent();
+	midi_event.setup([MIDIEvent.NOTEOFF, pitch, 100]);
+	this.trigger("note",midi_event);
+	return true;
+}
+
+LiteGraph.registerNodeType("midi/keys", LGMIDIKeys);
 
 
 
