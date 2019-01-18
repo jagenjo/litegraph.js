@@ -42,7 +42,8 @@ Or downloading the ```build/litegraph.js``` version from this repository.
 ```html
 <html>
 <head>
-	<script type="text/javascript" src="/litegraph.js"></script>
+	<link rel="stylesheet" type="text/css" href="litegraph.css">
+	<script type="text/javascript" src="litegraph.js"></script>
 </head>
 <body style='width:100%; height:100%'>
 <canvas id='mycanvas' width='1024' height='720' style='border: 1px solid'></canvas>
