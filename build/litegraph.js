@@ -2690,7 +2690,7 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 * Allows to pass 
 * 
 * @method addWidget
-* @return {Float32Array[4]} the total size
+* @return {Object} the created widget
 */
 LGraphNode.prototype.addWidget = function( type, name, value, callback, options )
 {
@@ -4125,7 +4125,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				{
 					//double click node
 					if( node.onDblClick)
-						node.onDblClick(e,[e.canvasX - node.pos[0], e.canvasY - node.pos[1]],graphcanvas);
+						node.onDblClick(e,[e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this);
 					this.processNodeDblClicked( node );
 					block_drag_node = true;
 				}
@@ -8062,10 +8062,13 @@ function ContextMenu( values, options )
 	function on_mouse_wheel(e)
 	{
 		var pos = parseInt( root.style.top );
-		root.style.top = (pos + e.deltaY * 0.1).toFixed() + "px";
+		root.style.top = (pos + e.deltaY * options.scroll_speed).toFixed() + "px";
 		e.preventDefault();
 		return true;
 	}
+
+	if(!options.scroll_speed)
+		options.scroll_speed = 0.1;
 
 	root.addEventListener("wheel", on_mouse_wheel, true);
 	root.addEventListener("mousewheel", on_mouse_wheel, true);
