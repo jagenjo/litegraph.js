@@ -5,18 +5,6 @@
 //   LiteGraph CLASS                                     *******
 // *************************************************************
 
-/* FYI: links are stored in graph.links with this structure per object
-{
-	id: number
-	type: string,
-	origin_id: number,
-	origin_slot: number,
-	target_id: number,
-	target_slot: number,
-	data: *
-}; //it can contain color to colorize this particular link
-*/
-
 /**
 * The Global Scope. It contains all the registered node classes.
 *
@@ -1625,8 +1613,10 @@ LGraph.prototype.configure = function( data, keep_old )
 		var links = [];
 		for(var i = 0; i < data.links.length; ++i)
 		{
-			var link = data.links[i];
-			links[ link[0] ] = { id: link[0], origin_id: link[1], origin_slot: link[2], target_id: link[3], target_slot: link[4], type: link[5] };
+			var link_data = data.links[i];
+			var link = new LLink();
+			link.configure( link_data );
+			links[ link.id ] = link;
 		}
 		data.links = links;
 	}
@@ -1708,6 +1698,49 @@ LGraph.prototype.onNodeTrace = function(node, msg, color)
 {
 	//TODO
 }
+
+//this is the class in charge of storing link information
+function LLink( id, type, origin_id, origin_slot, target_id, target_slot )
+{
+	this.id = id;
+	this.type = type;
+	this.origin_id = origin_id;
+	this.origin_slot = origin_slot;
+	this.target_id = target_id;
+	this.target_slot = target_slot;
+
+	this._data = null;
+	this._pos = new Float32Array(2); //center
+}
+
+LLink.prototype.configure = function(o)
+{
+	if(o.constructor === Array)
+	{
+		this.id = o[0];
+		this.origin_id = o[1];
+		this.origin_slot = o[2];
+		this.target_id = o[3];
+		this.target_slot = o[4];
+		this.type = o[5];
+	}
+	else
+	{
+		this.id = o.id;
+		this.type = o.type;
+		this.origin_id = o.origin_id;
+		this.origin_slot = o.origin_slot;
+		this.target_id = o.target_id;
+		this.target_slot = o.target_slot;
+	}
+}
+
+LLink.prototype.serialize = function()
+{
+	return [ this.id, this.type, this.origin_id, this.origin_slot, this.target_id, this.target_slot ];
+}
+
+LiteGraph.LLink = LLink;
 
 // *************************************************************
 //   Node CLASS                                          *******
@@ -1879,7 +1912,8 @@ LGraphNode.prototype.configure = function(info)
 		}
 	}
 
-	//FOR LEGACY, PLEASE REMOVE ON NEXT VERSION
+	/*
+	//FOR LEGACY, PLEASE REMOVE, used when nodes stored link info, now they only store link_id
 	for(var i in this.inputs)
 	{
 		var input = this.inputs[i];
@@ -1890,13 +1924,12 @@ LGraphNode.prototype.configure = function(info)
 			continue;
 		input.link = link[0];
 		if(this.graph)
-		this.graph.links[ link[0] ] = {
-			id: link[0],
-			origin_id: link[1],
-			origin_slot: link[2],
-			target_id: link[3],
-			target_slot: link[4]
-		};
+		{
+			//create link
+			var new_link = new LLink();
+			new_link.configure( link );
+			this.graph.links[ new_link.id ] = new_link;
+		}
 	}
 	for(var i in this.outputs)
 	{
@@ -1908,9 +1941,11 @@ LGraphNode.prototype.configure = function(info)
 			var link = output.links[j];
 			if(typeof(link) != "object")
 				continue;
-			output.links[j] = link[0];
+			output.links[j] = link[0]; //only the id
 		}
 	}
+	*/
+
 
 	if( this.onConfigure )
 		this.onConfigure( info );
@@ -2892,14 +2927,7 @@ LGraphNode.prototype.connect = function( slot, target_node, target_slot )
 
 	if( LiteGraph.isValidConnection( output.type, input.type ) )
 	{
-		link_info = {
-			id: this.graph.last_link_id++,
-			type: input.type,
-			origin_id: this.id,
-			origin_slot: slot,
-			target_id: target_node.id,
-			target_slot: target_slot
-		};
+		link_info = new LLink( this.graph.last_link_id++, input.type, this.id, slot, target_node.id, target_slot );
 
 		//add to graph links list
 		this.graph.links[ link_info.id ] = link_info;
@@ -3519,6 +3547,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.node_widget = null; //used for widgets
 	this.last_mouse_position = [0,0];
 	this.visible_area = new Float32Array(4);
+	this.visible_links = [];
 
 	//link canvas and graph
 	if(graph)
@@ -4071,8 +4100,8 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 				} //not resizing
 			}
 
-			//Search for corner
-			if( !skip_action && isInsideRectangle(e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT ))
+			//Search for corner for collapsing
+			if( !skip_action && isInsideRectangle( e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT ))
 			{
 				node.collapse();
 				skip_action = true;
@@ -4125,6 +4154,19 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 		}
 		else //clicked outside of nodes
 		{
+
+			//search for link connector
+			for(var i = 0; i < this.visible_links.length; ++i)
+			{
+				var link = this.visible_links[i];
+				var center = link._pos;
+				if( e.canvasX < center[0] - 4 || e.canvasX < center[0] + 4 || e.canvasY < center[1] - 4 || e.canvasY < center[1] - 4 )
+					continue;
+				//link clicked
+				console.log(link);
+				break;
+			}
+
 			this.selected_group = this.graph.getGroupOnPos( e.canvasX, e.canvasY );
 			this.selected_group_resizing = false;
 			if( this.selected_group )
@@ -5399,6 +5441,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 	//reset in case of error
 	ctx.restore();
 	ctx.setTransform(1, 0, 0, 1, 0, 0);
+	this.visible_links.length = 0;
 
 	if(this.graph)
 	{
@@ -6082,9 +6125,24 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 /**
 * draws a link between two points
 * @method renderLink
+* @param {vec2} a start pos
+* @param {vec2} b end pos
+* @param {Object} link the link object with all the link info
+* @param {boolean} skip_border ignore the shadow of the link
+* @param {boolean} flow show flow animation (for events)
+* @param {string} color the color for the link
+* @param {number} start_dir the direction enum 
+* @param {number} end_dir the direction enum 
 **/
 LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow, color, start_dir, end_dir )
 {
+	if(link && link._pos)
+	{
+		link._pos[0] = (a[0] + b[0]) * 0.5;
+		link._pos[1] = (a[1] + b[1]) * 0.5;
+		this.visible_links.push( link );
+	}
+
 	if(!this.highquality_render)
 	{
 		ctx.beginPath();
@@ -6166,8 +6224,8 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 		if(this.render_connection_arrows && this.scale > 0.6)
 		{
 			//compute two points in the connection
-			var pos = this.computeConnectionPoint(a, b, 0.5, start_dir, end_dir);
-			var pos2 = this.computeConnectionPoint(a, b, 0.51, start_dir, end_dir);
+			var pos = this.computeConnectionPoint( a, b, 0.5, start_dir, end_dir );
+			var pos2 = this.computeConnectionPoint( a, b, 0.51, start_dir, end_dir );
 
 			//compute the angle between them so the arrow points in the right direction
 			var angle = 0;
@@ -8695,6 +8753,11 @@ ConstantNumber.prototype.onExecute = function()
 	this.setOutputData(0, parseFloat( this.properties["value"] ) );
 }
 
+ConstantNumber.prototype.setValue = function(v)
+{
+	this.properties.value = v;
+}
+
 ConstantNumber.prototype.onDrawBackground = function(ctx)
 {
 	//show the current value
@@ -8834,21 +8897,27 @@ LiteGraph.registerNodeType("basic/console", Console );
 
 
 
-//Show value inside the debug console
+//Execites simple code
 function NodeScript()
 {
 	this.size = [60,20];
-	this.addProperty( "onExecute", "" );
-	this.addInput("in", "");
-	this.addInput("in2", "");
+	this.addProperty( "onExecute", "return A;" );
+	this.addInput("A", "");
+	this.addInput("B", "");
 	this.addOutput("out", "");
-	this.addOutput("out2", "");
 
 	this._func = null;
+	this.data = {};
+}
+
+NodeScript.prototype.onConfigure = function(o)
+{
+	if(o.properties.onExecute)
+		this.compileCode(o.properties.onExecute);
 }
 
 NodeScript.title = "Script";
-NodeScript.desc = "executes a code";
+NodeScript.desc = "executes a code (max 100 characters)";
 
 NodeScript.widgets_info = {
 	"onExecute": { type:"code" }
@@ -8856,12 +8925,30 @@ NodeScript.widgets_info = {
 
 NodeScript.prototype.onPropertyChanged = function(name,value)
 {
+
 	if(name == "onExecute" && LiteGraph.allow_scripts )
 	{
-		this._func = null;
+		this.compileCode( value );
+	}
+}
+
+NodeScript.prototype.compileCode = function(code)
+{
+	this._func = null;
+	if( code.length > 100 )
+		console.warn("Script too long, max 100 chars");
+	else {
+		var code_low = code.toLowerCase();
+		var forbidden_words = ["script","body","document","eval","nodescript","function"]; //bad security solution
+		for(var i = 0; i < forbidden_words.length; ++i)
+			if( code_low.indexOf( forbidden_words[i] ) != -1 )
+			{
+				console.warn("invalid script");
+				return;
+			}
 		try
 		{
-			this._func = new Function( value );
+			this._func = new Function("A","B","C","DATA","node", code );
 		}
 		catch (err)
 		{
@@ -8878,7 +8965,10 @@ NodeScript.prototype.onExecute = function()
 
 	try
 	{
-		this._func.call(this);
+		var A = this.getInputData(0);
+		var B = this.getInputData(1);
+		var C = this.getInputData(2);
+		this.setOutputData(0, this._func(A,B,C,this.data,this) );
 	}
 	catch (err)
 	{
@@ -8886,6 +8976,8 @@ NodeScript.prototype.onExecute = function()
 		console.error(err);
 	}
 }
+
+NodeScript.prototype.onGetOutputs = function(){ return [["C",""]]; }
 
 LiteGraph.registerNodeType("basic/script", NodeScript );
 
