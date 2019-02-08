@@ -1269,7 +1269,7 @@ if(typeof(GL) != "undefined")
 		this.addOutput("tex","Texture");
 		this.addOutput("avg","vec4");
 		this.addOutput("lum","number");
-		this.properties = { mipmap_offset: 0, low_precision: false };
+		this.properties = { use_previous_frame: true, mipmap_offset: 0, low_precision: false };
 
 		this._uniforms = { u_texture: 0, u_mipmap_offset: this.properties.mipmap_offset };
 		this._luminance = new Float32Array(4);
@@ -1279,6 +1279,22 @@ if(typeof(GL) != "undefined")
 	LGraphTextureAverage.desc = "Compute a partial average (32 random samples) of a texture and stores it as a 1x1 pixel texture";
 
 	LGraphTextureAverage.prototype.onExecute = function()
+	{
+		if( !this.properties.use_previous_frame )
+			this.updateAverage();
+
+		var v = this._luminance;
+		this.setOutputData(0, this._temp_texture );
+		this.setOutputData(1, v );
+		this.setOutputData(2,(v[0] + v[1] + v[2]) / 3);
+	}
+
+	LGraphTextureAverage.prototype.onPreRenderExecute = function()
+	{
+		this.updateAverage();
+	}
+
+	LGraphTextureAverage.prototype.updateAverage = function()
 	{
 		var tex = this.getInputData(0);
 		if(!tex)
@@ -1312,8 +1328,6 @@ if(typeof(GL) != "undefined")
 			tex.toViewport( shader, uniforms );
 		});
 
-		this.setOutputData(0,this._temp_texture);
-
 		if(this.isOutputConnected(1) || this.isOutputConnected(2))
 		{
 			var pixel = this._temp_texture.getPixels();
@@ -1325,11 +1339,11 @@ if(typeof(GL) != "undefined")
 				if(type == gl.UNSIGNED_BYTE)
 					vec4.scale( v,v, 1/255 );
 				else if(type == GL.HALF_FLOAT || type == GL.HALF_FLOAT_OES)
-					vec4.scale( v,v, 1/(255*255) ); //is this correct?
-				this.setOutputData(1,v);
-				this.setOutputData(2,(v[0] + v[1] + v[2]) / 3);
+				{
+					//no half floats possible, hard to read back unless copyed to a FLOAT texture, so temp_texture is always forced to FLOAT
+					//vec4.scale( v,v, 1/(255*255) ); //is this correct?
+				}
 			}
-
 		}
 	}
 

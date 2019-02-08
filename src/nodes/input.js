@@ -18,6 +18,12 @@ function GamepadInput()
 GamepadInput.title = "Gamepad";
 GamepadInput.desc = "gets the input of the gamepad";
 
+GamepadInput.CENTER = 0;
+GamepadInput.LEFT = 1;
+GamepadInput.RIGHT = 2;
+GamepadInput.UP = 4;
+GamepadInput.DOWN = 8;
+
 GamepadInput.zero = new Float32Array(2);
 GamepadInput.buttons = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs","home"];
 
@@ -66,6 +72,11 @@ GamepadInput.prototype.onExecute = function()
 					case "rb_button": v = gamepad.xbox.buttons["rb"] ? 1 : 0; break;
 					case "ls_button": v = gamepad.xbox.buttons["ls"] ? 1 : 0; break;
 					case "rs_button": v = gamepad.xbox.buttons["rs"] ? 1 : 0; break;
+					case "hat_left": v = gamepad.xbox.hatmap & GamepadInput.LEFT; break;
+					case "hat_right": v = gamepad.xbox.hatmap & GamepadInput.RIGHT; break;
+					case "hat_up": v = gamepad.xbox.hatmap & GamepadInput.UP; break;
+					case "hat_down": v = gamepad.xbox.hatmap & GamepadInput.DOWN; break;
+					case "hat": v = gamepad.xbox.hatmap; break;
 					case "start_button": v = gamepad.xbox.buttons["start"] ? 1 : 0; break;
 					case "back_button": v = gamepad.xbox.buttons["back"] ? 1 : 0; break;
 					case "button_pressed": 
@@ -110,52 +121,53 @@ GamepadInput.prototype.getGamepad = function()
 	//pick the first connected
 	for(var i = this.properties.gamepad_index; i < 4; i++)
 	{
-		if (gamepads[i])
+		if (!gamepads[i])
+			continue;
+		gamepad = gamepads[i];
+
+		//xbox controller mapping
+		var xbox = this.xbox_mapping;
+		if(!xbox)
+			xbox = this.xbox_mapping = { axes:[], buttons:{}, hat: "", hatmap: GamepadInput.CENTER };
+
+		xbox.axes["lx"] = gamepad.axes[0];
+		xbox.axes["ly"] = gamepad.axes[1];
+		xbox.axes["rx"] = gamepad.axes[2];
+		xbox.axes["ry"] = gamepad.axes[3];
+		xbox.axes["ltrigger"] = gamepad.buttons[6].value;
+		xbox.axes["rtrigger"] = gamepad.buttons[7].value;
+		xbox.hat = "";
+		xbox.hatmap = GamepadInput.CENTER;
+
+		for(var j = 0; j < gamepad.buttons.length; j++)
 		{
-			gamepad = gamepads[i];
+			this._current_buttons[j] = gamepad.buttons[j].pressed;
 
-			//xbox controller mapping
-			var xbox = this.xbox_mapping;
-			if(!xbox)
-				xbox = this.xbox_mapping = { axes:[], buttons:{}, hat: ""};
-
-			xbox.axes["lx"] = gamepad.axes[0];
-			xbox.axes["ly"] = gamepad.axes[1];
-			xbox.axes["rx"] = gamepad.axes[2];
-			xbox.axes["ry"] = gamepad.axes[3];
-			xbox.axes["ltrigger"] = gamepad.buttons[6].value;
-			xbox.axes["rtrigger"] = gamepad.buttons[7].value;
-
-			for(var j = 0; j < gamepad.buttons.length; j++)
+			//mapping of XBOX
+			switch(j) //I use a switch to ensure that a player with another gamepad could play
 			{
-				this._current_buttons[j] = gamepad.buttons[j].pressed;
-
-				//mapping of XBOX
-				switch(j) //I use a switch to ensure that a player with another gamepad could play
-				{
-					case 0: xbox.buttons["a"] = gamepad.buttons[j].pressed; break;
-					case 1: xbox.buttons["b"] = gamepad.buttons[j].pressed; break;
-					case 2: xbox.buttons["x"] = gamepad.buttons[j].pressed; break;
-					case 3: xbox.buttons["y"] = gamepad.buttons[j].pressed; break;
-					case 4: xbox.buttons["lb"] = gamepad.buttons[j].pressed; break;
-					case 5: xbox.buttons["rb"] = gamepad.buttons[j].pressed; break;
-					case 6: xbox.buttons["lt"] = gamepad.buttons[j].pressed; break;
-					case 7: xbox.buttons["rt"] = gamepad.buttons[j].pressed; break;
-					case 8: xbox.buttons["back"] = gamepad.buttons[j].pressed; break;
-					case 9: xbox.buttons["start"] = gamepad.buttons[j].pressed; break;
-					case 10: xbox.buttons["ls"] = gamepad.buttons[j].pressed; break;
-					case 11: xbox.buttons["rs"] = gamepad.buttons[j].pressed; break;
-					case 12: if( gamepad.buttons[j].pressed) xbox.hat += "up"; break;
-					case 13: if( gamepad.buttons[j].pressed) xbox.hat += "down"; break;
-					case 14: if( gamepad.buttons[j].pressed) xbox.hat += "left"; break;
-					case 15: if( gamepad.buttons[j].pressed) xbox.hat += "right"; break;
-					case 16: xbox.buttons["home"] = gamepad.buttons[j].pressed; break;
-					default:
-				}
+				case 0: xbox.buttons["a"] = gamepad.buttons[j].pressed; break;
+				case 1: xbox.buttons["b"] = gamepad.buttons[j].pressed; break;
+				case 2: xbox.buttons["x"] = gamepad.buttons[j].pressed; break;
+				case 3: xbox.buttons["y"] = gamepad.buttons[j].pressed; break;
+				case 4: xbox.buttons["lb"] = gamepad.buttons[j].pressed; break;
+				case 5: xbox.buttons["rb"] = gamepad.buttons[j].pressed; break;
+				case 6: xbox.buttons["lt"] = gamepad.buttons[j].pressed; break;
+				case 7: xbox.buttons["rt"] = gamepad.buttons[j].pressed; break;
+				case 8: xbox.buttons["back"] = gamepad.buttons[j].pressed; break;
+				case 9: xbox.buttons["start"] = gamepad.buttons[j].pressed; break;
+				case 10: xbox.buttons["ls"] = gamepad.buttons[j].pressed; break;
+				case 11: xbox.buttons["rs"] = gamepad.buttons[j].pressed; break;
+				case 12: if( gamepad.buttons[j].pressed) { xbox.hat += "up"; xbox.hatmap |= GamepadInput.UP; }; break;
+				case 13: if( gamepad.buttons[j].pressed) { xbox.hat += "down"; xbox.hatmap |= GamepadInput.DOWN; }; break;
+				case 14: if( gamepad.buttons[j].pressed) { xbox.hat += "left"; xbox.hatmap |= GamepadInput.LEFT; }; break;
+				case 15: if( gamepad.buttons[j].pressed) { xbox.hat += "right"; xbox.hatmap |= GamepadInput.RIGHT; }; break;
+				case 16: xbox.buttons["home"] = gamepad.buttons[j].pressed; break;
+				default:
 			}
-			gamepad.xbox = xbox;
-			return gamepad;
-		}	
+		}
+		gamepad.xbox = xbox;
+		return gamepad;
 	}
 }
 
@@ -196,8 +208,13 @@ GamepadInput.prototype.onGetOutputs = function() {
 		["rb_button","number"],
 		["ls_button","number"],
 		["rs_button","number"],
-		["start","number"],
-		["back","number"],
+		["start_button","number"],
+		["back_button","number"],
+		["hat_left","number"],
+		["hat_right","number"],
+		["hat_up","number"],
+		["hat_down","number"],
+		["hat","number"],
 		["button_pressed", LiteGraph.EVENT]
 	];
 }

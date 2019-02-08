@@ -76,6 +76,7 @@ var LiteGraph = global.LiteGraph = {
 	node_images_path: "",
 
 	debug: false,
+	catch_exceptions: true,
 	throw_errors: true,
 	allow_scripts: false,
 	registered_node_types: {}, //nodetypes by string
@@ -221,7 +222,23 @@ var LiteGraph = global.LiteGraph = {
 
 		title = title || base_class.title || type;
 
-		var node = new base_class( title );
+		var node = null;
+
+		if( LiteGraph.catch_exceptions )
+		{
+			try
+			{
+				node = new base_class( title );
+			}
+			catch (err)
+			{
+				console.error(err);
+				return null;
+			}
+		}
+		else
+			node = new base_class( title );
+
 		node.type = type;
 
 		if(!node.title && title) node.title = title;
@@ -1554,6 +1571,22 @@ LGraph.prototype.setDirtyCanvas = function(fg,bg)
 	this.sendActionToCanvas("setDirty",[fg,bg]);
 }
 
+/**
+* Destroys a link
+* @method removeLink
+* @param {Number} link_id
+*/
+LGraph.prototype.removeLink = function(link_id)
+{
+	var link = this.links[ link_id ];
+	if(!link)
+		return;
+	var node = this.getNodeById( link.target_id );
+	if(node)
+		node.disconnectInput( link.target_slot );
+}
+
+
 //save and recover app state ***************************************
 /**
 * Creates a Object containing all the info about this graph, it can be serialized
@@ -1638,9 +1671,14 @@ LGraph.prototype.configure = function( data, keep_old )
 			if(!node)
 			{
 				if(LiteGraph.debug)
-					console.log("Node not found: " + n_info.type);
+					console.log("Node not found or has errors: " + n_info.type);
+
+				//in case of error we create a replacement node to avoid losing info
+				node = new LGraphNode();
+				node.last_serialization = n_info;
+				node.has_errors = true;
 				error = true;
-				continue;
+				//continue;
 			}
 
 			node.id = n_info.id; //id it or it will create a new id
@@ -1856,9 +1894,6 @@ LGraphNode.prototype.configure = function(info)
 
 	for (var j in info)
 	{
-		if(j == "console")
-			continue;
-
 		if(j == "properties")
 		{
 			//i dont want to clone properties, I want to reuse the old container
@@ -1912,41 +1947,6 @@ LGraphNode.prototype.configure = function(info)
 		}
 	}
 
-	/*
-	//FOR LEGACY, PLEASE REMOVE, used when nodes stored link info, now they only store link_id
-	for(var i in this.inputs)
-	{
-		var input = this.inputs[i];
-		if(!input.link || !input.link.length )
-			continue;
-		var link = input.link;
-		if(typeof(link) != "object")
-			continue;
-		input.link = link[0];
-		if(this.graph)
-		{
-			//create link
-			var new_link = new LLink();
-			new_link.configure( link );
-			this.graph.links[ new_link.id ] = new_link;
-		}
-	}
-	for(var i in this.outputs)
-	{
-		var output = this.outputs[i];
-		if(!output.links || output.links.length == 0)
-			continue;
-		for(var j in output.links)
-		{
-			var link = output.links[j];
-			if(typeof(link) != "object")
-				continue;
-			output.links[j] = link[0]; //only the id
-		}
-	}
-	*/
-
-
 	if( this.onConfigure )
 		this.onConfigure( info );
 }
@@ -1967,6 +1967,10 @@ LGraphNode.prototype.serialize = function()
 		flags: LiteGraph.cloneObject(this.flags),
 		mode: this.mode
 	};
+
+	//special case for when there were errors
+	if( this.constructor === LGraphNode && this.last_serialization )
+		return this.last_serialization;
 
 	if( this.inputs )
 		o.inputs = this.inputs;
@@ -2011,6 +2015,8 @@ LGraphNode.prototype.serialize = function()
 LGraphNode.prototype.clone = function()
 {
 	var node = LiteGraph.createNode(this.type);
+	if(!node)
+		return null;
 
 	//we clone it because serialize returns shared containers
 	var data = LiteGraph.cloneObject( this.serialize() );
@@ -3159,7 +3165,7 @@ LGraphNode.prototype.getConnectionPos = function( is_input, slot_number, out )
 	if(this.flags.collapsed)
 	{
 		var w = (this._collapsed_width || LiteGraph.NODE_COLLAPSED_WIDTH);
-		if( this.flags.horizontal )
+		if( this.horizontal )
 		{
 			out[0] = this.pos[0] + w * 0.5; 
 			if(is_input)
@@ -3200,7 +3206,7 @@ LGraphNode.prototype.getConnectionPos = function( is_input, slot_number, out )
 	}
 
 	//horizontal distributed slots
-	if(this.flags.horizontal)
+	if(this.horizontal)
 	{
 		out[0] = this.pos[0] + (slot_number + 0.5) * (this.size[0] / num_slots);
 		if(is_input)
@@ -4160,10 +4166,10 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 			{
 				var link = this.visible_links[i];
 				var center = link._pos;
-				if( e.canvasX < center[0] - 4 || e.canvasX < center[0] + 4 || e.canvasY < center[1] - 4 || e.canvasY < center[1] - 4 )
+				if( !center || e.canvasX < center[0] - 4 || e.canvasX > center[0] + 4 || e.canvasY < center[1] - 4 || e.canvasY > center[1] + 4 )
 					continue;
 				//link clicked
-				console.log(link);
+				this.showLinkMenu( link, e );
 				break;
 			}
 
@@ -4625,7 +4631,12 @@ LGraphCanvas.prototype.isOverNodeInput = function(node, canvasx, canvasy, slot_p
 		{
 			var input = node.inputs[i];
 			var link_pos = node.getConnectionPos( true, i );
-			if( isInsideRectangle(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
+			var is_inside = false;
+			if( node.horizontal )
+				is_inside = isInsideRectangle(canvasx, canvasy, link_pos[0] - 5, link_pos[1] - 10, 10,20)
+			else
+				is_inside = isInsideRectangle(canvasx, canvasy, link_pos[0] - 10, link_pos[1] - 5, 40,10)
+			if(is_inside)
 			{
 				if(slot_pos)
 				{
@@ -5321,7 +5332,7 @@ LGraphCanvas.prototype.drawFrontCanvas = function()
 			}
 			
 			//the connection being dragged by the mouse
-			this.renderLink( ctx, this.connecting_pos, [ this.canvas_mouse[0], this.canvas_mouse[1] ], null, false, null, link_color, this.connecting_output.dir || (this.connecting_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT), LiteGraph.CENTER );
+			this.renderLink( ctx, this.connecting_pos, [ this.canvas_mouse[0], this.canvas_mouse[1] ], null, false, null, link_color, this.connecting_output.dir || (this.connecting_node.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT), LiteGraph.CENTER );
 
 			ctx.beginPath();
 				if( this.connecting_output.type === LiteGraph.EVENT || this.connecting_output.shape === LiteGraph.BOX_SHAPE )
@@ -5590,7 +5601,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	var shape = node._shape || LiteGraph.BOX_SHAPE;
 	var size = temp_vec2;
 	temp_vec2.set( node.size );
-	var horizontal = node.horizontal || node.flags.horizontal;
+	var horizontal = node.horizontal;// || node.flags.horizontal;
 
 	if( node.flags.collapsed )
 	{
@@ -5615,6 +5626,8 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 	}
 
 	//draw shape
+	if( node.has_errors )
+		bgcolor = "red";
 	this.drawNodeShape( node, ctx, size, color, bgcolor, node.is_selected, node.mouseOver );
 	ctx.shadowColor = "transparent";
 
@@ -6100,11 +6113,11 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 			if( !overlapBounding( link_bounding, margin_area ) )
 				continue;
 
-			var start_slot = start_node.outputs[start_node_slot];
+			var start_slot = start_node.outputs[ start_node_slot ];
 			var end_slot = node.inputs[i];
 			if(!start_slot || !end_slot) continue;
-			var start_dir = start_slot.dir || (start_node.flags.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT);
-			var end_dir = end_slot.dir || (node.flags.horizontal ? LiteGraph.UP : LiteGraph.LEFT);
+			var start_dir = start_slot.dir || (start_node.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT);
+			var end_dir = end_slot.dir || (node.horizontal ? LiteGraph.UP : LiteGraph.LEFT);
 
 			this.renderLink( ctx, start_node_slotpos, end_node_slotpos, link, false, 0, null, start_dir, end_dir );
 
@@ -6136,12 +6149,8 @@ LGraphCanvas.prototype.drawConnections = function(ctx)
 **/
 LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow, color, start_dir, end_dir )
 {
-	if(link && link._pos)
-	{
-		link._pos[0] = (a[0] + b[0]) * 0.5;
-		link._pos[1] = (a[1] + b[1]) * 0.5;
+	if(link)
 		this.visible_links.push( link );
-	}
 
 	if(!this.highquality_render)
 	{
@@ -6149,6 +6158,12 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 		ctx.moveTo(a[0],a[1]);
 		ctx.lineTo(b[0],b[1]);
 		ctx.stroke();
+
+		if(link && link._pos)
+		{
+			link._pos[0] = (a[0] + b[0]) * 0.5;
+			link._pos[1] = (a[1] + b[1]) * 0.5;
+		}
 		return;
 	}
 
@@ -6217,6 +6232,13 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 	ctx.stroke();
 	//end line shape
 
+	var pos = this.computeConnectionPoint( a, b, 0.5, start_dir, end_dir );
+	if(link && link._pos)
+	{
+		link._pos[0] = pos[0];
+		link._pos[1] = pos[1];
+	}
+
 	//render arrow in the middle
 	if( this.render_connection_arrows && this.scale >= 0.6 )
 	{
@@ -6224,32 +6246,53 @@ LGraphCanvas.prototype.renderLink = function( ctx, a, b, link, skip_border, flow
 		if(this.render_connection_arrows && this.scale > 0.6)
 		{
 			//compute two points in the connection
-			var pos = this.computeConnectionPoint( a, b, 0.5, start_dir, end_dir );
-			var pos2 = this.computeConnectionPoint( a, b, 0.51, start_dir, end_dir );
+			var posA = this.computeConnectionPoint( a, b, 0.25, start_dir, end_dir );
+			var posB = this.computeConnectionPoint( a, b, 0.26, start_dir, end_dir );
+			var posC = this.computeConnectionPoint( a, b, 0.75, start_dir, end_dir );
+			var posD = this.computeConnectionPoint( a, b, 0.76, start_dir, end_dir );
 
 			//compute the angle between them so the arrow points in the right direction
-			var angle = 0;
+			var angleA = 0;
+			var angleB = 0;
 			if(this.render_curved_connections)
-				angle = -Math.atan2( pos2[0] - pos[0], pos2[1] - pos[1]);
+			{
+				angleA = -Math.atan2( posB[0] - posA[0], posB[1] - posA[1]);
+				angleB = -Math.atan2( posD[0] - posC[0], posD[1] - posC[1]);
+			}
 			else
-				angle = b[1] > a[1] ? 0 : Math.PI;
+				angleB = angleA = b[1] > a[1] ? 0 : Math.PI;
 
 			//render arrow
 			ctx.save();
-			ctx.translate(pos[0],pos[1]);
-			ctx.rotate(angle);
+			ctx.translate(posA[0],posA[1]);
+			ctx.rotate(angleA);
 			ctx.beginPath();
-			ctx.moveTo(-5,-5);
-			ctx.lineTo(0,+5);
-			ctx.lineTo(+5,-5);
+			ctx.moveTo(-5,-3);
+			ctx.lineTo(0,+7);
+			ctx.lineTo(+5,-3);
 			ctx.fill();
 			ctx.restore();
+			ctx.save();
+			ctx.translate(posC[0],posC[1]);
+			ctx.rotate(angleB);
+			ctx.beginPath();
+			ctx.moveTo(-5,-3);
+			ctx.lineTo(0,+7);
+			ctx.lineTo(+5,-3);
+			ctx.fill();
+			ctx.restore();
+
+			//circle
+			ctx.beginPath();
+			ctx.arc(pos[0],pos[1],5,0,Math.PI*2);
+			ctx.fill();
 		}
 	}
 
 	//render flowing points
 	if(flow)
 	{
+		ctx.fillStyle = color;
 		for(var i = 0; i < 5; ++i)
 		{
 			var f = (LiteGraph.getTime() * 0.001 + (i * 0.2)) % 1;
@@ -6396,6 +6439,12 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 				ctx.fillStyle = active_widget == w ? "#89A" : "#678";
 				ctx.fillRect(10,y,nvalue*(width-20),H);
 				ctx.strokeRect(10,y,width-20,H);
+				if( w.marker )
+				{
+					var marker_nvalue = (w.marker - w.options.min) / range;
+					ctx.fillStyle = "#AA9";
+					ctx.fillRect(10 + marker_nvalue*(width-20),y,2,H);
+				}
 				if(show_text)
 				{
 					ctx.textAlign = "center";
@@ -6965,6 +7014,23 @@ LGraphCanvas.onResizeNode = function( value, options, e, menu, node )
 	node.setDirtyCanvas(true,true);
 }
 
+LGraphCanvas.prototype.showLinkMenu = function( link, e )
+{
+	var that = this;
+
+	new LiteGraph.ContextMenu(["Delete"], { event: e, callback: inner_clicked });
+
+	function inner_clicked(v)
+	{
+		switch(v)
+		{
+			case "Delete": that.graph.removeLink( link.id ); break;
+			default:
+		}
+	}
+
+	return false;
+}
 
 LGraphCanvas.onShowPropertyEditor = function( item, options, e, menu, node )
 {
@@ -9989,6 +10055,12 @@ function GamepadInput()
 GamepadInput.title = "Gamepad";
 GamepadInput.desc = "gets the input of the gamepad";
 
+GamepadInput.CENTER = 0;
+GamepadInput.LEFT = 1;
+GamepadInput.RIGHT = 2;
+GamepadInput.UP = 4;
+GamepadInput.DOWN = 8;
+
 GamepadInput.zero = new Float32Array(2);
 GamepadInput.buttons = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs","home"];
 
@@ -10037,6 +10109,11 @@ GamepadInput.prototype.onExecute = function()
 					case "rb_button": v = gamepad.xbox.buttons["rb"] ? 1 : 0; break;
 					case "ls_button": v = gamepad.xbox.buttons["ls"] ? 1 : 0; break;
 					case "rs_button": v = gamepad.xbox.buttons["rs"] ? 1 : 0; break;
+					case "hat_left": v = gamepad.xbox.hatmap & GamepadInput.LEFT; break;
+					case "hat_right": v = gamepad.xbox.hatmap & GamepadInput.RIGHT; break;
+					case "hat_up": v = gamepad.xbox.hatmap & GamepadInput.UP; break;
+					case "hat_down": v = gamepad.xbox.hatmap & GamepadInput.DOWN; break;
+					case "hat": v = gamepad.xbox.hatmap; break;
 					case "start_button": v = gamepad.xbox.buttons["start"] ? 1 : 0; break;
 					case "back_button": v = gamepad.xbox.buttons["back"] ? 1 : 0; break;
 					case "button_pressed": 
@@ -10081,52 +10158,53 @@ GamepadInput.prototype.getGamepad = function()
 	//pick the first connected
 	for(var i = this.properties.gamepad_index; i < 4; i++)
 	{
-		if (gamepads[i])
+		if (!gamepads[i])
+			continue;
+		gamepad = gamepads[i];
+
+		//xbox controller mapping
+		var xbox = this.xbox_mapping;
+		if(!xbox)
+			xbox = this.xbox_mapping = { axes:[], buttons:{}, hat: "", hatmap: GamepadInput.CENTER };
+
+		xbox.axes["lx"] = gamepad.axes[0];
+		xbox.axes["ly"] = gamepad.axes[1];
+		xbox.axes["rx"] = gamepad.axes[2];
+		xbox.axes["ry"] = gamepad.axes[3];
+		xbox.axes["ltrigger"] = gamepad.buttons[6].value;
+		xbox.axes["rtrigger"] = gamepad.buttons[7].value;
+		xbox.hat = "";
+		xbox.hatmap = GamepadInput.CENTER;
+
+		for(var j = 0; j < gamepad.buttons.length; j++)
 		{
-			gamepad = gamepads[i];
+			this._current_buttons[j] = gamepad.buttons[j].pressed;
 
-			//xbox controller mapping
-			var xbox = this.xbox_mapping;
-			if(!xbox)
-				xbox = this.xbox_mapping = { axes:[], buttons:{}, hat: ""};
-
-			xbox.axes["lx"] = gamepad.axes[0];
-			xbox.axes["ly"] = gamepad.axes[1];
-			xbox.axes["rx"] = gamepad.axes[2];
-			xbox.axes["ry"] = gamepad.axes[3];
-			xbox.axes["ltrigger"] = gamepad.buttons[6].value;
-			xbox.axes["rtrigger"] = gamepad.buttons[7].value;
-
-			for(var j = 0; j < gamepad.buttons.length; j++)
+			//mapping of XBOX
+			switch(j) //I use a switch to ensure that a player with another gamepad could play
 			{
-				this._current_buttons[j] = gamepad.buttons[j].pressed;
-
-				//mapping of XBOX
-				switch(j) //I use a switch to ensure that a player with another gamepad could play
-				{
-					case 0: xbox.buttons["a"] = gamepad.buttons[j].pressed; break;
-					case 1: xbox.buttons["b"] = gamepad.buttons[j].pressed; break;
-					case 2: xbox.buttons["x"] = gamepad.buttons[j].pressed; break;
-					case 3: xbox.buttons["y"] = gamepad.buttons[j].pressed; break;
-					case 4: xbox.buttons["lb"] = gamepad.buttons[j].pressed; break;
-					case 5: xbox.buttons["rb"] = gamepad.buttons[j].pressed; break;
-					case 6: xbox.buttons["lt"] = gamepad.buttons[j].pressed; break;
-					case 7: xbox.buttons["rt"] = gamepad.buttons[j].pressed; break;
-					case 8: xbox.buttons["back"] = gamepad.buttons[j].pressed; break;
-					case 9: xbox.buttons["start"] = gamepad.buttons[j].pressed; break;
-					case 10: xbox.buttons["ls"] = gamepad.buttons[j].pressed; break;
-					case 11: xbox.buttons["rs"] = gamepad.buttons[j].pressed; break;
-					case 12: if( gamepad.buttons[j].pressed) xbox.hat += "up"; break;
-					case 13: if( gamepad.buttons[j].pressed) xbox.hat += "down"; break;
-					case 14: if( gamepad.buttons[j].pressed) xbox.hat += "left"; break;
-					case 15: if( gamepad.buttons[j].pressed) xbox.hat += "right"; break;
-					case 16: xbox.buttons["home"] = gamepad.buttons[j].pressed; break;
-					default:
-				}
+				case 0: xbox.buttons["a"] = gamepad.buttons[j].pressed; break;
+				case 1: xbox.buttons["b"] = gamepad.buttons[j].pressed; break;
+				case 2: xbox.buttons["x"] = gamepad.buttons[j].pressed; break;
+				case 3: xbox.buttons["y"] = gamepad.buttons[j].pressed; break;
+				case 4: xbox.buttons["lb"] = gamepad.buttons[j].pressed; break;
+				case 5: xbox.buttons["rb"] = gamepad.buttons[j].pressed; break;
+				case 6: xbox.buttons["lt"] = gamepad.buttons[j].pressed; break;
+				case 7: xbox.buttons["rt"] = gamepad.buttons[j].pressed; break;
+				case 8: xbox.buttons["back"] = gamepad.buttons[j].pressed; break;
+				case 9: xbox.buttons["start"] = gamepad.buttons[j].pressed; break;
+				case 10: xbox.buttons["ls"] = gamepad.buttons[j].pressed; break;
+				case 11: xbox.buttons["rs"] = gamepad.buttons[j].pressed; break;
+				case 12: if( gamepad.buttons[j].pressed) { xbox.hat += "up"; xbox.hatmap |= GamepadInput.UP; }; break;
+				case 13: if( gamepad.buttons[j].pressed) { xbox.hat += "down"; xbox.hatmap |= GamepadInput.DOWN; }; break;
+				case 14: if( gamepad.buttons[j].pressed) { xbox.hat += "left"; xbox.hatmap |= GamepadInput.LEFT; }; break;
+				case 15: if( gamepad.buttons[j].pressed) { xbox.hat += "right"; xbox.hatmap |= GamepadInput.RIGHT; }; break;
+				case 16: xbox.buttons["home"] = gamepad.buttons[j].pressed; break;
+				default:
 			}
-			gamepad.xbox = xbox;
-			return gamepad;
-		}	
+		}
+		gamepad.xbox = xbox;
+		return gamepad;
 	}
 }
 
@@ -10167,8 +10245,13 @@ GamepadInput.prototype.onGetOutputs = function() {
 		["rb_button","number"],
 		["ls_button","number"],
 		["rs_button","number"],
-		["start","number"],
-		["back","number"],
+		["start_button","number"],
+		["back_button","number"],
+		["hat_left","number"],
+		["hat_right","number"],
+		["hat_up","number"],
+		["hat_down","number"],
+		["hat","number"],
 		["button_pressed", LiteGraph.EVENT]
 	];
 }
@@ -13516,7 +13599,7 @@ if(typeof(GL) != "undefined")
 		this.addOutput("tex","Texture");
 		this.addOutput("avg","vec4");
 		this.addOutput("lum","number");
-		this.properties = { mipmap_offset: 0, low_precision: false };
+		this.properties = { use_previous_frame: true, mipmap_offset: 0, low_precision: false };
 
 		this._uniforms = { u_texture: 0, u_mipmap_offset: this.properties.mipmap_offset };
 		this._luminance = new Float32Array(4);
@@ -13526,6 +13609,22 @@ if(typeof(GL) != "undefined")
 	LGraphTextureAverage.desc = "Compute a partial average (32 random samples) of a texture and stores it as a 1x1 pixel texture";
 
 	LGraphTextureAverage.prototype.onExecute = function()
+	{
+		if( !this.properties.use_previous_frame )
+			this.updateAverage();
+
+		var v = this._luminance;
+		this.setOutputData(0, this._temp_texture );
+		this.setOutputData(1, v );
+		this.setOutputData(2,(v[0] + v[1] + v[2]) / 3);
+	}
+
+	LGraphTextureAverage.prototype.onPreRenderExecute = function()
+	{
+		this.updateAverage();
+	}
+
+	LGraphTextureAverage.prototype.updateAverage = function()
 	{
 		var tex = this.getInputData(0);
 		if(!tex)
@@ -13559,8 +13658,6 @@ if(typeof(GL) != "undefined")
 			tex.toViewport( shader, uniforms );
 		});
 
-		this.setOutputData(0,this._temp_texture);
-
 		if(this.isOutputConnected(1) || this.isOutputConnected(2))
 		{
 			var pixel = this._temp_texture.getPixels();
@@ -13572,11 +13669,11 @@ if(typeof(GL) != "undefined")
 				if(type == gl.UNSIGNED_BYTE)
 					vec4.scale( v,v, 1/255 );
 				else if(type == GL.HALF_FLOAT || type == GL.HALF_FLOAT_OES)
-					vec4.scale( v,v, 1/(255*255) ); //is this correct?
-				this.setOutputData(1,v);
-				this.setOutputData(2,(v[0] + v[1] + v[2]) / 3);
+				{
+					//no half floats possible, hard to read back unless copyed to a FLOAT texture, so temp_texture is always forced to FLOAT
+					//vec4.scale( v,v, 1/(255*255) ); //is this correct?
+				}
 			}
-
 		}
 	}
 

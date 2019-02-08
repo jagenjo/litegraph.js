@@ -6,8 +6,6 @@ function demo()
 
 function multiConnection()
 {
-
-
 	var node_button = LiteGraph.createNode("widget/button");
 	node_button.pos = [100,400];
 	graph.add(node_button);
