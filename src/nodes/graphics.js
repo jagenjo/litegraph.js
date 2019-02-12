@@ -712,7 +712,7 @@ function ImageWebcam()
 
 ImageWebcam.title = "Webcam";
 ImageWebcam.desc = "Webcam image";
-
+ImageWebcam.is_webcam_open = false;
 
 ImageWebcam.prototype.openStream = function()
 {
@@ -731,6 +731,7 @@ ImageWebcam.prototype.openStream = function()
 	function onFailSoHard(e) {
 		console.log('Webcam rejected', e);
 		that._webcam_stream = false;
+		ImageWebcam.is_webcam_open = false;
 		that.boxcolor = "red";
 		that.trigger("stream_error");
 	};
@@ -746,6 +747,7 @@ ImageWebcam.prototype.closeStream = function()
 			for(var i = 0;i < tracks.length; ++i)
 				tracks[i].stop();
 		}
+		ImageWebcam.is_webcam_open = false;
 		this._webcam_stream = null;
 		this._video = null;
 		this.boxcolor = "black";
@@ -786,6 +788,7 @@ ImageWebcam.prototype.streamReady = function(localMediaStream)
 		video.onloadedmetadata = function(e) {
 			// Ready to go. Do some stuff.
 			console.log(e);
+			ImageWebcam.is_webcam_open = true;
 		};
 	}
 

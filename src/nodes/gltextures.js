@@ -2618,6 +2618,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	LGraphTextureWebcam.title = "Webcam";
 	LGraphTextureWebcam.desc = "Webcam texture";
 
+	LGraphTextureWebcam.is_webcam_open = false;
 
 	LGraphTextureWebcam.prototype.openStream = function()
 	{
@@ -2634,6 +2635,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 		var that = this;
 		function onFailSoHard(e) {
+			LGraphTextureWebcam.is_webcam_open = false;
 			console.log('Webcam rejected', e);
 			that._webcam_stream = false;
 			that.boxcolor = "red";
@@ -2651,6 +2653,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 				for(var i = 0;i < tracks.length; ++i)
 					tracks[i].stop();
 			}
+			LGraphTextureWebcam.is_webcam_open = false;
 			this._webcam_stream = null;
 			this._video = null;
 			this.boxcolor = "black";
@@ -2674,6 +2677,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			//when video info is loaded (size and so)
 			video.onloadedmetadata = function(e) {
 				// Ready to go. Do some stuff.
+				LGraphTextureWebcam.is_webcam_open = true;
 				console.log(e);
 			};
 		}

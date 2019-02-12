@@ -11,10 +11,12 @@ function LGWebSocket()
 	this.addOutput("out", 0 );
 	this.properties = {
 		url: "",
-		room: "lgraph" //allows to filter messages
+		room: "lgraph", //allows to filter messages,
+		only_send_changes: true
 	};
 	this._ws = null;
-	this._last_data = [];
+	this._last_sent_data = [];
+	this._last_received_data = [];
 }
 
 LGWebSocket.title = "WebSocket";
@@ -35,27 +37,34 @@ LGWebSocket.prototype.onExecute = function()
 		return;
 
 	var room = this.properties.room;
+	var only_changes = this.properties.only_send_changes;
 
 	for(var i = 1; i < this.inputs.length; ++i)
 	{
 		var data = this.getInputData(i);
-		if(data != null)
+		if(data == null)
+			continue;
+		var json;
+		try
 		{
-			var json;
-			try
-			{
-				json = JSON.stringify({ type: 0, room: room, channel: i, data: data });
-			}
-			catch (err)
-			{
-				continue;
-			}
-			this._ws.send( json );
+			json = JSON.stringify({ type: 0, room: room, channel: i, data: data });
 		}
+		catch (err)
+		{
+			continue;
+		}
+		if( only_changes && this._last_sent_data[i] == json )
+			continue;
+
+		this._last_sent_data[i] = json;
+		this._ws.send( json );
 	}
 
 	for(var i = 1; i < this.outputs.length; ++i)
-		this.setOutputData( i, this._last_data[i] );
+		this.setOutputData( i, this._last_received_data[i] );
+
+	if( this.boxcolor == "#AFA" )
+		this.boxcolor = "#6C6";
 }
 
 LGWebSocket.prototype.createSocket = function()
@@ -68,17 +77,18 @@ LGWebSocket.prototype.createSocket = function()
 	this._ws.onopen = function()
 	{
 		console.log("ready");
-		that.boxcolor = "#8E8";
+		that.boxcolor = "#6C6";
 	}
 	this._ws.onmessage = function(e)
 	{
+		that.boxcolor = "#AFA";
 		var data = JSON.parse( e.data );
 		if( data.room && data.room != this.properties.room )
 			return;
 		if( e.data.type == 1 )
 			that.triggerSlot( 0, data );
 		else
-			that._last_data[ e.data.channel || 0 ] = data.data;
+			that._last_received_data[ e.data.channel || 0 ] = data.data;
 	}
 	this._ws.onerror = function(e)
 	{
@@ -132,13 +142,13 @@ function LGSillyClient()
 	this.properties = {
 		url: "tamats.com:55000",
 		room: "lgraph",
-		save_bandwidth: true
+		only_send_changes: true
 	};
 
 	this._server = null;
 	this.createSocket();
-	this._last_input_data = [];
-	this._last_output_data = [];
+	this._last_sent_data = [];
+	this._last_received_data = [];
 }
 
 LGSillyClient.title = "SillyClient";
@@ -159,22 +169,25 @@ LGSillyClient.prototype.onExecute = function()
 	if(!this._server || !this._server.is_connected)
 		return;
 
-	var save_bandwidth = this.properties.save_bandwidth;
+	var only_send_changes = this.properties.only_send_changes;
 
 	for(var i = 1; i < this.inputs.length; ++i)
 	{
 		var data = this.getInputData(i);
 		if(data != null)
 		{
-			if( save_bandwidth && this._last_input_data[i] == data )
+			if( only_send_changes && this._last_sent_data[i] == data )
 				continue;
 			this._server.sendMessage( { type: 0, channel: i, data: data } );
-			this._last_input_data[i] = data;
+			this._last_sent_data[i] = data;
 		}
 	}
 
 	for(var i = 1; i < this.outputs.length; ++i)
-		this.setOutputData( i, this._last_output_data[i] );
+		this.setOutputData( i, this._last_received_data[i] );
+
+	if( this.boxcolor == "#AFA" )
+		this.boxcolor = "#6C6";
 }
 
 LGSillyClient.prototype.createSocket = function()
@@ -192,7 +205,7 @@ LGSillyClient.prototype.createSocket = function()
 	this._server.on_ready = function()
 	{
 		console.log("ready");
-		that.boxcolor = "#8E8";
+		that.boxcolor = "#6C6";
 	}
 	this._server.on_message = function(id,msg)
 	{
@@ -209,7 +222,8 @@ LGSillyClient.prototype.createSocket = function()
 		if(data.type == 1)
 			that.triggerSlot( 0, data );
 		else
-			that._last_output_data[ data.channel || 0 ] = data.data;
+			that._last_received_data[ data.channel || 0 ] = data.data;
+		that.boxcolor = "#AFA";
 	}
 	this._server.on_error = function(e)
 	{
