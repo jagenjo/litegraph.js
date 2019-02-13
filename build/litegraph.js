@@ -16449,8 +16449,17 @@ function MIDIEvent( data )
 
 LiteGraph.MIDIEvent = MIDIEvent;
 
-MIDIEvent.prototype.setup = function( raw_data )
+MIDIEvent.prototype.fromJSON = function( o )
 {
+	this.setup(o.data);
+}
+
+MIDIEvent.prototype.setup = function( data )
+{
+	var raw_data = data;
+	if(data.constructor === Object)
+		raw_data = data.data;
+
 	this.data.set(raw_data);
 
 	var midiStatus = raw_data[0];
@@ -16641,6 +16650,14 @@ MIDIEvent.prototype.toHexString = function()
 		str += this.data[i].toString(16) + " ";
 }
 
+MIDIEvent.prototype.toJSON = function()
+{
+	return {
+		data: [this.data[0],this.data[1],this.data[2]],
+		object_class: "MIDIEvent"
+	};
+}
+
 MIDIEvent.NOTEOFF = 0x80;
 MIDIEvent.NOTEON = 0x90;
 MIDIEvent.KEYPRESSURE = 0xA0;
@@ -16669,6 +16686,31 @@ MIDIEvent.commands = {
 	0xFE: "Sensing",
 	0xFF: "Reset"
 }
+
+
+MIDIEvent.commands_short = {
+	0x80: "NOTEOFF",
+	0x90: "NOTEOFF",
+	0xA0: "KEYP",
+	0xB0: "CC",
+	0xC0: "PC",
+	0xD0: "CP",
+	0xE0: "PB",
+	0xF0: "SYS",
+	0xF2: "POS",
+	0xF3: "SELECT",
+	0xF6: "TUNEREQ",
+	0xF8: "TT",
+	0xFA: "START",
+	0xFB: "CONTINUE",
+	0xFC: "STOP",
+	0xFE: "SENS",
+	0xFF: "RESET"
+}
+
+MIDIEvent.commands_reversed = {};
+for(var i in MIDIEvent.commands)
+	MIDIEvent.commands_reversed[ MIDIEvent.commands[i] ] = i;
 
 //MIDI wrapper
 function MIDIInterface( on_ready, on_error )
@@ -16839,6 +16881,8 @@ function LGMIDIIn()
 	this.properties = {port: 0};
 	this._last_midi_event = null;
 	this._current_midi_event = null;
+	this.boxcolor = "#AAA";
+	this._last_time = 0;
 
 	var that = this;
 	new MIDIInterface( function( midi ){
@@ -16885,7 +16929,8 @@ LGMIDIIn.prototype.onStart = function()
 LGMIDIIn.prototype.onMIDIEvent = function( data, midi_event )
 {
 	this._last_midi_event = midi_event;
-
+	this.boxcolor = "#AFA";
+	this._last_time = LiteGraph.getTime();
 	this.trigger( "on_midi", midi_event );
 	if(midi_event.cmd == MIDIEvent.NOTEON)
 		this.trigger( "on_noteon", midi_event );
@@ -16897,6 +16942,26 @@ LGMIDIIn.prototype.onMIDIEvent = function( data, midi_event )
 		this.trigger( "on_pc", midi_event );
 	else if(midi_event.cmd == MIDIEvent.PITCHBEND)
 		this.trigger( "on_pitchbend", midi_event );
+}
+
+LGMIDIIn.prototype.onDrawBackground = function(ctx)
+{
+	this.boxcolor = "#AAA";
+	if(!this.flags.collapsed && this._last_midi_event)
+	{
+		ctx.fillStyle = "white";
+		var now = LiteGraph.getTime();
+		var f = 1.0 - Math.max(0,(now - this._last_time) * 0.001);
+		if(f > 0)
+		{
+			var t = ctx.globalAlpha;
+			ctx.globalAlpha *= f;
+			ctx.font = "12px Tahoma";
+			ctx.fillText( this._last_midi_event.toString(), 2, this.size[1] * 0.5 + 3 );
+			//ctx.fillRect(0,0,this.size[0],this.size[1]);
+			ctx.globalAlpha = t;
+		}
+	}
 }
 
 LGMIDIIn.prototype.onExecute = function()
@@ -17043,27 +17108,74 @@ function LGMIDIFilter()
 		max_value: -1
 	};
 
+	var that = this;
+	this._learning = false;
+	this.addWidget("button","Learn", "", function(){
+		that._learning = true;
+		that.boxcolor = "#FA3";
+	});
+
 	this.addInput( "in", LiteGraph.EVENT );
 	this.addOutput( "on_midi", LiteGraph.EVENT );
+	this.boxcolor = "#AAA";
 }
 
 LGMIDIFilter.title = "MIDI Filter";
 LGMIDIFilter.desc = "Filters MIDI messages";
 LGMIDIFilter.color = MIDI_COLOR;
 
+LGMIDIFilter["@cmd"] = { type:"enum", title: "Command", values: MIDIEvent.commands_reversed };
+
+LGMIDIFilter.prototype.getTitle = function()
+{
+	var str = null;
+	if( this.properties.cmd == -1 )
+		str = "Nothing";
+	else
+		 str = MIDIEvent.commands_short[ this.properties.cmd ] || "Unknown";
+
+	if( this.properties.min_value != -1 && this.properties.max_value != -1)
+		str += " " + (this.properties.min_value == this.properties.max_value ? this.properties.max_value : this.properties.min_value + ".." + this.properties.max_value);
+
+	return "Filter: " + str;
+}
+
+LGMIDIFilter.prototype.onPropertyChanged = function(name, value)
+{
+	if( name == "cmd" )
+	{
+		var num = Number( value );
+		if( isNaN(num) )
+			num = MIDIEvent.commands[value] || 0;
+		this.properties.cmd = num;
+	}
+}
+
 LGMIDIFilter.prototype.onAction = function(event, midi_event )
 {
 	if(!midi_event || midi_event.constructor !== MIDIEvent)
 		return;
 
-	if( this.properties.channel != -1 && midi_event.channel != this.properties.channel)
-		return;
-	if(this.properties.cmd != -1 && midi_event.cmd != this.properties.cmd)
-		return;
-	if(this.properties.min_value != -1 && midi_event.data[1] < this.properties.min_value)
-		return;
-	if(this.properties.max_value != -1 && midi_event.data[1] > this.properties.max_value)
-		return;
+	if( this._learning )
+	{
+		this._learning = false;
+		this.boxcolor = "#AAA";
+		this.properties.channel = midi_event.channel;
+		this.properties.cmd = midi_event.cmd;
+		this.properties.min_value = this.properties.max_value = midi_event.data[1];
+	}
+	else
+	{
+		if( this.properties.channel != -1 && midi_event.channel != this.properties.channel)
+			return;
+		if(this.properties.cmd != -1 && midi_event.cmd != this.properties.cmd)
+			return;
+		if(this.properties.min_value != -1 && midi_event.data[1] < this.properties.min_value)
+			return;
+		if(this.properties.max_value != -1 && midi_event.data[1] > this.properties.max_value)
+			return;
+	}
+
 	this.trigger("on_midi",midi_event);
 }
 
@@ -19285,7 +19397,23 @@ LGSillyClient.prototype.createSocket = function()
 		}
 		
 		if(data.type == 1)
-			that.triggerSlot( 0, data );
+		{
+			if(data.data.object_class && LiteGraph[data.data.object_class] )
+			{
+				var obj = null;
+				try
+				{
+					obj = new LiteGraph[data.data.object_class](data.data);
+					that.triggerSlot( 0, obj );
+				}
+				catch (err)
+				{
+					return;
+				}
+			}
+			else
+				that.triggerSlot( 0, data.data );
+		}
 		else
 			that._last_received_data[ data.channel || 0 ] = data.data;
 		that.boxcolor = "#AFA";

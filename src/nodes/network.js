@@ -220,7 +220,23 @@ LGSillyClient.prototype.createSocket = function()
 		}
 		
 		if(data.type == 1)
-			that.triggerSlot( 0, data );
+		{
+			if(data.data.object_class && LiteGraph[data.data.object_class] )
+			{
+				var obj = null;
+				try
+				{
+					obj = new LiteGraph[data.data.object_class](data.data);
+					that.triggerSlot( 0, obj );
+				}
+				catch (err)
+				{
+					return;
+				}
+			}
+			else
+				that.triggerSlot( 0, data.data );
+		}
 		else
 			that._last_received_data[ data.channel || 0 ] = data.data;
 		that.boxcolor = "#AFA";
