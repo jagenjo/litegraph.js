@@ -111,6 +111,12 @@ When creating a class for a graph node here are some useful points:
 
 ### Custom Node Appearance
 
+You can configure the node shape or the title color if you want it to be different from the body color:
+```js
+MyNodeClass.title_color = "#345";
+MyNodeClass.shape = LiteGraph.ROUND_SHAPE;
+```
+
 You can draw something inside a node using the callbacks ```onDrawForeground``` and ```onDrawBackground```. The only difference is that onDrawForeground gets called in Live Mode and onDrawBackground not.
 
 You do not have to worry about the coordinates system, [0,0] is the top-left corner of the node content area (not the title).
