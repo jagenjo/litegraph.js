@@ -197,10 +197,7 @@ MathRand.prototype.onExecute = function()
 MathRand.prototype.onDrawBackground = function(ctx)
 {
 	//show the current value
-	if(this._last_v)
-		this.outputs[0].label = this._last_v.toFixed(3);
-	else
-		this.outputs[0].label = "?";
+	this.outputs[0].label = ( this._last_v || 0 ).toFixed(3);
 }
 
 MathRand.prototype.onGetInputs = function() {
@@ -208,6 +205,103 @@ MathRand.prototype.onGetInputs = function() {
 }
 
 LiteGraph.registerNodeType("math/rand", MathRand);
+
+
+//basic continuous noise
+function MathNoise()
+{
+	this.addInput("in","number");
+	this.addOutput("out","number");
+	this.addProperty( "min", 0 );
+	this.addProperty( "max", 1 );
+	this.addProperty( "smooth", true );
+	this.size = [90,20];
+}
+
+MathNoise.title = "Noise";
+MathNoise.desc = "Random number with temporal continuity";
+MathNoise.data = null;
+
+MathNoise.getValue = function(f,smooth)
+{
+	if( !MathNoise.data )
+	{
+		MathNoise.data = new Float32Array(1024);
+		for(var i = 0; i < MathNoise.data.length; ++i)
+			MathNoise.data[i] = Math.random();
+	}
+	f = f % 1024;
+	if(f < 0)
+		f += 1024;
+	var f_min = Math.floor(f);
+	var f = f - f_min;
+	var r1 = MathNoise.data[ f_min ];
+	var r2 = MathNoise.data[ f_min == 1023 ? 0 : f_min + 1 ];
+	if(smooth)
+		f = f*f*f*(f*(f*6.0-15.0)+10.0);
+	return r1 * (1-f) + r2 * f;
+}
+
+MathNoise.prototype.onExecute = function()
+{
+	var f = (this.getInputData(0) || 0);
+	var r = MathNoise.getValue( f, this.properties.smooth );
+	var min = this.properties.min;
+	var max = this.properties.max;
+	this._last_v = r * (max-min) + min;
+	this.setOutputData(0, this._last_v );
+}
+
+MathNoise.prototype.onDrawBackground = function(ctx)
+{
+	//show the current value
+	this.outputs[0].label = ( this._last_v || 0 ).toFixed(3);
+}
+
+LiteGraph.registerNodeType("math/noise", MathNoise);
+
+//generates spikes every random time
+function MathSpikes()
+{
+	this.addOutput("out","number");
+	this.addProperty( "min_time", 1 );
+	this.addProperty( "max_time", 2 );
+	this.addProperty( "duration", 0.2 );
+	this.size = [90,20];
+	this._remaining_time = 0;
+	this._blink_time = 0;
+}
+
+MathSpikes.title = "Spikes";
+MathSpikes.desc = "spike every random time";
+
+MathSpikes.prototype.onExecute = function()
+{
+	var dt = this.graph.elapsed_time; //in secs
+
+	this._remaining_time -= dt;
+	this._blink_time -= dt;
+
+	var v = 0;
+	if(this._blink_time > 0)
+	{
+		var f = this._blink_time / this.properties.duration;
+		v = 1/(Math.pow(f*8-4,4)+1);
+	}
+
+	if( this._remaining_time < 0)
+	{
+		this._remaining_time = Math.random() * (this.properties.max_time-this.properties.min_time) + this.properties.min_time;
+		this._blink_time = this.properties.duration;
+		this.boxcolor = "#FFF";
+	}
+	else
+		this.boxcolor = "#000";
+	this.setOutputData( 0, v );
+}
+
+LiteGraph.registerNodeType("math/spikes", MathSpikes);
+
 
 //Math clamp
 function MathClamp()
@@ -497,6 +591,7 @@ MathOperation.values = ["+","-","*","/","%","^"];
 MathOperation.title = "Operation";
 MathOperation.desc = "Easy math operators";
 MathOperation["@OP"] = { type:"enum", title: "operation", values: MathOperation.values };
+MathOperation.size = [100,50];
 
 MathOperation.prototype.getTitle = function()
 {
@@ -546,9 +641,9 @@ MathOperation.prototype.onDrawBackground = function(ctx)
 		return;
 
 	ctx.font = "40px Arial";
-	ctx.fillStyle = "#CCC";
+	ctx.fillStyle = "#666";
 	ctx.textAlign = "center";
-	ctx.fillText(this.properties.OP, this.size[0] * 0.5, this.size[1] * 0.35 + LiteGraph.NODE_TITLE_HEIGHT );
+	ctx.fillText(this.properties.OP, this.size[0] * 0.5, ( this.size[1] + LiteGraph.NODE_TITLE_HEIGHT ) * 0.5  );
 	ctx.textAlign = "left";
 }
 
@@ -762,12 +857,20 @@ function MathFormula()
 	this.addInput("y","number");
 	this.addOutput("","number");
 	this.properties = {x:1.0, y:1.0, formula:"x+y"};
+	this.code_widget = this.addWidget("text","F(x,y)",this.properties.formula,function(v,canvas,node){ node.properties.formula = v; });
 	this.addWidget("toggle","allow",LiteGraph.allow_scripts,function(v){ LiteGraph.allow_scripts = v; });
 	this._func = null;
 }
 
 MathFormula.title = "Formula";
 MathFormula.desc = "Compute formula";
+MathFormula.size = [160,100];
+
+MathAverageFilter.prototype.onPropertyChanged = function( name, value )
+{
+	if(name == "formula")
+		this.code_widget.value = value;
+}
 	
 MathFormula.prototype.onExecute = function()
 {
@@ -788,19 +891,27 @@ MathFormula.prototype.onExecute = function()
 
 	var f = this.properties["formula"];
 
-	if(!this._func || this._func_code != this.properties.formula)
+	var value;
+	try
 	{
-		this._func = new Function( "x","y","TIME", "return " + this.properties.formula );
-		this._func_code = this.properties.formula;
+		if(!this._func || this._func_code != this.properties.formula)
+		{
+			this._func = new Function( "x","y","TIME", "return " + this.properties.formula );
+			this._func_code = this.properties.formula;
+		}
+		value = this._func(x,y,this.graph.globaltime);
+		this.boxcolor = null;
 	}
-
-	var value = this._func(x,y,this.graph.globaltime);
+	catch (err)
+	{
+		this.boxcolor = "red";
+	}
 	this.setOutputData(0, value );
 }
 
 MathFormula.prototype.getTitle = function()
 {
-	return this._func_code || "";
+	return this._func_code || "Formula";
 }
 
 MathFormula.prototype.onDrawBackground = function()

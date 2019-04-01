@@ -44,7 +44,7 @@
 	position: relative;
 	width: 100%;
 	height: calc( 100% - 80px );
-	background-color: #292929;
+	background-color: #1A1A1A;
 }
 
 .litegraph-editor .header, .litegraph-editor .footer {

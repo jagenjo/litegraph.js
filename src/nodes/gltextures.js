@@ -7,7 +7,7 @@ global.LGraphTexture = null;
 if(typeof(GL) != "undefined")
 {
 
-	LGraphCanvas.link_type_colors["Texture"] = "#AEF";
+	LGraphCanvas.link_type_colors["Texture"] = "#987";
 
 	function LGraphTexture()
 	{
@@ -113,6 +113,14 @@ if(typeof(GL) != "undefined")
 			//no default
 		}
 		return type;
+	}
+
+	LGraphTexture.getWhiteTexture = function()
+	{
+		if(this._white_texture)
+			return this._white_texture;
+		var texture = this._white_texture = GL.Texture.fromMemory(1,1,[255,255,255,255],{ format: gl.RGBA, wrap: gl.REPEAT, filter: gl.NEAREST });
+		return texture;
 	}
 
 	LGraphTexture.getNoiseTexture = function()
@@ -1164,7 +1172,7 @@ if(typeof(GL) != "undefined")
 	LGraphTextureDownsample.title = "Downsample";
 	LGraphTextureDownsample.desc = "Downsample Texture";
 	LGraphTextureDownsample.widgets_info = { 
-		iterations: { type:"number", step: 1, precision: 0, min: 1 },
+		iterations: { type:"number", step: 1, precision: 0, min: 0 },
 		precision: { widget:"combo", values: LGraphTexture.MODE_VALUES }
 	};
 
@@ -1180,6 +1188,12 @@ if(typeof(GL) != "undefined")
 		//we do not allow any texture different than texture 2D
 		if(!tex || tex.texture_type !== GL.TEXTURE_2D )
 			return;
+
+		if( this.properties.iterations < 1)
+		{
+			this.setOutputData(0,tex);
+			return;
+		}
 
 		var shader = LGraphTextureDownsample._shader;
 		if(!shader)
@@ -1262,7 +1276,7 @@ if(typeof(GL) != "undefined")
 
 
 
-	// Texture Copy *****************************************
+	// Texture Average  *****************************************
 	function LGraphTextureAverage()
 	{
 		this.addInput("Texture","Texture");
@@ -1289,6 +1303,7 @@ if(typeof(GL) != "undefined")
 		this.setOutputData(2,(v[0] + v[1] + v[2]) / 3);
 	}
 
+	//executed before rendering the frame
 	LGraphTextureAverage.prototype.onPreRenderExecute = function()
 	{
 		this.updateAverage();
@@ -1324,6 +1339,8 @@ if(typeof(GL) != "undefined")
 		var shader = LGraphTextureAverage._shader;
 		var uniforms = this._uniforms;
 		uniforms.u_mipmap_offset = this.properties.mipmap_offset;
+		gl.disable( gl.DEPTH_TEST );
+		gl.disable( gl.BLEND );
 		this._temp_texture.drawTo(function(){
 			tex.toViewport( shader, uniforms );
 		});
@@ -1341,7 +1358,6 @@ if(typeof(GL) != "undefined")
 				else if(type == GL.HALF_FLOAT || type == GL.HALF_FLOAT_OES)
 				{
 					//no half floats possible, hard to read back unless copyed to a FLOAT texture, so temp_texture is always forced to FLOAT
-					//vec4.scale( v,v, 1/(255*255) ); //is this correct?
 				}
 			}
 		}
@@ -1368,6 +1384,72 @@ if(typeof(GL) != "undefined")
 			";
 
 	LiteGraph.registerNodeType("texture/average", LGraphTextureAverage );
+
+
+
+	function LGraphTextureTemporalSmooth()
+	{
+		this.addInput("in","Texture");
+		this.addInput("factor","Number");
+		this.addOutput("out","Texture");
+		this.properties = { factor: 0.5 };
+		this._uniforms = { u_texture: 0, u_textureB: 1, u_factor: this.properties.factor };
+	}
+
+	LGraphTextureTemporalSmooth.title = "Smooth";
+	LGraphTextureTemporalSmooth.desc = "Smooth texture over time";
+
+	LGraphTextureTemporalSmooth.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex || !this.isOutputConnected(0))
+			return;
+
+		if(!LGraphTextureTemporalSmooth._shader)
+			LGraphTextureTemporalSmooth._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureTemporalSmooth.pixel_shader);
+
+		var temp = this._temp_texture;
+		if(!temp || temp.type != tex.type || temp.width != tex.width || temp.height != tex.height )
+		{
+			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.NEAREST });
+			this._temp_texture2 = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.NEAREST });
+			tex.copyTo( this._temp_texture2 );
+		}
+
+		var tempA = this._temp_texture;
+		var tempB = this._temp_texture2;
+
+		var shader = LGraphTextureTemporalSmooth._shader;
+		var uniforms = this._uniforms;
+		uniforms.u_factor = 1.0 - this.getInputOrProperty("factor");
+
+		gl.disable( gl.BLEND );
+		gl.disable( gl.DEPTH_TEST );
+		tempA.drawTo(function(){
+			tempB.bind(1);
+			tex.toViewport( shader, uniforms );			
+		});
+
+		this.setOutputData(0, tempA );
+		
+		//swap
+		this._temp_texture = tempB;
+		this._temp_texture2 = tempA;
+	}
+
+	LGraphTextureTemporalSmooth.pixel_shader = "precision highp float;\n\
+			precision highp float;\n\
+			uniform sampler2D u_texture;\n\
+			uniform sampler2D u_textureB;\n\
+			uniform float u_factor;\n\
+			varying vec2 v_coord;\n\
+			\n\
+			void main() {\n\
+				gl_FragColor = mix( texture2D( u_texture, v_coord ), texture2D( u_textureB, v_coord ), u_factor );\n\
+			}\n\
+			";
+
+	LiteGraph.registerNodeType("texture/temporal_smooth", LGraphTextureTemporalSmooth );
 
 	// Image To Texture *****************************************
 	function LGraphImageToTexture()
@@ -1529,7 +1611,7 @@ if(typeof(GL) != "undefined")
 		this.addOutput("B","Texture");
 		this.addOutput("A","Texture");
 
-		this.properties = {};
+		this.properties = { use_luminance: true };
 		if(!LGraphTextureChannels._shader)
 			LGraphTextureChannels._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureChannels.pixel_shader );
 	}
@@ -1545,13 +1627,14 @@ if(typeof(GL) != "undefined")
 		if(!this._channels)
 			this._channels = Array(4);
 
+		var format = this.properties.use_luminance ? gl.LUMINANCE : gl.RGBA;
 		var connections = 0;
 		for(var i = 0; i < 4; i++)
 		{
 			if(this.isOutputConnected(i))
 			{
-				if(!this._channels[i] || this._channels[i].width != texA.width || this._channels[i].height != texA.height || this._channels[i].type != texA.type)
-					this._channels[i] = new GL.Texture( texA.width, texA.height, { type: texA.type, format: gl.RGBA, filter: gl.LINEAR });
+				if(!this._channels[i] || this._channels[i].width != texA.width || this._channels[i].height != texA.height || this._channels[i].type != texA.type || this._channels[i].format != format )
+					this._channels[i] = new GL.Texture( texA.width, texA.height, { type: texA.type, format: format, filter: gl.LINEAR });
 				connections++;
 			}
 			else
@@ -1605,40 +1688,55 @@ if(typeof(GL) != "undefined")
 
 		this.addOutput("Texture","Texture");
 
-		this.properties = {};
-		if(!LGraphChannelsTexture._shader)
-			LGraphChannelsTexture._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphChannelsTexture.pixel_shader );
+		this.properties = { precision: LGraphTexture.DEFAULT, R:1,G:1,B:1,A:1 };
+		this._color = vec4.create();
+		this._uniforms = { u_textureR:0, u_textureG:1, u_textureB:2, u_textureA:3, u_color: this._color };
 	}
 
 	LGraphChannelsTexture.title = "Channels to Texture";
 	LGraphChannelsTexture.desc = "Split texture channels";
+	LGraphChannelsTexture.widgets_info = { 
+		"precision": { widget:"combo", values: LGraphTexture.MODE_VALUES }
+	};
 
 	LGraphChannelsTexture.prototype.onExecute = function()
 	{
-		var tex = [ this.getInputData(0),
-				this.getInputData(1),
-				this.getInputData(2),
-				this.getInputData(3) ];
-
-		if(!tex[0] || !tex[1] || !tex[2] || !tex[3]) 
-			return;
+		var white = LGraphTexture.getWhiteTexture();
+		var texR = this.getInputData(0) || white;
+		var texG = this.getInputData(1) || white;
+		var texB = this.getInputData(2) || white;
+		var texA = this.getInputData(3) || white;
 
 		gl.disable( gl.BLEND );
 		gl.disable( gl.DEPTH_TEST );
 
 		var mesh = Mesh.getScreenQuad();
+		if(!LGraphChannelsTexture._shader)
+			LGraphChannelsTexture._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphChannelsTexture.pixel_shader );
 		var shader = LGraphChannelsTexture._shader;
 
-		this._tex = LGraphTexture.getTargetTexture( tex[0], this._tex );
+		var w = Math.max( texR.width, texG.width, texB.width, texA.width );
+		var h = Math.max( texR.height, texG.height, texB.height, texA.height );
+		var type = this.properties.precision == LGraphTexture.HIGH ? LGraphTexture.HIGH_PRECISION_FORMAT : gl.UNSIGNED_BYTE;
 
-		this._tex.drawTo( function() {
-			tex[0].bind(0);
-			tex[1].bind(1);
-			tex[2].bind(2);
-			tex[3].bind(3);
-			shader.uniforms({u_textureR:0, u_textureG:1, u_textureB:2, u_textureA:3 }).draw(mesh);
+		if( !this._texture || this._texture.width != w || this._texture.height != h || this._texture.type != type )
+			this._texture = new GL.Texture(w,h,{ type: type, format: gl.RGBA, filter: gl.LINEAR });
+
+		var color = this._color;
+		color[0] = this.properties.R;
+		color[1] = this.properties.G;
+		color[2] = this.properties.B;
+		color[3] = this.properties.A;
+		var uniforms = this._uniforms;
+
+		this._texture.drawTo( function() {
+			texR.bind(0);
+			texG.bind(1);
+			texB.bind(2);
+			texA.bind(3);
+			shader.uniforms( uniforms ).draw(mesh);
 		});
-		this.setOutputData(0, this._tex);
+		this.setOutputData(0, this._texture );
 	}
 
 	LGraphChannelsTexture.pixel_shader = "precision highp float;\n\
@@ -1648,9 +1746,10 @@ if(typeof(GL) != "undefined")
 			uniform sampler2D u_textureG;\n\
 			uniform sampler2D u_textureB;\n\
 			uniform sampler2D u_textureA;\n\
+			uniform vec4 u_color;\n\
 			\n\
 			void main() {\n\
-			   gl_FragColor = vec4( \
+			   gl_FragColor = u_color * vec4( \
 						texture2D(u_textureR, v_coord).r,\
 						texture2D(u_textureG, v_coord).r,\
 						texture2D(u_textureB, v_coord).r,\
@@ -2959,7 +3058,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 	function LGraphToneMapping()
 	{
 		this.addInput("in","Texture");
-		this.addInput("avg","number");
+		this.addInput("avg","number,Texture");
 		this.addOutput("out","Texture");
 		this.properties = { enabled: true, scale:1, gamma: 1, average_lum: 1, lum_white: 1, precision: LGraphTexture.LOW };
 
@@ -3003,19 +3102,31 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
 			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
 
-		//apply shader
-		var shader = LGraphToneMapping._shader;
-		if(!shader)
-			shader = LGraphToneMapping._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphToneMapping.pixel_shader );
-
 		var avg = this.getInputData(1);
-		if(avg != null)
-			this.properties.average_lum = avg;
+		if(avg == null)
+			avg = this.properties.average_lum;
 
 		var uniforms = this._uniforms;
+		var shader = null;
+
+		if( avg.constructor === Number )
+		{
+			this.properties.average_lum = avg;
+			uniforms.u_average_lum = this.properties.average_lum;
+			shader = LGraphToneMapping._shader;
+			if(!shader)
+				shader = LGraphToneMapping._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphToneMapping.pixel_shader );
+		}
+		else if( avg.constructor === GL.Texture )
+		{
+			uniforms.u_average_texture = avg.bind(1);
+			shader = LGraphToneMapping._shader_texture;
+			if(!shader)
+				shader = LGraphToneMapping._shader_texture = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphToneMapping.pixel_shader, { AVG_TEXTURE:"" } );
+		}
+
 		uniforms.u_lumwhite2 = this.properties.lum_white * this.properties.lum_white;
 		uniforms.u_scale = this.properties.scale;
-		uniforms.u_average_lum = this.properties.average_lum;
 		uniforms.u_igamma = 1/this.properties.gamma;
 
 		//apply shader
@@ -3032,7 +3143,11 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			varying vec2 v_coord;\n\
 			uniform sampler2D u_texture;\n\
 			uniform float u_scale;\n\
-			uniform float u_average_lum;\n\
+			#ifdef AVG_TEXTURE\n\
+				uniform sampler2D u_average_texture;\n\
+			#else\n\
+				uniform float u_average_lum;\n\
+			#endif\n\
 			uniform float u_lumwhite2;\n\
 			uniform float u_igamma;\n\
 			vec3 RGB2xyY (vec3 rgb)\n\
@@ -3051,9 +3166,16 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			void main() {\n\
 				vec4 color = texture2D( u_texture, v_coord );\n\
 				vec3 rgb = color.xyz;\n\
+				float average_lum = 0.0;\n\
+				#ifdef AVG_TEXTURE\n\
+					vec3 pixel = texture2D(u_average_texture,vec2(0.5)).xyz;\n\
+					average_lum = (pixel.x + pixel.y + pixel.z) / 3.0;\n\
+				#else\n\
+					average_lum = u_average_lum;\n\
+				#endif\n\
 				//Ld - this part of the code is the same for both versions\n\
 				float lum = dot(rgb, vec3(0.2126, 0.7152, 0.0722));\n\
-				float L = (u_scale / u_average_lum) * lum;\n\
+				float L = (u_scale / average_lum) * lum;\n\
 				float Ld = (L * (1.0 + L / u_lumwhite2)) / (1.0 + L);\n\
 				//first\n\
 				//vec3 xyY = RGB2xyY(rgb);\n\
@@ -3074,6 +3196,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		this.addOutput("out","Texture");
 		this.properties = { width: 512, height: 512, seed:0, persistence: 0.1, octaves: 8, scale: 1, offset: [0,0], amplitude: 1, precision: LGraphTexture.DEFAULT };
 		this._key = 0;
+		this._texture = null;
 		this._uniforms = { u_persistence: 0.1, u_seed: 0, u_offset: vec2.create(), u_scale: 1, u_viewport: vec2.create() };
 	}
 
@@ -3087,6 +3210,11 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		octaves: { type: "Number", precision: 0, step: 1, min: 1, max: 50 }
 	};
 
+	LGraphTexturePerlin.prototype.onGetInputs = function()
+	{
+		return [["seed","Number"],["persistence","Number"],["octaves","Number"],["scale","Number"],["amplitude","Number"],["offset","vec2"]];
+	}
+
 	LGraphTexturePerlin.prototype.onExecute = function()
 	{
 		if(!this.isOutputConnected(0))
@@ -3098,12 +3226,19 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 		if(h == 0)	h = gl.viewport_data[3]; //0 means default
 		var type = LGraphTexture.getTextureType( this.properties.precision );
 
-		var temp = this._temp_texture;
+		var temp = this._texture;
 		if(!temp || temp.width != w || temp.height != h || temp.type != type )
-			temp = this._temp_texture = new GL.Texture( w, h, { type: type, format: gl.RGB, filter: gl.LINEAR });
+			temp = this._texture = new GL.Texture( w, h, { type: type, format: gl.RGB, filter: gl.LINEAR });
 
-		//reusing old
-		var key = w + h + type + this.properties.persistence + this.properties.octaves + this.properties.scale + this.properties.seed + this.properties.offset[0] + this.properties.offset[1] + this.properties.amplitude;
+		var persistence = this.getInputOrProperty("persistence");
+		var octaves = this.getInputOrProperty("octaves");
+		var offset = this.getInputOrProperty("offset");
+		var scale = this.getInputOrProperty("scale");
+		var amplitude = this.getInputOrProperty("amplitude");
+		var seed = this.getInputOrProperty("seed");
+
+		//reusing old texture
+		var key = "" + w + h + type + persistence + octaves + scale + seed + offset[0] + offset[1] + amplitude;
 		if(key == this._key)
 		{
 			this.setOutputData( 0, temp );
@@ -3113,15 +3248,14 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 		//gather uniforms
 		var uniforms = this._uniforms;
-		uniforms.u_persistence = this.properties.persistence;
-		uniforms.u_octaves = this.properties.octaves;
-		uniforms.u_offset[0] = this.properties.offset[0];
-		uniforms.u_offset[1] = this.properties.offset[1];
-		uniforms.u_scale = this.properties.scale;
-		uniforms.u_amplitude = this.properties.amplitude;
+		uniforms.u_persistence = persistence;
+		uniforms.u_octaves = octaves;
+		uniforms.u_offset.set( offset );
+		uniforms.u_scale = scale;
+		uniforms.u_amplitude = amplitude;
+		uniforms.u_seed = seed * 128;
 		uniforms.u_viewport[0] = w;
 		uniforms.u_viewport[1] = h;
-		uniforms.u_seed = this.properties.seed * 128;
 
 		//render
 		var shader = LGraphTexturePerlin._shader;

@@ -635,6 +635,12 @@ LGMIDIShow.title = "MIDI Show";
 LGMIDIShow.desc = "Shows MIDI in the graph";
 LGMIDIShow.color = MIDI_COLOR;
 
+LGMIDIShow.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return this._str;
+	return this.title;
+}
 
 LGMIDIShow.prototype.onAction = function(event, midi_event )
 {
@@ -648,7 +654,7 @@ LGMIDIShow.prototype.onAction = function(event, midi_event )
 
 LGMIDIShow.prototype.onDrawForeground = function( ctx )
 {
-	if( !this._str )
+	if( !this._str || this.flags.collapsed )
 		return;
 
 	ctx.font = "30px Arial";
@@ -764,6 +770,7 @@ function LGMIDIEvent()
 	this.addOutput( "on_midi", LiteGraph.EVENT );
 
 	this.midi_event = new MIDIEvent();
+	this.gate = false;
 }
 
 LGMIDIEvent.title = "MIDIEvent";
@@ -778,6 +785,10 @@ LGMIDIEvent.prototype.onAction = function( event, midi_event )
 		this.properties.cmd = midi_event.cmd;
 		this.properties.value1 = midi_event.data[1];
 		this.properties.value2 = midi_event.data[2];
+		if( midi_event.cmd == MIDIEvent.NOTEON )
+			this.gate = true;
+		else if( midi_event.cmd == MIDIEvent.NOTEOFF )
+			this.gate = false;
 		return;
 	}
 
@@ -841,6 +852,7 @@ LGMIDIEvent.prototype.onExecute = function()
 				case "velocity": v = props.cmd == MIDIEvent.NOTEON ? props.value2 : null; break;
 				case "pitch": v = props.cmd == MIDIEvent.NOTEON ? MIDIEvent.computePitch( props.value1 ) : null; break;
 				case "pitchbend": v = props.cmd == MIDIEvent.PITCHBEND ? MIDIEvent.computePitchBend( props.value1, props.value2 ) : null; break;
+				case "gate": v = this.gate; break;
 				default:
 					continue;
 			}
@@ -870,6 +882,7 @@ LGMIDIEvent.prototype.onGetOutputs = function() {
 		["cc","number"],
 		["cc_value","number"],
 		["pitch","number"],
+		["gate","bool"],
 		["pitchbend","number"]
 	];
 }
@@ -1205,7 +1218,7 @@ LGMIDIKeys.keys = [
 	{x:5.75,w:0.5,h:0.6,t:1},
 	{x:6,w:1,h:1,t:0}];
 
-LGMIDIKeys.prototype.onDrawBackground = function(ctx)
+LGMIDIKeys.prototype.onDrawForeground = function(ctx)
 {
 	if(this.flags.collapsed)
 		return;
@@ -1214,6 +1227,8 @@ LGMIDIKeys.prototype.onDrawBackground = function(ctx)
 	this.keys.length = num_keys;
 	var key_width = this.size[0] / (this.properties.num_octaves * 7);
 	var key_height = this.size[1];
+
+	ctx.globalAlpha = 1;
 
 	for(var k = 0; k < 2; k++) //draw first whites (0) then blacks (1)
 		for(var i = 0; i < num_keys; ++i)

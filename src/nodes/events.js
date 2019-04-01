@@ -142,7 +142,7 @@ LiteGraph.registerNodeType("events/counter", EventCounter );
 function DelayEvent()
 {
 	this.size = [60,20];
-	this.addProperty( "time", 1000 );
+	this.addProperty( "time_in_ms", 1000 );
 	this.addInput("event", LiteGraph.ACTION);
 	this.addOutput("on_time", LiteGraph.EVENT);
 
@@ -154,12 +154,19 @@ DelayEvent.desc = "Delays one event";
 
 DelayEvent.prototype.onAction = function(action, param)
 {
-	this._pending.push([ this.properties.time, param ]);
+	var time = this.properties.time_in_ms;
+	if(time <= 0)
+		this.trigger(null, param);
+	else
+		this._pending.push([ time, param ]);
 }
 
 DelayEvent.prototype.onExecute = function()
 {
 	var dt = this.graph.elapsed_time * 1000; //in ms
+
+	if(this.isInputConnected(1))
+		this.properties.time_in_ms = this.getInputData(1);
 
 	for(var i = 0; i < this._pending.length; ++i)
 	{
@@ -179,7 +186,7 @@ DelayEvent.prototype.onExecute = function()
 
 DelayEvent.prototype.onGetInputs = function()
 {
-	return [["event",LiteGraph.ACTION]];
+	return [["event",LiteGraph.ACTION],["time_in_ms","number"]];
 }
 
 LiteGraph.registerNodeType("events/delay", DelayEvent );

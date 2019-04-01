@@ -25,7 +25,7 @@ LiteGraph.registerNodeType("basic/time", Time);
 function Subgraph()
 {
 	var that = this;
-	this.size = [120,80];
+	this.size = [140,80];
 
 	//create inner graph
 	this.subgraph = new LGraph();
@@ -40,19 +40,18 @@ function Subgraph()
 	this.subgraph.onGlobalOutputRenamed = this.onSubgraphRenamedGlobalOutput.bind(this);
 	this.subgraph.onGlobalOutputTypeChanged = this.onSubgraphTypeChangeGlobalOutput.bind(this);
 
-	this.color = "#335";
-	this.bgcolor = "#557";
 }
 
 Subgraph.title = "Subgraph";
 Subgraph.desc = "Graph inside a node";
+Subgraph.title_color = "#334";
 
 Subgraph.prototype.onDrawTitle = function(ctx)
 {
 	if(this.flags.collapsed)
 		return;
 
-	ctx.fillStyle = "#AAA";
+	ctx.fillStyle = "#555";
 	var w = LiteGraph.NODE_TITLE_HEIGHT;
 	var x = this.size[0] - w;
 	ctx.fillRect( x, -w, w,w );
@@ -348,6 +347,13 @@ ConstantNumber.prototype.onExecute = function()
 	this.setOutputData(0, parseFloat( this.properties["value"] ) );
 }
 
+ConstantNumber.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return this.properties.value;
+	return this.title;
+}
+
 ConstantNumber.prototype.setValue = function(v)
 {
 	this.properties.value = v;
@@ -367,6 +373,7 @@ function ConstantString()
 	this.addProperty( "value", "" );
 	this.widget = this.addWidget("text","value","", this.setValue.bind(this) );
 	this.widgets_up = true;
+	this.size = [100,30];
 }
 
 ConstantString.title = "Const String";
@@ -382,12 +389,100 @@ ConstantString.prototype.onPropertyChanged = function(name,value)
 	this.widget.value = value;
 }
 
+ConstantString.prototype.getTitle = ConstantNumber.prototype.getTitle;
+
 ConstantString.prototype.onExecute = function()
 {
 	this.setOutputData(0, this.properties["value"] );
 }
 
 LiteGraph.registerNodeType("basic/string", ConstantString );
+
+
+function ConstantData()
+{
+	this.addOutput("","");
+	this.addProperty( "value", "" );
+	this.widget = this.addWidget("text","json","", this.setValue.bind(this) );
+	this.widgets_up = true;
+	this.size = [140,30];
+	this._value = null;
+}
+
+ConstantData.title = "Const Data";
+ConstantData.desc = "Constant Data";
+
+ConstantData.prototype.setValue = function(v)
+{
+	this.properties.value = v;
+	this.onPropertyChanged("value",v);
+}
+
+ConstantData.prototype.onPropertyChanged = function(name,value)
+{
+	this.widget.value = value;
+	if(value == null || value == "")
+		return;
+
+	try
+	{
+		this._value = JSON.parse(value);
+		this.boxcolor = "#AEA";
+	}
+	catch (err)
+	{
+		this.boxcolor = "red";
+	}
+}
+
+ConstantData.prototype.onExecute = function()
+{
+	this.setOutputData(0, this._value );
+}
+
+LiteGraph.registerNodeType("basic/data", ConstantData );
+
+
+function ObjectProperty()
+{
+	this.addInput("obj","");
+	this.addOutput("","");
+	this.addProperty( "value", "" );
+	this.widget = this.addWidget("text","prop.","", this.setValue.bind(this) );
+	this.widgets_up = true;
+	this.size = [140,30];
+	this._value = null;
+}
+
+ObjectProperty.title = "Object property";
+ObjectProperty.desc = "Outputs the property of an object";
+
+ObjectProperty.prototype.setValue = function(v)
+{
+	this.properties.value = v;
+	this.widget.value = v;
+}
+
+ObjectProperty.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return "in." + this.properties.value;
+	return this.title;
+}
+
+ObjectProperty.prototype.onPropertyChanged = function(name,value)
+{
+	this.widget.value = value;
+}
+
+ObjectProperty.prototype.onExecute = function()
+{
+	var data = this.getInputData(0);
+	if(data != null)
+		this.setOutputData(0, data[ this.properties.value ] );
+}
+
+LiteGraph.registerNodeType("basic/object_property", ObjectProperty );
 
 
 //Watch a value in the editor
@@ -405,6 +500,13 @@ Watch.prototype.onExecute = function()
 {
 	if( this.inputs[0] )	
 		this.value = this.getInputData(0);
+}
+
+Watch.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return this.inputs[0].label;
+	return this.title;
 }
 
 Watch.toString = function( o )
@@ -433,23 +535,23 @@ Watch.prototype.onDrawBackground = function(ctx)
 
 LiteGraph.registerNodeType("basic/watch", Watch);
 
-//Watch a value in the editor
-function Pass()
+//in case one type doesnt match other type but you want to connect them anyway
+function Cast()
 {
 	this.addInput("in",0);
 	this.addOutput("out",0);
 	this.size = [40,20];
 }
 
-Pass.title = "Pass";
-Pass.desc = "Allows to connect different types";
+Cast.title = "Cast";
+Cast.desc = "Allows to connect different types";
 
-Pass.prototype.onExecute = function()
+Cast.prototype.onExecute = function()
 {
 	this.setOutputData( 0, this.getInputData(0) );
 }
 
-LiteGraph.registerNodeType("basic/pass", Pass);
+LiteGraph.registerNodeType("basic/cast", Cast);
 
 
 //Show value inside the debug console

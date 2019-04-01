@@ -6,11 +6,11 @@ var LiteGraph = global.LiteGraph;
 
 	function WidgetButton()
 	{
-		this.addOutput( "clicked", LiteGraph.EVENT );
-		this.addProperty( "text","" );
-		this.addProperty( "font_size", 40 );
+		this.addOutput( "", LiteGraph.EVENT );
+		this.addProperty( "text","click me" );
+		this.addProperty( "font_size", 30 );
 		this.addProperty( "message", "" );
-		this.size = [64,84];
+		this.size = [164,84];
 	}
 
 	WidgetButton.title = "Button";
@@ -21,15 +21,13 @@ var LiteGraph = global.LiteGraph;
 	{
 		if(this.flags.collapsed)
 			return;
-
-		//ctx.font = "40px Arial";
-		//ctx.textAlign = "center";
+		var margin = 10;
 		ctx.fillStyle = "black";
-		ctx.fillRect(1,1,this.size[0] - 3, this.size[1] - 3);
+		ctx.fillRect(margin+1,margin+1,this.size[0] - margin*2, this.size[1] - margin*2);
 		ctx.fillStyle = "#AAF";
-		ctx.fillRect(0,0,this.size[0] - 3, this.size[1] - 3);
+		ctx.fillRect(margin-1,margin-1,this.size[0] - margin*2, this.size[1] - margin*2);
 		ctx.fillStyle = this.clicked ? "white" : (this.mouseOver ? "#668" : "#334");
-		ctx.fillRect(1,1,this.size[0] - 4, this.size[1] - 4);
+		ctx.fillRect(margin,margin,this.size[0] - margin*2, this.size[1] - margin*2);
 
 		if( this.properties.text || this.properties.text === 0 )
 		{
@@ -233,117 +231,87 @@ var LiteGraph = global.LiteGraph;
 	{
 		this.addOutput("",'number');
 		this.size = [64,84];
-		this.properties = {min:0,max:1,value:0.5,wcolor:"#7AF",size:50};
+		this.properties = { min:0, max:1, value:0.5, color:"#7AF", precision: 2 };
+		this.value = -1;
 	}
 
 	WidgetKnob.title = "Knob";
 	WidgetKnob.desc = "Circular controller";
-	WidgetKnob.widgets = [{name:"increase",text:"+",type:"minibutton"},{name:"decrease",text:"-",type:"minibutton"}];
-
-
-	WidgetKnob.prototype.onAdded = function()
-	{
-		this.value = (this.properties["value"] - this.properties["min"]) / (this.properties["max"] - this.properties["min"]);
-
-		this.imgbg = this.loadImage("imgs/knob_bg.png");
-		this.imgfg = this.loadImage("imgs/knob_fg.png");
-	}
-
-	WidgetKnob.prototype.onDrawImageKnob = function(ctx)
-	{
-		if(!this.imgfg || !this.imgfg.width) return;
-
-		var d = this.imgbg.width*0.5;
-		var scale = this.size[0] / this.imgfg.width;
-
-		ctx.save();
-			ctx.translate(0,20);
-			ctx.scale(scale,scale);
-			ctx.drawImage(this.imgbg,0,0);
-			//ctx.drawImage(this.imgfg,0,20);
-
-			ctx.translate(d,d);
-			ctx.rotate(this.value * (Math.PI*2) * 6/8 + Math.PI * 10/8);
-			//ctx.rotate(this.value * (Math.PI*2));
-			ctx.translate(-d,-d);
-			ctx.drawImage(this.imgfg,0,0);
-
-		ctx.restore();
-
-		if(this.title)
-		{
-			ctx.font = "bold 16px Criticized,Tahoma";
-			ctx.fillStyle="rgba(100,100,100,0.8)";
-			ctx.textAlign = "center";
-			ctx.fillText(this.title.toUpperCase(), this.size[0] * 0.5, 18 );
-			ctx.textAlign = "left";
-		}
-	}
-
-	WidgetKnob.prototype.onDrawVectorKnob = function(ctx)
-	{
-		if(!this.imgfg || !this.imgfg.width) return;
-
-		//circle around
-		ctx.lineWidth = 1;
-		ctx.strokeStyle= this.mouseOver ? "#FFF" : "#AAA";
-		ctx.fillStyle="#000";
-		ctx.beginPath();
-		ctx.arc(this.size[0] * 0.5,this.size[1] * 0.5 + 10,this.properties.size * 0.5,0,Math.PI*2,true);
-		ctx.stroke();
-
-		if(this.value > 0)
-		{
-			ctx.strokeStyle=this.properties["wcolor"];
-			ctx.lineWidth = (this.properties.size * 0.2);
-			ctx.beginPath();
-			ctx.arc(this.size[0] * 0.5,this.size[1] * 0.5 + 10,this.properties.size * 0.35,Math.PI * -0.5 + Math.PI*2 * this.value,Math.PI * -0.5,true);
-			ctx.stroke();
-			ctx.lineWidth = 1;
-		}
-
-		ctx.font = (this.properties.size * 0.2) + "px Arial";
-		ctx.fillStyle="#AAA";
-		ctx.textAlign = "center";
-
-		var str = this.properties["value"];
-		if(typeof(str) == 'number')
-			str = str.toFixed(2);
-
-		ctx.fillText(str,this.size[0] * 0.5,this.size[1]*0.65);
-		ctx.textAlign = "left";
-	}
+	WidgetKnob.size = [ 80, 100 ];
 
 	WidgetKnob.prototype.onDrawForeground = function(ctx)
 	{
-		this.onDrawImageKnob(ctx);
+		if(this.flags.collapsed)
+			return;
+
+		if(this.value == -1)
+			this.value = (this.properties.value - this.properties.min) / (this.properties.max - this.properties.min );
+
+		var center_x = this.size[0] * 0.5;
+		var center_y = this.size[1] * 0.5;
+		var radius = Math.min( this.size[0], this.size[1] ) * 0.5 - 5;
+		var w = Math.floor( radius * 0.05 );
+
+		ctx.globalAlpha = 1;
+		ctx.save();
+		ctx.translate( center_x, center_y );
+		ctx.rotate(Math.PI*0.75);
+
+		//bg
+		ctx.fillStyle = "rgba(0,0,0,0.5)";
+		ctx.beginPath();
+		ctx.moveTo(0, 0);
+		ctx.arc( 0, 0, radius, 0, Math.PI*1.5 );
+		ctx.fill();
+	
+		//value
+		ctx.strokeStyle = "black";
+		ctx.fillStyle = this.properties.color;
+		ctx.lineWidth = 2;
+		ctx.beginPath();
+		ctx.moveTo(0,0);
+		ctx.arc(0,0, radius - 4, 0, Math.PI*1.5 * Math.max(0.01,this.value) );
+		ctx.closePath();
+		ctx.fill();
+		//ctx.stroke();
+		ctx.lineWidth = 1;
+		ctx.globalAlpha = 1;
+		ctx.restore();
+
+		//inner
+		ctx.fillStyle = "black";
+		ctx.beginPath();
+		ctx.arc( center_x, center_y, radius*0.75, 0, Math.PI*2, true );
+		ctx.fill();
+
+		//miniball
+		ctx.fillStyle = this.mouseOver ? "white" : this.properties.color;
+		ctx.beginPath();
+		var angle = this.value * Math.PI*1.5 + Math.PI*0.75;
+		ctx.arc( center_x + Math.cos(angle) * radius * 0.65, center_y + Math.sin(angle) * radius*0.65, radius*0.05, 0, Math.PI*2, true );
+		ctx.fill();
+
+		//text
+		ctx.fillStyle = this.mouseOver ? "white" : "#AAA";
+		ctx.font = Math.floor(radius * 0.5) + "px Arial";
+		ctx.textAlign = "center";
+		ctx.fillText( this.properties.value.toFixed(this.properties.precision), center_x, center_y + radius * 0.15);
 	}
 
 	WidgetKnob.prototype.onExecute = function()
 	{
-		this.setOutputData(0, this.properties["value"] );
-
+		this.setOutputData(0, this.properties.value );
 		this.boxcolor = LiteGraph.colorToString([this.value,this.value,this.value]);
 	}
 
 	WidgetKnob.prototype.onMouseDown = function(e)
 	{
-		if(!this.imgfg || !this.imgfg.width) return;
-
-		//this.center = [this.imgbg.width * 0.5, this.imgbg.height * 0.5 + 20];
-		//this.radius = this.imgbg.width * 0.5;
 		this.center = [this.size[0] * 0.5, this.size[1] * 0.5 + 20];
 		this.radius = this.size[0] * 0.5;
-
 		if(e.canvasY - this.pos[1] < 20 || LiteGraph.distance([e.canvasX,e.canvasY],[this.pos[0] + this.center[0],this.pos[1] + this.center[1]]) > this.radius)
 			return false;
-
 		this.oldmouse = [ e.canvasX - this.pos[0], e.canvasY - this.pos[1] ];
 		this.captureInput(true);
-
-		/*
-		var tmp = this.localToScreenSpace(0,0);
-		this.trace(tmp[0] + "," + tmp[1]); */
 		return true;
 	}
 
@@ -355,12 +323,12 @@ var LiteGraph = global.LiteGraph;
 
 		var v = this.value;
 		v -= (m[1] - this.oldmouse[1]) * 0.01;
-		if(v > 1.0) v = 1.0;
-		else if(v < 0.0) v = 0.0;
-
+		if(v > 1.0)
+			v = 1.0;
+		else if(v < 0.0)
+			v = 0.0;
 		this.value = v;
-		this.properties["value"] = this.properties["min"] + (this.properties["max"] - this.properties["min"]) * this.value;
-
+		this.properties.value = this.properties.min + (this.properties.max - this.properties.min) * this.value;
 		this.oldmouse = m;
 		this.setDirtyCanvas(true);
 	}
@@ -374,29 +342,13 @@ var LiteGraph = global.LiteGraph;
 		}
 	}
 
-	WidgetKnob.prototype.onMouseLeave = function(e)
-	{
-		//this.oldmouse = null;
-	}
-
 	WidgetKnob.prototype.onPropertyChanged = function(name,value)
 	{
-		if(name=="wcolor")
-			this.properties[name] = value;
-		else if(name=="size")
-		{
-			value = parseInt(value);
-			this.properties[name] = value;
-			this.size = [value+4,value+24];
-			this.setDirtyCanvas(true,true);
-		}
-		else if(name=="min" || name=="max" || name=="value")
+		if(name=="min" || name=="max" || name=="value")
 		{
 			this.properties[name] = parseFloat(value);
+			return true; //block
 		}
-		else
-			return false;
-		return true;
 	}
 
 	LiteGraph.registerNodeType("widget/knob", WidgetKnob);
@@ -437,70 +389,35 @@ var LiteGraph = global.LiteGraph;
 	{
 		this.size = [160,26];
 		this.addOutput("",'number');
-		this.properties = {wcolor:"#7AF",min:0,max:1,value:0.5};
+		this.properties = {color:"#7AF",min:0,max:1,value:0.5};
+		this.value = -1;
 	}
 
 	WidgetHSlider.title = "H.Slider";
 	WidgetHSlider.desc = "Linear slider controller";
 
-	WidgetHSlider.prototype.onAdded = function()
-	{
-		this.value = 0.5;
-		this.imgfg = this.loadImage("imgs/slider_fg.png");
-	}
-
-	WidgetHSlider.prototype.onDrawVectorial = function(ctx)
-	{
-		if(!this.imgfg || !this.imgfg.width) return;
-
-		//border
-		ctx.lineWidth = 1;
-		ctx.strokeStyle= this.mouseOver ? "#FFF" : "#AAA";
-		ctx.fillStyle="#000";
-		ctx.beginPath();
-		ctx.rect(2,0,this.size[0]-4,20);
-		ctx.stroke();
-
-		ctx.fillStyle=this.properties["wcolor"];
-		ctx.beginPath();
-		ctx.rect(2+(this.size[0]-4-20)*this.value,0, 20,20);
-		ctx.fill();
-	}
-
-	WidgetHSlider.prototype.onDrawImage = function(ctx)
-	{
-		if(!this.imgfg || !this.imgfg.width)
-			return;
-
-		//border
-		ctx.lineWidth = 1;
-		ctx.fillStyle="#000";
-		ctx.fillRect(2,9,this.size[0]-4,2);
-
-		ctx.strokeStyle= "#333";
-		ctx.beginPath();
-		ctx.moveTo(2,9);
-		ctx.lineTo(this.size[0]-4,9);
-		ctx.stroke();
-
-		ctx.strokeStyle= "#AAA";
-		ctx.beginPath();
-		ctx.moveTo(2,11);
-		ctx.lineTo(this.size[0]-4,11);
-		ctx.stroke();
-
-		ctx.drawImage(this.imgfg, 2+(this.size[0]-4)*this.value - this.imgfg.width*0.5,-this.imgfg.height*0.5 + 10);
-	},
-
 	WidgetHSlider.prototype.onDrawForeground = function(ctx)
 	{
-		this.onDrawImage(ctx);
+		if(this.value == -1)
+			this.value = (this.properties.value - this.properties.min) / (this.properties.max - this.properties.min );
+
+		//border
+		ctx.globalAlpha = 1;
+		ctx.lineWidth = 1;
+		ctx.fillStyle = "#000";
+		ctx.fillRect(2,2,this.size[0]-4,this.size[1]-4);
+
+		ctx.fillStyle=this.properties.color;
+		ctx.beginPath();
+		ctx.rect(4,4, (this.size[0]-8)*this.value, this.size[1]-8);
+		ctx.fill();
+
 	}
 
 	WidgetHSlider.prototype.onExecute = function()
 	{
-		this.properties["value"] = this.properties["min"] + (this.properties["max"] - this.properties["min"]) * this.value;
-		this.setOutputData(0, this.properties["value"] );
+		this.properties.value = this.properties.min + (this.properties.max - this.properties.min) * this.value;
+		this.setOutputData(0, this.properties.value );
 		this.boxcolor = LiteGraph.colorToString([this.value,this.value,this.value]);
 	}
 
@@ -543,15 +460,6 @@ var LiteGraph = global.LiteGraph;
 		//this.oldmouse = null;
 	}
 
-	WidgetHSlider.prototype.onPropertyChanged = function(name,value)
-	{
-		if(name=="wcolor")
-			this.properties[name] = value;
-		else
-			return false;
-		return true;
-	}
-
 	LiteGraph.registerNodeType("widget/hslider", WidgetHSlider );
 
 
@@ -559,7 +467,7 @@ var LiteGraph = global.LiteGraph;
 	{
 		this.size = [160,26];
 		this.addInput("",'number');
-		this.properties = {min:0,max:1,value:0,wcolor:"#AAF"};
+		this.properties = {min:0,max:1,value:0,color:"#AAF"};
 	}
 
 	WidgetProgress.title = "Progress";
@@ -576,7 +484,7 @@ var LiteGraph = global.LiteGraph;
 	{
 		//border
 		ctx.lineWidth = 1;
-		ctx.fillStyle=this.properties.wcolor;
+		ctx.fillStyle=this.properties.color;
 		var v = (this.properties.value - this.properties.min) / (this.properties.max - this.properties.min);
 		v = Math.min(1,v);
 		v = Math.max(0,v);
@@ -605,7 +513,7 @@ var LiteGraph = global.LiteGraph;
 
 		if(this.properties["glowSize"])
 		{
-			ctx.shadowColor = this.properties["color"];
+			ctx.shadowColor = this.properties.color;
 			ctx.shadowOffsetX = 0;
 			ctx.shadowOffsetY = 0;
 			ctx.shadowBlur = this.properties["glowSize"];

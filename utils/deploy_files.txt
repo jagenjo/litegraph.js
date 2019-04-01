@@ -4,6 +4,8 @@
 ../src/nodes/interface.js
 ../src/nodes/input.js
 ../src/nodes/math.js
+../src/nodes/math3d.js
+../src/nodes/strings.js
 ../src/nodes/logic.js
 ../src/nodes/graphics.js
 ../src/nodes/gltextures.js

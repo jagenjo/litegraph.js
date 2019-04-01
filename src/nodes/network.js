@@ -25,13 +25,13 @@ LGWebSocket.desc = "Send data through a websocket";
 LGWebSocket.prototype.onPropertyChanged = function(name,value)
 {
 	if(name == "url")
-		this.createSocket();
+		this.connectSocket();
 }
 
 LGWebSocket.prototype.onExecute = function()
 {
 	if(!this._ws && this.properties.url)
-		this.createSocket();
+		this.connectSocket();
 
 	if(!this._ws || this._ws.readyState != WebSocket.OPEN )
 		return;
@@ -67,7 +67,7 @@ LGWebSocket.prototype.onExecute = function()
 		this.boxcolor = "#6C6";
 }
 
-LGWebSocket.prototype.createSocket = function()
+LGWebSocket.prototype.connectSocket = function()
 {
 	var that = this;
 	var url = this.properties.url;
@@ -150,7 +150,10 @@ LiteGraph.registerNodeType("network/websocket", LGWebSocket );
 
 function LGSillyClient()
 {
-	this.size = [60,20];
+	//this.size = [60,20];
+	this.room_widget = this.addWidget("text","Room","lgraph",this.setRoom.bind(this));
+	this.addWidget("button","Reconnect",null,this.connectSocket.bind(this));
+
 	this.addInput("send", LiteGraph.ACTION);
 	this.addOutput("received", LiteGraph.EVENT);
 	this.addInput("in", 0 );
@@ -162,9 +165,10 @@ function LGSillyClient()
 	};
 
 	this._server = null;
-	this.createSocket();
+	this.connectSocket();
 	this._last_sent_data = [];
 	this._last_received_data = [];
+
 }
 
 LGSillyClient.title = "SillyClient";
@@ -172,11 +176,30 @@ LGSillyClient.desc = "Connects to SillyServer to broadcast messages";
 
 LGSillyClient.prototype.onPropertyChanged = function(name,value)
 {
-	var final_url = (this.properties.url + "/" + this.properties.room);
-	if(this._server && this._final_url != final_url )
+	if(name == "room")
+		this.room_widget.value = value;
+	this.connectSocket();
+}
+
+LGSillyClient.prototype.setRoom = function(room_name)
+{
+	this.properties.room = room_name;
+	this.room_widget.value = room_name;
+	this.connectSocket();
+}
+
+//force label names
+LGSillyClient.prototype.onDrawForeground = function()
+{
+	for(var i = 1; i < this.inputs.length; ++i)
 	{
-		this._server.connect( this.properties.url, this.properties.room );
-		this._final_url = final_url;
+		var slot = this.inputs[i];
+		slot.label = "in_" + i;
+	}
+	for(var i = 1; i < this.outputs.length; ++i)
+	{
+		var slot = this.outputs[i];
+		slot.label = "out_" + i;
 	}
 }
 
@@ -206,7 +229,7 @@ LGSillyClient.prototype.onExecute = function()
 		this.boxcolor = "#6C6";
 }
 
-LGSillyClient.prototype.createSocket = function()
+LGSillyClient.prototype.connectSocket = function()
 {
 	var that = this;
 	if(typeof(SillyClient) == "undefined")
@@ -235,7 +258,7 @@ LGSillyClient.prototype.createSocket = function()
 			return;
 		}
 		
-		if(data.type == 1)
+		if(data.type == 1) //EVENT slot
 		{
 			if(data.data.object_class && LiteGraph[data.data.object_class] )
 			{
@@ -253,7 +276,7 @@ LGSillyClient.prototype.createSocket = function()
 			else
 				that.triggerSlot( 0, data.data );
 		}
-		else
+		else //for FLOW slots
 			that._last_received_data[ data.channel || 0 ] = data.data;
 		that.boxcolor = "#AFA";
 	}
@@ -270,7 +293,16 @@ LGSillyClient.prototype.createSocket = function()
 
 	if(this.properties.url && this.properties.room)
 	{
-		this._server.connect( this.properties.url, this.properties.room );
+		try
+		{
+			this._server.connect( this.properties.url, this.properties.room );
+		}
+		catch (err)
+		{
+			console.error("SillyServer error: " + err );
+			this._server = null;
+			return;
+		}
 		this._final_url = (this.properties.url + "/" + this.properties.room);
 	}
 }

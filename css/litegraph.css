@@ -1,7 +1,7 @@
 /* this CSS contains only the basic CSS needed to run the app and use it */
 
 .lgraphcanvas {
-	cursor: crosshair;
+	/*cursor: crosshair;*/
 	user-select: none;
 	-moz-user-select: none;
 	-webkit-user-select: none;

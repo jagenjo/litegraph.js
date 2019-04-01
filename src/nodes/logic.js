@@ -21,11 +21,11 @@ Selector.prototype.onDrawBackground = function(ctx)
 	if(this.flags.collapsed)
 		return;
 	ctx.fillStyle = "#AFB";
-	var y = (this.selected + 1) * LiteGraph.NODE_SLOT_HEIGHT + 2;
+	var y = (this.selected + 1) * LiteGraph.NODE_SLOT_HEIGHT + 6;
 	ctx.beginPath();
-	ctx.moveTo(30, y);
-	ctx.lineTo(30, y+LiteGraph.NODE_SLOT_HEIGHT);
-	ctx.lineTo(24, y+LiteGraph.NODE_SLOT_HEIGHT*0.5);
+	ctx.moveTo(50, y);
+	ctx.lineTo(50, y+LiteGraph.NODE_SLOT_HEIGHT);
+	ctx.lineTo(34, y+LiteGraph.NODE_SLOT_HEIGHT*0.5);
 	ctx.fill();
 }
 
