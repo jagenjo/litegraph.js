@@ -55,6 +55,13 @@
 
 	LiteGraph.wrapFunctionAsNode("string/split",toUpperCase, ["String","String"],"Array");
 
+	function toFixed(a)
+	{
+		if(a != null && a.constructor === Number)
+			return a.toFixed(this.properties.precision);
+		return a;
+	}
 
+	LiteGraph.wrapFunctionAsNode("string/toFixed", toFixed, ["Number"], "String", { precision: 0 } );
 
 })(this);

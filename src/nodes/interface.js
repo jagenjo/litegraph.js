@@ -66,7 +66,7 @@ var LiteGraph = global.LiteGraph;
 		this.addOutput( "v", "boolean" );
 		this.addOutput( "e", LiteGraph.EVENT );
 		this.properties = { font: "", value: false };
-		this.size = [124,64];
+		this.size = [160,44];
 	}
 
 	WidgetToggle.title = "Toggle";
@@ -80,17 +80,19 @@ var LiteGraph = global.LiteGraph;
 		var size = this.size[1] * 0.5;
 		var margin = 0.25;
 		var h = this.size[1] * 0.8;
+		ctx.font = this.properties.font || ((size * 0.8).toFixed(0) + "px Arial");
+		var w = ctx.measureText(this.title).width;
+		var x = (this.size[0] - (w + size) ) * 0.5;
 
 		ctx.fillStyle = "#AAA";
-		ctx.fillRect(10, h - size,size,size);
+		ctx.fillRect(x, h - size,size,size);
 
 		ctx.fillStyle = this.properties.value ? "#AEF" : "#000";
-		ctx.fillRect(10+size*margin,h - size + size*margin,size*(1-margin*2),size*(1-margin*2));
+		ctx.fillRect(x + size*margin,h - size + size*margin,size*(1-margin*2),size*(1-margin*2) );
 
 		ctx.textAlign = "left";
-		ctx.font = this.properties.font || ((size * 0.8).toFixed(0) + "px Arial");
 		ctx.fillStyle = "#AAA";
-		ctx.fillText( this.title, size + 20, h * 0.85 );
+		ctx.fillText( this.title, size * 1.2 + x, h * 0.85 );
 		ctx.textAlign = "left";
 	}
 

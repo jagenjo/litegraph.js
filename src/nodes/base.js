@@ -26,20 +26,23 @@ function Subgraph()
 {
 	var that = this;
 	this.size = [140,80];
+	this.properties = { enabled: true };
+	this.addInput("enabled","boolean");
 
 	//create inner graph
 	this.subgraph = new LGraph();
 	this.subgraph._subgraph_node = this;
 	this.subgraph._is_subgraph = true;
 
-	this.subgraph.onGlobalInputAdded = this.onSubgraphNewGlobalInput.bind(this);
-	this.subgraph.onGlobalInputRenamed = this.onSubgraphRenamedGlobalInput.bind(this);
-	this.subgraph.onGlobalInputTypeChanged = this.onSubgraphTypeChangeGlobalInput.bind(this);
+	this.subgraph.onInputAdded = this.onSubgraphNewInput.bind(this);
+	this.subgraph.onInputRenamed = this.onSubgraphRenamedInput.bind(this);
+	this.subgraph.onInputTypeChanged = this.onSubgraphTypeChangeInput.bind(this);
+	this.subgraph.onInputRemoved = this.onSubgraphRemovedInput.bind(this);
 
-	this.subgraph.onGlobalOutputAdded = this.onSubgraphNewGlobalOutput.bind(this);
-	this.subgraph.onGlobalOutputRenamed = this.onSubgraphRenamedGlobalOutput.bind(this);
-	this.subgraph.onGlobalOutputTypeChanged = this.onSubgraphTypeChangeGlobalOutput.bind(this);
-
+	this.subgraph.onOutputAdded = this.onSubgraphNewOutput.bind(this);
+	this.subgraph.onOutputRenamed = this.onSubgraphRenamedOutput.bind(this);
+	this.subgraph.onOutputTypeChanged = this.onSubgraphTypeChangeOutput.bind(this);
+	this.subgraph.onOutputRemoved = this.onSubgraphRemovedOutput.bind(this);
 }
 
 Subgraph.title = "Subgraph";
@@ -69,7 +72,6 @@ Subgraph.prototype.onDblClick = function(e,pos,graphcanvas)
 	setTimeout(function(){ graphcanvas.openSubgraph( that.subgraph ); },10 );
 }
 
-
 Subgraph.prototype.onMouseDown = function(e,pos,graphcanvas)
 {
 	if( !this.flags.collapsed && pos[0] > this.size[0] - LiteGraph.NODE_TITLE_HEIGHT && pos[1] < 0 )
@@ -79,13 +81,43 @@ Subgraph.prototype.onMouseDown = function(e,pos,graphcanvas)
 	}
 }
 
-Subgraph.prototype.onSubgraphNewGlobalInput = function(name, type)
+Subgraph.prototype.onExecute = function()
 {
-	//add input to the node
-	this.addInput(name, type);
+	if( !this.getInputOrProperty("enabled") )
+		return;
+
+	//send inputs to subgraph global inputs
+	if(this.inputs)
+		for(var i = 0; i < this.inputs.length; i++)
+		{
+			var input = this.inputs[i];
+			var value = this.getInputData(i);
+			this.subgraph.setInputData( input.name, value );
+		}
+
+	//execute
+	this.subgraph.runStep();
+
+	//send subgraph global outputs to outputs
+	if(this.outputs)
+		for(var i = 0; i < this.outputs.length; i++)
+		{
+			var output = this.outputs[i];
+			var value = this.subgraph.getOutputData( output.name );
+			this.setOutputData(i, value);
+		}
 }
 
-Subgraph.prototype.onSubgraphRenamedGlobalInput = function(oldname, name)
+//**** INPUTS ***********************************
+Subgraph.prototype.onSubgraphNewInput = function(name, type)
+{
+	//add input to the node
+	var slot = this.findInputSlot(name);
+	if(slot == -1)
+		this.addInput(name, type);
+}
+
+Subgraph.prototype.onSubgraphRenamedInput = function(oldname, name)
 {
 	var slot = this.findInputSlot( oldname );
 	if(slot == -1)
@@ -94,7 +126,7 @@ Subgraph.prototype.onSubgraphRenamedGlobalInput = function(oldname, name)
 	info.name = name;
 }
 
-Subgraph.prototype.onSubgraphTypeChangeGlobalInput = function(name, type)
+Subgraph.prototype.onSubgraphTypeChangeInput = function(name, type)
 {
 	var slot = this.findInputSlot( name );
 	if(slot == -1)
@@ -103,15 +135,23 @@ Subgraph.prototype.onSubgraphTypeChangeGlobalInput = function(name, type)
 	info.type = type;
 }
 
-
-Subgraph.prototype.onSubgraphNewGlobalOutput = function(name, type)
+Subgraph.prototype.onSubgraphRemovedInput = function(name)
 {
-	//add output to the node
-	this.addOutput(name, type);
+	var slot = this.findInputSlot( name );
+	if(slot == -1)
+		return;
+	this.removeInput(slot);
 }
 
+//**** OUTPUTS ***********************************
+Subgraph.prototype.onSubgraphNewOutput = function(name, type)
+{
+	var slot = this.findOutputSlot(name);
+	if(slot == -1)
+		this.addOutput(name, type);
+}
 
-Subgraph.prototype.onSubgraphRenamedGlobalOutput = function(oldname, name)
+Subgraph.prototype.onSubgraphRenamedOutput = function(oldname, name)
 {
 	var slot = this.findOutputSlot( oldname );
 	if(slot == -1)
@@ -120,7 +160,7 @@ Subgraph.prototype.onSubgraphRenamedGlobalOutput = function(oldname, name)
 	info.name = name;
 }
 
-Subgraph.prototype.onSubgraphTypeChangeGlobalOutput = function(name, type)
+Subgraph.prototype.onSubgraphTypeChangeOutput = function(name, type)
 {
 	var slot = this.findOutputSlot( name );
 	if(slot == -1)
@@ -129,6 +169,14 @@ Subgraph.prototype.onSubgraphTypeChangeGlobalOutput = function(name, type)
 	info.type = type;
 }
 
+Subgraph.prototype.onSubgraphRemovedOutput = function(name)
+{
+	var slot = this.findInputSlot( name );
+	if(slot == -1)
+		return;
+	this.removeOutput(slot);
+}
+// *****************************************************
 
 Subgraph.prototype.getExtraMenuOptions = function(graphcanvas)
 {
@@ -145,42 +193,13 @@ Subgraph.prototype.onResize = function(size)
 	size[1] += 20;
 }
 
-Subgraph.prototype.onExecute = function()
-{
-	//send inputs to subgraph global inputs
-	if(this.inputs)
-		for(var i = 0; i < this.inputs.length; i++)
-		{
-			var input = this.inputs[i];
-			var value = this.getInputData(i);
-			this.subgraph.setGlobalInputData( input.name, value );
-		}
-
-	//execute
-	this.subgraph.runStep();
-
-	//send subgraph global outputs to outputs
-	if(this.outputs)
-		for(var i = 0; i < this.outputs.length; i++)
-		{
-			var output = this.outputs[i];
-			var value = this.subgraph.getGlobalOutputData( output.name );
-			this.setOutputData(i, value);
-		}
-}
-
-Subgraph.prototype.configure = function(o)
-{
-	LGraphNode.prototype.configure.call(this, o);
-	//this.subgraph.configure(o.graph);
-}
-
 Subgraph.prototype.serialize = function()
 {
 	var data = LGraphNode.prototype.serialize.call(this);
 	data.subgraph = this.subgraph.serialize();
 	return data;
 }
+//no need to define node.configure, the default method detects node.subgraph and passes the object to node.subgraph.configure()
 
 Subgraph.prototype.clone = function()
 {
@@ -193,38 +212,31 @@ Subgraph.prototype.clone = function()
 	return node;
 }
 
-
 LiteGraph.registerNodeType("graph/subgraph", Subgraph );
 
 
 //Input for a subgraph
-function GlobalInput()
+function GraphInput()
 {
+	this.addOutput("","");
 
-	//random name to avoid problems with other outputs when added
-	var input_name = "input_" + (Math.random()*1000).toFixed();
-
-	this.addOutput(input_name, null );
-
-	this.properties = { name: input_name, type: null };
-
+	this.name_in_graph = "";
+	this.properties = {};
 	var that = this;
 
 	Object.defineProperty( this.properties, "name", {
 		get: function() { 
-			return input_name;
+			return that.name_in_graph;
 		},
 		set: function(v) {
-			if(v == "")
+			if( v == "" || v == that.name_in_graph || v == "enabled" )
 				return;
-
-			var info = that.getOutputInfo(0);
-			if(info.name == v)
-				return;
-			info.name = v;
-			if(that.graph)
-				that.graph.renameGlobalInput(input_name, v);
-			input_name = v;
+			if(that.name_in_graph) //already added
+				that.graph.renameInput( that.name_in_graph, v );
+			else
+				that.graph.addInput( v, that.properties.type );
+			that.name_widget.value = v;
+			that.name_in_graph = v;
 		},
 		enumerable: true
 	});
@@ -232,103 +244,132 @@ function GlobalInput()
 	Object.defineProperty( this.properties, "type", {
 		get: function() { return that.outputs[0].type; },
 		set: function(v) { 
-			that.outputs[0].type = v; 
-			if(that.graph)
-				that.graph.changeGlobalInputType(input_name, that.outputs[0].type);
+			that.outputs[0].type = v;
+			if(that.name_in_graph) //already added
+				that.graph.changeInputType( that.name_in_graph, that.outputs[0].type);
+			that.type_widget.value = v;
 		},
 		enumerable: true
 	});
+
+	this.name_widget = this.addWidget("text","Name", this.properties.name, function(v){
+		if(!v) return;
+		that.properties.name = v;
+	});
+	this.type_widget = this.addWidget("text","Type", this.properties.type, function(v){
+		v = v || "";
+		that.properties.type = v;
+	});
+
+	this.widgets_up = true;
+	this.size = [180,60];
 }
 
-GlobalInput.title = "Input";
-GlobalInput.desc = "Input of the graph";
+GraphInput.title = "Input";
+GraphInput.desc = "Input of the graph";
 
-//When added to graph tell the graph this is a new global input
-GlobalInput.prototype.onAdded = function()
+GraphInput.prototype.getTitle = function()
 {
-	this.graph.addGlobalInput( this.properties.name, this.properties.type );
+	if(this.flags.collapsed)
+		return this.properties.name;
+	return this.title;
 }
 
-GlobalInput.prototype.onExecute = function()
+GraphInput.prototype.onExecute = function()
 {
 	var name = this.properties.name;
 
 	//read from global input
-	var	data = this.graph.global_inputs[name];
-	if(!data) return;
+	var	data = this.graph.inputs[name];
+	if(!data)
+		return;
 
 	//put through output
 	this.setOutputData(0,data.value);
 }
 
-LiteGraph.registerNodeType("graph/input", GlobalInput);
+GraphInput.prototype.onRemoved = function()
+{
+	if(this.name_in_graph)
+		this.graph.removeInput( this.name_in_graph );
+}
 
+LiteGraph.registerNodeType("graph/input", GraphInput);
 
 
 //Output for a subgraph
-function GlobalOutput()
+function GraphOutput()
 {
-	//random name to avoid problems with other outputs when added
-	var output_name = "output_" + (Math.random()*1000).toFixed();
+	this.addInput("","");
 
-	this.addInput(output_name, null);
-
-	this._value = null;
-
-	this.properties = {name: output_name, type: null };
-
+	this.name_in_graph = "";
+	this.properties = {};
 	var that = this;
 
-	Object.defineProperty(this.properties, "name", {
+	Object.defineProperty( this.properties, "name", {
 		get: function() { 
-			return output_name;
+			return that.name_in_graph;
 		},
 		set: function(v) {
-			if(v == "")
+			if( v == "" || v == that.name_in_graph )
 				return;
-
-			var info = that.getInputInfo(0);
-			if(info.name == v)
-				return;
-			info.name = v;
-			if(that.graph)
-				that.graph.renameGlobalOutput(output_name, v);
-			output_name = v;
+			if(that.name_in_graph) //already added
+				that.graph.renameOutput( that.name_in_graph, v );
+			else
+				that.graph.addOutput( v, that.properties.type );
+			that.name_widget.value = v;
+			that.name_in_graph = v;
 		},
 		enumerable: true
 	});
 
-	Object.defineProperty(this.properties, "type", {
+	Object.defineProperty( this.properties, "type", {
 		get: function() { return that.inputs[0].type; },
 		set: function(v) { 
 			that.inputs[0].type = v;
-			if(that.graph)
-				that.graph.changeGlobalInputType( output_name, that.inputs[0].type );
+			if(that.name_in_graph) //already added
+				that.graph.changeOutputType( that.name_in_graph, that.inputs[0].type);
+			that.type_widget.value = v || "";
 		},
 		enumerable: true
 	});
+
+	this.name_widget = this.addWidget("text","Name", this.properties.name, function(v){
+		if(!v) return;
+		that.properties.name = v;
+	});
+	this.type_widget = this.addWidget("text","Type", this.properties.type, function(v){
+		v = v || "";
+		that.properties.type = v;
+	});
+
+	this.widgets_up = true;
+	this.size = [180,60];
 }
 
-GlobalOutput.title = "Output";
-GlobalOutput.desc = "Output of the graph";
+GraphOutput.title = "Output";
+GraphOutput.desc = "Output of the graph";
 
-GlobalOutput.prototype.onAdded = function()
-{
-	var name = this.graph.addGlobalOutput( this.properties.name, this.properties.type );
-}
-
-GlobalOutput.prototype.getValue = function()
-{
-	return this._value;
-}
-
-GlobalOutput.prototype.onExecute = function()
+GraphOutput.prototype.onExecute = function()
 {
 	this._value = this.getInputData(0);
-	this.graph.setGlobalOutputData( this.properties.name, this._value );
+	this.graph.setOutputData( this.properties.name, this._value );
 }
 
-LiteGraph.registerNodeType("graph/output", GlobalOutput);
+GraphOutput.prototype.onRemoved = function()
+{
+	if(this.name_in_graph)
+		this.graph.removeOutput( this.name_in_graph );
+}
+
+GraphOutput.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return this.properties.name;
+	return this.title;
+}
+
+LiteGraph.registerNodeType("graph/output", GraphOutput);
 
 
 

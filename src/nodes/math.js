@@ -404,7 +404,7 @@ function MathFloor()
 {
 	this.addInput("in","number");
 	this.addOutput("out","number");
-	this.size = [60,20];
+	this.size = [80,30];
 }
 
 MathFloor.title = "Floor";
@@ -425,7 +425,7 @@ function MathFrac()
 {
 	this.addInput("in","number");
 	this.addOutput("out","number");
-	this.size = [60,20];
+	this.size = [80,30];
 }
 
 MathFrac.title = "Frac";
@@ -447,7 +447,7 @@ function MathSmoothStep()
 {
 	this.addInput("in","number");
 	this.addOutput("out","number");
-	this.size = [60,20];
+	this.size = [80,30];
 	this.properties = { A: 0, B: 1 };
 }
 
@@ -478,7 +478,7 @@ function MathScale()
 {
 	this.addInput("in","number",{label:""});
 	this.addOutput("out","number",{label:""});
-	this.size = [60,20];
+	this.size = [80,30];
 	this.addProperty( "factor", 1 );
 }
 
@@ -500,7 +500,7 @@ function MathAverageFilter()
 {
 	this.addInput("in","number");
 	this.addOutput("out","number");
-	this.size = [60,20];
+	this.size = [80,30];
 	this.addProperty( "samples", 10 );
 	this._values = new Float32Array(10);
 	this._current = 0;
@@ -552,7 +552,7 @@ function MathTendTo()
 	this.addInput("in","number");
 	this.addOutput("out","number");
 	this.addProperty( "factor", 0.1 );
-	this.size = [60,20];
+	this.size = [80,30];
 	this._value = null;
 }
 
@@ -591,7 +591,7 @@ MathOperation.values = ["+","-","*","/","%","^"];
 MathOperation.title = "Operation";
 MathOperation.desc = "Easy math operators";
 MathOperation["@OP"] = { type:"enum", title: "operation", values: MathOperation.values };
-MathOperation.size = [100,50];
+MathOperation.size = [100,60];
 
 MathOperation.prototype.getTitle = function()
 {
@@ -720,7 +720,7 @@ function MathCondition()
 	this.addProperty( "B", 1 );
 	this.addProperty( "OP", ">", "string", { values: MathCondition.values } );
 
-	this.size = [60,40];
+	this.size = [80,60];
 }
 
 MathCondition.values = [">","<","==","!=","<=",">="];
