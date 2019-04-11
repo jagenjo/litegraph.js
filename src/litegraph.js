@@ -1165,14 +1165,14 @@ LGraph.prototype.getNodeById = function( id )
 * @param {Class} classObject the class itself (not an string)
 * @return {Array} a list with all the nodes of this type
 */
-
-LGraph.prototype.findNodesByClass = function(classObject)
+LGraph.prototype.findNodesByClass = function( classObject, result )
 {
-	var r = [];
+	result = result || [];
+	result.length = 0;
 	for(var i = 0, l = this._nodes.length; i < l; ++i)
 		if(this._nodes[i].constructor === classObject)
-			r.push(this._nodes[i]);
-	return r;
+			result.push( this._nodes[i] );
+	return result;
 }
 
 /**
@@ -1181,15 +1181,29 @@ LGraph.prototype.findNodesByClass = function(classObject)
 * @param {String} type the name of the node type
 * @return {Array} a list with all the nodes of this type
 */
-
-LGraph.prototype.findNodesByType = function(type)
+LGraph.prototype.findNodesByType = function( type, result )
 {
 	var type = type.toLowerCase();
-	var r = [];
+	result = result || [];
+	result.length = 0;
 	for(var i = 0, l = this._nodes.length; i < l; ++i)
 		if(this._nodes[i].type.toLowerCase() == type )
-			r.push(this._nodes[i]);
-	return r;
+			result.push(this._nodes[i]);
+	return result;
+}
+
+/**
+* Returns the first node that matches a name in its title
+* @method findNodeByTitle
+* @param {String} name the name of the node to search
+* @return {Node} the node or null
+*/
+LGraph.prototype.findNodeByTitle = function(title)
+{
+	for(var i = 0, l = this._nodes.length; i < l; ++i)
+		if(this._nodes[i].title == title)
+			return this._nodes[i];
+	return null;
 }
 
 /**
@@ -1198,7 +1212,6 @@ LGraph.prototype.findNodesByType = function(type)
 * @param {String} name the name of the node to search
 * @return {Array} a list with all the nodes with this name
 */
-
 LGraph.prototype.findNodesByTitle = function(title)
 {
 	var result = [];
@@ -1248,6 +1261,26 @@ LGraph.prototype.getGroupOnPos = function(x,y)
 
 // ********** GLOBALS *****************
 
+
+LGraph.prototype.onAction = function(action, param)
+{
+	this._input_nodes = this.findNodesByClass( LiteGraph.GraphInput, this._input_nodes );
+	for(var i = 0; i < this._input_nodes.length; ++i)
+	{
+		var node = this._input_nodes[i];
+		if( node.properties.name != action )
+			continue;
+		node.onAction(action,param);
+		break;
+	}
+}
+
+LGraph.prototype.trigger = function(action, param)
+{
+	if(this.onTrigger)
+		this.onTrigger(action,param);
+}
+
 /**
 * Tell this graph it has a global graph input of this type
 * @method addGlobalInput
@@ -1255,7 +1288,7 @@ LGraph.prototype.getGroupOnPos = function(x,y)
 * @param {String} type
 * @param {*} value [optional]
 */
-LGraph.prototype.addInput = function(name, type, value)
+LGraph.prototype.addInput = function( name, type, value )
 {
 	var input = this.inputs[ name ];
 	if( input ) //already exist
@@ -1341,7 +1374,7 @@ LGraph.prototype.changeInputType = function(name, type)
 	if(!this.inputs[name])
 		return false;
 
-	if(this.inputs[name].type && this.inputs[name].type.toLowerCase() == type.toLowerCase() )
+	if(this.inputs[name].type && String(this.inputs[name].type).toLowerCase() == String(type).toLowerCase() )
 		return;
 
 	this.inputs[name].type = type;
@@ -1458,7 +1491,7 @@ LGraph.prototype.changeOutputType = function(name, type)
 	if(!this.outputs[name])
 		return false;
 
-	if(this.outputs[name].type && this.outputs[name].type.toLowerCase() == type.toLowerCase() )
+	if(this.outputs[name].type && String(this.outputs[name].type).toLowerCase() == String(type).toLowerCase() )
 		return;
 
 	this.outputs[name].type = type;

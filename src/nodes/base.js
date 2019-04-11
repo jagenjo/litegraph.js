@@ -34,6 +34,8 @@ function Subgraph()
 	this.subgraph._subgraph_node = this;
 	this.subgraph._is_subgraph = true;
 
+	this.subgraph.onTrigger = this.onSubgraphTrigger.bind(this);
+
 	this.subgraph.onInputAdded = this.onSubgraphNewInput.bind(this);
 	this.subgraph.onInputRenamed = this.onSubgraphRenamedInput.bind(this);
 	this.subgraph.onInputTypeChanged = this.onSubgraphTypeChangeInput.bind(this);
@@ -81,6 +83,11 @@ Subgraph.prototype.onMouseDown = function(e,pos,graphcanvas)
 	}
 }
 
+Subgraph.prototype.onAction = function( action, param )
+{
+	this.subgraph.onAction( action, param );
+}
+
 Subgraph.prototype.onExecute = function()
 {
 	if( !this.getInputOrProperty("enabled") )
@@ -109,11 +116,17 @@ Subgraph.prototype.onExecute = function()
 }
 
 //**** INPUTS ***********************************
+Subgraph.prototype.onSubgraphTrigger = function(event, param)
+{
+	var slot = this.findOutputSlot(event);
+	if(slot != -1) 
+		this.triggerSlot(slot);
+}
+
 Subgraph.prototype.onSubgraphNewInput = function(name, type)
 {
-	//add input to the node
 	var slot = this.findInputSlot(name);
-	if(slot == -1)
+	if(slot == -1) //add input to the node
 		this.addInput(name, type);
 }
 
@@ -244,6 +257,8 @@ function GraphInput()
 	Object.defineProperty( this.properties, "type", {
 		get: function() { return that.outputs[0].type; },
 		set: function(v) { 
+			if(v == "event")
+				v = LiteGraph.EVENT;
 			that.outputs[0].type = v;
 			if(that.name_in_graph) //already added
 				that.graph.changeInputType( that.name_in_graph, that.outputs[0].type);
@@ -275,6 +290,12 @@ GraphInput.prototype.getTitle = function()
 	return this.title;
 }
 
+GraphInput.prototype.onAction = function(action, param)
+{
+	if(this.properties.type == LiteGraph.EVENT)
+		this.triggerSlot(0, param);
+}
+
 GraphInput.prototype.onExecute = function()
 {
 	var name = this.properties.name;
@@ -294,6 +315,7 @@ GraphInput.prototype.onRemoved = function()
 		this.graph.removeInput( this.name_in_graph );
 }
 
+LiteGraph.GraphInput = GraphInput;
 LiteGraph.registerNodeType("graph/input", GraphInput);
 
 
@@ -326,6 +348,8 @@ function GraphOutput()
 	Object.defineProperty( this.properties, "type", {
 		get: function() { return that.inputs[0].type; },
 		set: function(v) { 
+			if(v == "action" || v == "event")
+				v = LiteGraph.ACTION;
 			that.inputs[0].type = v;
 			if(that.name_in_graph) //already added
 				that.graph.changeOutputType( that.name_in_graph, that.inputs[0].type);
@@ -356,6 +380,12 @@ GraphOutput.prototype.onExecute = function()
 	this.graph.setOutputData( this.properties.name, this._value );
 }
 
+GraphOutput.prototype.onAction = function(action, param)
+{
+	if(this.properties.type == LiteGraph.ACTION)
+		this.graph.trigger( this.properties.name, param );
+}
+
 GraphOutput.prototype.onRemoved = function()
 {
 	if(this.name_in_graph)
@@ -369,6 +399,7 @@ GraphOutput.prototype.getTitle = function()
 	return this.title;
 }
 
+LiteGraph.GraphOutput = GraphOutput;
 LiteGraph.registerNodeType("graph/output", GraphOutput);
 
 
