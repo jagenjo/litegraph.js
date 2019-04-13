@@ -7,10 +7,12 @@ var LiteGraph = global.LiteGraph;
 	function WidgetButton()
 	{
 		this.addOutput( "", LiteGraph.EVENT );
+		this.addOutput( "", "boolean" );
 		this.addProperty( "text","click me" );
 		this.addProperty( "font_size", 30 );
 		this.addProperty( "message", "" );
 		this.size = [164,84];
+		this.clicked = false;
 	}
 
 	WidgetButton.title = "Button";
@@ -45,16 +47,20 @@ var LiteGraph = global.LiteGraph;
 		if(local_pos[0] > 1 && local_pos[1] > 1 && local_pos[0] < (this.size[0] - 2) && local_pos[1] < (this.size[1] - 2) )
 		{
 			this.clicked = true;
-			this.trigger( "clicked", this.properties.message );
+			this.triggerSlot( 0, this.properties.message );
 			return true;
 		}
+	}
+
+	WidgetButton.prototype.onExecute = function()
+	{
+		this.setOutputData(1,this.clicked);
 	}
 
 	WidgetButton.prototype.onMouseUp = function(e)
 	{
 		this.clicked = false;
 	}
-
 
 	LiteGraph.registerNodeType("widget/button", WidgetButton );
 
@@ -128,7 +134,7 @@ var LiteGraph = global.LiteGraph;
 	function WidgetNumber()
 	{
 		this.addOutput("",'number');
-		this.size = [74,54];
+		this.size = [80,60];
 		this.properties = {min:-1000,max:1000,value:1,step:1};
 		this.old_y = -1;
 		this._remainder = 0;
@@ -366,11 +372,12 @@ var LiteGraph = global.LiteGraph;
 			text: "V"
 		};
 		var that = this;
-		this.size = [80,60];
+		this.size = [140,40];
 		this.slider = this.addWidget("slider","V", this.properties.value, function(v){ that.properties.value = v; }, this.properties  );
+		this.widgets_up = true;
 	}
 
-	WidgetSliderGUI.title = "Internal Slider";
+	WidgetSliderGUI.title = "Inner Slider";
 
 	WidgetSliderGUI.prototype.onPropertyChanged = function(name,value)
 	{
@@ -604,6 +611,9 @@ var LiteGraph = global.LiteGraph;
 
 	WidgetPanel.prototype.onDrawForeground = function(ctx)
 	{
+		if(this.flags.collapsed)
+			return;
+
 		if(this.lineargradient == null)
 			this.createGradient(ctx);
 

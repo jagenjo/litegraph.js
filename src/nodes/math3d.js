@@ -312,7 +312,7 @@ if(global.glMatrix)
 	function Math3DQuaternion()
 	{
 		this.addOutput("quat","quat");
-		this.properties = { x:0, y:0, z:0, w: 1 };
+		this.properties = { x:0, y:0, z:0, w: 1, normalize: false };
 		this._value = quat.create();
 	}
 
@@ -321,11 +321,17 @@ if(global.glMatrix)
 
 	Math3DQuaternion.prototype.onExecute = function()
 	{
-		this._value[0] = this.properties.x;
-		this._value[1] = this.properties.y;
-		this._value[2] = this.properties.z;
-		this._value[3] = this.properties.w;
+		this._value[0] = this.getInputOrProperty("x");
+		this._value[1] = this.getInputOrProperty("y");
+		this._value[2] = this.getInputOrProperty("z");
+		this._value[3] = this.getInputOrProperty("w");
+		if( this.properties.normalize )
+			quat.normalize( this._value, this._value );
 		this.setOutputData( 0, this._value );
+	}
+
+	Math3DQuaternion.prototype.onGetInputs = function(){
+		return [["x","number"],["y","number"],["z","number"],["w","number"]];
 	}
 
 	LiteGraph.registerNodeType("math3d/quaternion", Math3DQuaternion );

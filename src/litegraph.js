@@ -727,7 +727,7 @@ LGraph.prototype.updateExecutionOrder = function()
 			this._nodes_executable.push( this._nodes_in_order[i] );
 }
 
-//This is more internal, it computes the order and returns it
+//This is more internal, it computes the executable nodes in order and returns it
 LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 {
 	var L = [];
@@ -761,7 +761,7 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 		{
 			if(set_level)
 				node._level = 0;
-			remaining_links[node.id] = num;
+			remaining_links[ node.id ] = num;
 		}
 	}
 
@@ -833,9 +833,9 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 	L = L.sort(function(A,B){ 
 		var Ap = A.constructor.priority || A.priority || 0;
 		var Bp = B.constructor.priority || B.priority || 0;
-		if(Ap == Bp)
+		if(Ap == Bp) //if same priority, sort by order
 			return A.order - B.order;
-		return Ap - Bp;
+		return Ap - Bp; //sort by priority
 	});
 
 	//save order number in the node, again...
@@ -965,7 +965,6 @@ LGraph.prototype.getElapsedTime = function()
 * @param {String} eventname the name of the event (function to be called)
 * @param {Array} params parameters in array format
 */
-
 LGraph.prototype.sendEventToAllNodes = function( eventname, params, mode )
 {
 	mode = mode || LiteGraph.ALWAYS;
@@ -977,6 +976,14 @@ LGraph.prototype.sendEventToAllNodes = function( eventname, params, mode )
 	for( var j = 0, l = nodes.length; j < l; ++j )
 	{
 		var node = nodes[j];
+
+		if(node.constructor === LiteGraph.Subgraph && eventname != "onExecute" )
+		{
+			if(node.mode == mode)
+				node.sendEventToAllNodes( eventname, params, mode );
+			continue;
+		}
+
 		if( !node[eventname] || node.mode != mode )
 			continue;
 		if(params === undefined)
@@ -1975,6 +1982,13 @@ LGraphNode.prototype.configure = function(info)
 		}
 	}
 
+	if(info.widgets_values && this.widgets)
+	{
+		for(var i = 0; i < info.widgets_values.length; ++i)
+			if( this.widgets[i] )
+				this.widgets[i].value = info.widgets_values[i];
+	}
+
 	if( this.onConfigure )
 		this.onConfigure( info );
 }
@@ -2016,6 +2030,13 @@ LGraphNode.prototype.serialize = function()
 
 	if( this.properties )
 		o.properties = LiteGraph.cloneObject( this.properties );
+
+	if( this.widgets && this.serialize_widgets )
+	{
+		o.widgets_values = [];
+		for(var i = 0; i < this.widgets.length; ++i)
+			o.widgets_values[i] = this.widgets[i].value;
+	}
 
 	if( !o.type )
 		o.type = this.constructor.type;
@@ -2732,8 +2753,13 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 	rows = Math.max(rows, 1);
 	var font_size = LiteGraph.NODE_TEXT_SIZE; //although it should be graphcanvas.inner_text_font size
 	size[1] = (this.constructor.slot_start_y || 0) + rows * LiteGraph.NODE_SLOT_HEIGHT;
+	var widgets_height = 0;
 	if( this.widgets && this.widgets.length )
-		size[1] += this.widgets.length * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 8;
+		widgets_height = this.widgets.length * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 8;
+	if( this.widgets_up )
+		size[1] = Math.max(size[1], widgets_height);
+	else
+		size[1] += widgets_height;
 
 	var font_size = font_size;
 	var title_width = compute_text_size( this.title );
@@ -2805,7 +2831,7 @@ LGraphNode.prototype.addWidget = function( type, name, value, callback, options 
 		w.y = w.options.y;
 
 	if( !callback )
-		console.warn("LiteGraph addWidget('button',...) without a callback");
+		console.warn("LiteGraph addWidget(...) without a callback");
 	if( type == "combo" && !w.options.values )
 		throw("LiteGraph addWidget('combo',...) requires to pass values in options: { values:['red','blue'] }");
 	this.widgets.push(w);
@@ -5724,7 +5750,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		ctx.lineWidth = 1;
 		ctx.font = "40px Arial"
 		ctx.textAlign = "center";
-		ctx.fillStyle = subgraph_node.bgcolor;
+		ctx.fillStyle = subgraph_node.bgcolor || "#AAA";
 		var title = "";
 		for(var i = 1; i < this._graph_stack.length; ++i)
 			title += this._graph_stack[i]._subgraph_node.getTitle() + " >> ";
@@ -6877,7 +6903,7 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					var nvalue = Math.clamp( (x - 10) / (width - 20), 0, 1);
 					w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
 					if(w.callback)
-						setTimeout( function(){	w.callback( w.value, that, node, pos ); }, 20 );
+						setTimeout( function(){	inner_value_change( w, w.value ); }, 20 );
 					this.dirty_canvas = true;
 					break;
 				case "number": 
@@ -6920,13 +6946,13 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 							function inner_clicked( v, option, event )
 							{
 								this.value = v;
+								inner_value_change( this, v );
 								that.dirty_canvas = true;
 								return false;
 							}
 						}
 					}
-					if(w.callback)
-						setTimeout( (function(){ this.callback( this.value, that, node, pos ); }).bind(w), 20 );
+					setTimeout( (function(){ inner_value_change( this, this.value ); }).bind(w), 20 );
 					this.dirty_canvas = true;
 					break;
 				case "toggle":
@@ -6934,13 +6960,13 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					{
 						w.value = !w.value;
 						if(w.callback)
-							setTimeout( function(){	w.callback( w.value, that, node, pos ); }, 20 );
+							setTimeout( function(){	inner_value_change( w, w.value ); }, 20 );
 					}
 					break;
 				case "string":
 				case "text":
 					if( event.type == "mousedown" )
-						this.prompt( "Value", w.value, (function(v){ this.value = v; if(w.callback) w.callback(v, that, node ); }).bind(w), event );
+						this.prompt( "Value", w.value, (function(v){ this.value = v; inner_value_change( this, v ); }).bind(w), event );
 					break;
 				default: 
 					if( w.mouse )
@@ -6951,6 +6977,16 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 			return w;
 		}
 	}
+
+	function inner_value_change( widget, value )
+	{
+		widget.value = value;
+		if(widget.property && node.properties[ widget.property ] !== undefined )
+			node.properties[ widget.property ] = value;
+		if(widget.callback)
+			widget.callback( widget.value, that, node, pos, event );
+	}
+
 	return null;
 }
 

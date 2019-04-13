@@ -27,7 +27,7 @@ function Subgraph()
 	var that = this;
 	this.size = [140,80];
 	this.properties = { enabled: true };
-	this.addInput("enabled","boolean");
+	this.enabled = true;
 
 	//create inner graph
 	this.subgraph = new LGraph();
@@ -50,6 +50,11 @@ function Subgraph()
 Subgraph.title = "Subgraph";
 Subgraph.desc = "Graph inside a node";
 Subgraph.title_color = "#334";
+
+Subgraph.prototype.onGetInputs = function()
+{
+	return [["enabled","boolean"]];
+}
 
 Subgraph.prototype.onDrawTitle = function(ctx)
 {
@@ -90,7 +95,8 @@ Subgraph.prototype.onAction = function( action, param )
 
 Subgraph.prototype.onExecute = function()
 {
-	if( !this.getInputOrProperty("enabled") )
+	this.enabled = this.getInputOrProperty("enabled");
+	if( !this.enabled )
 		return;
 
 	//send inputs to subgraph global inputs
@@ -113,6 +119,12 @@ Subgraph.prototype.onExecute = function()
 			var value = this.subgraph.getOutputData( output.name );
 			this.setOutputData(i, value);
 		}
+}
+
+Subgraph.prototype.sendEventToAllNodes = function( eventname, param, mode )
+{
+	if(this.enabled)
+		this.subgraph.sendEventToAllNodes( eventname, param, mode );
 }
 
 //**** INPUTS ***********************************
@@ -225,6 +237,7 @@ Subgraph.prototype.clone = function()
 	return node;
 }
 
+LiteGraph.Subgraph = Subgraph;
 LiteGraph.registerNodeType("graph/subgraph", Subgraph );
 
 
@@ -630,7 +643,7 @@ LiteGraph.registerNodeType("basic/cast", Cast);
 function Console()
 {
 	this.mode = LiteGraph.ON_EVENT;
-	this.size = [60,20];
+	this.size = [80,30];
 	this.addProperty( "msg", "" );
 	this.addInput("log", LiteGraph.EVENT);
 	this.addInput("msg",0);
@@ -665,6 +678,36 @@ Console.prototype.onGetInputs = function()
 LiteGraph.registerNodeType("basic/console", Console );
 
 
+//Show value inside the debug console
+function Alert()
+{
+	this.mode = LiteGraph.ON_EVENT;
+	this.addProperty( "msg", "" );
+	this.addInput("", LiteGraph.EVENT);
+	var that = this;
+	this.widget = this.addWidget("text","Text","",function(v){
+		that.properties.msg = v;
+	});
+	this.widgets_up = true;
+	this.size = [200,30];
+}
+
+Alert.title = "Alert";
+Alert.desc = "Show an alert window";
+Alert.color = "#510";
+
+Alert.prototype.onConfigure = function(o)
+{
+	this.widget.value = o.properties.msg;
+}
+
+Alert.prototype.onAction = function(action, param)
+{
+	var msg = this.properties.msg;
+	setTimeout(function(){	alert(msg); },10 );
+}
+
+LiteGraph.registerNodeType("basic/alert", Alert );
 
 //Execites simple code
 function NodeScript()

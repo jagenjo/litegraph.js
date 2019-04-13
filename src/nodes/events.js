@@ -107,6 +107,13 @@ function EventCounter()
 EventCounter.title = "Counter";
 EventCounter.desc = "Counts events";
 
+EventCounter.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return String(this.num);
+	return this.title;
+}
+
 EventCounter.prototype.onAction = function(action, param)
 {
 	var v = this.num;

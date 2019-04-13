@@ -92,6 +92,7 @@ function TestWidgetsNode()
 	this.toggle = this.addWidget("toggle","Toggle", true, function(v){}, { on: "enabled", off:"disabled"} );
 	this.button = this.addWidget("button","Button", null, function(v){}, {} );
 	this.size = this.computeSize();
+	this.serialize_widgets = true;
 }
 
 TestWidgetsNode.title = "Widgets";

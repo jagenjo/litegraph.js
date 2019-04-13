@@ -729,7 +729,7 @@ LGraph.prototype.updateExecutionOrder = function()
 			this._nodes_executable.push( this._nodes_in_order[i] );
 }
 
-//This is more internal, it computes the order and returns it
+//This is more internal, it computes the executable nodes in order and returns it
 LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 {
 	var L = [];
@@ -763,7 +763,7 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 		{
 			if(set_level)
 				node._level = 0;
-			remaining_links[node.id] = num;
+			remaining_links[ node.id ] = num;
 		}
 	}
 
@@ -835,9 +835,9 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 	L = L.sort(function(A,B){ 
 		var Ap = A.constructor.priority || A.priority || 0;
 		var Bp = B.constructor.priority || B.priority || 0;
-		if(Ap == Bp)
+		if(Ap == Bp) //if same priority, sort by order
 			return A.order - B.order;
-		return Ap - Bp;
+		return Ap - Bp; //sort by priority
 	});
 
 	//save order number in the node, again...
@@ -967,7 +967,6 @@ LGraph.prototype.getElapsedTime = function()
 * @param {String} eventname the name of the event (function to be called)
 * @param {Array} params parameters in array format
 */
-
 LGraph.prototype.sendEventToAllNodes = function( eventname, params, mode )
 {
 	mode = mode || LiteGraph.ALWAYS;
@@ -979,6 +978,14 @@ LGraph.prototype.sendEventToAllNodes = function( eventname, params, mode )
 	for( var j = 0, l = nodes.length; j < l; ++j )
 	{
 		var node = nodes[j];
+
+		if(node.constructor === LiteGraph.Subgraph && eventname != "onExecute" )
+		{
+			if(node.mode == mode)
+				node.sendEventToAllNodes( eventname, params, mode );
+			continue;
+		}
+
 		if( !node[eventname] || node.mode != mode )
 			continue;
 		if(params === undefined)
@@ -1977,6 +1984,13 @@ LGraphNode.prototype.configure = function(info)
 		}
 	}
 
+	if(info.widgets_values && this.widgets)
+	{
+		for(var i = 0; i < info.widgets_values.length; ++i)
+			if( this.widgets[i] )
+				this.widgets[i].value = info.widgets_values[i];
+	}
+
 	if( this.onConfigure )
 		this.onConfigure( info );
 }
@@ -2018,6 +2032,13 @@ LGraphNode.prototype.serialize = function()
 
 	if( this.properties )
 		o.properties = LiteGraph.cloneObject( this.properties );
+
+	if( this.widgets && this.serialize_widgets )
+	{
+		o.widgets_values = [];
+		for(var i = 0; i < this.widgets.length; ++i)
+			o.widgets_values[i] = this.widgets[i].value;
+	}
 
 	if( !o.type )
 		o.type = this.constructor.type;
@@ -2734,8 +2755,13 @@ LGraphNode.prototype.computeSize = function( minHeight, out )
 	rows = Math.max(rows, 1);
 	var font_size = LiteGraph.NODE_TEXT_SIZE; //although it should be graphcanvas.inner_text_font size
 	size[1] = (this.constructor.slot_start_y || 0) + rows * LiteGraph.NODE_SLOT_HEIGHT;
+	var widgets_height = 0;
 	if( this.widgets && this.widgets.length )
-		size[1] += this.widgets.length * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 8;
+		widgets_height = this.widgets.length * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 8;
+	if( this.widgets_up )
+		size[1] = Math.max(size[1], widgets_height);
+	else
+		size[1] += widgets_height;
 
 	var font_size = font_size;
 	var title_width = compute_text_size( this.title );
@@ -2807,7 +2833,7 @@ LGraphNode.prototype.addWidget = function( type, name, value, callback, options 
 		w.y = w.options.y;
 
 	if( !callback )
-		console.warn("LiteGraph addWidget('button',...) without a callback");
+		console.warn("LiteGraph addWidget(...) without a callback");
 	if( type == "combo" && !w.options.values )
 		throw("LiteGraph addWidget('combo',...) requires to pass values in options: { values:['red','blue'] }");
 	this.widgets.push(w);
@@ -5726,7 +5752,7 @@ LGraphCanvas.prototype.drawBackCanvas = function()
 		ctx.lineWidth = 1;
 		ctx.font = "40px Arial"
 		ctx.textAlign = "center";
-		ctx.fillStyle = subgraph_node.bgcolor;
+		ctx.fillStyle = subgraph_node.bgcolor || "#AAA";
 		var title = "";
 		for(var i = 1; i < this._graph_stack.length; ++i)
 			title += this._graph_stack[i]._subgraph_node.getTitle() + " >> ";
@@ -6879,7 +6905,7 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					var nvalue = Math.clamp( (x - 10) / (width - 20), 0, 1);
 					w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
 					if(w.callback)
-						setTimeout( function(){	w.callback( w.value, that, node, pos ); }, 20 );
+						setTimeout( function(){	inner_value_change( w, w.value ); }, 20 );
 					this.dirty_canvas = true;
 					break;
 				case "number": 
@@ -6922,13 +6948,13 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 							function inner_clicked( v, option, event )
 							{
 								this.value = v;
+								inner_value_change( this, v );
 								that.dirty_canvas = true;
 								return false;
 							}
 						}
 					}
-					if(w.callback)
-						setTimeout( (function(){ this.callback( this.value, that, node, pos ); }).bind(w), 20 );
+					setTimeout( (function(){ inner_value_change( this, this.value ); }).bind(w), 20 );
 					this.dirty_canvas = true;
 					break;
 				case "toggle":
@@ -6936,13 +6962,13 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 					{
 						w.value = !w.value;
 						if(w.callback)
-							setTimeout( function(){	w.callback( w.value, that, node, pos ); }, 20 );
+							setTimeout( function(){	inner_value_change( w, w.value ); }, 20 );
 					}
 					break;
 				case "string":
 				case "text":
 					if( event.type == "mousedown" )
-						this.prompt( "Value", w.value, (function(v){ this.value = v; if(w.callback) w.callback(v, that, node ); }).bind(w), event );
+						this.prompt( "Value", w.value, (function(v){ this.value = v; inner_value_change( this, v ); }).bind(w), event );
 					break;
 				default: 
 					if( w.mouse )
@@ -6953,6 +6979,16 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 			return w;
 		}
 	}
+
+	function inner_value_change( widget, value )
+	{
+		widget.value = value;
+		if(widget.property && node.properties[ widget.property ] !== undefined )
+			node.properties[ widget.property ] = value;
+		if(widget.callback)
+			widget.callback( widget.value, that, node, pos, event );
+	}
+
 	return null;
 }
 
@@ -8874,7 +8910,7 @@ function Subgraph()
 	var that = this;
 	this.size = [140,80];
 	this.properties = { enabled: true };
-	this.addInput("enabled","boolean");
+	this.enabled = true;
 
 	//create inner graph
 	this.subgraph = new LGraph();
@@ -8897,6 +8933,11 @@ function Subgraph()
 Subgraph.title = "Subgraph";
 Subgraph.desc = "Graph inside a node";
 Subgraph.title_color = "#334";
+
+Subgraph.prototype.onGetInputs = function()
+{
+	return [["enabled","boolean"]];
+}
 
 Subgraph.prototype.onDrawTitle = function(ctx)
 {
@@ -8937,7 +8978,8 @@ Subgraph.prototype.onAction = function( action, param )
 
 Subgraph.prototype.onExecute = function()
 {
-	if( !this.getInputOrProperty("enabled") )
+	this.enabled = this.getInputOrProperty("enabled");
+	if( !this.enabled )
 		return;
 
 	//send inputs to subgraph global inputs
@@ -8960,6 +9002,12 @@ Subgraph.prototype.onExecute = function()
 			var value = this.subgraph.getOutputData( output.name );
 			this.setOutputData(i, value);
 		}
+}
+
+Subgraph.prototype.sendEventToAllNodes = function( eventname, param, mode )
+{
+	if(this.enabled)
+		this.subgraph.sendEventToAllNodes( eventname, param, mode );
 }
 
 //**** INPUTS ***********************************
@@ -9072,6 +9120,7 @@ Subgraph.prototype.clone = function()
 	return node;
 }
 
+LiteGraph.Subgraph = Subgraph;
 LiteGraph.registerNodeType("graph/subgraph", Subgraph );
 
 
@@ -9477,7 +9526,7 @@ LiteGraph.registerNodeType("basic/cast", Cast);
 function Console()
 {
 	this.mode = LiteGraph.ON_EVENT;
-	this.size = [60,20];
+	this.size = [80,30];
 	this.addProperty( "msg", "" );
 	this.addInput("log", LiteGraph.EVENT);
 	this.addInput("msg",0);
@@ -9512,6 +9561,36 @@ Console.prototype.onGetInputs = function()
 LiteGraph.registerNodeType("basic/console", Console );
 
 
+//Show value inside the debug console
+function Alert()
+{
+	this.mode = LiteGraph.ON_EVENT;
+	this.addProperty( "msg", "" );
+	this.addInput("", LiteGraph.EVENT);
+	var that = this;
+	this.widget = this.addWidget("text","Text","",function(v){
+		that.properties.msg = v;
+	});
+	this.widgets_up = true;
+	this.size = [200,30];
+}
+
+Alert.title = "Alert";
+Alert.desc = "Show an alert window";
+Alert.color = "#510";
+
+Alert.prototype.onConfigure = function(o)
+{
+	this.widget.value = o.properties.msg;
+}
+
+Alert.prototype.onAction = function(action, param)
+{
+	var msg = this.properties.msg;
+	setTimeout(function(){	alert(msg); },10 );
+}
+
+LiteGraph.registerNodeType("basic/alert", Alert );
 
 //Execites simple code
 function NodeScript()
@@ -9708,6 +9787,13 @@ function EventCounter()
 EventCounter.title = "Counter";
 EventCounter.desc = "Counts events";
 
+EventCounter.prototype.getTitle = function()
+{
+	if(this.flags.collapsed)
+		return String(this.num);
+	return this.title;
+}
+
 EventCounter.prototype.onAction = function(action, param)
 {
 	var v = this.num;
@@ -9872,10 +9958,12 @@ var LiteGraph = global.LiteGraph;
 	function WidgetButton()
 	{
 		this.addOutput( "", LiteGraph.EVENT );
+		this.addOutput( "", "boolean" );
 		this.addProperty( "text","click me" );
 		this.addProperty( "font_size", 30 );
 		this.addProperty( "message", "" );
 		this.size = [164,84];
+		this.clicked = false;
 	}
 
 	WidgetButton.title = "Button";
@@ -9910,16 +9998,20 @@ var LiteGraph = global.LiteGraph;
 		if(local_pos[0] > 1 && local_pos[1] > 1 && local_pos[0] < (this.size[0] - 2) && local_pos[1] < (this.size[1] - 2) )
 		{
 			this.clicked = true;
-			this.trigger( "clicked", this.properties.message );
+			this.triggerSlot( 0, this.properties.message );
 			return true;
 		}
+	}
+
+	WidgetButton.prototype.onExecute = function()
+	{
+		this.setOutputData(1,this.clicked);
 	}
 
 	WidgetButton.prototype.onMouseUp = function(e)
 	{
 		this.clicked = false;
 	}
-
 
 	LiteGraph.registerNodeType("widget/button", WidgetButton );
 
@@ -9993,7 +10085,7 @@ var LiteGraph = global.LiteGraph;
 	function WidgetNumber()
 	{
 		this.addOutput("",'number');
-		this.size = [74,54];
+		this.size = [80,60];
 		this.properties = {min:-1000,max:1000,value:1,step:1};
 		this.old_y = -1;
 		this._remainder = 0;
@@ -10231,11 +10323,12 @@ var LiteGraph = global.LiteGraph;
 			text: "V"
 		};
 		var that = this;
-		this.size = [80,60];
+		this.size = [140,40];
 		this.slider = this.addWidget("slider","V", this.properties.value, function(v){ that.properties.value = v; }, this.properties  );
+		this.widgets_up = true;
 	}
 
-	WidgetSliderGUI.title = "Internal Slider";
+	WidgetSliderGUI.title = "Inner Slider";
 
 	WidgetSliderGUI.prototype.onPropertyChanged = function(name,value)
 	{
@@ -10469,6 +10562,9 @@ var LiteGraph = global.LiteGraph;
 
 	WidgetPanel.prototype.onDrawForeground = function(ctx)
 	{
+		if(this.flags.collapsed)
+			return;
+
 		if(this.lineargradient == null)
 			this.createGradient(ctx);
 
@@ -12270,7 +12366,7 @@ if(global.glMatrix)
 	function Math3DQuaternion()
 	{
 		this.addOutput("quat","quat");
-		this.properties = { x:0, y:0, z:0, w: 1 };
+		this.properties = { x:0, y:0, z:0, w: 1, normalize: false };
 		this._value = quat.create();
 	}
 
@@ -12279,11 +12375,17 @@ if(global.glMatrix)
 
 	Math3DQuaternion.prototype.onExecute = function()
 	{
-		this._value[0] = this.properties.x;
-		this._value[1] = this.properties.y;
-		this._value[2] = this.properties.z;
-		this._value[3] = this.properties.w;
+		this._value[0] = this.getInputOrProperty("x");
+		this._value[1] = this.getInputOrProperty("y");
+		this._value[2] = this.getInputOrProperty("z");
+		this._value[3] = this.getInputOrProperty("w");
+		if( this.properties.normalize )
+			quat.normalize( this._value, this._value );
 		this.setOutputData( 0, this._value );
+	}
+
+	Math3DQuaternion.prototype.onGetInputs = function(){
+		return [["x","number"],["y","number"],["z","number"],["w","number"]];
 	}
 
 	LiteGraph.registerNodeType("math3d/quaternion", Math3DQuaternion );
