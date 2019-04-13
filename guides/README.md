@@ -178,7 +178,7 @@ This is the list of supported widgets:
 
 Widget's value is not serialized by default when storing the node state, but if you want to store the value of widgets just set serialize_widgets to true:
 
-```
+```js
 function MyNode()
 {
   this.addWidget("text","name","");
