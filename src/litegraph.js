@@ -85,7 +85,7 @@ var LiteGraph = global.LiteGraph = {
 	throw_errors: true,
 	allow_scripts: false, //if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration), which could lead to exploits
 	registered_node_types: {}, //nodetypes by string
-	node_types_by_file_extension: {}, //used for droping files in the canvas
+	node_types_by_file_extension: {}, //used for dropping files in the canvas
 	Nodes: {}, //node types by classname
 
 	searchbox_extras: {}, //used to add extra features to the search box
@@ -158,7 +158,7 @@ var LiteGraph = global.LiteGraph = {
 	},
 
 	/**
-	* Create a new node type by passing a function, it wraps it with a propper class and generates inputs according to the parameters of the function.
+	* Create a new nodetype by passing a function, it wraps it with a proper class and generates inputs according to the parameters of the function.
 	* Useful to wrap simple methods that do not require properties, and that only process some input to generate an output.
 	* @method wrapFunctionAsNode
 	* @param {String} name node name with namespace (p.e.: 'math/sum')
@@ -324,7 +324,7 @@ var LiteGraph = global.LiteGraph = {
 		return result;
 	},
 
-	//debug purposes: reloads all the js scripts that matches a wilcard
+	//debug purposes: reloads all the js scripts that matches a wildcard
 	reloadNodes: function (folder_wildcard)
 	{
 		var tmp = document.getElementsByTagName("script");
@@ -366,7 +366,7 @@ var LiteGraph = global.LiteGraph = {
 			console.log("Nodes reloaded");
 	},
 
-	//separated just to improve if it doesnt work
+	//separated just to improve if it doesn't work
 	cloneObject: function(obj, target)
 	{
 		if(obj == null) return null;
@@ -847,7 +847,7 @@ LGraph.prototype.computeExecutionOrder = function( only_onExecute, set_level )
 
 /**
 * Returns all the nodes that could affect this one (ancestors) by crawling all the inputs recursively.
-* It doesnt include the node itself
+* It doesn't include the node itself
 * @method getAncestors
 * @return {Array} an array with all the LGraphNodes that affect this node, in order of execution
 */
@@ -1009,7 +1009,7 @@ LGraph.prototype.sendActionToCanvas = function(action, params)
 }
 
 /**
-* Adds a new node instasnce to this graph
+* Adds a new node instance to this graph
 * @method add
 * @param {LGraphNode} node the instance of the node
 */
@@ -1825,7 +1825,7 @@ LiteGraph.LLink = LLink;
 		+  { name:string, type:string, pos: [x,y]=Optional, direction: "input"|"output", links: Array });
 
 	general properties:
-		+ clip_area: if you render outside the node, it will be cliped
+		+ clip_area: if you render outside the node, it will be clipped
 		+ unsafe_execution: not allowed for safe execution
 		+ skip_repeated_outputs: when adding new outputs, it wont show if there is one already connected
 		+ resizable: if set to false it wont be resizable with the mouse
@@ -1931,7 +1931,7 @@ LGraphNode.prototype.configure = function(info)
 	{
 		if(j == "properties")
 		{
-			//i dont want to clone properties, I want to reuse the old container
+			//i don't want to clone properties, I want to reuse the old container
 			for(var k in info.properties)
 			{
 				this.properties[k] = info.properties[k];
@@ -2099,7 +2099,7 @@ LGraphNode.prototype.toString = function()
 {
 	return JSON.stringify( this.serialize() );
 }
-//LGraphNode.prototype.unserialize = function(info) {} //this cannot be done from within, must be done in LiteGraph
+//LGraphNode.prototype.deserialize = function(info) {} //this cannot be done from within, must be done in LiteGraph
 
 
 /**
@@ -2203,7 +2203,7 @@ LGraphNode.prototype.getInputData = function( slot, force_update )
 	if(!force_update)
 		return link.data;
 
-	//special case: used to extract data from the incomming connection before the graph has been executed
+	//special case: used to extract data from the incoming connection before the graph has been executed
 	var node = this.graph.getNodeById( link.origin_id );
 	if(!node)
 		return link.data;
@@ -2969,7 +2969,7 @@ LGraphNode.prototype.connect = function( slot, target_node, target_slot )
 
 	if(!this.graph) //could be connected before adding it to a graph
 	{
-		console.log("Connect: Error, node doesnt belong to any graph. Nodes must be added first to a graph before connecting them."); //due to link ids being associated with graphs
+		console.log("Connect: Error, node doesn\'t belong to any graph. Nodes must be added first to a graph before connecting them."); //due to link ids being associated with graphs
 		return null;
 	}
 
@@ -3085,7 +3085,7 @@ LGraphNode.prototype.connect = function( slot, target_node, target_slot )
 * @method disconnectOutput
 * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
 * @param {LGraphNode} target_node the target node to which this slot is connected [Optional, if not target_node is specified all nodes will be disconnected]
-* @return {boolean} if it was disconnected succesfully
+* @return {boolean} if it was disconnected successfully
 */
 LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 {
@@ -3134,7 +3134,7 @@ LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 				if(this.graph)
 					this.graph._version++;
 				if(target_node.onConnectionsChange)
-					target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info, input ); //link_info hasnt been modified so its ok
+					target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info, input ); //link_info hasn't been modified so its ok
 				if(this.onConnectionsChange)
 					this.onConnectionsChange( LiteGraph.OUTPUT, slot, false, link_info, output );
 				if( this.graph && this.graph.onNodeConnectionChange )
@@ -3166,7 +3166,7 @@ LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 				input = target_node.inputs[ link_info.target_slot ];
 				input.link = null; //remove other side link
 				if(target_node.onConnectionsChange)
-					target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info, input ); //link_info hasnt been modified so its ok
+					target_node.onConnectionsChange( LiteGraph.INPUT, link_info.target_slot, false, link_info, input ); //link_info hasn't been modified so its ok
 				if( this.graph && this.graph.onNodeConnectionChange )
 					this.graph.onNodeConnectionChange( LiteGraph.INPUT, target_node, link_info.target_slot );
 			}
@@ -3192,7 +3192,7 @@ LGraphNode.prototype.disconnectOutput = function( slot, target_node )
 * disconnect one input
 * @method disconnectInput
 * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
-* @return {boolean} if it was disconnected succesfully
+* @return {boolean} if it was disconnected successfully
 */
 LGraphNode.prototype.disconnectInput = function( slot )
 {
@@ -3311,7 +3311,7 @@ LGraphNode.prototype.getConnectionPos = function( is_input, slot_number, out )
 		return out;
 	}
 
-	//hardcoded pos
+	//hard-coded pos
 	if(is_input && num_slots > slot_number && this.inputs[ slot_number ].pos)
 	{
 		out[0] = this.pos[0] + this.inputs[slot_number].pos[0];
@@ -3933,11 +3933,10 @@ LGraphCanvas.prototype.clear = function()
 
 	if(this.onClear)
 		this.onClear();
-	//this.UIinit();
 }
 
 /**
-* assigns a graph, you can reasign graphs to the same canvas
+* assigns a graph, you can reassign graphs to the same canvas
 *
 * @method setGraph
 * @param {LGraph} graph
@@ -4004,16 +4003,16 @@ LGraphCanvas.prototype.closeSubgraph = function()
 {
 	if(!this._graph_stack || this._graph_stack.length == 0)
 		return;
-	var subraph_node = this.graph._subgraph_node;
+	var subgraph_node = this.graph._subgraph_node;
 	var graph = this._graph_stack.pop();
 	this.selected_nodes = {};
 	this.highlighted_links = {};
 	graph.attachCanvas(this);
 	this.setDirty(true,true);
-	if( subraph_node )
+	if( subgraph_node )
 	{
-		this.centerOnNode( subraph_node );
-		this.selectNodes( [subraph_node] );
+		this.centerOnNode( subgraph_node );
+		this.selectNodes( [subgraph_node] );
 	}
 }
 
@@ -4071,7 +4070,7 @@ LGraphCanvas.prototype.setCanvas = function( canvas, skip_events )
 	{
 		if( canvas.localName != "canvas" )
 			throw("Element supplied for LGraphCanvas must be a <canvas> element, you passed a " + canvas.localName );
-		throw("This browser doesnt support Canvas");
+		throw("This browser doesn't support Canvas");
 	}
 
 	var ctx = this.ctx = canvas.getContext("2d");
@@ -4133,9 +4132,9 @@ LGraphCanvas.prototype.bindEvents = function()
 	this._key_callback = this.processKey.bind(this);
 
 	canvas.addEventListener("keydown", this._key_callback, true );
-	document.addEventListener("keyup", this._key_callback, true ); //in document, otherwise it doesnt fire keyup
+	document.addEventListener("keyup", this._key_callback, true ); //in document, otherwise it doesn't fire keyup
 
-	//Droping Stuff over nodes ************************************
+	//Dropping Stuff over nodes ************************************
 	this._ondrop_callback = this.processDrop.bind(this);
 
 	canvas.addEventListener("dragover", this._doNothing, false );
@@ -4347,7 +4346,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 		if( node && this.allow_interaction && !skip_action )
 		{
 			if( !this.live_mode && !node.flags.pinned )
-				this.bringToFront( node ); //if it wasnt selected?
+				this.bringToFront( node ); //if it wasn't selected?
 
 			//not dragging mouse to connect two slots
 			if(!this.connecting_node && !node.flags.collapsed && !this.live_mode)
@@ -4436,7 +4435,7 @@ LGraphCanvas.prototype.processMouseDown = function(e)
 			}
 			*/
 
-			//it wasnt clicked on the links boxes
+			//it wasn't clicked on the links boxes
 			if(!skip_action)
 			{
 				var block_drag_node = false;
@@ -4659,7 +4658,7 @@ LGraphCanvas.prototype.processMouseMove = function(e)
 				//on top of input
 				if( this.isOverNodeBox( node, e.canvasX, e.canvasY ) )
 				{
-					//mouse on top of the corner box, dont know what to do
+					//mouse on top of the corner box, don't know what to do
 				}
 				else
 				{
@@ -4785,7 +4784,7 @@ LGraphCanvas.prototype.processMouseUp = function(e)
 				var starty = this.dragging_rectangle[3] < 0 ? this.dragging_rectangle[1] - h : this.dragging_rectangle[1];
 				this.dragging_rectangle[0] = startx; this.dragging_rectangle[1] = starty; this.dragging_rectangle[2] = w; this.dragging_rectangle[3] = h;
 
-				//test against all nodes (not visible becasue the rectangle maybe start outside
+				//test against all nodes (not visible because the rectangle maybe start outside
 				var to_select = [];
 				for(var i = 0; i < nodes.length; ++i)
 				{
@@ -4933,7 +4932,7 @@ LGraphCanvas.prototype.processMouseWheel = function(e)
 }
 
 /**
-* retuns true if a position (in graph space) is on top of a node little corner box
+* returns true if a position (in graph space) is on top of a node little corner box
 * @method isOverNodeBox
 **/
 LGraphCanvas.prototype.isOverNodeBox = function( node, canvasx, canvasy )
@@ -4945,7 +4944,7 @@ LGraphCanvas.prototype.isOverNodeBox = function( node, canvasx, canvasy )
 }
 
 /**
-* retuns true if a position (in graph space) is on top of a node input slot
+* returns true if a position (in graph space) is on top of a node input slot
 * @method isOverNodeInput
 **/
 LGraphCanvas.prototype.isOverNodeInput = function(node, canvasx, canvasy, slot_pos )
@@ -5203,7 +5202,7 @@ LGraphCanvas.prototype.processDrop = function(e)
 	return false;
 }
 
-//called if the graph doesnt have a default drop item behaviour
+//called if the graph doesn't have a default drop item behaviour
 LGraphCanvas.prototype.checkDropItem = function(e)
 {
 	if(e.dataTransfer.files.length)
@@ -5905,7 +5904,7 @@ LGraphCanvas.prototype.drawNode = function(node, ctx )
 		ctx.shadowColor = "transparent";
 
 	//custom draw collapsed method (draw after shadows because they are affected)
-	if(node.flags.collapsed && node.onDrawCollaped && node.onDrawCollapsed(ctx, this) == true)
+	if(node.flags.collapsed && node.onDrawCollapsed && node.onDrawCollapsed(ctx, this) == true)
 		return;
 
 	//clip if required (mask)
@@ -6369,7 +6368,7 @@ var tempB = new Float32Array(2);
 
 /**
 * draws every connection visible in the canvas
-* OPTIMIZE THIS: precatch connections position instead of recomputing them every time
+* OPTIMIZE THIS: pre-catch connections position instead of recomputing them every time
 * @method drawConnections
 **/
 LGraphCanvas.prototype.drawConnections = function(ctx)
@@ -8392,7 +8391,7 @@ function growBounding( bounding, x,y)
 }
 LiteGraph.growBounding = growBounding;
 
-//point inside boundin box
+//point inside bounding box
 function isInsideBounding(p,bb)
 {
 	if (p[0] < bb[0][0] ||
@@ -8404,7 +8403,7 @@ function isInsideBounding(p,bb)
 }
 LiteGraph.isInsideBounding = isInsideBounding;
 
-//boundings overlap, format: [ startx, starty, width, height ]
+//bounding overlap, format: [ startx, starty, width, height ]
 function overlapBounding(a,b)
 {
 	var A_end_x = a[0] + a[2];
@@ -8508,7 +8507,7 @@ function ContextMenu( values, options )
 	root.style.minWidth = 100;
 	root.style.minHeight = 100;
 	root.style.pointerEvents = "none";
-	setTimeout( function() { root.style.pointerEvents = "auto"; },100); //delay so the mouse up event is not caugh by this element
+	setTimeout( function() { root.style.pointerEvents = "auto"; },100); //delay so the mouse up event is not caught by this element
 
 	//this prevents the default context browser menu to open in case this menu was created when pressing right button
 	root.addEventListener("mouseup", function(e){
@@ -8832,12 +8831,12 @@ LiteGraph.extendClass = function ( target, origin )
 	}
 
 	if(origin.prototype) //copy prototype properties
-		for(var i in origin.prototype) //only enumerables
+		for(var i in origin.prototype) //only enumerable
 		{
 			if(!origin.prototype.hasOwnProperty(i))
 				continue;
 
-			if(target.prototype.hasOwnProperty(i)) //avoid overwritting existing ones
+			if(target.prototype.hasOwnProperty(i)) //avoid overwriting existing ones
 				continue;
 
 			//copy getters
