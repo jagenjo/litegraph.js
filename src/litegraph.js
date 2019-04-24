@@ -6892,6 +6892,9 @@ LGraphCanvas.prototype.processNodeWidgets = function( node, pos, event, active_w
 			switch( w.type )
 			{
 				case "button": 
+					if(event.type === 'mousemove'){
+						break
+					}
 					if(w.callback)
 						setTimeout( function(){	w.callback( w, that, node, pos ); }, 20 );
 					w.clicked = true;
