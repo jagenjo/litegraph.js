@@ -3,4 +3,5 @@ node_modules/*
 npm-debug.log
 
 # Editor
-/.vscode
+/.vscode/*
+!/.vscode/extensions.json
