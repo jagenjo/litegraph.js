@@ -2909,7 +2909,7 @@ LGraphNode.prototype.getSlotInPosition = function( x, y )
 			var input = this.inputs[i];
 			this.getConnectionPos( true,i, link_pos );
 			if( isInsideRectangle(x, y, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
-				return { input: input, slot: i, link_pos: link_pos, locked: input.locked };
+				return { input: input, slot: i, link_pos: link_pos };
 		}
 
 	if(this.outputs)
@@ -2918,7 +2918,7 @@ LGraphNode.prototype.getSlotInPosition = function( x, y )
 			var output = this.outputs[i];
 			this.getConnectionPos(false,i,link_pos);
 			if( isInsideRectangle(x, y, link_pos[0] - 10, link_pos[1] - 5, 20,10) )
-				return { output: output, slot: i, link_pos: link_pos, locked: output.locked };
+				return { output: output, slot: i, link_pos: link_pos };
 		}
 
 	return null;
@@ -8246,8 +8246,9 @@ LGraphCanvas.prototype.processContextMenu = function( node, event )
 		menu_info = [];
 		if(slot && slot.output && slot.output.links && slot.output.links.length)
 			menu_info.push( { content: "Disconnect Links", slot: slot } );
-		menu_info.push( slot.locked ? "Cannot remove"  : { content: "Remove Slot", slot: slot } );
-		menu_info.push( slot.nameLocked ? "Cannot rename" : { content: "Rename Slot", slot: slot } );
+		const _slot = slot.input || slot.output
+		menu_info.push( _slot.locked ? "Cannot remove"  : { content: "Remove Slot", slot: slot } );
+		menu_info.push( _slot.nameLocked ? "Cannot rename" : { content: "Rename Slot", slot: slot } );
 		options.title = (slot.input ? slot.input.type : slot.output.type) || "*";
 		if(slot.input && slot.input.type == LiteGraph.ACTION)
 			options.title = "Action";
