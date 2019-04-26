@@ -5220,6 +5220,7 @@ LGraphNode.prototype.executeAction = function(action)
             node.is_selected = false;
         }
         this.selected_nodes = {};
+        this.current_node = null;
         this.highlighted_links = {};
         this.setDirty(true);
     };
@@ -5235,6 +5236,7 @@ LGraphNode.prototype.executeAction = function(action)
             this.graph.remove(m);
         }
         this.selected_nodes = {};
+        this.current_node = null;
         this.highlighted_links = {};
         this.setDirty(true);
     };
