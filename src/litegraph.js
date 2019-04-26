@@ -1473,7 +1473,8 @@
 
         //pack link info into a non-verbose format
         var links = [];
-        for (var i in this.links) { //links is an OBJECT
+        for (var i in this.links) {
+            //links is an OBJECT
             var link = this.links[i];
             links.push([
                 link.id,
@@ -9122,14 +9123,16 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LiteGraph.extendClass = function(target, origin) {
-        for (var i in origin) { //copy class properties
+        for (var i in origin) {
+            //copy class properties
             if (target.hasOwnProperty(i)) continue;
             target[i] = origin[i];
         }
 
         if (origin.prototype)
             //copy prototype properties
-            for (var i in origin.prototype) { //only enumerable
+            for (var i in origin.prototype) {
+                //only enumerable
                 if (!origin.prototype.hasOwnProperty(i)) continue;
 
                 if (target.prototype.hasOwnProperty(i))
