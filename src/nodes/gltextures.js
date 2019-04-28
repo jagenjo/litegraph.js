@@ -43,7 +43,7 @@
             low: LGraphTexture.LOW,
             high: LGraphTexture.HIGH,
             reuse: LGraphTexture.REUSE,
-            default: LGraphTexture.DEFAULT
+            "default": LGraphTexture.DEFAULT
         };
 
         //returns the container where all the loaded textures are stored (overwrite if you have a Resources Manager)
