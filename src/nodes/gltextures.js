@@ -2542,7 +2542,7 @@ if(typeof(GL) != "undefined")
 	LiteGraph.registerNodeType("texture/glow", LGraphTextureGlow );
 
 
-	// Texture Blur *****************************************
+	// Texture Filter *****************************************
 	function LGraphTextureKuwaharaFilter()
 	{
 		this.addInput("Texture","Texture");
@@ -2568,11 +2568,7 @@ if(typeof(GL) != "undefined")
 		var temp = this._temp_texture;
 
 		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
-		{
-			//we need two textures to do the blurring
 			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
-			//this._final_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
-		}
 
 		//iterations
 		var radius = this.properties.radius;
@@ -2704,6 +2700,112 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
 	LiteGraph.registerNodeType("texture/kuwahara", LGraphTextureKuwaharaFilter );
 
+	// Texture  *****************************************
+	function LGraphTextureXDoGFilter()
+	{
+		this.addInput("Texture","Texture");
+		this.addOutput("Filtered","Texture");
+		this.properties = { sigma: 1.4, k: 1.6, p:21.7, epsilon:79, phi:0.017 };
+	}
+
+	LGraphTextureXDoGFilter.title = "XDoG Filter";
+	LGraphTextureXDoGFilter.desc = "Filters a texture giving an artistic ink style";
+
+	LGraphTextureXDoGFilter.max_radius = 10;
+	LGraphTextureXDoGFilter._shaders = [];
+
+	LGraphTextureXDoGFilter.prototype.onExecute = function()
+	{
+		var tex = this.getInputData(0);
+		if(!tex)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return; //saves work
+
+		var temp = this._temp_texture;
+		if(!temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type )
+			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR });
+
+		if(!LGraphTextureXDoGFilter._xdog_shader)
+			LGraphTextureXDoGFilter._xdog_shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureXDoGFilter.xdog_pixel_shader );
+		var shader = LGraphTextureXDoGFilter._xdog_shader;
+		var mesh = GL.Mesh.getScreenQuad();
+
+		var sigma = this.properties.sigma;
+		var k = this.properties.k;
+		var p = this.properties.p;
+		var epsilon = this.properties.epsilon;
+		var phi = this.properties.phi;
+		tex.bind(0);
+		this._temp_texture.drawTo( function() {
+			shader.uniforms({ src:0, sigma: sigma, k:k, p:p, epsilon:epsilon, phi:phi, cvsWidth: tex.width, cvsHeight: tex.height }).draw(mesh);
+		});
+
+		this.setOutputData(0, this._temp_texture );
+	}
+
+	//from https://github.com/RaymondMcGuire/GPU-Based-Image-Processing-Tools/blob/master/lib_webgl/scripts/main.js
+	LGraphTextureXDoGFilter.xdog_pixel_shader = "\n\
+	precision highp float;\n\
+	uniform sampler2D src;\n\n\
+	uniform float cvsHeight;\n\
+	uniform float cvsWidth;\n\n\
+	uniform float sigma;\n\
+	uniform float k;\n\
+	uniform float p;\n\
+	uniform float epsilon;\n\
+	uniform float phi;\n\
+	varying vec2 v_coord;\n\n\
+	float cosh(float val)\n\
+	{\n\
+		float tmp = exp(val);\n\
+		float cosH = (tmp + 1.0 / tmp) / 2.0;\n\
+		return cosH;\n\
+	}\n\n\
+	float tanh(float val)\n\
+	{\n\
+		float tmp = exp(val);\n\
+		float tanH = (tmp - 1.0 / tmp) / (tmp + 1.0 / tmp);\n\
+		return tanH;\n\
+	}\n\n\
+	float sinh(float val)\n\
+	{\n\
+		float tmp = exp(val);\n\
+		float sinH = (tmp - 1.0 / tmp) / 2.0;\n\
+		return sinH;\n\
+	}\n\n\
+	void main(void){\n\
+		vec3 destColor = vec3(0.0);\n\
+		float tFrag = 1.0 / cvsHeight;\n\
+		float sFrag = 1.0 / cvsWidth;\n\
+		vec2 Frag = vec2(sFrag,tFrag);\n\
+		vec2 uv = gl_FragCoord.st;\n\
+		float twoSigmaESquared = 2.0 * sigma * sigma;\n\
+		float twoSigmaRSquared = twoSigmaESquared * k * k;\n\
+		int halfWidth = int(ceil( 1.0 * sigma * k ));\n\n\
+		const int MAX_NUM_ITERATION = 99999;\n\
+		vec2 sum = vec2(0.0);\n\
+		vec2 norm = vec2(0.0);\n\n\
+		for(int cnt=0;cnt<MAX_NUM_ITERATION;cnt++){\n\
+			if(cnt > (2*halfWidth+1)*(2*halfWidth+1)){break;}\n\
+			int i = int(cnt / (2*halfWidth+1)) - halfWidth;\n\
+			int j = cnt - halfWidth - int(cnt / (2*halfWidth+1)) * (2*halfWidth+1);\n\n\
+			float d = length(vec2(i,j));\n\
+			vec2 kernel = vec2( exp( -d * d / twoSigmaESquared ), \n\
+								exp( -d * d / twoSigmaRSquared ));\n\n\
+			vec2 L = texture2D(src, (uv + vec2(i,j)) * Frag).xx;\n\n\
+			norm += kernel;\n\
+			sum += kernel * L;\n\
+		}\n\n\
+		sum /= norm;\n\n\
+		float H = 100.0 * ((1.0 + p) * sum.x - p * sum.y);\n\
+		float edge = ( H > epsilon )? 1.0 : 1.0 + tanh( phi * (H - epsilon));\n\
+		destColor = vec3(edge);\n\
+		gl_FragColor = vec4(destColor, 1.0);\n\
+	}";
+
+	LiteGraph.registerNodeType("texture/xDoG", LGraphTextureXDoGFilter );
 
 	// Texture Webcam *****************************************
 	function LGraphTextureWebcam()

@@ -573,7 +573,7 @@ LiteGraph.registerNodeType("basic/object_property", ObjectProperty );
 //Watch a value in the editor
 function Watch()
 {
-	this.size = [60,20];
+	this.size = [60,30];
 	this.addInput("value",0,{label:""});
 	this.value = 0;
 }
@@ -625,7 +625,7 @@ function Cast()
 {
 	this.addInput("in",0);
 	this.addOutput("out",0);
-	this.size = [40,20];
+	this.size = [60,30];
 }
 
 Cast.title = "Cast";
@@ -712,7 +712,7 @@ LiteGraph.registerNodeType("basic/alert", Alert );
 //Execites simple code
 function NodeScript()
 {
-	this.size = [60,20];
+	this.size = [80,60];
 	this.addProperty( "onExecute", "return A;" );
 	this.addInput("A", "");
 	this.addInput("B", "");
