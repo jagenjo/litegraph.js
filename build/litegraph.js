@@ -7995,7 +7995,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (!str) return;
 
             if (that.onSearchBox) {
-                var list = that.onSearchBox(help, str, graphcanvas);
+                var list = that.onSearchBox(helper, str, graphcanvas);
                 if (list)
                     for (var i = 0; i < list.length; ++i) addResult(list[i]);
             } else {
@@ -11848,6 +11848,7 @@ if (typeof exports != "undefined") exports.LiteGraph = this.LiteGraph;
         for (var i = 0, l = this.outputs.length; i < l; ++i) {
             var output = this.outputs[i];
             if (!output.links || !output.links.length) continue;
+            var value;
             switch (output.name) {
                 case "A==B":
                     value = A == B;
@@ -12014,6 +12015,7 @@ if (typeof exports != "undefined") exports.LiteGraph = this.LiteGraph;
 
         for (var i = 0, l = this.outputs.length; i < l; ++i) {
             var output = this.outputs[i];
+            var value;
             switch (output.name) {
                 case "sin":
                     value = Math.sin(v);
@@ -15705,7 +15707,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			that._webcam_stream = false;
 			that.boxcolor = "red";
 			that.trigger("stream_error");
-		};
+		}
 	}
 
 	LGraphTextureWebcam.prototype.closeStream = function()
@@ -17143,6 +17145,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
             gl.disable(gl.DEPTH_TEST);
             var mesh = Mesh.getScreenQuad();
             var camera = global.LS ? LS.Renderer._current_camera : null;
+            var camera_planes;
             if (camera)
                 camera_planes = [
                     LS.Renderer._current_camera.near,
