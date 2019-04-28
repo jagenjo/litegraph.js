@@ -551,6 +551,7 @@
             gl.disable(gl.DEPTH_TEST);
             var mesh = Mesh.getScreenQuad();
             var camera = global.LS ? LS.Renderer._current_camera : null;
+            var camera_planes;
             if (camera)
                 camera_planes = [
                     LS.Renderer._current_camera.near,
