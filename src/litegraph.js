@@ -1476,14 +1476,7 @@
         for (var i in this.links) {
             //links is an OBJECT
             var link = this.links[i];
-            links.push([
-                link.id,
-                link.origin_id,
-                link.origin_slot,
-                link.target_id,
-                link.target_slot,
-                link.type
-            ]);
+            links.push(link.serialize());
         }
 
         var groups_info = [];
@@ -1636,11 +1629,11 @@
     LLink.prototype.serialize = function() {
         return [
             this.id,
-            this.type,
             this.origin_id,
             this.origin_slot,
             this.target_id,
-            this.target_slot
+            this.target_slot,
+            this.type
         ];
     };
 
@@ -8537,7 +8530,7 @@ LGraphNode.prototype.executeAction = function(action)
                 slot.output.links.length
             )
                 menu_info.push({ content: "Disconnect Links", slot: slot });
-            const _slot = slot.input || slot.output;
+            var _slot = slot.input || slot.output;
             menu_info.push(
                 _slot.locked
                     ? "Cannot remove"
