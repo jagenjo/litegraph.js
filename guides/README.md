@@ -176,6 +176,16 @@ This is the list of supported widgets:
 * **"toggle"** like a checkbox
 * **"button"**
 
+Widget's value is not serialized by default when storing the node state, but if you want to store the value of widgets just set serialize_widgets to true:
+
+```js
+function MyNode()
+{
+  this.addWidget("text","name","");
+  this.serialize_widgets = true;
+}
+```
+
 ## Integration
 
 To integrate in you HTML application:
