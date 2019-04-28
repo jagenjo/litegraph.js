@@ -3212,7 +3212,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			that._webcam_stream = false;
 			that.boxcolor = "red";
 			that.trigger("stream_error");
-		};
+		}
 	}
 
 	LGraphTextureWebcam.prototype.closeStream = function()
