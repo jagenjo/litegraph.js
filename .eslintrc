@@ -1,0 +1,49 @@
+{
+    "extends": "eslint:recommended",
+    "parserOptions": {
+        "ecmaVersion": 5
+    },
+    "env": {
+        "browser": true,
+        "node": true
+    },
+    "globals": {
+        "gl": true,
+        "GL": true,
+        "LS": true,
+        "Uint8Array": true,
+        "Uint32Array": true,
+        "Float32Array": true,
+        "LGraphCanvas": true,
+        "LGraph": true,
+        "LGraphNode": true,
+        "LiteGraph": true,
+        "LGraphTexture": true,
+        "Mesh": true,
+        "Shader": true,
+        "enableWebGLCanvas": true,
+        "vec2": true,
+        "vec3": true,
+        "vec4": true,
+        "DEG2RAD": true,
+        "isPowerOfTwo": true,
+        "cloneCanvas": true,
+        "createCanvas": true,
+        "hex2num": true,
+        "colorToString": true,
+        "showElement": true,
+        "quat": true,
+        "AudioSynth": true,
+        "SillyClient": true
+    },
+    "rules": {
+        "no-console": "off",
+        "no-empty": "warn",
+        "no-redeclare": "warn",
+        "no-inner-declarations": "warn",
+        "no-constant-condition": "warn",
+        "no-unused-vars": "warn",
+        "no-mixed-spaces-and-tabs": "warn",
+        "no-unreachable": "warn"
+    }
+}

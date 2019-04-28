@@ -620,6 +620,7 @@
         for (var i = 0, l = this.outputs.length; i < l; ++i) {
             var output = this.outputs[i];
             if (!output.links || !output.links.length) continue;
+            var value;
             switch (output.name) {
                 case "A==B":
                     value = A == B;
@@ -786,6 +787,7 @@
 
         for (var i = 0, l = this.outputs.length; i < l; ++i) {
             var output = this.outputs[i];
+            var value;
             switch (output.name) {
                 case "sin":
                     value = Math.sin(v);

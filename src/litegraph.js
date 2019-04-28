@@ -7995,7 +7995,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (!str) return;
 
             if (that.onSearchBox) {
-                var list = that.onSearchBox(help, str, graphcanvas);
+                var list = that.onSearchBox(helper, str, graphcanvas);
                 if (list)
                     for (var i = 0; i < list.length; ++i) addResult(list[i]);
             } else {
