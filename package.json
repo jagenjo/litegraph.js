@@ -12,7 +12,9 @@
         "build": "grunt build",
         "start": "nodemon utils/server.js",
         "test": "echo \"Error: no test specified\" && exit 1",
-        "prettier": "npx prettier --write src/**/*.* css/**/*.*"
+        "prettier": "npx prettier --write src/**/*.* css/**/*.*",
+        "lint": "npx eslint src",
+        "lint:fix": "npx eslint --fix src"
     },
     "repository": {
         "type": "git",
