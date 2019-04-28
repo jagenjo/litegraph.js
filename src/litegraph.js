@@ -2559,6 +2559,12 @@ LGraphNode.prototype.addProperty = function( name, default_value, type, extra_in
 	return o;
 }
 
+LGraphNode.prototype.setProperty = function( name, value )
+{
+	this.properties[ name ] = value;
+	if(this.onPropertyChanged)
+		this.onPropertyChanged( name, value );
+}
 
 //connections
 
@@ -3874,6 +3880,7 @@ function LGraphCanvas( canvas, graph, options )
 	this.last_mouse_position = [0,0];
 	this.visible_area = this.ds.visible_area;
 	this.visible_links = [];
+	this._graph_stack = null;
 
 	//link canvas and graph
 	if(graph)
@@ -3919,6 +3926,8 @@ LGraphCanvas.prototype.clear = function()
 	this.node_capturing_input = null;
 	this.connecting_node = null;
 	this.highlighted_links = {};
+	if(this._graph_stack)
+		this._graph_stack.length = 0;
 
 	this.dirty_canvas = true;
 	this.dirty_bgcanvas = true;
@@ -3956,15 +3965,21 @@ LGraphCanvas.prototype.setGraph = function( graph, skip_clear )
 		return;
 	}
 
-	/*
-	if(this.graph)
-		this.graph.canvas = null; //remove old graph link to the canvas
-	this.graph = graph;
-	if(this.graph)
-		this.graph.canvas = this;
-	*/
+	if( this._graph_stack )
+		this._graph_stack.length = 0;
 	graph.attachCanvas(this);
 	this.setDirty(true,true);
+}
+
+/**
+* Returns the active graph in the canvas (in case there are subgraphs open)
+*
+* @method getCurrentGraph
+* @param {LGraph} graph
+*/
+LGraphCanvas.prototype.getCurrentGraph = function()
+{
+	return this.graph;
 }
 
 /**
@@ -6737,6 +6752,7 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 	var outline_color = "#666";
 	var background_color = "#222";
 	var margin = 15;
+	ctx.font = "14px Arial";
 
 	for(var i = 0; i < widgets.length; ++i)
 	{
@@ -6856,7 +6872,11 @@ LGraphCanvas.prototype.drawNodeWidgets = function( node, posY, ctx, active_widge
 						ctx.fillText( w.name, margin*2, y + H*0.7 );
 					ctx.fillStyle = "#DDD";
 					ctx.textAlign = "right";
-					ctx.fillText( w.value, width - margin*2, y + H*0.7 );
+					var str = String(w.value);
+					var max_characters = (width - 60 - margin ) / 12;
+					if( str.length > max_characters)
+						str = str.substr(0,max_characters) + "...";
+					ctx.fillText( str, width - margin*2, y + H*0.7 );
 				}
 				break;
 			default:
