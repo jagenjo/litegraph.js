@@ -472,8 +472,8 @@
         this.stop();
         this.status = LGraph.STATUS_STOPPED;
 
-        this.last_node_id = 1;
-        this.last_link_id = 1;
+        this.last_node_id = 0;
+        this.last_link_id = 0;
 
         this._version = -1; //used to detect changes
 
