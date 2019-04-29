@@ -1511,6 +1511,16 @@
         for (var i in this.links) {
             //links is an OBJECT
             var link = this.links[i];
+			if(!link.serialize) //weird bug I havent solved yet
+			{
+				console.warn("weird LLink bug, link info is not a LLink but a regular object");
+				var link2 = new LLink();
+				for(var i in link)
+					link2[i] = link[i];
+				this.links[i] = link2;
+				link = link2;
+			}
+
             links.push(link.serialize());
         }
 
@@ -1949,6 +1959,20 @@
     LGraphNode.prototype.getTitle = function() {
         return this.title || this.constructor.title;
     };
+
+    /**
+     * sets the value of a property
+     * @method setProperty
+     * @param {String} name
+     * @param {*} value
+     */
+    LGraphNode.prototype.setProperty = function(name, value) {
+		if(!this.properties)
+			this.properties = {};
+		this.properties[name] = value;
+        if (this.onPropertyChanged)
+			this.onPropertyChanged(name, value);
+	};
 
     // Execution *************************
     /**
@@ -3793,6 +3817,15 @@ LGraphNode.prototype.executeAction = function(action)
             this.selectNodes([subgraph_node]);
         }
     };
+
+    /**
+     * returns the visualy active graph (in case there are more in the stack)
+     * @method getCurrentGraph
+     * @return {LGraph} the active graph
+     */
+    LGraphCanvas.prototype.getCurrentGraph = function() {
+		return this.graph;
+	}
 
     /**
      * assigns a canvas
