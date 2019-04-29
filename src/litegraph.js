@@ -147,8 +147,13 @@
                 enumerable: true
             });
 
+			var prev = this.registered_node_types[type];
             this.registered_node_types[type] = base_class;
             if (base_class.constructor.name) this.Nodes[classname] = base_class;
+			if(LiteGraph.onNodeTypeRegistered)
+				LiteGraph.onNodeTypeRegistered(type,base_class);
+			if( prev && LiteGraph.onNodeTypeReplaced)
+				LiteGraph.onNodeTypeReplaced(type,base_class,prev);
 
             //warnings
             if (base_class.prototype.onPropertyChange)
@@ -1164,6 +1169,34 @@
         }
         return null;
     };
+
+    /**
+     * Checks that the node type matches the node type registered, used when replacing a nodetype by a newer version during execution
+	 * this replaces the ones using the old version with the new version
+     * @method checkNodeTypes
+     */
+    LGraph.prototype.checkNodeTypes = function() {
+		var changes = false;
+        for (var i = 0; i < this._nodes.length; i++) {
+            var node = this._nodes[i];
+			var ctor = LiteGraph.registered_node_types[ node.type ];
+			if(node.constructor == ctor)
+				continue;
+			console.log("node being replaced by newer version: " + node.type );
+			var newnode = LiteGraph.createNode( node.type );
+			changes = true;
+			this._nodes[i] = newnode;
+			newnode.configure( node.serialize() );
+			newnode.graph = this;
+			this._nodes_by_id[newnode.id] = newnode;
+			if(node.inputs)
+				newnode.inputs = node.inputs.concat();
+			if(node.outputs)
+				newnode.outputs = node.outputs.concat();
+        }
+		this.updateExecutionOrder();
+    };
+
 
     // ********** GLOBALS *****************
 
