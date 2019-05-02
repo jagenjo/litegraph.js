@@ -1788,7 +1788,8 @@
      * @method configure
      */
     LGraphNode.prototype.configure = function(info) {
-        if (this.graph) this.graph._version++;
+        if (this.graph)
+			this.graph._version++;
 
         for (var j in info) {
             if (j == "properties") {
@@ -1801,16 +1802,23 @@
                 continue;
             }
 
-            if (info[j] == null) continue;
-            else if (typeof info[j] == "object") {
+            if (info[j] == null)
+				continue;
+
+			//this will assign to the node itself anything found inside the serialized object
+            if (typeof info[j] == "object") {
                 //object
-                if (this[j] && this[j].configure) this[j].configure(info[j]);
-                else this[j] = LiteGraph.cloneObject(info[j], this[j]);
+                if (this[j] && this[j].configure)
+					this[j].configure( info[j] );
+                else
+					this[j] = LiteGraph.cloneObject(info[j], this[j]);
             } //value
-            else this[j] = info[j];
+            else
+				this[j] = info[j];
         }
 
-        if (!info.title) this.title = this.constructor.title;
+        if (!info.title)
+			this.title = this.constructor.title;
 
         if (this.onConnectionsChange) {
             if (this.inputs)

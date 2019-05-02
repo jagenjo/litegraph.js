@@ -2819,7 +2819,7 @@
                     );
 
                 var dirt_texture = this.getInputData(1);
-                var dirt_factor = this.getInputOrProperty("dirt_factor");
+                var dirt_factor = Math.clamp( this.getInputOrProperty("dirt_factor"),0,1);
 
                 uniforms.u_intensity = intensity;
 
@@ -3687,15 +3687,17 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 
         LiteGraph.registerNodeType("texture/tonemapping", LGraphToneMapping);
 
+
         function LGraphTexturePerlin() {
             this.addOutput("out", "Texture");
             this.properties = {
                 width: 512,
                 height: 512,
                 seed: 0,
-                persistence: 0.1,
+                persistence: 0.5,
                 octaves: 8,
                 scale: 1,
+                aspect: 1,
                 offset: [0, 0],
                 amplitude: 1,
                 precision: LGraphTexture.DEFAULT
@@ -3707,6 +3709,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
                 u_seed: 0,
                 u_offset: vec2.create(),
                 u_scale: 1,
+				u_aspect: 1,
                 u_viewport: vec2.create()
             };
         }
@@ -3727,6 +3730,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
                 ["persistence", "Number"],
                 ["octaves", "Number"],
                 ["scale", "Number"],
+                ["aspect", "Number"],
                 ["amplitude", "Number"],
                 ["offset", "vec2"]
             ];
@@ -3758,6 +3762,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
             var octaves = this.getInputOrProperty("octaves");
             var offset = this.getInputOrProperty("offset");
             var scale = this.getInputOrProperty("scale");
+            var aspect = this.getInputOrProperty("aspect");
             var amplitude = this.getInputOrProperty("amplitude");
             var seed = this.getInputOrProperty("seed");
 
@@ -3771,6 +3776,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
                 octaves +
                 scale +
                 seed +
+				aspect + 
                 offset[0] +
                 offset[1] +
                 amplitude;
@@ -3786,6 +3792,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
             uniforms.u_octaves = octaves;
             uniforms.u_offset.set(offset);
             uniforms.u_scale = scale;
+            uniforms.u_aspect = aspect;
             uniforms.u_amplitude = amplitude;
             uniforms.u_seed = seed * 128;
             uniforms.u_viewport[0] = w;
@@ -3817,6 +3824,7 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			uniform float u_persistence;\n\
 			uniform int u_octaves;\n\
 			uniform float u_amplitude;\n\
+			uniform float u_aspect;\n\
 			uniform vec2 u_viewport;\n\
 			uniform float u_seed;\n\
 			#define M_PI 3.14159265358979323846\n\
@@ -3859,11 +3867,13 @@ LGraphTextureKuwaharaFilter.pixel_shader = "\n\
 			}\n\
 			void main() {\n\
 				vec2 uv = v_coord * u_scale * u_viewport + u_offset * u_scale;\n\
+				uv.y *= u_aspect;\n\
 				vec4 color = vec4( pNoise( uv, u_octaves ) * u_amplitude );\n\
 				gl_FragColor = color;\n\
 			}";
 
         LiteGraph.registerNodeType("texture/perlin", LGraphTexturePerlin);
+
 
         function LGraphTextureCanvas2D() {
             this.addOutput("out", "Texture");
