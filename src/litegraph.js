@@ -2103,7 +2103,6 @@
         if (this.graph) {
             this.graph._version++;
         }
-
         for (var j in info) {
             if (j == "properties") {
                 //i don't want to clone properties, I want to reuse the old container
