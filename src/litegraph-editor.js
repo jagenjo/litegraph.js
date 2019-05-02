@@ -47,7 +47,7 @@ function Editor(container_id, options) {
         ".tools-right"
     );
 
-    if (!options.skip_livemode)
+    if (!options.skip_livemode) {
         this.addToolsButton(
             "livemode_button",
             "Live",
@@ -55,7 +55,8 @@ function Editor(container_id, options) {
             this.onLiveButton.bind(this),
             ".tools-right"
         );
-    if (!options.skip_maximize)
+    }
+    if (!options.skip_maximize) {
         this.addToolsButton(
             "maximize_button",
             "",
@@ -63,11 +64,16 @@ function Editor(container_id, options) {
             this.onFullscreenButton.bind(this),
             ".tools-right"
         );
-    if (options.miniwindow) this.addMiniWindow(300, 200);
+    }
+    if (options.miniwindow) {
+        this.addMiniWindow(300, 200);
+    }
 
     //append to DOM
     var parent = document.getElementById(container_id);
-    if (parent) parent.appendChild(root);
+    if (parent) {
+        parent.appendChild(root);
+    }
 
     graphcanvas.resize();
     //graphcanvas.draw(true,true);
@@ -89,10 +95,12 @@ Editor.prototype.addLoadCounter = function() {
     setInterval(function() {
         meter.querySelector(".cpuload .fgload").style.width =
             2 * self.graph.execution_time * 90 + "px";
-        if (self.graph.status == LGraph.STATUS_RUNNING)
+        if (self.graph.status == LGraph.STATUS_RUNNING) {
             meter.querySelector(".gpuload .fgload").style.width =
                 self.graphcanvas.render_time * 10 * 90 + "px";
-        else meter.querySelector(".gpuload .fgload").style.width = 4 + "px";
+        } else {
+            meter.querySelector(".gpuload .fgload").style.width = 4 + "px";
+        }
     }, 200);
 };
 
@@ -103,7 +111,9 @@ Editor.prototype.addToolsButton = function(
     callback,
     container
 ) {
-    if (!container) container = ".tools";
+    if (!container) {
+        container = ".tools";
+    }
 
     var button = this.createButton(name, icon_url);
     button.id = id;
@@ -128,7 +138,9 @@ Editor.prototype.createPanel = function(title, options) {
 
 Editor.prototype.createButton = function(name, icon_url) {
     var button = document.createElement("button");
-    if (icon_url) button.innerHTML = "<img src='" + icon_url + "'/> ";
+    if (icon_url) {
+        button.innerHTML = "<img src='" + icon_url + "'/> ";
+    }
     button.innerHTML += name;
     return button;
 };
@@ -181,13 +193,15 @@ Editor.prototype.onLiveButton = function() {
 };
 
 Editor.prototype.goFullscreen = function() {
-    if (this.root.requestFullscreen)
+    if (this.root.requestFullscreen) {
         this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-    else if (this.root.mozRequestFullscreen)
+    } else if (this.root.mozRequestFullscreen) {
         this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-    else if (this.root.webkitRequestFullscreen)
+    } else if (this.root.webkitRequestFullscreen) {
         this.root.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-    else throw "Fullscreen not supported";
+    } else {
+        throw "Fullscreen not supported";
+    }
 
     var self = this;
     setTimeout(function() {

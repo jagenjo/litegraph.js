@@ -45,7 +45,9 @@
                 return;
             }
 
-            if (!tex) return;
+            if (!tex) {
+                return;
+            }
 
             this._tex = LGraphTexture.getTargetTexture(
                 tex,
@@ -272,10 +274,14 @@
                 return;
             }
 
-            if (!blurred_tex) blurred_tex = tex;
+            if (!blurred_tex) {
+                blurred_tex = tex;
+            }
 
             var shape_tex = LGraphTexture.getTexture(this.properties.shape);
-            if (!shape_tex) return;
+            if (!shape_tex) {
+                return;
+            }
 
             var threshold = this.properties.threshold;
             if (this.isInputConnected(3)) {
@@ -284,36 +290,40 @@
             }
 
             var precision = gl.UNSIGNED_BYTE;
-            if (this.properties.high_precision)
+            if (this.properties.high_precision) {
                 precision = gl.half_float_ext ? gl.HALF_FLOAT_OES : gl.FLOAT;
+            }
             if (
                 !this._temp_texture ||
                 this._temp_texture.type != precision ||
                 this._temp_texture.width != tex.width ||
                 this._temp_texture.height != tex.height
-            )
+            ) {
                 this._temp_texture = new GL.Texture(tex.width, tex.height, {
                     type: precision,
                     format: gl.RGBA,
                     filter: gl.LINEAR
                 });
+            }
 
             //iterations
             var size = this.properties.size;
 
             var first_shader = LGraphFXBokeh._first_shader;
-            if (!first_shader)
+            if (!first_shader) {
                 first_shader = LGraphFXBokeh._first_shader = new GL.Shader(
                     Shader.SCREEN_VERTEX_SHADER,
                     LGraphFXBokeh._first_pixel_shader
                 );
+            }
 
             var second_shader = LGraphFXBokeh._second_shader;
-            if (!second_shader)
+            if (!second_shader) {
                 second_shader = LGraphFXBokeh._second_shader = new GL.Shader(
                     LGraphFXBokeh._second_vertex_shader,
                     LGraphFXBokeh._second_pixel_shader
                 );
+            }
 
             var points_mesh = this._points_mesh;
             if (
@@ -321,8 +331,9 @@
                 points_mesh._width != tex.width ||
                 points_mesh._height != tex.height ||
                 points_mesh._spacing != 2
-            )
+            ) {
                 points_mesh = this.createPointsMesh(tex.width, tex.height, 2);
+            }
 
             var screen_mesh = Mesh.getScreenQuad();
 
@@ -506,7 +517,9 @@
         LGraphFXGeneric.shaders = {};
 
         LGraphFXGeneric.prototype.onExecute = function() {
-            if (!this.isOutputConnected(0)) return; //saves work
+            if (!this.isOutputConnected(0)) {
+                return;
+            } //saves work
 
             var tex = this.getInputData(0);
             if (this.properties.precision === LGraphTexture.PASS_THROUGH) {
@@ -514,7 +527,9 @@
                 return;
             }
 
-            if (!tex) return;
+            if (!tex) {
+                return;
+            }
 
             this._tex = LGraphTexture.getTargetTexture(
                 tex,
@@ -539,7 +554,9 @@
             var shader = LGraphFXGeneric.shaders[fx];
             if (!shader) {
                 var pixel_shader_code = LGraphFXGeneric["pixel_shader_" + fx];
-                if (!pixel_shader_code) return;
+                if (!pixel_shader_code) {
+                    return;
+                }
 
                 shader = LGraphFXGeneric.shaders[fx] = new GL.Shader(
                     Shader.SCREEN_VERTEX_SHADER,
@@ -552,19 +569,25 @@
             var mesh = Mesh.getScreenQuad();
             var camera = global.LS ? LS.Renderer._current_camera : null;
             var camera_planes;
-            if (camera)
+            if (camera) {
                 camera_planes = [
                     LS.Renderer._current_camera.near,
                     LS.Renderer._current_camera.far
                 ];
-            else camera_planes = [1, 100];
+            } else {
+                camera_planes = [1, 100];
+            }
 
             var noise = null;
-            if (fx == "noise") noise = LGraphTexture.getNoiseTexture();
+            if (fx == "noise") {
+                noise = LGraphTexture.getNoiseTexture();
+            }
 
             this._tex.drawTo(function() {
                 tex.bind(0);
-                if (fx == "noise") noise.bind(1);
+                if (fx == "noise") {
+                    noise.bind(1);
+                }
 
                 shader
                     .uniforms({
@@ -679,11 +702,12 @@
                 precision: LGraphTexture.DEFAULT
             };
 
-            if (!LGraphFXVigneting._shader)
+            if (!LGraphFXVigneting._shader) {
                 LGraphFXVigneting._shader = new GL.Shader(
                     Shader.SCREEN_VERTEX_SHADER,
                     LGraphFXVigneting.pixel_shader
                 );
+            }
         }
 
         LGraphFXVigneting.title = "Vigneting";
@@ -701,7 +725,9 @@
                 return;
             }
 
-            if (!tex) return;
+            if (!tex) {
+                return;
+            }
 
             this._tex = LGraphTexture.getTargetTexture(
                 tex,

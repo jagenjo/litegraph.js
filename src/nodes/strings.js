@@ -20,8 +20,12 @@
     );
 
     function concatenate(a, b) {
-        if (a === undefined) return b;
-        if (b === undefined) return a;
+        if (a === undefined) {
+            return b;
+        }
+        if (b === undefined) {
+            return a;
+        }
         return a + b;
     }
 
@@ -33,7 +37,9 @@
     );
 
     function contains(a, b) {
-        if (a === undefined || b === undefined) return false;
+        if (a === undefined || b === undefined) {
+            return false;
+        }
         return a.indexOf(b) != -1;
     }
 
@@ -45,7 +51,9 @@
     );
 
     function toUpperCase(a) {
-        if (a != null && a.constructor === String) return a.toUpperCase();
+        if (a != null && a.constructor === String) {
+            return a.toUpperCase();
+        }
         return a;
     }
 
@@ -57,7 +65,9 @@
     );
 
     function split(a, b) {
-        if (a != null && a.constructor === String) return a.split(b || " ");
+        if (a != null && a.constructor === String) {
+            return a.split(b || " ");
+        }
         return [a];
     }
 
@@ -69,8 +79,9 @@
     );
 
     function toFixed(a) {
-        if (a != null && a.constructor === Number)
+        if (a != null && a.constructor === Number) {
             return a.toFixed(this.properties.precision);
+        }
         return a;
     }
 

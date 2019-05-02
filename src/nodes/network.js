@@ -22,20 +22,28 @@
     LGWebSocket.desc = "Send data through a websocket";
 
     LGWebSocket.prototype.onPropertyChanged = function(name, value) {
-        if (name == "url") this.connectSocket();
+        if (name == "url") {
+            this.connectSocket();
+        }
     };
 
     LGWebSocket.prototype.onExecute = function() {
-        if (!this._ws && this.properties.url) this.connectSocket();
+        if (!this._ws && this.properties.url) {
+            this.connectSocket();
+        }
 
-        if (!this._ws || this._ws.readyState != WebSocket.OPEN) return;
+        if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
+            return;
+        }
 
         var room = this.properties.room;
         var only_changes = this.properties.only_send_changes;
 
         for (var i = 1; i < this.inputs.length; ++i) {
             var data = this.getInputData(i);
-            if (data == null) continue;
+            if (data == null) {
+                continue;
+            }
             var json;
             try {
                 json = JSON.stringify({
@@ -47,22 +55,29 @@
             } catch (err) {
                 continue;
             }
-            if (only_changes && this._last_sent_data[i] == json) continue;
+            if (only_changes && this._last_sent_data[i] == json) {
+                continue;
+            }
 
             this._last_sent_data[i] = json;
             this._ws.send(json);
         }
 
-        for (var i = 1; i < this.outputs.length; ++i)
+        for (var i = 1; i < this.outputs.length; ++i) {
             this.setOutputData(i, this._last_received_data[i]);
+        }
 
-        if (this.boxcolor == "#AFA") this.boxcolor = "#6C6";
+        if (this.boxcolor == "#AFA") {
+            this.boxcolor = "#6C6";
+        }
     };
 
     LGWebSocket.prototype.connectSocket = function() {
         var that = this;
         var url = this.properties.url;
-        if (url.substr(0, 2) != "ws") url = "ws://" + url;
+        if (url.substr(0, 2) != "ws") {
+            url = "ws://" + url;
+        }
         this._ws = new WebSocket(url);
         this._ws.onopen = function() {
             console.log("ready");
@@ -71,7 +86,9 @@
         this._ws.onmessage = function(e) {
             that.boxcolor = "#AFA";
             var data = JSON.parse(e.data);
-            if (data.room && data.room != this.properties.room) return;
+            if (data.room && data.room != this.properties.room) {
+                return;
+            }
             if (e.data.type == 1) {
                 if (
                     data.data.object_class &&
@@ -84,8 +101,12 @@
                     } catch (err) {
                         return;
                     }
-                } else that.triggerSlot(0, data.data);
-            } else that._last_received_data[e.data.channel || 0] = data.data;
+                } else {
+                    that.triggerSlot(0, data.data);
+                }
+            } else {
+                that._last_received_data[e.data.channel || 0] = data.data;
+            }
         };
         this._ws.onerror = function(e) {
             console.log("couldnt connect to websocket");
@@ -98,12 +119,16 @@
     };
 
     LGWebSocket.prototype.send = function(data) {
-        if (!this._ws || this._ws.readyState != WebSocket.OPEN) return;
+        if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
+            return;
+        }
         this._ws.send(JSON.stringify({ type: 1, msg: data }));
     };
 
     LGWebSocket.prototype.onAction = function(action, param) {
-        if (!this._ws || this._ws.readyState != WebSocket.OPEN) return;
+        if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
+            return;
+        }
         this._ws.send({
             type: 1,
             room: this.properties.room,
@@ -160,7 +185,9 @@
     LGSillyClient.desc = "Connects to SillyServer to broadcast messages";
 
     LGSillyClient.prototype.onPropertyChanged = function(name, value) {
-        if (name == "room") this.room_widget.value = value;
+        if (name == "room") {
+            this.room_widget.value = value;
+        }
         this.connectSocket();
     };
 
@@ -183,33 +210,40 @@
     };
 
     LGSillyClient.prototype.onExecute = function() {
-        if (!this._server || !this._server.is_connected) return;
+        if (!this._server || !this._server.is_connected) {
+            return;
+        }
 
         var only_send_changes = this.properties.only_send_changes;
 
         for (var i = 1; i < this.inputs.length; ++i) {
             var data = this.getInputData(i);
             if (data != null) {
-                if (only_send_changes && this._last_sent_data[i] == data)
+                if (only_send_changes && this._last_sent_data[i] == data) {
                     continue;
+                }
                 this._server.sendMessage({ type: 0, channel: i, data: data });
                 this._last_sent_data[i] = data;
             }
         }
 
-        for (var i = 1; i < this.outputs.length; ++i)
+        for (var i = 1; i < this.outputs.length; ++i) {
             this.setOutputData(i, this._last_received_data[i]);
+        }
 
-        if (this.boxcolor == "#AFA") this.boxcolor = "#6C6";
+        if (this.boxcolor == "#AFA") {
+            this.boxcolor = "#6C6";
+        }
     };
 
     LGSillyClient.prototype.connectSocket = function() {
         var that = this;
         if (typeof SillyClient == "undefined") {
-            if (!this._error)
+            if (!this._error) {
                 console.error(
                     "SillyClient node cannot be used, you must include SillyServer.js"
                 );
+            }
             this._error = true;
             return;
         }
@@ -240,9 +274,13 @@
                     } catch (err) {
                         return;
                     }
-                } else that.triggerSlot(0, data.data);
+                } else {
+                    that.triggerSlot(0, data.data);
+                }
             } //for FLOW slots
-            else that._last_received_data[data.channel || 0] = data.data;
+            else {
+                that._last_received_data[data.channel || 0] = data.data;
+            }
             that.boxcolor = "#AFA";
         };
         this._server.on_error = function(e) {
@@ -267,12 +305,16 @@
     };
 
     LGSillyClient.prototype.send = function(data) {
-        if (!this._server || !this._server.is_connected) return;
+        if (!this._server || !this._server.is_connected) {
+            return;
+        }
         this._server.sendMessage({ type: 1, data: data });
     };
 
     LGSillyClient.prototype.onAction = function(action, param) {
-        if (!this._server || !this._server.is_connected) return;
+        if (!this._server || !this._server.is_connected) {
+            return;
+        }
         this._server.sendMessage({ type: 1, action: action, data: param });
     };
 

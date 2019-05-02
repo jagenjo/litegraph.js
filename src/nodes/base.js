@@ -56,7 +56,9 @@
     };
 
     Subgraph.prototype.onDrawTitle = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
 
         ctx.fillStyle = "#555";
         var w = LiteGraph.NODE_TITLE_HEIGHT;
@@ -96,89 +98,111 @@
 
     Subgraph.prototype.onExecute = function() {
         this.enabled = this.getInputOrProperty("enabled");
-        if (!this.enabled) return;
+        if (!this.enabled) {
+            return;
+        }
 
         //send inputs to subgraph global inputs
-        if (this.inputs)
+        if (this.inputs) {
             for (var i = 0; i < this.inputs.length; i++) {
                 var input = this.inputs[i];
                 var value = this.getInputData(i);
                 this.subgraph.setInputData(input.name, value);
             }
+        }
 
         //execute
         this.subgraph.runStep();
 
         //send subgraph global outputs to outputs
-        if (this.outputs)
+        if (this.outputs) {
             for (var i = 0; i < this.outputs.length; i++) {
                 var output = this.outputs[i];
                 var value = this.subgraph.getOutputData(output.name);
                 this.setOutputData(i, value);
             }
+        }
     };
 
     Subgraph.prototype.sendEventToAllNodes = function(eventname, param, mode) {
-        if (this.enabled)
+        if (this.enabled) {
             this.subgraph.sendEventToAllNodes(eventname, param, mode);
+        }
     };
 
     //**** INPUTS ***********************************
     Subgraph.prototype.onSubgraphTrigger = function(event, param) {
         var slot = this.findOutputSlot(event);
-        if (slot != -1) this.triggerSlot(slot);
+        if (slot != -1) {
+            this.triggerSlot(slot);
+        }
     };
 
     Subgraph.prototype.onSubgraphNewInput = function(name, type) {
         var slot = this.findInputSlot(name);
-        if (slot == -1)
+        if (slot == -1) {
             //add input to the node
             this.addInput(name, type);
+        }
     };
 
     Subgraph.prototype.onSubgraphRenamedInput = function(oldname, name) {
         var slot = this.findInputSlot(oldname);
-        if (slot == -1) return;
+        if (slot == -1) {
+            return;
+        }
         var info = this.getInputInfo(slot);
         info.name = name;
     };
 
     Subgraph.prototype.onSubgraphTypeChangeInput = function(name, type) {
         var slot = this.findInputSlot(name);
-        if (slot == -1) return;
+        if (slot == -1) {
+            return;
+        }
         var info = this.getInputInfo(slot);
         info.type = type;
     };
 
     Subgraph.prototype.onSubgraphRemovedInput = function(name) {
         var slot = this.findInputSlot(name);
-        if (slot == -1) return;
+        if (slot == -1) {
+            return;
+        }
         this.removeInput(slot);
     };
 
     //**** OUTPUTS ***********************************
     Subgraph.prototype.onSubgraphNewOutput = function(name, type) {
         var slot = this.findOutputSlot(name);
-        if (slot == -1) this.addOutput(name, type);
+        if (slot == -1) {
+            this.addOutput(name, type);
+        }
     };
 
     Subgraph.prototype.onSubgraphRenamedOutput = function(oldname, name) {
         var slot = this.findOutputSlot(oldname);
-        if (slot == -1) return;
+        if (slot == -1) {
+            return;
+        }
         var info = this.getOutputInfo(slot);
         info.name = name;
     };
 
     Subgraph.prototype.onSubgraphTypeChangeOutput = function(name, type) {
         var slot = this.findOutputSlot(name);
-        if (slot == -1) return;
+        if (slot == -1) {
+            return;
+        }
         var info = this.getOutputInfo(slot);
         info.type = type;
     };
 
     Subgraph.prototype.onSubgraphRemovedOutput = function(name) {
         var slot = this.findInputSlot(name);
-        if (slot == -1) return;
+        if (slot == -1) {
+            return;
+        }
         this.removeOutput(slot);
     };
     // *****************************************************
@@ -232,12 +256,15 @@
                 return that.name_in_graph;
             },
             set: function(v) {
-                if (v == "" || v == that.name_in_graph || v == "enabled")
+                if (v == "" || v == that.name_in_graph || v == "enabled") {
                     return;
-                if (that.name_in_graph)
+                }
+                if (that.name_in_graph) {
                     //already added
                     that.graph.renameInput(that.name_in_graph, v);
-                else that.graph.addInput(v, that.properties.type);
+                } else {
+                    that.graph.addInput(v, that.properties.type);
+                }
                 that.name_widget.value = v;
                 that.name_in_graph = v;
             },
@@ -249,14 +276,17 @@
                 return that.outputs[0].type;
             },
             set: function(v) {
-                if (v == "event") v = LiteGraph.EVENT;
+                if (v == "event") {
+                    v = LiteGraph.EVENT;
+                }
                 that.outputs[0].type = v;
-                if (that.name_in_graph)
+                if (that.name_in_graph) {
                     //already added
                     that.graph.changeInputType(
                         that.name_in_graph,
                         that.outputs[0].type
                     );
+                }
                 that.type_widget.value = v;
             },
             enumerable: true
@@ -267,7 +297,9 @@
             "Name",
             this.properties.name,
             function(v) {
-                if (!v) return;
+                if (!v) {
+                    return;
+                }
                 that.properties.name = v;
             }
         );
@@ -289,12 +321,16 @@
     GraphInput.desc = "Input of the graph";
 
     GraphInput.prototype.getTitle = function() {
-        if (this.flags.collapsed) return this.properties.name;
+        if (this.flags.collapsed) {
+            return this.properties.name;
+        }
         return this.title;
     };
 
     GraphInput.prototype.onAction = function(action, param) {
-        if (this.properties.type == LiteGraph.EVENT) this.triggerSlot(0, param);
+        if (this.properties.type == LiteGraph.EVENT) {
+            this.triggerSlot(0, param);
+        }
     };
 
     GraphInput.prototype.onExecute = function() {
@@ -302,14 +338,18 @@
 
         //read from global input
         var data = this.graph.inputs[name];
-        if (!data) return;
+        if (!data) {
+            return;
+        }
 
         //put through output
         this.setOutputData(0, data.value);
     };
 
     GraphInput.prototype.onRemoved = function() {
-        if (this.name_in_graph) this.graph.removeInput(this.name_in_graph);
+        if (this.name_in_graph) {
+            this.graph.removeInput(this.name_in_graph);
+        }
     };
 
     LiteGraph.GraphInput = GraphInput;
@@ -328,11 +368,15 @@
                 return that.name_in_graph;
             },
             set: function(v) {
-                if (v == "" || v == that.name_in_graph) return;
-                if (that.name_in_graph)
+                if (v == "" || v == that.name_in_graph) {
+                    return;
+                }
+                if (that.name_in_graph) {
                     //already added
                     that.graph.renameOutput(that.name_in_graph, v);
-                else that.graph.addOutput(v, that.properties.type);
+                } else {
+                    that.graph.addOutput(v, that.properties.type);
+                }
                 that.name_widget.value = v;
                 that.name_in_graph = v;
             },
@@ -344,14 +388,17 @@
                 return that.inputs[0].type;
             },
             set: function(v) {
-                if (v == "action" || v == "event") v = LiteGraph.ACTION;
+                if (v == "action" || v == "event") {
+                    v = LiteGraph.ACTION;
+                }
                 that.inputs[0].type = v;
-                if (that.name_in_graph)
+                if (that.name_in_graph) {
                     //already added
                     that.graph.changeOutputType(
                         that.name_in_graph,
                         that.inputs[0].type
                     );
+                }
                 that.type_widget.value = v || "";
             },
             enumerable: true
@@ -362,7 +409,9 @@
             "Name",
             this.properties.name,
             function(v) {
-                if (!v) return;
+                if (!v) {
+                    return;
+                }
                 that.properties.name = v;
             }
         );
@@ -389,16 +438,21 @@
     };
 
     GraphOutput.prototype.onAction = function(action, param) {
-        if (this.properties.type == LiteGraph.ACTION)
+        if (this.properties.type == LiteGraph.ACTION) {
             this.graph.trigger(this.properties.name, param);
+        }
     };
 
     GraphOutput.prototype.onRemoved = function() {
-        if (this.name_in_graph) this.graph.removeOutput(this.name_in_graph);
+        if (this.name_in_graph) {
+            this.graph.removeOutput(this.name_in_graph);
+        }
     };
 
     GraphOutput.prototype.getTitle = function() {
-        if (this.flags.collapsed) return this.properties.name;
+        if (this.flags.collapsed) {
+            return this.properties.name;
+        }
         return this.title;
     };
 
@@ -419,7 +473,9 @@
     };
 
     ConstantNumber.prototype.getTitle = function() {
-        if (this.flags.collapsed) return this.properties.value;
+        if (this.flags.collapsed) {
+            return this.properties.value;
+        }
         return this.title;
     };
 
@@ -490,7 +546,9 @@
 
     ConstantData.prototype.onPropertyChanged = function(name, value) {
         this.widget.value = value;
-        if (value == null || value == "") return;
+        if (value == null || value == "") {
+            return;
+        }
 
         try {
             this._value = JSON.parse(value);
@@ -530,7 +588,9 @@
     };
 
     ObjectProperty.prototype.getTitle = function() {
-        if (this.flags.collapsed) return "in." + this.properties.value;
+        if (this.flags.collapsed) {
+            return "in." + this.properties.value;
+        }
         return this.title;
     };
 
@@ -540,7 +600,9 @@
 
     ObjectProperty.prototype.onExecute = function() {
         var data = this.getInputData(0);
-        if (data != null) this.setOutputData(0, data[this.properties.value]);
+        if (data != null) {
+            this.setOutputData(0, data[this.properties.value]);
+        }
     };
 
     LiteGraph.registerNodeType("basic/object_property", ObjectProperty);
@@ -556,24 +618,33 @@
     Watch.desc = "Show value of input";
 
     Watch.prototype.onExecute = function() {
-        if (this.inputs[0]) this.value = this.getInputData(0);
+        if (this.inputs[0]) {
+            this.value = this.getInputData(0);
+        }
     };
 
     Watch.prototype.getTitle = function() {
-        if (this.flags.collapsed) return this.inputs[0].label;
+        if (this.flags.collapsed) {
+            return this.inputs[0].label;
+        }
         return this.title;
     };
 
     Watch.toString = function(o) {
-        if (o == null) return "null";
-        else if (o.constructor === Number) return o.toFixed(3);
-        else if (o.constructor === Array) {
+        if (o == null) {
+            return "null";
+        } else if (o.constructor === Number) {
+            return o.toFixed(3);
+        } else if (o.constructor === Array) {
             var str = "[";
-            for (var i = 0; i < o.length; ++i)
+            for (var i = 0; i < o.length; ++i) {
                 str += Watch.toString(o[i]) + (i + 1 != o.length ? "," : "");
+            }
             str += "]";
             return str;
-        } else return String(o);
+        } else {
+            return String(o);
+        }
     };
 
     Watch.prototype.onDrawBackground = function(ctx) {
@@ -612,14 +683,20 @@
     Console.desc = "Show value inside the console";
 
     Console.prototype.onAction = function(action, param) {
-        if (action == "log") console.log(param);
-        else if (action == "warn") console.warn(param);
-        else if (action == "error") console.error(param);
+        if (action == "log") {
+            console.log(param);
+        } else if (action == "warn") {
+            console.warn(param);
+        } else if (action == "error") {
+            console.error(param);
+        }
     };
 
     Console.prototype.onExecute = function() {
         var msg = this.getInputData(1);
-        if (msg !== null) this.properties.msg = msg;
+        if (msg !== null) {
+            this.properties.msg = msg;
+        }
         console.log(msg);
     };
 
@@ -676,7 +753,9 @@
     }
 
     NodeScript.prototype.onConfigure = function(o) {
-        if (o.properties.onExecute) this.compileCode(o.properties.onExecute);
+        if (o.properties.onExecute) {
+            this.compileCode(o.properties.onExecute);
+        }
     };
 
     NodeScript.title = "Script";
@@ -694,8 +773,9 @@
 
     NodeScript.prototype.compileCode = function(code) {
         this._func = null;
-        if (code.length > 100) console.warn("Script too long, max 100 chars");
-        else {
+        if (code.length > 100) {
+            console.warn("Script too long, max 100 chars");
+        } else {
             var code_low = code.toLowerCase();
             var forbidden_words = [
                 "script",
@@ -705,11 +785,12 @@
                 "nodescript",
                 "function"
             ]; //bad security solution
-            for (var i = 0; i < forbidden_words.length; ++i)
+            for (var i = 0; i < forbidden_words.length; ++i) {
                 if (code_low.indexOf(forbidden_words[i]) != -1) {
                     console.warn("invalid script");
                     return;
                 }
+            }
             try {
                 this._func = new Function("A", "B", "C", "DATA", "node", code);
             } catch (err) {
@@ -720,7 +801,9 @@
     };
 
     NodeScript.prototype.onExecute = function() {
-        if (!this._func) return;
+        if (!this._func) {
+            return;
+        }
 
         try {
             var A = this.getInputData(0);

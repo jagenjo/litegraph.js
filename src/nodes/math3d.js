@@ -12,7 +12,9 @@
 
     Math3DVec2ToXYZ.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v == null) return;
+        if (v == null) {
+            return;
+        }
 
         this.setOutputData(0, v[0]);
         this.setOutputData(1, v[1]);
@@ -32,9 +34,13 @@
 
     Math3DXYToVec2.prototype.onExecute = function() {
         var x = this.getInputData(0);
-        if (x == null) x = this.properties.x;
+        if (x == null) {
+            x = this.properties.x;
+        }
         var y = this.getInputData(1);
-        if (y == null) y = this.properties.y;
+        if (y == null) {
+            y = this.properties.y;
+        }
 
         var data = this._data;
         data[0] = x;
@@ -57,7 +63,9 @@
 
     Math3DVec3ToXYZ.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v == null) return;
+        if (v == null) {
+            return;
+        }
 
         this.setOutputData(0, v[0]);
         this.setOutputData(1, v[1]);
@@ -78,11 +86,17 @@
 
     Math3DXYZToVec3.prototype.onExecute = function() {
         var x = this.getInputData(0);
-        if (x == null) x = this.properties.x;
+        if (x == null) {
+            x = this.properties.x;
+        }
         var y = this.getInputData(1);
-        if (y == null) y = this.properties.y;
+        if (y == null) {
+            y = this.properties.y;
+        }
         var z = this.getInputData(2);
-        if (z == null) z = this.properties.z;
+        if (z == null) {
+            z = this.properties.z;
+        }
 
         var data = this._data;
         data[0] = x;
@@ -107,7 +121,9 @@
 
     Math3DVec4ToXYZW.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v == null) return;
+        if (v == null) {
+            return;
+        }
 
         this.setOutputData(0, v[0]);
         this.setOutputData(1, v[1]);
@@ -134,13 +150,21 @@
 
     Math3DXYZWToVec4.prototype.onExecute = function() {
         var x = this.getInputData(0);
-        if (x == null) x = this.properties.x;
+        if (x == null) {
+            x = this.properties.x;
+        }
         var y = this.getInputData(1);
-        if (y == null) y = this.properties.y;
+        if (y == null) {
+            y = this.properties.y;
+        }
         var z = this.getInputData(2);
-        if (z == null) z = this.properties.z;
+        if (z == null) {
+            z = this.properties.z;
+        }
         var w = this.getInputData(3);
-        if (w == null) w = this.properties.w;
+        if (w == null) {
+            w = this.properties.w;
+        }
 
         var data = this._data;
         data[0] = x;
@@ -166,9 +190,13 @@
 
     Math3DVec3Scale.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v == null) return;
+        if (v == null) {
+            return;
+        }
         var f = this.getInputData(1);
-        if (f == null) f = this.properties.f;
+        if (f == null) {
+            f = this.properties.f;
+        }
 
         var data = this._data;
         data[0] = v[0] * f;
@@ -189,7 +217,9 @@
 
     Math3DVec3Length.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v == null) return;
+        if (v == null) {
+            return;
+        }
         var dist = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
         this.setOutputData(0, dist);
     };
@@ -207,7 +237,9 @@
 
     Math3DVec3Normalize.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v == null) return;
+        if (v == null) {
+            return;
+        }
         var dist = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
         var data = this._data;
         data[0] = v[0] / dist;
@@ -233,9 +265,13 @@
 
     Math3DVec3Lerp.prototype.onExecute = function() {
         var A = this.getInputData(0);
-        if (A == null) return;
+        if (A == null) {
+            return;
+        }
         var B = this.getInputData(1);
-        if (B == null) return;
+        if (B == null) {
+            return;
+        }
         var f = this.getInputOrProperty("f");
 
         var data = this._data;
@@ -259,9 +295,13 @@
 
     Math3DVec3Dot.prototype.onExecute = function() {
         var A = this.getInputData(0);
-        if (A == null) return;
+        if (A == null) {
+            return;
+        }
         var B = this.getInputData(1);
-        if (B == null) return;
+        if (B == null) {
+            return;
+        }
 
         var dot = A[0] * B[0] + A[1] * B[1] + A[2] * B[2];
         this.setOutputData(0, dot);
@@ -285,8 +325,9 @@
             this._value[1] = this.getInputOrProperty("y");
             this._value[2] = this.getInputOrProperty("z");
             this._value[3] = this.getInputOrProperty("w");
-            if (this.properties.normalize)
+            if (this.properties.normalize) {
                 quat.normalize(this._value, this._value);
+            }
             this.setOutputData(0, this._value);
         };
 
@@ -314,9 +355,13 @@
 
         Math3DRotation.prototype.onExecute = function() {
             var angle = this.getInputData(0);
-            if (angle == null) angle = this.properties.angle;
+            if (angle == null) {
+                angle = this.properties.angle;
+            }
             var axis = this.getInputData(1);
-            if (axis == null) axis = this.properties.axis;
+            if (axis == null) {
+                axis = this.properties.axis;
+            }
 
             var R = quat.setAxisAngle(this._value, axis, angle * 0.0174532925);
             this.setOutputData(0, R);
@@ -336,14 +381,18 @@
 
         Math3DRotateVec3.prototype.onExecute = function() {
             var vec = this.getInputData(0);
-            if (vec == null) vec = this.properties.vec;
+            if (vec == null) {
+                vec = this.properties.vec;
+            }
             var quat = this.getInputData(1);
-            if (quat == null) this.setOutputData(vec);
-            else
+            if (quat == null) {
+                this.setOutputData(vec);
+            } else {
                 this.setOutputData(
                     0,
                     vec3.transformQuat(vec3.create(), vec, quat)
                 );
+            }
         };
 
         LiteGraph.registerNodeType("math3d/rotate_vec3", Math3DRotateVec3);
@@ -360,9 +409,13 @@
 
         Math3DMultQuat.prototype.onExecute = function() {
             var A = this.getInputData(0);
-            if (A == null) return;
+            if (A == null) {
+                return;
+            }
             var B = this.getInputData(1);
-            if (B == null) return;
+            if (B == null) {
+                return;
+            }
 
             var R = quat.multiply(this._value, A, B);
             this.setOutputData(0, R);
@@ -387,11 +440,17 @@
 
         Math3DQuatSlerp.prototype.onExecute = function() {
             var A = this.getInputData(0);
-            if (A == null) return;
+            if (A == null) {
+                return;
+            }
             var B = this.getInputData(1);
-            if (B == null) return;
+            if (B == null) {
+                return;
+            }
             var factor = this.properties.factor;
-            if (this.getInputData(2) != null) factor = this.getInputData(2);
+            if (this.getInputData(2) != null) {
+                factor = this.getInputData(2);
+            }
 
             var R = quat.slerp(this._value, A, B, factor);
             this.setOutputData(0, R);

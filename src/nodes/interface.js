@@ -19,7 +19,9 @@
 
     WidgetButton.font = "Arial";
     WidgetButton.prototype.onDrawForeground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
         var margin = 10;
         ctx.fillStyle = "black";
         ctx.fillRect(
@@ -97,7 +99,9 @@
     WidgetToggle.desc = "Toggles between true or false";
 
     WidgetToggle.prototype.onDrawForeground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
 
         var size = this.size[1] * 0.5;
         var margin = 0.25;
@@ -130,7 +134,9 @@
 
     WidgetToggle.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v != null) this.properties.value = v;
+        if (v != null) {
+            this.properties.value = v;
+        }
         this.setOutputData(0, this.properties.value);
     };
 
@@ -184,7 +190,9 @@
             ctx.lineTo(x + h * -0.1, h * 0.8);
             ctx.fill();
             ctx.font = (h * 0.7).toFixed(1) + "px Arial";
-        } else ctx.font = (h * 0.8).toFixed(1) + "px Arial";
+        } else {
+            ctx.font = (h * 0.8).toFixed(1) + "px Arial";
+        }
 
         ctx.textAlign = "center";
         ctx.font = (h * 0.7).toFixed(1) + "px Arial";
@@ -206,7 +214,9 @@
     };
 
     WidgetNumber.prototype.onMouseDown = function(e, pos) {
-        if (pos[1] < 0) return;
+        if (pos[1] < 0) {
+            return;
+        }
 
         this.old_y = e.canvasY;
         this.captureInput(true);
@@ -216,11 +226,17 @@
     };
 
     WidgetNumber.prototype.onMouseMove = function(e) {
-        if (!this.mouse_captured) return;
+        if (!this.mouse_captured) {
+            return;
+        }
 
         var delta = this.old_y - e.canvasY;
-        if (e.shiftKey) delta *= 10;
-        if (e.metaKey || e.altKey) delta *= 0.1;
+        if (e.shiftKey) {
+            delta *= 10;
+        }
+        if (e.metaKey || e.altKey) {
+            delta *= 0.1;
+        }
         this.old_y = e.canvasY;
 
         var steps = this._remainder + delta / WidgetNumber.pixels_threshold;
@@ -277,12 +293,15 @@
     WidgetKnob.size = [80, 100];
 
     WidgetKnob.prototype.onDrawForeground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
 
-        if (this.value == -1)
+        if (this.value == -1) {
             this.value =
                 (this.properties.value - this.properties.min) /
                 (this.properties.max - this.properties.min);
+        }
 
         var center_x = this.size[0] * 0.5;
         var center_y = this.size[1] * 0.5;
@@ -370,22 +389,28 @@
                 [e.canvasX, e.canvasY],
                 [this.pos[0] + this.center[0], this.pos[1] + this.center[1]]
             ) > this.radius
-        )
+        ) {
             return false;
+        }
         this.oldmouse = [e.canvasX - this.pos[0], e.canvasY - this.pos[1]];
         this.captureInput(true);
         return true;
     };
 
     WidgetKnob.prototype.onMouseMove = function(e) {
-        if (!this.oldmouse) return;
+        if (!this.oldmouse) {
+            return;
+        }
 
         var m = [e.canvasX - this.pos[0], e.canvasY - this.pos[1]];
 
         var v = this.value;
         v -= (m[1] - this.oldmouse[1]) * 0.01;
-        if (v > 1.0) v = 1.0;
-        else if (v < 0.0) v = 0.0;
+        if (v > 1.0) {
+            v = 1.0;
+        } else if (v < 0.0) {
+            v = 0.0;
+        }
         this.value = v;
         this.properties.value =
             this.properties.min +
@@ -436,7 +461,9 @@
     WidgetSliderGUI.title = "Inner Slider";
 
     WidgetSliderGUI.prototype.onPropertyChanged = function(name, value) {
-        if (name == "value") this.slider.value = value;
+        if (name == "value") {
+            this.slider.value = value;
+        }
     };
 
     WidgetSliderGUI.prototype.onExecute = function() {
@@ -457,10 +484,11 @@
     WidgetHSlider.desc = "Linear slider controller";
 
     WidgetHSlider.prototype.onDrawForeground = function(ctx) {
-        if (this.value == -1)
+        if (this.value == -1) {
             this.value =
                 (this.properties.value - this.properties.min) /
                 (this.properties.max - this.properties.min);
+        }
 
         //border
         ctx.globalAlpha = 1;
@@ -487,7 +515,9 @@
     };
 
     WidgetHSlider.prototype.onMouseDown = function(e) {
-        if (e.canvasY - this.pos[1] < 0) return false;
+        if (e.canvasY - this.pos[1] < 0) {
+            return false;
+        }
 
         this.oldmouse = [e.canvasX - this.pos[0], e.canvasY - this.pos[1]];
         this.captureInput(true);
@@ -495,15 +525,20 @@
     };
 
     WidgetHSlider.prototype.onMouseMove = function(e) {
-        if (!this.oldmouse) return;
+        if (!this.oldmouse) {
+            return;
+        }
 
         var m = [e.canvasX - this.pos[0], e.canvasY - this.pos[1]];
 
         var v = this.value;
         var delta = m[0] - this.oldmouse[0];
         v += delta / this.size[0];
-        if (v > 1.0) v = 1.0;
-        else if (v < 0.0) v = 0.0;
+        if (v > 1.0) {
+            v = 1.0;
+        } else if (v < 0.0) {
+            v = 0.0;
+        }
 
         this.value = v;
 
@@ -533,7 +568,9 @@
 
     WidgetProgress.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v != undefined) this.properties["value"] = v;
+        if (v != undefined) {
+            this.properties["value"] = v;
+        }
     };
 
     WidgetProgress.prototype.onDrawForeground = function(ctx) {
@@ -582,7 +619,9 @@
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
             ctx.shadowBlur = this.properties["glowSize"];
-        } else ctx.shadowColor = "transparent";
+        } else {
+            ctx.shadowColor = "transparent";
+        }
 
         var fontsize = this.properties["fontsize"];
 
@@ -593,12 +632,13 @@
 
         if (typeof this.str == "string") {
             var lines = this.str.split("\\n");
-            for (var i in lines)
+            for (var i in lines) {
                 ctx.fillText(
                     lines[i],
                     this.properties["align"] == "left" ? 15 : this.size[0] - 15,
                     fontsize * -0.15 + fontsize * (parseInt(i) + 1)
                 );
+            }
         }
 
         ctx.shadowColor = "transparent";
@@ -608,12 +648,16 @@
 
     WidgetText.prototype.onExecute = function() {
         var v = this.getInputData(0);
-        if (v != null) this.properties["value"] = v;
+        if (v != null) {
+            this.properties["value"] = v;
+        }
         //this.setDirtyCanvas(true);
     };
 
     WidgetText.prototype.resize = function() {
-        if (!this.last_ctx) return;
+        if (!this.last_ctx) {
+            return;
+        }
 
         var lines = this.str.split("\\n");
         this.last_ctx.font =
@@ -621,7 +665,9 @@
         var max = 0;
         for (var i in lines) {
             var w = this.last_ctx.measureText(lines[i]).width;
-            if (max < w) max = w;
+            if (max < w) {
+                max = w;
+            }
         }
         this.size[0] = max + 20;
         this.size[1] = 4 + lines.length * this.properties["fontsize"];
@@ -668,11 +714,17 @@
     };
 
     WidgetPanel.prototype.onDrawForeground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
 
-        if (this.lineargradient == null) this.createGradient(ctx);
+        if (this.lineargradient == null) {
+            this.createGradient(ctx);
+        }
 
-        if (!this.lineargradient) return;
+        if (!this.lineargradient) {
+            return;
+        }
 
         ctx.lineWidth = 1;
         ctx.strokeStyle = this.properties["borderColor"];
@@ -684,7 +736,9 @@
             ctx.shadowOffsetX = 0;
             ctx.shadowOffsetY = 0;
             ctx.shadowBlur = this.properties["shadowSize"];
-        } else ctx.shadowColor = "transparent";
+        } else {
+            ctx.shadowColor = "transparent";
+        }
 
         ctx.roundRect(
             0,

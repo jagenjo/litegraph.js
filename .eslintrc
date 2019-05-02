@@ -44,6 +44,7 @@
         "no-constant-condition": "warn",
         "no-unused-vars": "warn",
         "no-mixed-spaces-and-tabs": "warn",
-        "no-unreachable": "warn"
+        "no-unreachable": "warn",
+        "curly": ["warn", "all"]
     }
 }

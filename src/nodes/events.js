@@ -43,9 +43,11 @@
     };
 
     Sequencer.prototype.onAction = function(action, param) {
-        if (this.outputs)
-            for (var i = 0; i < this.outputs.length; ++i)
+        if (this.outputs) {
+            for (var i = 0; i < this.outputs.length; ++i) {
                 this.triggerSlot(i, param);
+            }
+        }
     };
 
     LiteGraph.registerNodeType("events/sequencer", Sequencer);
@@ -66,20 +68,26 @@
     FilterEvent.desc = "Blocks events that do not match the filter";
 
     FilterEvent.prototype.onAction = function(action, param) {
-        if (param == null) return;
-
-        if (this.properties.equal_to && this.properties.equal_to != param)
+        if (param == null) {
             return;
+        }
+
+        if (this.properties.equal_to && this.properties.equal_to != param) {
+            return;
+        }
 
         if (this.properties.has_property) {
             var prop = param[this.properties.has_property];
-            if (prop == null) return;
+            if (prop == null) {
+                return;
+            }
 
             if (
                 this.properties.property_equal_to &&
                 this.properties.property_equal_to != prop
-            )
+            ) {
                 return;
+            }
         }
 
         this.triggerSlot(0, param);
@@ -101,20 +109,30 @@
     EventCounter.desc = "Counts events";
 
     EventCounter.prototype.getTitle = function() {
-        if (this.flags.collapsed) return String(this.num);
+        if (this.flags.collapsed) {
+            return String(this.num);
+        }
         return this.title;
     };
 
     EventCounter.prototype.onAction = function(action, param) {
         var v = this.num;
-        if (action == "inc") this.num += 1;
-        else if (action == "dec") this.num -= 1;
-        else if (action == "reset") this.num = 0;
-        if (this.num != v) this.trigger("change", this.num);
+        if (action == "inc") {
+            this.num += 1;
+        } else if (action == "dec") {
+            this.num -= 1;
+        } else if (action == "reset") {
+            this.num = 0;
+        }
+        if (this.num != v) {
+            this.trigger("change", this.num);
+        }
     };
 
     EventCounter.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
         ctx.fillStyle = "#AAA";
         ctx.font = "20px Arial";
         ctx.textAlign = "center";
@@ -142,20 +160,26 @@
 
     DelayEvent.prototype.onAction = function(action, param) {
         var time = this.properties.time_in_ms;
-        if (time <= 0) this.trigger(null, param);
-        else this._pending.push([time, param]);
+        if (time <= 0) {
+            this.trigger(null, param);
+        } else {
+            this._pending.push([time, param]);
+        }
     };
 
     DelayEvent.prototype.onExecute = function() {
         var dt = this.graph.elapsed_time * 1000; //in ms
 
-        if (this.isInputConnected(1))
+        if (this.isInputConnected(1)) {
             this.properties.time_in_ms = this.getInputData(1);
+        }
 
         for (var i = 0; i < this._pending.length; ++i) {
             var action = this._pending[i];
             action[0] -= dt;
-            if (action[0] > 0) continue;
+            if (action[0] > 0) {
+                continue;
+            }
 
             //remove
             this._pending.splice(i, 1);
@@ -218,16 +242,18 @@
             !trigger &&
             (this.time < this.last_interval || isNaN(this.last_interval))
         ) {
-            if (this.inputs && this.inputs.length > 1 && this.inputs[1])
+            if (this.inputs && this.inputs.length > 1 && this.inputs[1]) {
                 this.setOutputData(1, false);
+            }
             return;
         }
 
         this.triggered = true;
         this.time = this.time % this.last_interval;
         this.trigger("on_tick", this.properties.event);
-        if (this.inputs && this.inputs.length > 1 && this.inputs[1])
+        if (this.inputs && this.inputs.length > 1 && this.inputs[1]) {
             this.setOutputData(1, true);
+        }
     };
 
     TimerEvent.prototype.onGetInputs = function() {
