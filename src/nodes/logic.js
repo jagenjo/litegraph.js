@@ -16,7 +16,9 @@
     Selector.desc = "selects an output";
 
     Selector.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
         ctx.fillStyle = "#AFB";
         var y = (this.selected + 1) * LiteGraph.NODE_SLOT_HEIGHT + 6;
         ctx.beginPath();
@@ -28,10 +30,14 @@
 
     Selector.prototype.onExecute = function() {
         var sel = this.getInputData(0);
-        if (sel == null) sel = 0;
+        if (sel == null) {
+            sel = 0;
+        }
         this.selected = sel = Math.round(sel) % (this.inputs.length - 1);
         var v = this.getInputData(sel + 1);
-        if (v !== undefined) this.setOutputData(0, v);
+        if (v !== undefined) {
+            this.setOutputData(0, v);
+        }
     };
 
     Selector.prototype.onGetInputs = function() {
@@ -68,7 +74,9 @@
             this.current_sequence = seq;
         }
         var index = this.getInputData(0);
-        if (index == null) index = 0;
+        if (index == null) {
+            index = 0;
+        }
         this.index = index = Math.round(index) % this.values.length;
 
         this.setOutputData(0, this.values[index]);

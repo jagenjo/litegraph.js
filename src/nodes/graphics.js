@@ -16,21 +16,29 @@
     GraphicsPlot.colors = ["#FFF", "#F99", "#9F9", "#99F"];
 
     GraphicsPlot.prototype.onExecute = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
 
         var size = this.size;
 
         for (var i = 0; i < 4; ++i) {
             var v = this.getInputData(i);
-            if (v == null) continue;
+            if (v == null) {
+                continue;
+            }
             var values = this.values[i];
             values.push(v);
-            if (values.length > size[0]) values.shift();
+            if (values.length > size[0]) {
+                values.shift();
+            }
         }
     };
 
     GraphicsPlot.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
 
         var size = this.size;
 
@@ -46,10 +54,12 @@
         ctx.lineTo(size[0], offset);
         ctx.stroke();
 
-        if (this.inputs)
+        if (this.inputs) {
             for (var i = 0; i < 4; ++i) {
                 var values = this.values[i];
-                if (!this.inputs[i] || !this.inputs[i].link) continue;
+                if (!this.inputs[i] || !this.inputs[i].link) {
+                    continue;
+                }
                 ctx.strokeStyle = colors[i];
                 ctx.beginPath();
                 var v = values[0] * scale * -1 + offset;
@@ -60,6 +70,7 @@
                 }
                 ctx.stroke();
             }
+        }
     };
 
     LiteGraph.registerNodeType("graphics/plot", GraphicsPlot);
@@ -82,21 +93,33 @@
     };
 
     GraphicsImage.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed) return;
-        if (this.img && this.size[0] > 5 && this.size[1] > 5)
+        if (this.flags.collapsed) {
+            return;
+        }
+        if (this.img && this.size[0] > 5 && this.size[1] > 5) {
             ctx.drawImage(this.img, 0, 0, this.size[0], this.size[1]);
+        }
     };
 
     GraphicsImage.prototype.onExecute = function() {
-        if (!this.img) this.boxcolor = "#000";
-        if (this.img && this.img.width) this.setOutputData(0, this.img);
-        else this.setOutputData(0, null);
-        if (this.img && this.img.dirty) this.img.dirty = false;
+        if (!this.img) {
+            this.boxcolor = "#000";
+        }
+        if (this.img && this.img.width) {
+            this.setOutputData(0, this.img);
+        } else {
+            this.setOutputData(0, null);
+        }
+        if (this.img && this.img.dirty) {
+            this.img.dirty = false;
+        }
     };
 
     GraphicsImage.prototype.onPropertyChanged = function(name, value) {
         this.properties[name] = value;
-        if (name == "url" && value != "") this.loadImage(value);
+        if (name == "url" && value != "") {
+            this.loadImage(value);
+        }
 
         return true;
     };
@@ -109,14 +132,17 @@
 
         this.img = document.createElement("img");
 
-        if (url.substr(0, 4) == "http" && LiteGraph.proxy)
+        if (url.substr(0, 4) == "http" && LiteGraph.proxy) {
             url = LiteGraph.proxy + url.substr(url.indexOf(":") + 3);
+        }
 
         this.img.src = url;
         this.boxcolor = "#F95";
         var that = this;
         this.img.onload = function() {
-            if (callback) callback(this);
+            if (callback) {
+                callback(this);
+            }
             that.trace(
                 "Image loaded, size: " + that.img.width + "x" + that.img.height
             );
@@ -134,7 +160,9 @@
 
     GraphicsImage.prototype.onDropFile = function(file) {
         var that = this;
-        if (this._url) URL.revokeObjectURL(this._url);
+        if (this._url) {
+            URL.revokeObjectURL(this._url);
+        }
         this._url = URL.createObjectURL(file);
         this.properties.url = this._url;
         this.loadImage(this._url, function(img) {
@@ -161,26 +189,39 @@
     ColorPalette.prototype.onExecute = function() {
         var c = [];
 
-        if (this.properties.colorA != null)
+        if (this.properties.colorA != null) {
             c.push(hex2num(this.properties.colorA));
-        if (this.properties.colorB != null)
+        }
+        if (this.properties.colorB != null) {
             c.push(hex2num(this.properties.colorB));
-        if (this.properties.colorC != null)
+        }
+        if (this.properties.colorC != null) {
             c.push(hex2num(this.properties.colorC));
-        if (this.properties.colorD != null)
+        }
+        if (this.properties.colorD != null) {
             c.push(hex2num(this.properties.colorD));
+        }
 
         var f = this.getInputData(0);
-        if (f == null) f = 0.5;
-        if (f > 1.0) f = 1.0;
-        else if (f < 0.0) f = 0.0;
+        if (f == null) {
+            f = 0.5;
+        }
+        if (f > 1.0) {
+            f = 1.0;
+        } else if (f < 0.0) {
+            f = 0.0;
+        }
 
-        if (c.length == 0) return;
+        if (c.length == 0) {
+            return;
+        }
 
         var result = [0, 0, 0];
-        if (f == 0) result = c[0];
-        else if (f == 1) result = c[c.length - 1];
-        else {
+        if (f == 0) {
+            result = c[0];
+        } else if (f == 1) {
+            result = c[c.length - 1];
+        } else {
             var pos = (c.length - 1) * f;
             var c1 = c[Math.floor(pos)];
             var c2 = c[Math.floor(pos) + 1];
@@ -196,7 +237,9 @@
 	c[2] = Math.abs( Math.sin( 0.01 * reModular.getTime() * Math.PI) );
 	*/
 
-        for (var i in result) result[i] /= 255;
+        for (var i in result) {
+            result[i] /= 255;
+        }
 
         this.boxcolor = colorToString(result);
         this.setOutputData(0, result);
@@ -217,8 +260,9 @@
     ];
 
     ImageFrame.prototype.onDrawBackground = function(ctx) {
-        if (this.frame && !this.flags.collapsed)
+        if (this.frame && !this.flags.collapsed) {
             ctx.drawImage(this.frame, 0, 0, this.size[0], this.size[1]);
+        }
     };
 
     ImageFrame.prototype.onExecute = function() {
@@ -236,14 +280,20 @@
                 height = this.frame.videoHeight;
             }
 
-            if (width && height) this.size = [width, height];
+            if (width && height) {
+                this.size = [width, height];
+            }
             this.setDirtyCanvas(true, true);
-        } else if (widget.name == "view") this.show();
+        } else if (widget.name == "view") {
+            this.show();
+        }
     };
 
     ImageFrame.prototype.show = function() {
         //var str = this.canvas.toDataURL("image/png");
-        if (showElement && this.frame) showElement(this.frame);
+        if (showElement && this.frame) {
+            showElement(this.frame);
+        }
     };
 
     LiteGraph.registerNodeType("graphics/frame", ImageFrame);
@@ -288,8 +338,11 @@
         }
 
         var fade = this.getInputData(2);
-        if (fade == null) fade = this.properties["fade"];
-        else this.properties["fade"] = fade;
+        if (fade == null) {
+            fade = this.properties["fade"];
+        } else {
+            this.properties["fade"] = fade;
+        }
 
         ctx.globalAlpha = fade;
         var B = this.getInputData(1);
@@ -326,7 +379,9 @@
 
     ImageCrop.prototype.onExecute = function() {
         var input = this.getInputData(0);
-        if (!input) return;
+        if (!input) {
+            return;
+        }
 
         if (input.width) {
             var ctx = this.canvas.getContext("2d");
@@ -339,12 +394,16 @@
                 input.height * this.properties["scale"]
             );
             this.setOutputData(0, this.canvas);
-        } else this.setOutputData(0, null);
+        } else {
+            this.setOutputData(0, null);
+        }
     };
 
     ImageCrop.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed) return;
-        if (this.canvas)
+        if (this.flags.collapsed) {
+            return;
+        }
+        if (this.canvas) {
             ctx.drawImage(
                 this.canvas,
                 0,
@@ -356,6 +415,7 @@
                 this.size[0],
                 this.size[1]
             );
+        }
     };
 
     ImageCrop.prototype.onPropertyChanged = function(name, value) {
@@ -367,7 +427,9 @@
                 this.trace("Error in scale");
                 this.properties[name] = 1.0;
             }
-        } else this.properties[name] = parseInt(value);
+        } else {
+            this.properties[name] = parseInt(value);
+        }
 
         this.createCanvas();
 
@@ -394,17 +456,23 @@
         var canvas = this.canvas;
         var w = this.properties.width | 0;
         var h = this.properties.height | 0;
-        if (canvas.width != w) canvas.width = w;
-        if (canvas.height != h) canvas.height = h;
+        if (canvas.width != w) {
+            canvas.width = w;
+        }
+        if (canvas.height != h) {
+            canvas.height = h;
+        }
 
-        if (this.properties.autoclear)
+        if (this.properties.autoclear) {
             this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
         this.setOutputData(0, canvas);
     };
 
     CanvasNode.prototype.onAction = function(action, param) {
-        if (action == "clear")
+        if (action == "clear") {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
     };
 
     LiteGraph.registerNodeType("graphics/canvas", CanvasNode);
@@ -422,10 +490,14 @@
 
     DrawImageNode.prototype.onExecute = function() {
         var canvas = this.getInputData(0);
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
 
         var img = this.getInputOrProperty("img");
-        if (!img) return;
+        if (!img) {
+            return;
+        }
 
         var x = this.getInputOrProperty("x");
         var y = this.getInputOrProperty("y");
@@ -456,7 +528,9 @@
 
     DrawRectangleNode.prototype.onExecute = function() {
         var canvas = this.getInputData(0);
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
 
         var x = this.getInputOrProperty("x");
         var y = this.getInputOrProperty("y");
@@ -484,12 +558,17 @@
     ];
 
     ImageVideo.prototype.onExecute = function() {
-        if (!this.properties.url) return;
+        if (!this.properties.url) {
+            return;
+        }
 
-        if (this.properties.url != this._video_url)
+        if (this.properties.url != this._video_url) {
             this.loadVideo(this.properties.url);
+        }
 
-        if (!this._video || this._video.width == 0) return;
+        if (!this._video || this._video.width == 0) {
+            return;
+        }
 
         var t = this.getInputData(0);
         if (t && t >= 0 && t <= 1.0) {
@@ -519,8 +598,9 @@
             this.properties.use_proxy &&
             url.substr(0, 4) == "http" &&
             LiteGraph.proxy
-        )
+        ) {
             url = LiteGraph.proxy + url.substr(url.indexOf(":") + 3);
+        }
 
         this._video = document.createElement("video");
         this._video.src = url;
@@ -575,29 +655,42 @@
 
     ImageVideo.prototype.onPropertyChanged = function(name, value) {
         this.properties[name] = value;
-        if (name == "url" && value != "") this.loadVideo(value);
+        if (name == "url" && value != "") {
+            this.loadVideo(value);
+        }
 
         return true;
     };
 
     ImageVideo.prototype.play = function() {
-        if (this._video) this._video.play();
+        if (this._video) {
+            this._video.play();
+        }
     };
 
     ImageVideo.prototype.playPause = function() {
-        if (!this._video) return;
-        if (this._video.paused) this.play();
-        else this.pause();
+        if (!this._video) {
+            return;
+        }
+        if (this._video.paused) {
+            this.play();
+        } else {
+            this.pause();
+        }
     };
 
     ImageVideo.prototype.stop = function() {
-        if (!this._video) return;
+        if (!this._video) {
+            return;
+        }
         this._video.pause();
         this._video.currentTime = 0;
     };
 
     ImageVideo.prototype.pause = function() {
-        if (!this._video) return;
+        if (!this._video) {
+            return;
+        }
         this.trace("Video paused");
         this._video.pause();
     };
@@ -671,7 +764,9 @@
         if (this._webcam_stream) {
             var tracks = this._webcam_stream.getTracks();
             if (tracks.length) {
-                for (var i = 0; i < tracks.length; ++i) tracks[i].stop();
+                for (var i = 0; i < tracks.length; ++i) {
+                    tracks[i].stop();
+                }
             }
             ImageWebcam.is_webcam_open = false;
             this._webcam_stream = null;
@@ -717,17 +812,22 @@
     };
 
     ImageWebcam.prototype.onExecute = function() {
-        if (this._webcam_stream == null && !this._waiting_confirmation)
+        if (this._webcam_stream == null && !this._waiting_confirmation) {
             this.openStream();
+        }
 
-        if (!this._video || !this._video.videoWidth) return;
+        if (!this._video || !this._video.videoWidth) {
+            return;
+        }
 
         this._video.frame = ++this.frame;
         this._video.width = this._video.videoWidth;
         this._video.height = this._video.videoHeight;
         this.setOutputData(0, this._video);
         for (var i = 1; i < this.outputs.length; ++i) {
-            if (!this.outputs[i]) continue;
+            if (!this.outputs[i]) {
+                continue;
+            }
             switch (this.outputs[i].name) {
                 case "width":
                     this.setOutputData(i, this._video.videoWidth);
@@ -753,10 +853,17 @@
     };
 
     ImageWebcam.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed || this.size[1] <= 20 || !this.properties.show)
+        if (
+            this.flags.collapsed ||
+            this.size[1] <= 20 ||
+            !this.properties.show
+        ) {
             return;
+        }
 
-        if (!this._video) return;
+        if (!this._video) {
+            return;
+        }
 
         //render to graph canvas
         ctx.save();

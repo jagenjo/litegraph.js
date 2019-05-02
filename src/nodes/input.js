@@ -75,7 +75,9 @@
         if (this.outputs) {
             for (var i = 0; i < this.outputs.length; i++) {
                 var output = this.outputs[i];
-                if (!output.links || !output.links.length) continue;
+                if (!output.links || !output.links.length) {
+                    continue;
+                }
                 var v = null;
 
                 if (gamepad) {
@@ -158,11 +160,12 @@
                                 if (
                                     this._current_buttons[j] &&
                                     !this._previous_buttons[j]
-                                )
+                                ) {
                                     this.triggerSlot(
                                         i,
                                         GamepadInput.buttons[j]
                                     );
+                                }
                             }
                             break;
                         default:
@@ -191,7 +194,9 @@
             navigator.getGamepads ||
             navigator.webkitGetGamepads ||
             navigator.mozGetGamepads;
-        if (!getGamepads) return null;
+        if (!getGamepads) {
+            return null;
+        }
         var gamepads = getGamepads.call(navigator);
         var gamepad = null;
 
@@ -199,18 +204,21 @@
 
         //pick the first connected
         for (var i = this.properties.gamepad_index; i < 4; i++) {
-            if (!gamepads[i]) continue;
+            if (!gamepads[i]) {
+                continue;
+            }
             gamepad = gamepads[i];
 
             //xbox controller mapping
             var xbox = this.xbox_mapping;
-            if (!xbox)
+            if (!xbox) {
                 xbox = this.xbox_mapping = {
                     axes: [],
                     buttons: {},
                     hat: "",
                     hatmap: GamepadInput.CENTER
                 };
+            }
 
             xbox.axes["lx"] = gamepad.axes[0];
             xbox.axes["ly"] = gamepad.axes[1];
@@ -300,7 +308,9 @@
     };
 
     GamepadInput.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed) return;
+        if (this.flags.collapsed) {
+            return;
+        }
 
         //render gamepad state?
         var la = this._left_axis;
@@ -321,8 +331,11 @@
         );
         var h = this.size[1] / this._current_buttons.length;
         ctx.fillStyle = "#AEB";
-        for (var i = 0; i < this._current_buttons.length; ++i)
-            if (this._current_buttons[i]) ctx.fillRect(0, h * i, 6, h);
+        for (var i = 0; i < this._current_buttons.length; ++i) {
+            if (this._current_buttons[i]) {
+                ctx.fillRect(0, h * i, 6, h);
+            }
+        }
     };
 
     GamepadInput.prototype.onGetOutputs = function() {
