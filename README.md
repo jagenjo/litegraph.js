@@ -146,9 +146,9 @@ graph.start()
 
 ![MOI Elephant](imgs/elephant.gif "MOI Elephant")
 
-### [Mynodes.NET](http://www.mynodes.net)
+### Mynodes
 
-![MyNodes.NET](imgs/mynodes.png "MyNodes.NET")
+![MyNodes](imgs/mynodes.png "MyNodes")
 
 ## Utils
 -----
