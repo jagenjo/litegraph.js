@@ -366,6 +366,15 @@
             ];
         };
 
+		//used to replace shader code
+		LGraphTexture.replaceCode = function( code, context )
+		{
+			return code.replace(/\{\{[a-zA-Z0-9_]*\}\}/g, function(v){
+				v = v.replace( /[\{\}]/g, "" );
+				return context[v] || "";
+			});
+		}
+
         LiteGraph.registerNodeType("texture/texture", LGraphTexture);
 
         //**************************
@@ -458,7 +467,7 @@
             this.help =
                 "<p>pixelcode must be vec3</p>\
 			<p>uvcode must be vec2, is optional</p>\
-			<p><strong>uv:</strong> tex. coords</p><p><strong>color:</strong> texture</p><p><strong>colorB:</strong> textureB</p><p><strong>time:</strong> scene time</p><p><strong>value:</strong> input value</p>";
+			<p><strong>uv:</strong> tex. coords</p><p><strong>color:</strong> texture</p><p><strong>colorB:</strong> textureB</p><p><strong>time:</strong> scene time</p><p><strong>value:</strong> input value</p><p>For multiline you must type: result = ...</p>";
 
             this.properties = {
                 value: 1,
@@ -466,6 +475,8 @@
                 pixelcode: "color + colorB * value",
                 precision: LGraphTexture.DEFAULT
             };
+
+			this.has_error = false;
         }
 
         LGraphTextureOperation.widgets_info = {
@@ -491,6 +502,11 @@
                 }
             ];
         };
+
+		LGraphTextureOperation.prototype.onPropertyChanged = function()
+		{
+			this.has_error = false;
+		}
 
         LGraphTextureOperation.prototype.onDrawBackground = function(ctx) {
             if (
@@ -583,30 +599,21 @@
 
             var shader = this._shader;
 
-            if (!shader || this._shader_code != uvcode + "|" + pixelcode) {
+            if ( !this.has_error && (!shader || this._shader_code != uvcode + "|" + pixelcode) ) {
+
+				var final_pixel_code = LGraphTexture.replaceCode( LGraphTextureOperation.pixel_shader, { UV_CODE:uvcode, PIXEL_CODE:pixelcode });
+
                 try {
-                    this._shader = new GL.Shader(
-                        Shader.SCREEN_VERTEX_SHADER,
-                        LGraphTextureOperation.pixel_shader,
-                        { UV_CODE: uvcode, PIXEL_CODE: pixelcode }
-                    );
+                    shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, final_pixel_code );
                     this.boxcolor = "#00FF00";
                 } catch (err) {
-                    console.log("Error compiling shader: ", err);
+                    console.log("Error compiling shader: ", err, final_pixel_code );
                     this.boxcolor = "#FF0000";
+					this.has_error = true;
                     return;
                 }
-                this.boxcolor = "#FF0000";
-
+				this._shader = shader;
                 this._shader_code = uvcode + "|" + pixelcode;
-                shader = this._shader;
-            }
-
-            if (!shader) {
-                this.boxcolor = "red";
-                return;
-            } else {
-                this.boxcolor = "green";
             }
 
             var value = this.getInputData(2);
@@ -655,14 +662,14 @@
 			\n\
 			void main() {\n\
 				vec2 uv = v_coord;\n\
-				UV_CODE;\n\
+				{{UV_CODE}};\n\
 				vec4 color4 = texture2D(u_texture, uv);\n\
 				vec3 color = color4.rgb;\n\
 				vec4 color4B = texture2D(u_textureB, uv);\n\
 				vec3 colorB = color4B.rgb;\n\
 				vec3 result = color;\n\
 				float alpha = 1.0;\n\
-				PIXEL_CODE;\n\
+				{{PIXEL_CODE}};\n\
 				gl_FragColor = vec4(result, alpha);\n\
 			}\n\
 			";
@@ -1556,11 +1563,12 @@
                     GL.Shader.SCREEN_VERTEX_SHADER,
                     LGraphTextureAverage.pixel_shader
                 );
-                //creates 32 random numbers and stores the, in two mat4
-                var samples = new Float32Array(32);
-                for (var i = 0; i < 32; ++i) {
-                    samples[i] = Math.random();
+                //creates 256 random numbers and stores them in two mat4
+                var samples = new Float32Array(16);
+                for (var i = 0; i < samples.length; ++i) {
+                    samples[i] = Math.random(); //poorly distributed samples
                 }
+				//upload only once
                 LGraphTextureAverage._shader.uniforms({
                     u_samples_a: samples.subarray(0, 16),
                     u_samples_b: samples.subarray(16, 32)
@@ -1620,8 +1628,9 @@
 			\n\
 			void main() {\n\
 				vec4 color = vec4(0.0);\n\
-				for(int i = 0; i < 4; ++i)\n\
-					for(int j = 0; j < 4; ++j)\n\
+				//random average\n\
+				for(int i = 0; i <= 4; ++i)\n\
+					for(int j = 0; j <= 4; ++j)\n\
 					{\n\
 						color += texture2D(u_texture, vec2( u_samples_a[i][j], u_samples_b[i][j] ), u_mipmap_offset );\n\
 						color += texture2D(u_texture, vec2( 1.0 - u_samples_a[i][j], 1.0 - u_samples_b[i][j] ), u_mipmap_offset );\n\
