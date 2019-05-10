@@ -4309,6 +4309,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.pause_rendering = false;
         this.clear_background = true;
 
+		this.read_only = false; //if set to true users cannot modify the graph
         this.render_only_selected = true;
         this.live_mode = false;
         this.show_info = true;
@@ -4869,7 +4870,7 @@ LGraphNode.prototype.executeAction = function(action)
 
             //when clicked on top of a node
             //and it is not interactive
-            if (node && this.allow_interaction && !skip_action) {
+            if (node && this.allow_interaction && !skip_action && !this.read_only) {
                 if (!this.live_mode && !node.flags.pinned) {
                     this.bringToFront(node);
                 } //if it wasn't selected?
@@ -5076,29 +5077,30 @@ LGraphNode.prototype.executeAction = function(action)
             } //clicked outside of nodes
             else {
                 //search for link connector
-                for (var i = 0; i < this.visible_links.length; ++i) {
-                    var link = this.visible_links[i];
-                    var center = link._pos;
-                    if (
-                        !center ||
-                        e.canvasX < center[0] - 4 ||
-                        e.canvasX > center[0] + 4 ||
-                        e.canvasY < center[1] - 4 ||
-                        e.canvasY > center[1] + 4
-                    ) {
-                        continue;
-                    }
-                    //link clicked
-                    this.showLinkMenu(link, e);
-                    break;
-                }
+				if(!this.read_only) 
+					for (var i = 0; i < this.visible_links.length; ++i) {
+						var link = this.visible_links[i];
+						var center = link._pos;
+						if (
+							!center ||
+							e.canvasX < center[0] - 4 ||
+							e.canvasX > center[0] + 4 ||
+							e.canvasY < center[1] - 4 ||
+							e.canvasY > center[1] + 4
+						) {
+							continue;
+						}
+						//link clicked
+						this.showLinkMenu(link, e);
+						break;
+					}
 
                 this.selected_group = this.graph.getGroupOnPos(
                     e.canvasX,
                     e.canvasY
                 );
                 this.selected_group_resizing = false;
-                if (this.selected_group) {
+                if (this.selected_group && !this.read_only ) {
                     if (e.ctrlKey) {
                         this.dragging_rectangle = null;
                     }
@@ -5119,7 +5121,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }
 
-                if (is_double_click) {
+                if (is_double_click && !this.read_only ) {
                     this.showSearchBox(e);
                 }
 
@@ -5133,7 +5135,8 @@ LGraphNode.prototype.executeAction = function(action)
             //middle button
         } else if (e.which == 3) {
             //right button
-            this.processContextMenu(node, e);
+			if(!this.read_only)
+	            this.processContextMenu(node, e);
         }
 
         //TODO
@@ -5210,7 +5213,7 @@ LGraphNode.prototype.executeAction = function(action)
             this.dragging_rectangle[2] = e.canvasX - this.dragging_rectangle[0];
             this.dragging_rectangle[3] = e.canvasY - this.dragging_rectangle[1];
             this.dirty_canvas = true;
-        } else if (this.selected_group) {
+        } else if (this.selected_group && !this.read_only) {
             //moving/resizing a group
             if (this.selected_group_resizing) {
                 this.selected_group.size = [
@@ -5231,7 +5234,7 @@ LGraphNode.prototype.executeAction = function(action)
             this.ds.offset[1] += delta[1] / this.ds.scale;
             this.dirty_canvas = true;
             this.dirty_bgcanvas = true;
-        } else if (this.allow_interaction) {
+        } else if (this.allow_interaction && !this.read_only) {
             if (this.connecting_node) {
                 this.dirty_canvas = true;
             }
@@ -16109,14 +16112,13 @@ if (typeof exports != "undefined") {
             this.addInput("value", "number");
             this.addOutput("Texture", "Texture");
             this.help =
-                "<p>pixelcode must be vec3</p>\
-			<p>uvcode must be vec2, is optional</p>\
-			<p><strong>uv:</strong> tex. coords</p><p><strong>color:</strong> texture</p><p><strong>colorB:</strong> textureB</p><p><strong>time:</strong> scene time</p><p><strong>value:</strong> input value</p><p>For multiline you must type: result = ...</p>";
+                "<p>pixelcode must be vec3, uvcode must be vec2, is optional</p>\
+			<p><strong>uv:</strong> tex. coords</p><p><strong>color:</strong> texture <strong>colorB:</strong> textureB</p><p><strong>time:</strong> scene time <strong>value:</strong> input value</p><p>For multiline you must type: result = ...</p>";
 
             this.properties = {
                 value: 1,
-                uvcode: "",
                 pixelcode: "color + colorB * value",
+                uvcode: "",
                 precision: LGraphTexture.DEFAULT
             };
 
@@ -16124,8 +16126,8 @@ if (typeof exports != "undefined") {
         }
 
         LGraphTextureOperation.widgets_info = {
-            uvcode: { widget: "textarea", height: 100 },
-            pixelcode: { widget: "textarea", height: 100 },
+            uvcode: { widget: "code" },
+            pixelcode: { widget: "code" },
             precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
         };
 
@@ -17156,14 +17158,13 @@ if (typeof exports != "undefined") {
             this.addOutput("avg", "vec4");
             this.addOutput("lum", "number");
             this.properties = {
-                use_previous_frame: true,
-                mipmap_offset: 0,
-                low_precision: false
+                use_previous_frame: true, //to avoid stalls 
+                high_quality: false //to use as much pixels as possible
             };
 
             this._uniforms = {
                 u_texture: 0,
-                u_mipmap_offset: this.properties.mipmap_offset
+                u_mipmap_offset: 0
             };
             this._luminance = new Float32Array(4);
         }
@@ -17234,6 +17235,25 @@ if (typeof exports != "undefined") {
                 });
             }
 
+			this._uniforms.u_mipmap_offset = 0;
+
+			if(this.properties.high_quality)
+			{
+				if( !this._temp_pot2_texture || this._temp_pot2_texture.type != type )
+					this._temp_pot2_texture = new GL.Texture(512, 512, {
+						type: type,
+						format: gl.RGBA,
+						minFilter: gl.LINEAR_MIPMAP_LINEAR,
+						magFilter: gl.LINEAR
+					});
+
+				tex.copyTo( this._temp_pot2_texture );
+				tex = this._temp_pot2_texture;
+				tex.bind(0);
+				gl.generateMipmap(GL_TEXTURE_2D);
+				this._uniforms.u_mipmap_offset = 9;
+			}
+
             var shader = LGraphTextureAverage._shader;
             var uniforms = this._uniforms;
             uniforms.u_mipmap_offset = this.properties.mipmap_offset;
@@ -17273,8 +17293,8 @@ if (typeof exports != "undefined") {
 			void main() {\n\
 				vec4 color = vec4(0.0);\n\
 				//random average\n\
-				for(int i = 0; i <= 4; ++i)\n\
-					for(int j = 0; j <= 4; ++j)\n\
+				for(int i = 0; i < 4; ++i)\n\
+					for(int j = 0; j < 4; ++j)\n\
 					{\n\
 						color += texture2D(u_texture, vec2( u_samples_a[i][j], u_samples_b[i][j] ), u_mipmap_offset );\n\
 						color += texture2D(u_texture, vec2( 1.0 - u_samples_a[i][j], 1.0 - u_samples_b[i][j] ), u_mipmap_offset );\n\
