@@ -4307,6 +4307,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.pause_rendering = false;
         this.clear_background = true;
 
+		this.read_only = false; //if set to true users cannot modify the graph
         this.render_only_selected = true;
         this.live_mode = false;
         this.show_info = true;
@@ -4867,7 +4868,7 @@ LGraphNode.prototype.executeAction = function(action)
 
             //when clicked on top of a node
             //and it is not interactive
-            if (node && this.allow_interaction && !skip_action) {
+            if (node && this.allow_interaction && !skip_action && !this.read_only) {
                 if (!this.live_mode && !node.flags.pinned) {
                     this.bringToFront(node);
                 } //if it wasn't selected?
@@ -5074,29 +5075,30 @@ LGraphNode.prototype.executeAction = function(action)
             } //clicked outside of nodes
             else {
                 //search for link connector
-                for (var i = 0; i < this.visible_links.length; ++i) {
-                    var link = this.visible_links[i];
-                    var center = link._pos;
-                    if (
-                        !center ||
-                        e.canvasX < center[0] - 4 ||
-                        e.canvasX > center[0] + 4 ||
-                        e.canvasY < center[1] - 4 ||
-                        e.canvasY > center[1] + 4
-                    ) {
-                        continue;
-                    }
-                    //link clicked
-                    this.showLinkMenu(link, e);
-                    break;
-                }
+				if(!this.read_only) 
+					for (var i = 0; i < this.visible_links.length; ++i) {
+						var link = this.visible_links[i];
+						var center = link._pos;
+						if (
+							!center ||
+							e.canvasX < center[0] - 4 ||
+							e.canvasX > center[0] + 4 ||
+							e.canvasY < center[1] - 4 ||
+							e.canvasY > center[1] + 4
+						) {
+							continue;
+						}
+						//link clicked
+						this.showLinkMenu(link, e);
+						break;
+					}
 
                 this.selected_group = this.graph.getGroupOnPos(
                     e.canvasX,
                     e.canvasY
                 );
                 this.selected_group_resizing = false;
-                if (this.selected_group) {
+                if (this.selected_group && !this.read_only ) {
                     if (e.ctrlKey) {
                         this.dragging_rectangle = null;
                     }
@@ -5117,7 +5119,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }
 
-                if (is_double_click) {
+                if (is_double_click && !this.read_only ) {
                     this.showSearchBox(e);
                 }
 
@@ -5131,7 +5133,8 @@ LGraphNode.prototype.executeAction = function(action)
             //middle button
         } else if (e.which == 3) {
             //right button
-            this.processContextMenu(node, e);
+			if(!this.read_only)
+	            this.processContextMenu(node, e);
         }
 
         //TODO
@@ -5208,7 +5211,7 @@ LGraphNode.prototype.executeAction = function(action)
             this.dragging_rectangle[2] = e.canvasX - this.dragging_rectangle[0];
             this.dragging_rectangle[3] = e.canvasY - this.dragging_rectangle[1];
             this.dirty_canvas = true;
-        } else if (this.selected_group) {
+        } else if (this.selected_group && !this.read_only) {
             //moving/resizing a group
             if (this.selected_group_resizing) {
                 this.selected_group.size = [
@@ -5229,7 +5232,7 @@ LGraphNode.prototype.executeAction = function(action)
             this.ds.offset[1] += delta[1] / this.ds.scale;
             this.dirty_canvas = true;
             this.dirty_bgcanvas = true;
-        } else if (this.allow_interaction) {
+        } else if (this.allow_interaction && !this.read_only) {
             if (this.connecting_node) {
                 this.dirty_canvas = true;
             }

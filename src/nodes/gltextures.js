@@ -465,14 +465,13 @@
             this.addInput("value", "number");
             this.addOutput("Texture", "Texture");
             this.help =
-                "<p>pixelcode must be vec3</p>\
-			<p>uvcode must be vec2, is optional</p>\
-			<p><strong>uv:</strong> tex. coords</p><p><strong>color:</strong> texture</p><p><strong>colorB:</strong> textureB</p><p><strong>time:</strong> scene time</p><p><strong>value:</strong> input value</p><p>For multiline you must type: result = ...</p>";
+                "<p>pixelcode must be vec3, uvcode must be vec2, is optional</p>\
+			<p><strong>uv:</strong> tex. coords</p><p><strong>color:</strong> texture <strong>colorB:</strong> textureB</p><p><strong>time:</strong> scene time <strong>value:</strong> input value</p><p>For multiline you must type: result = ...</p>";
 
             this.properties = {
                 value: 1,
-                uvcode: "",
                 pixelcode: "color + colorB * value",
+                uvcode: "",
                 precision: LGraphTexture.DEFAULT
             };
 
@@ -480,8 +479,8 @@
         }
 
         LGraphTextureOperation.widgets_info = {
-            uvcode: { widget: "textarea", height: 100 },
-            pixelcode: { widget: "textarea", height: 100 },
+            uvcode: { widget: "code" },
+            pixelcode: { widget: "code" },
             precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
         };
 
@@ -1512,14 +1511,13 @@
             this.addOutput("avg", "vec4");
             this.addOutput("lum", "number");
             this.properties = {
-                use_previous_frame: true,
-                mipmap_offset: 0,
-                low_precision: false
+                use_previous_frame: true, //to avoid stalls 
+                high_quality: false //to use as much pixels as possible
             };
 
             this._uniforms = {
                 u_texture: 0,
-                u_mipmap_offset: this.properties.mipmap_offset
+                u_mipmap_offset: 0
             };
             this._luminance = new Float32Array(4);
         }
@@ -1590,6 +1588,25 @@
                 });
             }
 
+			this._uniforms.u_mipmap_offset = 0;
+
+			if(this.properties.high_quality)
+			{
+				if( !this._temp_pot2_texture || this._temp_pot2_texture.type != type )
+					this._temp_pot2_texture = new GL.Texture(512, 512, {
+						type: type,
+						format: gl.RGBA,
+						minFilter: gl.LINEAR_MIPMAP_LINEAR,
+						magFilter: gl.LINEAR
+					});
+
+				tex.copyTo( this._temp_pot2_texture );
+				tex = this._temp_pot2_texture;
+				tex.bind(0);
+				gl.generateMipmap(GL_TEXTURE_2D);
+				this._uniforms.u_mipmap_offset = 9;
+			}
+
             var shader = LGraphTextureAverage._shader;
             var uniforms = this._uniforms;
             uniforms.u_mipmap_offset = this.properties.mipmap_offset;
@@ -1629,8 +1646,8 @@
 			void main() {\n\
 				vec4 color = vec4(0.0);\n\
 				//random average\n\
-				for(int i = 0; i <= 4; ++i)\n\
-					for(int j = 0; j <= 4; ++j)\n\
+				for(int i = 0; i < 4; ++i)\n\
+					for(int j = 0; j < 4; ++j)\n\
 					{\n\
 						color += texture2D(u_texture, vec2( u_samples_a[i][j], u_samples_b[i][j] ), u_mipmap_offset );\n\
 						color += texture2D(u_texture, vec2( 1.0 - u_samples_a[i][j], 1.0 - u_samples_b[i][j] ), u_mipmap_offset );\n\
