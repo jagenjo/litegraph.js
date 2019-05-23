@@ -773,8 +773,8 @@
 
     NodeScript.prototype.compileCode = function(code) {
         this._func = null;
-        if (code.length > 100) {
-            console.warn("Script too long, max 100 chars");
+        if (code.length > 256) {
+            console.warn("Script too long, max 256 chars");
         } else {
             var code_low = code.toLowerCase();
             var forbidden_words = [
