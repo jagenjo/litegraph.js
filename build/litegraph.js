@@ -482,7 +482,7 @@
         },
 
         registerSearchboxExtra: function(node_type, description, data) {
-            this.searchbox_extras[description] = {
+            this.searchbox_extras[description.toLowerCase()] = {
                 type: node_type,
                 desc: description,
                 data: data
@@ -9111,7 +9111,7 @@ LGraphNode.prototype.executeAction = function(action)
                 if (that.onSearchBoxSelection) {
                     that.onSearchBoxSelection(name, event, graphcanvas);
                 } else {
-                    var extra = LiteGraph.searchbox_extras[name];
+                    var extra = LiteGraph.searchbox_extras[name.toLowerCase()];
                     if (extra) {
                         name = extra.type;
                     }
@@ -9127,10 +9127,7 @@ LGraphNode.prototype.executeAction = function(action)
                     if (extra && extra.data) {
                         if (extra.data.properties) {
                             for (var i in extra.data.properties) {
-                                node.addProperty(
-                                    extra.data.properties[i][0],
-                                    extra.data.properties[i][0]
-                                );
+                                node.addProperty( i, extra.data.properties[i] );
                             }
                         }
                         if (extra.data.inputs) {
@@ -11327,8 +11324,8 @@ if (typeof exports != "undefined") {
 
     NodeScript.prototype.compileCode = function(code) {
         this._func = null;
-        if (code.length > 100) {
-            console.warn("Script too long, max 100 chars");
+        if (code.length > 256) {
+            console.warn("Script too long, max 256 chars");
         } else {
             var code_low = code.toLowerCase();
             var forbidden_words = [
@@ -13361,9 +13358,9 @@ if (typeof exports != "undefined") {
         this.addProperty("OP", "+", "enum", { values: MathOperation.values });
     }
 
-    MathOperation.values = ["+", "-", "*", "/", "%", "^"];
+    MathOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
 
-    MathOperation.title = "Operation";
+	MathOperation.title = "Operation";
     MathOperation.desc = "Easy math operators";
     MathOperation["@OP"] = {
         type: "enum",
@@ -13373,6 +13370,8 @@ if (typeof exports != "undefined") {
     MathOperation.size = [100, 60];
 
     MathOperation.prototype.getTitle = function() {
+		if(this.properties.OP == "max" || this.properties.OP == "min")
+			return this.properties.OP + "(A,B)";
         return "A " + this.properties.OP + " B";
     };
 
@@ -13420,6 +13419,12 @@ if (typeof exports != "undefined") {
             case "^":
                 result = Math.pow(A, B);
                 break;
+            case "max":
+                result = Math.max(A, B);
+                break;
+            case "min":
+                result = Math.min(A, B);
+                break;
             default:
                 console.warn("Unknown operation: " + this.properties.OP);
         }
@@ -13443,6 +13448,16 @@ if (typeof exports != "undefined") {
     };
 
     LiteGraph.registerNodeType("math/operation", MathOperation);
+
+    LiteGraph.registerSearchboxExtra("math/operation", "MAX", {
+        properties: {OP:"max"},
+        title: "MAX()"
+    });
+
+    LiteGraph.registerSearchboxExtra("math/operation", "MIN", {
+        properties: {OP:"min"},
+        title: "MIN()"
+    });
 
     //Math compare
     function MathCompare() {
@@ -13641,7 +13656,7 @@ if (typeof exports != "undefined") {
 
     MathTrigonometry.title = "Trigonometry";
     MathTrigonometry.desc = "Sin Cos Tan";
-    MathTrigonometry.filter = "shader";
+    //MathTrigonometry.filter = "shader";
 
     MathTrigonometry.prototype.onExecute = function() {
         var v = this.getInputData(0);
@@ -16117,8 +16132,7 @@ if (typeof exports != "undefined") {
             this.addInput("TextureB", "Texture");
             this.addInput("value", "number");
             this.addOutput("Texture", "Texture");
-            this.help =
-                "<p>pixelcode must be vec3, uvcode must be vec2, is optional</p>\
+            this.help = "<p>pixelcode must be vec3, uvcode must be vec2, is optional</p>\
 			<p><strong>uv:</strong> tex. coords</p><p><strong>color:</strong> texture <strong>colorB:</strong> textureB</p><p><strong>time:</strong> scene time <strong>value:</strong> input value</p><p>For multiline you must type: result = ...</p>";
 
             this.properties = {
@@ -16248,7 +16262,8 @@ if (typeof exports != "undefined") {
                     shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, final_pixel_code );
                     this.boxcolor = "#00FF00";
                 } catch (err) {
-                    console.log("Error compiling shader: ", err, final_pixel_code );
+                    //console.log("Error compiling shader: ", err, final_pixel_code );
+					GL.Shader.dumpErrorToConsole(err,Shader.SCREEN_VERTEX_SHADER, final_pixel_code);
                     this.boxcolor = "#FF0000";
 					this.has_error = true;
                     return;
@@ -16256,6 +16271,9 @@ if (typeof exports != "undefined") {
 				this._shader = shader;
                 this._shader_code = uvcode + "|" + pixelcode;
             }
+
+			if(!this._shader)
+				return;
 
             var value = this.getInputData(2);
             if (value != null) {
@@ -16323,14 +16341,16 @@ if (typeof exports != "undefined") {
             this.addOutput("out", "Texture");
             this.properties = {
                 code: "",
+				u_value: 1,
+				u_color: [1,1,1,1],
                 width: 512,
                 height: 512,
                 precision: LGraphTexture.DEFAULT
             };
 
             this.properties.code =
-                "\nvoid main() {\n  vec2 uv = v_coord;\n  vec3 color = vec3(0.0);\n//your code here\n\ngl_FragColor = vec4(color, 1.0);\n}\n";
-            this._uniforms = { in_texture: 0, texSize: vec2.create(), time: 0 };
+                "//time: time in seconds\n//texSize: vec2 with res\nuniform float u_value;\nuniform vec4 u_color;\n\nvoid main() {\n  vec2 uv = v_coord;\n  vec3 color = vec3(0.0);\n	//your code here\n	color.xy=uv;\n\ngl_FragColor = vec4(color, 1.0);\n}\n";
+            this._uniforms = { u_value: 1, u_color: vec4.create(), in_texture: 0, texSize: vec2.create(), time: 0 };
         }
 
         LGraphTextureShader.title = "Shader";
@@ -16466,6 +16486,7 @@ if (typeof exports != "undefined") {
             var in_tex = null;
 
             //set uniforms
+			if(this.inputs)
             for (var i = 0; i < this.inputs.length; ++i) {
                 var info = this.getInputInfo(i);
                 var data = this.getInputData(i);
@@ -16485,10 +16506,7 @@ if (typeof exports != "undefined") {
             }
 
             var uniforms = this._uniforms;
-            var type = LGraphTexture.getTextureType(
-                this.properties.precision,
-                in_tex
-            );
+            var type = LGraphTexture.getTextureType( this.properties.precision, in_tex );
 
             //render to texture
             var w = this.properties.width | 0;
@@ -16502,18 +16520,11 @@ if (typeof exports != "undefined") {
             uniforms.texSize[0] = w;
             uniforms.texSize[1] = h;
             uniforms.time = this.graph.getTime();
+			uniforms.u_value = this.properties.u_value;
+			uniforms.u_color.set( this.properties.u_color );
 
-            if (
-                !this._tex ||
-                this._tex.type != type ||
-                this._tex.width != w ||
-                this._tex.height != h
-            ) {
-                this._tex = new GL.Texture(w, h, {
-                    type: type,
-                    format: gl.RGBA,
-                    filter: gl.LINEAR
-                });
+            if ( !this._tex || this._tex.type != type ||  this._tex.width != w || this._tex.height != h ) {
+                this._tex = new GL.Texture(w, h, {  type: type, format: gl.RGBA, filter: gl.LINEAR });
             }
             var tex = this._tex;
             tex.drawTo(function() {
@@ -16567,10 +16578,7 @@ if (typeof exports != "undefined") {
 
             var width = tex.width;
             var height = tex.height;
-            var type =
-                this.precision === LGraphTexture.LOW
-                    ? gl.UNSIGNED_BYTE
-                    : gl.HIGH_PRECISION_FORMAT;
+            var type =  this.precision === LGraphTexture.LOW ? gl.UNSIGNED_BYTE : gl.HIGH_PRECISION_FORMAT;
             if (this.precision === LGraphTexture.DEFAULT) {
                 type = tex.type;
             }
@@ -20034,6 +20042,7 @@ if (typeof exports != "undefined") {
                 code: "",
                 width: 512,
                 height: 512,
+				clear: true,
                 precision: LGraphTexture.DEFAULT
             };
             this._func = null;
@@ -20041,8 +20050,8 @@ if (typeof exports != "undefined") {
         }
 
         LGraphTextureCanvas2D.title = "Canvas2D";
-        LGraphTextureCanvas2D.desc =
-            "Executes Canvas2D code inside a texture or the viewport";
+        LGraphTextureCanvas2D.desc = "Executes Canvas2D code inside a texture or the viewport.";
+		LGraphTextureCanvas2D.help = "Set width and height to 0 to match viewport size.";
 
         LGraphTextureCanvas2D.widgets_info = {
             precision: { widget: "combo", values: LGraphTexture.MODE_VALUES },
@@ -20058,13 +20067,7 @@ if (typeof exports != "undefined") {
             if (name == "code" && LiteGraph.allow_scripts) {
                 this._func = null;
                 try {
-                    this._func = new Function(
-                        "canvas",
-                        "ctx",
-                        "time",
-                        "script",
-                        value
-                    );
+                    this._func = new Function( "canvas", "ctx", "time", "script", value );
                     this.boxcolor = "#00FF00";
                 } catch (err) {
                     this.boxcolor = "#FF0000";
@@ -20090,17 +20093,26 @@ if (typeof exports != "undefined") {
             var width = this.properties.width || gl.canvas.width;
             var height = this.properties.height || gl.canvas.height;
             var temp = this._temp_texture;
-            if (!temp || temp.width != width || temp.height != height) {
+            var type = LGraphTexture.getTextureType( this.properties.precision );
+            if (!temp || temp.width != width || temp.height != height || temp.type != type ) {
                 temp = this._temp_texture = new GL.Texture(width, height, {
                     format: gl.RGBA,
-                    filter: gl.LINEAR
+                    filter: gl.LINEAR,
+					type: type
                 });
             }
 
+			var properties = this.properties;
             var that = this;
             var time = this.graph.getTime();
             temp.drawTo(function() {
                 gl.start2D();
+				if(properties.clear)
+				{
+					gl.clearColor(0,0,0,0);
+					gl.clear( gl.COLOR_BUFFER_BIT );
+				}
+
                 try {
                     if (func.draw) {
                         func.draw.call(that, gl.canvas, gl, time, func);
@@ -20120,6 +20132,8 @@ if (typeof exports != "undefined") {
         };
 
         LiteGraph.registerNodeType("texture/canvas2D", LGraphTextureCanvas2D);
+
+		// To do chroma keying *****************
 
         function LGraphTextureMatte() {
             this.addInput("in", "Texture");
