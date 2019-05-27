@@ -480,7 +480,7 @@
         },
 
         registerSearchboxExtra: function(node_type, description, data) {
-            this.searchbox_extras[description] = {
+            this.searchbox_extras[description.toLowerCase()] = {
                 type: node_type,
                 desc: description,
                 data: data
@@ -9109,7 +9109,7 @@ LGraphNode.prototype.executeAction = function(action)
                 if (that.onSearchBoxSelection) {
                     that.onSearchBoxSelection(name, event, graphcanvas);
                 } else {
-                    var extra = LiteGraph.searchbox_extras[name];
+                    var extra = LiteGraph.searchbox_extras[name.toLowerCase()];
                     if (extra) {
                         name = extra.type;
                     }
@@ -9125,10 +9125,7 @@ LGraphNode.prototype.executeAction = function(action)
                     if (extra && extra.data) {
                         if (extra.data.properties) {
                             for (var i in extra.data.properties) {
-                                node.addProperty(
-                                    extra.data.properties[i][0],
-                                    extra.data.properties[i][0]
-                                );
+                                node.addProperty( i, extra.data.properties[i] );
                             }
                         }
                         if (extra.data.inputs) {

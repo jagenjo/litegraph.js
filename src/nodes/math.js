@@ -584,9 +584,9 @@
         this.addProperty("OP", "+", "enum", { values: MathOperation.values });
     }
 
-    MathOperation.values = ["+", "-", "*", "/", "%", "^"];
+    MathOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
 
-    MathOperation.title = "Operation";
+	MathOperation.title = "Operation";
     MathOperation.desc = "Easy math operators";
     MathOperation["@OP"] = {
         type: "enum",
@@ -596,6 +596,8 @@
     MathOperation.size = [100, 60];
 
     MathOperation.prototype.getTitle = function() {
+		if(this.properties.OP == "max" || this.properties.OP == "min")
+			return this.properties.OP + "(A,B)";
         return "A " + this.properties.OP + " B";
     };
 
@@ -643,6 +645,12 @@
             case "^":
                 result = Math.pow(A, B);
                 break;
+            case "max":
+                result = Math.max(A, B);
+                break;
+            case "min":
+                result = Math.min(A, B);
+                break;
             default:
                 console.warn("Unknown operation: " + this.properties.OP);
         }
@@ -666,6 +674,16 @@
     };
 
     LiteGraph.registerNodeType("math/operation", MathOperation);
+
+    LiteGraph.registerSearchboxExtra("math/operation", "MAX", {
+        properties: {OP:"max"},
+        title: "MAX()"
+    });
+
+    LiteGraph.registerSearchboxExtra("math/operation", "MIN", {
+        properties: {OP:"min"},
+        title: "MIN()"
+    });
 
     //Math compare
     function MathCompare() {
@@ -864,7 +882,7 @@
 
     MathTrigonometry.title = "Trigonometry";
     MathTrigonometry.desc = "Sin Cos Tan";
-    MathTrigonometry.filter = "shader";
+    //MathTrigonometry.filter = "shader";
 
     MathTrigonometry.prototype.onExecute = function() {
         var v = this.getInputData(0);
