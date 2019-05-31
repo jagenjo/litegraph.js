@@ -607,6 +607,53 @@
 
     LiteGraph.registerNodeType("basic/object_property", ObjectProperty);
 
+    function ObjectKeys() {
+        this.addInput("obj", "");
+        this.addOutput("keys", "array");
+        this.size = [140, 30];
+    }
+
+    ObjectKeys.title = "Object keys";
+    ObjectKeys.desc = "Outputs an array with the keys of an object";
+
+    ObjectKeys.prototype.onExecute = function() {
+        var data = this.getInputData(0);
+        if (data != null) {
+            this.setOutputData(0, Object.keys(data) );
+        }
+    };
+
+    LiteGraph.registerNodeType("basic/object_keys", ObjectKeys);
+
+    function MergeObjects() {
+        this.addInput("A", "object");
+        this.addInput("B", "object");
+        this.addOutput("", "object");
+		this._result = {};
+		var that = this;
+		this.addWidget("button","clear",function(){
+			that._result = {};
+		});
+    }
+
+    MergeObjects.title = "Merge Objects";
+    MergeObjects.desc = "Creates an object copying properties from others";
+
+    MergeObjects.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        var B = this.getInputData(1);
+		var C = this._result;
+		if(A)
+			for(var i in A)
+				C[i] = A[i];
+		if(B)
+			for(var i in B)
+				C[i] = B[i];
+		this.setOutputData(0,C);
+    };
+
+    LiteGraph.registerNodeType("basic/merge_objects", MergeObjects );
+
     //Watch a value in the editor
     function Watch() {
         this.size = [60, 20];

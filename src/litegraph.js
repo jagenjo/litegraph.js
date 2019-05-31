@@ -719,9 +719,11 @@
      * Run N steps (cycles) of the graph
      * @method runStep
      * @param {number} num number of steps to run, default is 1
+     * @param {Boolean} do_not_catch_errors [optional] if you want to try/catch errors 
+     * @param {number} limit max number of nodes to execute (used to execute from start to a node)
      */
 
-    LGraph.prototype.runStep = function(num, do_not_catch_errors) {
+    LGraph.prototype.runStep = function(num, do_not_catch_errors, limit ) {
         num = num || 1;
 
         var start = LiteGraph.getTime();
@@ -734,10 +736,12 @@
             return;
         }
 
+		limit = limit || nodes.length;
+
         if (do_not_catch_errors) {
             //iterations
             for (var i = 0; i < num; i++) {
-                for (var j = 0, l = nodes.length; j < l; ++j) {
+                for (var j = 0; j < limit; ++j) {
                     var node = nodes[j];
                     if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
                         node.onExecute();
@@ -757,7 +761,7 @@
             try {
                 //iterations
                 for (var i = 0; i < num; i++) {
-                    for (var j = 0, l = nodes.length; j < l; ++j) {
+                    for (var j = 0; j < limit; ++j) {
                         var node = nodes[j];
                         if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
                             node.onExecute();
