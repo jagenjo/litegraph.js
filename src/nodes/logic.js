@@ -30,9 +30,8 @@
 
     Selector.prototype.onExecute = function() {
         var sel = this.getInputData(0);
-        if (sel == null) {
+        if (sel == null || sel.constructor !== Number)
             sel = 0;
-        }
         this.selected = sel = Math.round(sel) % (this.inputs.length - 1);
         var v = this.getInputData(sel + 1);
         if (v !== undefined) {

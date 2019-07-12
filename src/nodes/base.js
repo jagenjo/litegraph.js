@@ -259,12 +259,15 @@
                 if (v == "" || v == that.name_in_graph || v == "enabled") {
                     return;
                 }
-                if (that.name_in_graph) {
-                    //already added
-                    that.graph.renameInput(that.name_in_graph, v);
-                } else {
-                    that.graph.addInput(v, that.properties.type);
-                }
+				if(that.graph)
+				{
+					if (that.name_in_graph) {
+						//already added
+						that.graph.renameInput(that.name_in_graph, v);
+					} else {
+						that.graph.addInput(v, that.properties.type);
+					}
+				} //what if not?!
                 that.name_widget.value = v;
                 that.name_in_graph = v;
             },
@@ -631,9 +634,10 @@
         this.addOutput("", "object");
 		this._result = {};
 		var that = this;
-		this.addWidget("button","clear",function(){
+		this.addWidget("button","clear","",function(){
 			that._result = {};
 		});
+		this.size = this.computeSize();
     }
 
     MergeObjects.title = "Merge Objects";
@@ -654,9 +658,36 @@
 
     LiteGraph.registerNodeType("basic/merge_objects", MergeObjects );
 
+    //Store as variable
+    function Variable() {
+        this.size = [60, 30];
+        this.addInput("in");
+        this.addOutput("out");
+		this.properties = { varname: "myname", global: false };
+        this.value = null;
+    }
+
+    Variable.title = "Variable";
+    Variable.desc = "store/read variable value";
+
+    Variable.prototype.onExecute = function() {
+		this.value = this.getInputData(0);
+		if(this.graph)
+			this.graph.vars[ this.properties.varname ] = this.value;
+		if(this.properties.global)
+			global[this.properties.varname] = this.value;
+		this.setOutputData(0, this.value );
+    };
+
+    Variable.prototype.getTitle = function() {
+        return this.properties.varname;
+    };
+
+    LiteGraph.registerNodeType("basic/variable", Variable);
+
     //Watch a value in the editor
     function Watch() {
-        this.size = [60, 20];
+        this.size = [60, 30];
         this.addInput("value", 0, { label: "" });
         this.value = 0;
     }
@@ -705,7 +736,7 @@
     function Cast() {
         this.addInput("in", 0);
         this.addOutput("out", 0);
-        this.size = [40, 20];
+        this.size = [40, 30];
     }
 
     Cast.title = "Cast";
@@ -789,7 +820,7 @@
 
     //Execites simple code
     function NodeScript() {
-        this.size = [60, 20];
+        this.size = [60, 30];
         this.addProperty("onExecute", "return A;");
         this.addInput("A", "");
         this.addInput("B", "");
@@ -800,9 +831,10 @@
     }
 
     NodeScript.prototype.onConfigure = function(o) {
-        if (o.properties.onExecute) {
+        if (o.properties.onExecute && LiteGraph.allow_scripts)
             this.compileCode(o.properties.onExecute);
-        }
+		else
+			console.warn("Script not compiled, LiteGraph.allow_scripts is false");
     };
 
     NodeScript.title = "Script";
@@ -813,9 +845,10 @@
     };
 
     NodeScript.prototype.onPropertyChanged = function(name, value) {
-        if (name == "onExecute" && LiteGraph.allow_scripts) {
+        if (name == "onExecute" && LiteGraph.allow_scripts)
             this.compileCode(value);
-        }
+		else
+			console.warn("Script not compiled, LiteGraph.allow_scripts is false");
     };
 
     NodeScript.prototype.compileCode = function(code) {

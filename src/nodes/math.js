@@ -4,7 +4,7 @@
     //Converter
     function Converter() {
         this.addInput("in", "*");
-        this.size = [60, 20];
+        this.size = [80, 30];
     }
 
     Converter.title = "Converter";
@@ -79,7 +79,7 @@
     function Bypass() {
         this.addInput("in");
         this.addOutput("out");
-        this.size = [60, 20];
+        this.size = [80, 30];
     }
 
     Bypass.title = "Bypass";
@@ -117,7 +117,7 @@
         this.addProperty("out_min", 0);
         this.addProperty("out_max", 1);
 
-        this.size = [80, 20];
+        this.size = [80, 30];
     }
 
     MathRange.title = "Range";
@@ -181,7 +181,7 @@
         this.addOutput("value", "number");
         this.addProperty("min", 0);
         this.addProperty("max", 1);
-        this.size = [60, 20];
+        this.size = [80, 30];
     }
 
     MathRand.title = "Rand";
@@ -223,7 +223,7 @@
         this.addProperty("min", 0);
         this.addProperty("max", 1);
         this.addProperty("smooth", true);
-        this.size = [90, 20];
+        this.size = [90, 30];
     }
 
     MathNoise.title = "Noise";
@@ -273,7 +273,7 @@
         this.addProperty("min_time", 1);
         this.addProperty("max_time", 2);
         this.addProperty("duration", 0.2);
-        this.size = [90, 20];
+        this.size = [90, 30];
         this._remaining_time = 0;
         this._blink_time = 0;
     }
@@ -312,7 +312,7 @@
     function MathClamp() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
-        this.size = [60, 20];
+        this.size = [80, 30];
         this.addProperty("min", 0);
         this.addProperty("max", 1);
     }
@@ -388,7 +388,7 @@
     function MathAbs() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
-        this.size = [60, 20];
+        this.size = [80, 30];
     }
 
     MathAbs.title = "Abs";
@@ -787,12 +787,12 @@
         this.addOutput("out", "boolean");
         this.addProperty("A", 1);
         this.addProperty("B", 1);
-        this.addProperty("OP", ">", "string", { values: MathCondition.values });
+        this.addProperty("OP", ">", "enum", { values: MathCondition.values });
 
         this.size = [80, 60];
     }
 
-    MathCondition.values = [">", "<", "==", "!=", "<=", ">="];
+    MathCondition.values = [">", "<", "==", "!=", "<=", ">=", "||", "&&" ];
     MathCondition["@OP"] = {
         type: "enum",
         title: "operation",
@@ -801,6 +801,10 @@
 
     MathCondition.title = "Condition";
     MathCondition.desc = "evaluates condition between A and B";
+
+    MathCondition.prototype.getTitle = function() {
+        return "A " + this.properties.OP + " B";
+    };
 
     MathCondition.prototype.onExecute = function() {
         var A = this.getInputData(0);
@@ -836,6 +840,12 @@
                 break;
             case ">=":
                 result = A >= B;
+                break;
+            case "||":
+                result = A || B;
+                break;
+            case "&&":
+                result = A && B;
                 break;
         }
 

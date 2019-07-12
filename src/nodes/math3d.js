@@ -1,6 +1,102 @@
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
+    //Math 3D operation
+    function Math3DOperation() {
+        this.addInput("A", "number,vec3");
+        this.addInput("B", "number,vec3");
+        this.addOutput("=", "vec3");
+        this.addProperty("OP", "+", "enum", { values: Math3DOperation.values });
+		this._result = vec3.create();
+    }
+
+    Math3DOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
+
+	Math3DOperation.title = "Operation";
+    Math3DOperation.desc = "Easy math 3D operators";
+    Math3DOperation["@OP"] = {
+        type: "enum",
+        title: "operation",
+        values: Math3DOperation.values
+    };
+    Math3DOperation.size = [100, 60];
+
+    Math3DOperation.prototype.getTitle = function() {
+		if(this.properties.OP == "max" || this.properties.OP == "min" )
+			return this.properties.OP + "(A,B)";
+        return "A " + this.properties.OP + " B";
+    };
+
+    Math3DOperation.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        var B = this.getInputData(1);
+		if(A == null || B == null)
+			return;
+		if(A.constructor === Number)
+			A = [A,A,A];
+		if(B.constructor === Number)
+			B = [B,B,B];
+
+        var result = this._result;
+        switch (this.properties.OP) {
+            case "+":
+                result = vec3.add(result,A,B);
+                break;
+            case "-":
+                result = vec3.sub(result,A,B);
+                break;
+            case "x":
+            case "X":
+            case "*":
+                result = vec3.mul(result,A,B);
+                break;
+            case "/":
+                result = vec3.div(result,A,B);
+                break;
+            case "%":
+                result[0] = A[0]%B[0];
+                result[1] = A[1]%B[1];
+                result[2] = A[2]%B[2];
+                break;
+            case "^":
+                result[0] = Math.pow(A[0],B[0]);
+                result[1] = Math.pow(A[1],B[1]);
+                result[2] = Math.pow(A[2],B[2]);
+                break;
+            case "max":
+                result[0] = Math.max(A[0],B[0]);
+                result[1] = Math.max(A[1],B[1]);
+                result[2] = Math.max(A[2],B[2]);
+                break;
+            case "min":
+                result[0] = Math.min(A[0],B[0]);
+                result[1] = Math.min(A[1],B[1]);
+                result[2] = Math.min(A[2],B[2]);
+                break;
+            default:
+                console.warn("Unknown operation: " + this.properties.OP);
+        }
+        this.setOutputData(0, result);
+    };
+
+    Math3DOperation.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+
+        ctx.font = "40px Arial";
+        ctx.fillStyle = "#666";
+        ctx.textAlign = "center";
+        ctx.fillText(
+            this.properties.OP,
+            this.size[0] * 0.5,
+            (this.size[1] + LiteGraph.NODE_TITLE_HEIGHT) * 0.5
+        );
+        ctx.textAlign = "left";
+    };
+
+    LiteGraph.registerNodeType("math3d/operation", Math3DOperation);
+
     function Math3DVec2ToXYZ() {
         this.addInput("vec2", "vec2");
         this.addOutput("x", "number");
@@ -457,5 +553,57 @@
         };
 
         LiteGraph.registerNodeType("math3d/quat-slerp", Math3DQuatSlerp);
+
+
+        //Math3D rotate vec3
+        function Math3DRemapRange() {
+            this.addInput("vec3", "vec3");
+            this.addOutput("remap", "vec3");
+			this.addOutput("clamped", "vec3");
+            this.properties = { clamp: true, range_min: [-1, -1, 0], range_max: [1, 1, 0], target_min: [-1,-1,0], target_max:[1,1,0] };
+			this._value = vec3.create();
+			this._clamped = vec3.create();
+        }
+
+        Math3DRemapRange.title = "Remap Range";
+        Math3DRemapRange.desc = "remap a 3D range";
+
+        Math3DRemapRange.prototype.onExecute = function() {
+            var vec = this.getInputData(0);
+			if(vec)
+				this._value.set(vec);
+			var range_min = this.properties.range_min;
+			var range_max = this.properties.range_max;
+			var target_min = this.properties.target_min;
+			var target_max = this.properties.target_max;
+
+			for(var i = 0; i < 3; ++i)
+			{
+				var r = range_max[i] - range_min[i];
+				this._clamped[i] = Math.clamp( this._value[i], range_min[i], range_max[i] );
+				if(r == 0)
+				{
+					this._value[i] = (target_min[i] + target_max[i]) * 0.5;
+					continue;
+				}
+
+				var n = (this._value[i] - range_min[i]) / r;
+				if(this.properties.clamp)
+					n = Math.clamp(n,0,1);
+				var t = target_max[i] - target_min[i];
+				this._value[i] = target_min[i] + n * t;
+			}
+
+			this.setOutputData(0,this._value);
+			this.setOutputData(1,this._clamped);
+        };
+
+        LiteGraph.registerNodeType("math3d/remap_range", Math3DRemapRange);
+
+
+
     } //glMatrix
+	else
+		console.warn("No glmatrix found, some Math3D nodes may not work");
+
 })(this);
