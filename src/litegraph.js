@@ -3396,7 +3396,7 @@
 
         if (LiteGraph.isValidConnection(output.type, input.type)) {
             link_info = new LLink(
-                this.graph.last_link_id++,
+                ++this.graph.last_link_id,
                 input.type,
                 this.id,
                 slot,
