@@ -13,7 +13,7 @@ window.onbeforeunload = function(){
 //create scene selector
 var elem = document.createElement("span");
 elem.className = "selector";
-elem.innerHTML = "Demo <select><option>Empty</option></select> <button id='save'>Save</button><button id='load'>Load</button>";
+elem.innerHTML = "Demo <select><option>Empty</option></select> <button id='save'>Save</button><button id='load'>Load</button><button id='download'>Download</button>";
 editor.tools.appendChild(elem);
 var select = elem.querySelector("select");
 select.addEventListener("change", function(e){
@@ -38,6 +38,20 @@ elem.querySelector("#load").addEventListener("click",function(){
 	if(data)
 		graph.configure( JSON.parse( data ) );
 	console.log("loaded");
+});
+
+elem.querySelector("#download").addEventListener("click",function(){
+	var data = JSON.stringify( graph.serialize() );
+	var file = new Blob( [ data ] );
+	var url = URL.createObjectURL( file );
+	var element = document.createElement("a");
+	element.setAttribute('href', url);
+	element.setAttribute('download', "graph.JSON" );
+	element.style.display = 'none';
+	document.body.appendChild(element);
+	element.click();
+	document.body.removeChild(element);
+	setTimeout( function(){ URL.revokeObjectURL( url ); }, 1000*60 ); //wait one minute to revoke url	
 });
 
 function addDemo( name, url )

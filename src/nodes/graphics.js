@@ -96,7 +96,7 @@
         if (this.flags.collapsed) {
             return;
         }
-        if (this.img && this.size[0] > 5 && this.size[1] > 5) {
+        if (this.img && this.size[0] > 5 && this.size[1] > 5 && this.img.width) {
             ctx.drawImage(this.img, 0, 0, this.size[0], this.size[1]);
         }
     };
@@ -150,6 +150,9 @@
             that.boxcolor = "#9F9";
             that.setDirtyCanvas(true);
         };
+        this.img.onerror = function() {
+			console.log("error loading the image:" + url);
+		}
     };
 
     GraphicsImage.prototype.onWidget = function(e, widget) {

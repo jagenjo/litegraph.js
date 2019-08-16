@@ -127,35 +127,41 @@
                 }
             }
 
-            Object.defineProperty(base_class.prototype, "shape", {
-                set: function(v) {
-                    switch (v) {
-                        case "default":
-                            delete this._shape;
-                            break;
-                        case "box":
-                            this._shape = LiteGraph.BOX_SHAPE;
-                            break;
-                        case "round":
-                            this._shape = LiteGraph.ROUND_SHAPE;
-                            break;
-                        case "circle":
-                            this._shape = LiteGraph.CIRCLE_SHAPE;
-                            break;
-                        case "card":
-                            this._shape = LiteGraph.CARD_SHAPE;
-                            break;
-                        default:
-                            this._shape = v;
-                    }
-                },
-                get: function(v) {
-                    return this._shape;
-                },
-                enumerable: true
-            });
+			if( !Object.hasOwnProperty( base_class.prototype, "shape") )
+			{
+				Object.defineProperty(base_class.prototype, "shape", {
+					set: function(v) {
+						switch (v) {
+							case "default":
+								delete this._shape;
+								break;
+							case "box":
+								this._shape = LiteGraph.BOX_SHAPE;
+								break;
+							case "round":
+								this._shape = LiteGraph.ROUND_SHAPE;
+								break;
+							case "circle":
+								this._shape = LiteGraph.CIRCLE_SHAPE;
+								break;
+							case "card":
+								this._shape = LiteGraph.CARD_SHAPE;
+								break;
+							default:
+								this._shape = v;
+						}
+					},
+					get: function(v) {
+						return this._shape;
+					},
+					enumerable: true
+				});
+			}
 
             var prev = this.registered_node_types[type];
+			if(prev)
+				console.log("replacing node type: " + type);
+
             this.registered_node_types[type] = base_class;
             if (base_class.constructor.name) {
                 this.Nodes[classname] = base_class;
@@ -176,6 +182,7 @@
                 );
             }
 
+			//used to know which nodes create when dragging files to the canvas
             if (base_class.supported_extensions) {
                 for (var i in base_class.supported_extensions) {
                     this.node_types_by_file_extension[
@@ -2330,9 +2337,13 @@
         if (!this.properties) {
             this.properties = {};
         }
+		if( value === this.properties[name] )
+			return;
+		var prev_value = this.properties[name];
         this.properties[name] = value;
         if (this.onPropertyChanged) {
-            this.onPropertyChanged(name, value);
+            if( this.onPropertyChanged(name, value) === false ) //abort change
+				this.properties[name] = prev_value;
         }
     };
 
@@ -9824,6 +9835,9 @@ LGraphNode.prototype.executeAction = function(action)
             callback: inner_option_clicked,
             extra: node
         };
+
+		if(node)
+			options.title = node.type;
 
         //check if mouse is in input
         var slot = null;

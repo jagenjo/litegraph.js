@@ -494,6 +494,25 @@
 
     LiteGraph.registerNodeType("math/scale", MathScale);
 
+	//Gate
+	function Gate() {
+		this.addInput("v","boolean");
+		this.addInput("A");
+		this.addInput("B");
+		this.addOutput("out");
+	}
+
+	Gate.title = "Gate";
+	Gate.desc = "if v is true, then outputs A, otherwise B";
+
+	Gate.prototype.onExecute = function() {
+		var v = this.getInputData(0);
+		this.setOutputData(0, this.getInputData( v ? 1 : 2 ));
+	};
+
+	LiteGraph.registerNodeType("math/gate", Gate);
+
+
     //Math Average
     function MathAverageFilter() {
         this.addInput("in", "number");
@@ -784,7 +803,8 @@
     function MathCondition() {
         this.addInput("A", "number");
         this.addInput("B", "number");
-        this.addOutput("out", "boolean");
+        this.addOutput("true", "boolean");
+        this.addOutput("false", "boolean");
         this.addProperty("A", 1);
         this.addProperty("B", 1);
         this.addProperty("OP", ">", "enum", { values: MathCondition.values });
@@ -850,6 +870,7 @@
         }
 
         this.setOutputData(0, result);
+        this.setOutputData(1, !result);
     };
 
     LiteGraph.registerNodeType("math/condition", MathCondition);

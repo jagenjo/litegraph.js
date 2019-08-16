@@ -245,55 +245,16 @@
 
     //Input for a subgraph
     function GraphInput() {
-        this.addOutput("", "");
+        this.addOutput("", "number");
 
         this.name_in_graph = "";
-        this.properties = {};
+        this.properties = {
+			name: "",
+			type: "number",
+			value: 0
+		}; 
+
         var that = this;
-
-        Object.defineProperty(this.properties, "name", {
-            get: function() {
-                return that.name_in_graph;
-            },
-            set: function(v) {
-                if (v == "" || v == that.name_in_graph || v == "enabled") {
-                    return;
-                }
-				if(that.graph)
-				{
-					if (that.name_in_graph) {
-						//already added
-						that.graph.renameInput(that.name_in_graph, v);
-					} else {
-						that.graph.addInput(v, that.properties.type);
-					}
-				} //what if not?!
-                that.name_widget.value = v;
-                that.name_in_graph = v;
-            },
-            enumerable: true
-        });
-
-        Object.defineProperty(this.properties, "type", {
-            get: function() {
-                return that.outputs[0].type;
-            },
-            set: function(v) {
-                if (v == "event") {
-                    v = LiteGraph.EVENT;
-                }
-                that.outputs[0].type = v;
-                if (that.name_in_graph) {
-                    //already added
-                    that.graph.changeInputType(
-                        that.name_in_graph,
-                        that.outputs[0].type
-                    );
-                }
-                that.type_widget.value = v;
-            },
-            enumerable: true
-        });
 
         this.name_widget = this.addWidget(
             "text",
@@ -303,7 +264,7 @@
                 if (!v) {
                     return;
                 }
-                that.properties.name = v;
+                that.setProperty("name",v);
             }
         );
         this.type_widget = this.addWidget(
@@ -311,17 +272,86 @@
             "Type",
             this.properties.type,
             function(v) {
-                v = v || "";
-                that.properties.type = v;
+				that.setProperty("type",v);
+            }
+        );
+
+        this.value_widget = this.addWidget(
+            "number",
+            "Value",
+            this.properties.value,
+            function(v) {
+                that.setProperty("value",v);
             }
         );
 
         this.widgets_up = true;
-        this.size = [180, 60];
+        this.size = [180, 90];
     }
 
     GraphInput.title = "Input";
     GraphInput.desc = "Input of the graph";
+
+	GraphInput.prototype.onConfigure = function()
+	{
+		this.updateType();
+	}
+
+	GraphInput.prototype.updateType = function()
+	{
+		var type = this.properties.type;
+		this.type_widget.value = type;
+		if(type == "number")
+		{
+			this.value_widget.type = "number";
+			this.value_widget.value = 0;
+		}
+		else if(type == "bool")
+		{
+			this.value_widget.type = "toggle";
+			this.value_widget.value = true;
+		}
+		else if(type == "string")
+		{
+			this.value_widget.type = "text";
+			this.value_widget.value = "";
+		}
+		else
+		{
+			this.value_widget.type = null;
+			this.value_widget.value = null;
+		}
+		this.properties.value = this.value_widget.value;
+	}
+
+	GraphInput.prototype.onPropertyChanged = function(name,v)
+	{
+		if( name == "name" )
+		{
+			if (v == "" || v == this.name_in_graph || v == "enabled") {
+				return false;
+			}
+			if(this.graph)
+			{
+				if (this.name_in_graph) {
+					//already added
+					this.graph.renameInput( this.name_in_graph, v );
+				} else {
+					this.graph.addInput( v, this.properties.type );
+				}
+			} //what if not?!
+			this.name_widget.value = v;
+			this.name_in_graph = v;
+		}
+		else if( name == "type" )
+		{
+			v = v || "";
+			this.updateType(v);
+		}
+		else if( name == "value" )
+		{
+		}
+	}
 
     GraphInput.prototype.getTitle = function() {
         if (this.flags.collapsed) {
@@ -338,15 +368,12 @@
 
     GraphInput.prototype.onExecute = function() {
         var name = this.properties.name;
-
         //read from global input
         var data = this.graph.inputs[name];
         if (!data) {
-            return;
+            this.setOutputData(0, this.properties.value );
         }
-
-        //put through output
-        this.setOutputData(0, data.value);
+        this.setOutputData(0, data.value === undefined ? this.properties.value : data.value);
     };
 
     GraphInput.prototype.onRemoved = function() {
@@ -684,6 +711,63 @@
     };
 
     LiteGraph.registerNodeType("basic/variable", Variable);
+
+
+	function DownloadData() {
+        this.size = [60, 30];
+        this.addInput("value", 0, { label: "" });
+		this.properties = { filename: "data.json" };
+        this.value = null;
+		var that = this;
+		this.addWidget("button","Download","", function(v){
+			if(!that.value)
+				return;
+			that.downloadAsFile();
+		});
+    }
+
+    DownloadData.title = "Download";
+    DownloadData.desc = "Download some data";
+
+	DownloadData.prototype.downloadAsFile = function()
+	{
+		if(this.value == null)
+			return;
+
+		var str = null;
+		if(this.value.constructor === String)
+			str = this.value;
+		else
+			str = JSON.stringify(this.value);
+
+		var file = new Blob([str]);
+		var url = URL.createObjectURL( file );
+		var element = document.createElement("a");
+		element.setAttribute('href', url);
+		element.setAttribute('download', this.properties.filename );
+		element.style.display = 'none';
+		document.body.appendChild(element);
+		element.click();
+		document.body.removeChild(element);
+		setTimeout( function(){ URL.revokeObjectURL( url ); }, 1000*60 ); //wait one minute to revoke url
+	}
+
+    DownloadData.prototype.onExecute = function() {
+        if (this.inputs[0]) {
+            this.value = this.getInputData(0);
+        }
+    };
+
+    DownloadData.prototype.getTitle = function() {
+        if (this.flags.collapsed) {
+            return this.properties.filename;
+        }
+        return this.title;
+    };
+
+    LiteGraph.registerNodeType("basic/download", DownloadData);
+
+
 
     //Watch a value in the editor
     function Watch() {

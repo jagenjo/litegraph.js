@@ -9,6 +9,7 @@
 ../src/nodes/logic.js
 ../src/nodes/graphics.js
 ../src/nodes/gltextures.js
+../src/nodes/geometry.js
 ../src/nodes/glfx.js
 ../src/nodes/midi.js
 ../src/nodes/audio.js
