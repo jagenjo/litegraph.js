@@ -715,7 +715,8 @@
 
 	function DownloadData() {
         this.size = [60, 30];
-        this.addInput("value", 0, { label: "" });
+        this.addInput("data", 0 );
+        this.addInput("download", LiteGraph.ACTION );
 		this.properties = { filename: "data.json" };
         this.value = null;
 		var that = this;
@@ -750,6 +751,11 @@
 		element.click();
 		document.body.removeChild(element);
 		setTimeout( function(){ URL.revokeObjectURL( url ); }, 1000*60 ); //wait one minute to revoke url
+	}
+
+    DownloadData.prototype.onAction = function(action, param) {
+		var that = this;
+		setTimeout( function(){ that.downloadAsFile(); }, 100); //deferred to avoid blocking the renderer with the popup
 	}
 
     DownloadData.prototype.onExecute = function() {
