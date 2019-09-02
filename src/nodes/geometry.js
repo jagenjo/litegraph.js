@@ -253,12 +253,13 @@
 
 	LiteGraph.registerNodeType( "geometry/toGeometry", LGraphToGeometry );
 
-	function LGraphGeometryQuantize() {
+	function LGraphGeometryEval() {
 		this.addInput("in", "geometry");
 		this.addOutput("out", "geometry");
 
 		this.properties = {
-			grid_size: 1
+			code: "V[1] += 0.01 * Math.sin(I + T*0.001);",
+			execute_every_frame: false
 		};
 
 		this.geometry = null;
@@ -267,49 +268,110 @@
 		this.must_update = true;
 
 		this.vertices = null;
+		this.func = null;
 	}
 
-	LGraphGeometryQuantize.title = "quantize";
-	LGraphGeometryQuantize.desc = "quantize vertices";
+	LGraphGeometryEval.title = "geoeval";
+	LGraphGeometryEval.desc = "eval code";
 
-	LGraphGeometryQuantize.prototype.onExecute = function() {
+	LGraphGeometryEval.widgets_info = {
+		code: { widget: "code" }
+	};
+
+	LGraphGeometryEval.prototype.onConfigure = function(o)
+	{
+		this.compileCode();
+	}
+
+	LGraphGeometryEval.prototype.compileCode = function()
+	{
+		if(!this.properties.code)
+			return;
+
+		try
+		{
+			this.func = new Function("V","I","T", this.properties.code); 
+			this.boxcolor = "#AFA";
+			this.must_update = true;
+		}
+		catch (err)
+		{
+			this.boxcolor = "red";
+		}
+	}
+
+	LGraphGeometryEval.prototype.onPropertyChanged = function(name, value)
+	{
+		if(name == "code")
+		{
+			this.properties.code = value;
+			this.compileCode();
+		}
+	}
+
+	LGraphGeometryEval.prototype.onExecute = function() {
 		var geometry = this.getInputData(0);
 		if(!geometry)
 			return;
 
-		if( this.geometry_id != geometry._id || this.version != geometry._version || this.must_update )
+		if(!this.func)
+		{
+			this.setOutputData(0,geometry);
+			return;
+		}
+
+		if( this.geometry_id != geometry._id || this.version != geometry._version || this.must_update || this.properties.execute_every_frame )
 		{
 			this.must_update = false;
 			this.geometry_id = geometry._id;
-			this.version = geometry._version;
+			if(this.properties.execute_every_frame)
+				this.version++;
+			else
+				this.version = geometry._version;
+			var func = this.func;
+			var T = getTime();
 
-			//copy
-			this.geometry = {};
+			//clone
+			if(!this.geometry)
+				this.geometry = {};
 			for(var i in geometry)
-				this.geometry[i] = geometry[i];
-			this.geometry._id = geometry._id;
-			this.geometry._version = geometry._version + 1;
-
-			var grid_size = this.properties.grid_size;
-			if(grid_size != 0)
 			{
-				var vertices = this.vertices;
-				if(!vertices || this.vertices.length != this.geometry.vertices.length)
-					vertices = this.vertices = new Float32Array( this.geometry.vertices );
-				for(var i = 0; i < vertices.length; i+=3)
-				{
-					vertices[i] = Math.round(vertices[i]/grid_size) * grid_size;
-					vertices[i+1] = Math.round(vertices[i+1]/grid_size) * grid_size;
-					vertices[i+2] = Math.round(vertices[i+2]/grid_size) * grid_size;
-				}
-				this.geometry.vertices = vertices;
+				if(geometry[i] == null)
+					continue;
+				if( geometry[i].constructor == Float32Array )
+					this.geometry[i] = new Float32Array( geometry[i] );
+				else
+					this.geometry[i] = geometry[i];
 			}
+			this.geometry._id = geometry._id;
+			if(this.properties.execute_every_frame)
+				this.geometry._version = this.version;
+			else
+				this.geometry._version = geometry._version + 1;
+
+			var V = vec3.create();
+			var vertices = this.vertices;
+			if(!vertices || this.vertices.length != geometry.vertices.length)
+				vertices = this.vertices = new Float32Array( geometry.vertices );
+			else
+				vertices.set( geometry.vertices );
+			for(var i = 0; i < vertices.length; i+=3)
+			{
+				V[0] = vertices[i];
+				V[1] = vertices[i+1];
+				V[2] = vertices[i+2];
+				func(V,i/3,T);
+				vertices[i] = V[0];
+				vertices[i+1] = V[1];
+				vertices[i+2] = V[2];
+			}
+			this.geometry.vertices = vertices;
 		}
 
 		this.setOutputData(0,this.geometry);
 	}
 
-	LiteGraph.registerNodeType( "geometry/quantize", LGraphGeometryQuantize );
+	LiteGraph.registerNodeType( "geometry/eval", LGraphGeometryEval );
 
 /*
 function LGraphGeometryDisplace() {
@@ -807,6 +869,8 @@ function LGraphGeometryDisplace() {
 		}\
 	';
 
+	//based on https://inconvergent.net/2019/depth-of-field/
+	/*
 	function LGraphRenderGeometryDOF() {
 		this.addInput("in", "geometry");
 		this.addInput("mat4", "mat4");
@@ -1008,6 +1072,7 @@ function LGraphGeometryDisplace() {
 			gl_FragColor = color;\n\
 		}\
 	';
+	*/
 
 
 

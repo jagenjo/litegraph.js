@@ -34,6 +34,11 @@
         DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.5)",
         DEFAULT_GROUP_FONT: 24,
 
+		WIDGET_BGCOLOR: "#222",
+		WIDGET_OUTLINE_COLOR: "#666",
+		WIDGET_TEXT_COLOR: "#DDD",
+		WIDGET_SECONDARY_TEXT_COLOR: "#999",
+
         LINK_COLOR: "#9A9",
         EVENT_LINK_COLOR: "#A86",
         CONNECTING_LINK_COLOR: "#AFA",
@@ -8041,8 +8046,10 @@ LGraphNode.prototype.executeAction = function(action)
         var show_text = this.ds.scale > 0.5;
         ctx.save();
         ctx.globalAlpha = this.editor_alpha;
-        var outline_color = "#666";
-        var background_color = "#222";
+        var outline_color = LiteGraph.WIDGET_OUTLINE_COLOR;
+        var background_color = LiteGraph.WIDGET_BGCOLOR;
+        var text_color = LiteGraph.WIDGET_TEXT_COLOR;
+		var secondary_text_color = LiteGraph.WIDGET_SECONDARY_TEXT_COLOR;
         var margin = 15;
 
         for (var i = 0; i < widgets.length; ++i) {
@@ -8067,7 +8074,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.strokeRect(margin, y, width - margin * 2, H);
                     if (show_text) {
                         ctx.textAlign = "center";
-                        ctx.fillStyle = "#AAA";
+                        ctx.fillStyle = text_color;
                         ctx.fillText(w.name, width * 0.5, y + H * 0.7);
                     }
                     break;
@@ -8090,11 +8097,11 @@ LGraphNode.prototype.executeAction = function(action)
                     );
                     ctx.fill();
                     if (show_text) {
-                        ctx.fillStyle = "#999";
+                        ctx.fillStyle = secondary_text_color;
                         if (w.name != null) {
                             ctx.fillText(w.name, margin * 2, y + H * 0.7);
                         }
-                        ctx.fillStyle = w.value ? "#DDD" : "#888";
+                        ctx.fillStyle = w.value ? text_color : secondary_text_color;
                         ctx.textAlign = "right";
                         ctx.fillText(
                             w.value
@@ -8125,7 +8132,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                     if (show_text) {
                         ctx.textAlign = "center";
-                        ctx.fillStyle = "#DDD";
+                        ctx.fillStyle = text_color;
                         ctx.fillText(
                             w.name + "  " + Number(w.value).toFixed(3),
                             width * 0.5,
@@ -8143,7 +8150,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fill();
                     ctx.stroke();
                     if (show_text) {
-                        ctx.fillStyle = "#AAA";
+                        ctx.fillStyle = text_color;
                         ctx.beginPath();
                         ctx.moveTo(margin + 16, posY + 5);
                         ctx.lineTo(margin + 6, posY + H * 0.5);
@@ -8152,9 +8159,9 @@ LGraphNode.prototype.executeAction = function(action)
                         ctx.lineTo(width - margin - 6, posY + H * 0.5);
                         ctx.lineTo(width - margin - 16, posY + H - 5);
                         ctx.fill();
-                        ctx.fillStyle = "#999";
+                        ctx.fillStyle = secondary_text_color;
                         ctx.fillText(w.name, margin * 2 + 5, y + H * 0.7);
-                        ctx.fillStyle = "#DDD";
+                        ctx.fillStyle = text_color;
                         ctx.textAlign = "right";
                         if (w.type == "number") {
                             ctx.fillText(
@@ -8185,11 +8192,11 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fill();
                     ctx.stroke();
                     if (show_text) {
-                        ctx.fillStyle = "#999";
+                        ctx.fillStyle = secondary_text_color;
                         if (w.name != null) {
                             ctx.fillText(w.name, margin * 2, y + H * 0.7);
                         }
-                        ctx.fillStyle = "#DDD";
+                        ctx.fillStyle = text_color;
                         ctx.textAlign = "right";
                         ctx.fillText(w.value, width - margin * 2, y + H * 0.7);
                     }

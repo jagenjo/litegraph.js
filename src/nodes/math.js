@@ -1071,16 +1071,16 @@
 
     LiteGraph.registerNodeType("math/formula", MathFormula);
 
-    function Math3DVec2ToXYZ() {
+    function Math3DVec2ToXY() {
         this.addInput("vec2", "vec2");
         this.addOutput("x", "number");
         this.addOutput("y", "number");
     }
 
-    Math3DVec2ToXYZ.title = "Vec2->XY";
-    Math3DVec2ToXYZ.desc = "vector 2 to components";
+    Math3DVec2ToXY.title = "Vec2->XY";
+    Math3DVec2ToXY.desc = "vector 2 to components";
 
-    Math3DVec2ToXYZ.prototype.onExecute = function() {
+    Math3DVec2ToXY.prototype.onExecute = function() {
         var v = this.getInputData(0);
         if (v == null) {
             return;
@@ -1090,7 +1090,7 @@
         this.setOutputData(1, v[1]);
     };
 
-    LiteGraph.registerNodeType("math3d/vec2-to-xyz", Math3DVec2ToXYZ);
+    LiteGraph.registerNodeType("math3d/vec2-to-xy", Math3DVec2ToXY);
 
     function Math3DXYToVec2() {
         this.addInputs([["x", "number"], ["y", "number"]]);

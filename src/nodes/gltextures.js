@@ -433,7 +433,7 @@
 	function LGraphTextureSave() {
 		this.addInput("Texture", "Texture");
 		this.addOutput("", "Texture");
-		this.properties = { name: "" };
+		this.properties = { name: "", generate_mipmaps: false };
 	}
 
 	LGraphTextureSave.title = "Save";
@@ -448,6 +448,13 @@
 		var tex = this.getInputData(0);
 		if (!tex) {
 			return;
+		}
+
+		if (this.properties.generate_mipmaps) {
+			tex.bind(0);
+			tex.setParameter( gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR );
+			gl.generateMipmap(tex.texture_type);
+			tex.unbind(0);
 		}
 
 		if (this.properties.name) {
@@ -1050,7 +1057,17 @@
 		this.addOutput("out", "Texture");
 		this.properties = {
 			factor: 0.01,
+			scale: [1,1],
+			offset: [0,0],
 			precision: LGraphTexture.DEFAULT
+		};
+
+		this._uniforms = { 
+			u_texture: 0, 
+			u_textureB: 1, 
+			u_factor: 1, 
+			u_scale: vec2.create(),
+			u_offset: vec2.create()
 		};
 	}
 
@@ -1120,6 +1137,10 @@
 		} else {
 			factor = parseFloat(this.properties.factor);
 		}
+		var uniforms = this._uniforms;
+		uniforms.u_factor = factor;
+		uniforms.u_scale.set( this.properties.scale );
+		uniforms.u_offset.set( this.properties.offset );
 
 		this._tex.drawTo(function() {
 			gl.disable(gl.DEPTH_TEST);
@@ -1133,7 +1154,7 @@
 			}
 			var mesh = Mesh.getScreenQuad();
 			shader
-				.uniforms({ u_texture: 0, u_textureB: 1, u_factor: factor })
+				.uniforms( uniforms )
 				.draw(mesh);
 		});
 
@@ -1147,10 +1168,12 @@
 		uniform sampler2D u_textureB;\n\
 		varying vec2 v_coord;\n\
 		uniform float u_factor;\n\
+		uniform vec2 u_scale;\n\
+		uniform vec2 u_offset;\n\
 		\n\
 		void main() {\n\
 			vec2 uv = v_coord;\n\
-			uv += ( texture2D(u_textureB, uv).rg - vec2(0.5)) * u_factor;\n\
+			uv += ( texture2D(u_textureB, uv).rg - vec2(0.5)) * u_factor * u_scale + u_offset;\n\
 			gl_FragColor = texture2D(u_texture, uv);\n\
 		}\n\
 		";
