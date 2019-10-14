@@ -176,6 +176,12 @@ This is the list of supported widgets:
 * **"toggle"** like a checkbox
 * **"button"**
 
+The fourth optional parameter could be options for the widget, the parameters accepted are:
+* **property**: specifies the name of a property to modify when the widget changes
+* **min**: min value
+* **max**: max value
+* **callback**: function to call when the value changes.
+
 Widget's value is not serialized by default when storing the node state, but if you want to store the value of widgets just set serialize_widgets to true:
 
 ```js
@@ -185,6 +191,17 @@ function MyNode()
   this.serialize_widgets = true;
 }
 ```
+
+Or if you want to associate a widget with a property of the node, then specify it in the options:
+
+```js
+function MyNode()
+{
+  this.properties = { surname: "smith" };
+  this.addWidget("text","Surname","", { property: "surname"}); //this will modify the node.properties 
+}
+```
+
 
 ## Integration
 
