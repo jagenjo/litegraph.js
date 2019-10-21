@@ -213,10 +213,6 @@ Editor.prototype.onFullscreenButton = function() {
     this.goFullscreen();
 };
 
-Editor.prototype.onMaximizeButton = function() {
-    this.maximize();
-};
-
 Editor.prototype.addMiniWindow = function(w, h) {
     var miniwindow = document.createElement("div");
     miniwindow.className = "litegraph miniwindow";

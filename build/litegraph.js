@@ -10255,7 +10255,11 @@ LGraphNode.prototype.executeAction = function(action)
         if (!root_document) {
             root_document = document;
         }
-        root_document.body.appendChild(root);
+
+		if( root_document.fullscreenElement )
+	        root_document.fullscreenElement.appendChild(root);
+		else
+		    root_document.body.appendChild(root);
 
         //compute best position
         var left = options.left || 0;

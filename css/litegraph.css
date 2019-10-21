@@ -17,6 +17,7 @@
     padding: 0;
     box-shadow: 0 0 10px black !important;
     background-color: #2e2e2e !important;
+	z-index: 10;
 }
 
 .litegraph.litecontextmenu.dark {
