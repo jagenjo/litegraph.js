@@ -179,6 +179,9 @@
         this.connectSocket();
         this._last_sent_data = [];
         this._last_received_data = [];
+
+		if(typeof(SillyClient) == "undefined")
+			console.warn("remember to add SillyClient.js to your project: https://tamats.com/projects/sillyserver/src/sillyclient.js");
     }
 
     LGSillyClient.title = "SillyClient";
@@ -218,12 +221,44 @@
 
         for (var i = 1; i < this.inputs.length; ++i) {
             var data = this.getInputData(i);
+			var prev_data = this._last_sent_data[i];
             if (data != null) {
-                if (only_send_changes && this._last_sent_data[i] == data) {
-                    continue;
+                if (only_send_changes)
+				{	
+					var is_equal = true;
+					if( data && data.length && prev_data && prev_data.length == data.length && data.constructor !== String)
+					{
+						for(var j = 0; j < data.length; ++j)
+							if( prev_data[j] != data[j] )
+							{
+								is_equal = false;
+								break;
+							}
+					}
+					else if(this._last_sent_data[i] != data)
+						is_equal = false;
+					if(is_equal)
+							continue;
                 }
                 this._server.sendMessage({ type: 0, channel: i, data: data });
-                this._last_sent_data[i] = data;
+				if( data.length && data.constructor !== String )
+				{
+					if( this._last_sent_data[i] )
+					{
+						this._last_sent_data[i].length = data.length;
+						for(var j = 0; j < data.length; ++j)
+							this._last_sent_data[i][j] = data[j];
+					}
+					else //create
+					{
+						if(data.constructor === Array)
+							this._last_sent_data[i] = data.concat();
+						else
+							this._last_sent_data[i] = new data.constructor( data );
+					}
+				}
+				else
+	                this._last_sent_data[i] = data; //should be cloned
             }
         }
 

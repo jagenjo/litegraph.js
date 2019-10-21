@@ -200,4 +200,28 @@ TestSlotsNode.title = "Flat Slots";
 LiteGraph.registerNodeType("features/slots", TestSlotsNode );
 
 
+//Show value inside the debug console
+function TestPropertyEditorsNode()
+{
+	this.properties = {
+		name: "foo",
+		age: 10,
+		alive: true,
+		children: ["John","Emily","Charles"],
+		skills: {
+			speed: 10,
+			dexterity: 100
+		}
+	}
+
+	var that = this;
+	this.addWidget("button","Log",null,function(){
+		console.log(that.properties);
+	});
+}
+
+TestPropertyEditorsNode.title = "Properties";
+
+
+LiteGraph.registerNodeType("features/properties_editor", TestPropertyEditorsNode );
 

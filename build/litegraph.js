@@ -2349,7 +2349,7 @@
 		var prev_value = this.properties[name];
         this.properties[name] = value;
         if (this.onPropertyChanged) {
-            if( this.onPropertyChanged(name, value) === false ) //abort change
+            if( this.onPropertyChanged(name, value, prev_value) === false ) //abort change
 				this.properties[name] = prev_value;
         }
     };
@@ -4374,6 +4374,8 @@ LGraphNode.prototype.executeAction = function(action)
         this.onDrawForeground = null; //to render foreground objects (above nodes and connections) in the canvas affected by transform
         this.onDrawOverlay = null; //to render foreground objects not affected by transform (for GUIs)
 		this.onDrawLinkTooltip = null; //called when rendering a tooltip
+		this.onNodeMoved = null; //called after moving a node
+		this.onSelectionChange = null; //called if the selection changes
 
         this.connections_width = 3;
         this.round_radius = 8;
@@ -5030,23 +5032,19 @@ LGraphNode.prototype.executeAction = function(action)
 
                 //Search for corner for collapsing
                 /*
-			if( !skip_action && isInsideRectangle( e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT ))
-			{
-				node.collapse();
-				skip_action = true;
-			}
-			*/
+				if( !skip_action && isInsideRectangle( e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT ))
+				{
+					node.collapse();
+					skip_action = true;
+				}
+				*/
 
                 //it wasn't clicked on the links boxes
                 if (!skip_action) {
                     var block_drag_node = false;
 
                     //widgets
-                    var widget = this.processNodeWidgets(
-                        node,
-                        this.canvas_mouse,
-                        e
-                    );
+                    var widget = this.processNodeWidgets( node, this.canvas_mouse, e );
                     if (widget) {
                         block_drag_node = true;
                         this.node_widget = [node, widget];
@@ -5056,14 +5054,7 @@ LGraphNode.prototype.executeAction = function(action)
                     if (is_double_click && this.selected_nodes[node.id]) {
                         //double click node
                         if (node.onDblClick) {
-                            node.onDblClick(
-                                e,
-                                [
-                                    e.canvasX - node.pos[0],
-                                    e.canvasY - node.pos[1]
-                                ],
-                                this
-                            );
+                            node.onDblClick( e, [ e.canvasX - node.pos[0], e.canvasY - node.pos[1] ], this );
                         }
                         this.processNodeDblClicked(node);
                         block_drag_node = true;
@@ -5072,11 +5063,7 @@ LGraphNode.prototype.executeAction = function(action)
                     //if do not capture mouse
                     if (
                         node.onMouseDown &&
-                        node.onMouseDown(
-                            e,
-                            [e.canvasX - node.pos[0], e.canvasY - node.pos[1]],
-                            this
-                        )
+                        node.onMouseDown( e, [e.canvasX - node.pos[0], e.canvasY - node.pos[1]], this )
                     ) {
                         block_drag_node = true;
                     } else if (this.live_mode) {
@@ -5608,14 +5595,7 @@ LGraphNode.prototype.executeAction = function(action)
                 if (
                     node &&
                     e.click_time < 300 &&
-                    isInsideRectangle(
-                        e.canvasX,
-                        e.canvasY,
-                        node.pos[0],
-                        node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT,
-                        LiteGraph.NODE_TITLE_HEIGHT,
-                        LiteGraph.NODE_TITLE_HEIGHT
-                    )
+                    isInsideRectangle( e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT )
                 ) {
                     node.collapse();
                 }
@@ -5627,6 +5607,8 @@ LGraphNode.prototype.executeAction = function(action)
                 if (this.graph.config.align_to_grid) {
                     this.node_dragged.alignToGrid();
                 }
+				if( this.onNodeMoved )
+					this.onNodeMoved( this.node_dragged );
                 this.node_dragged = null;
             } //no node being dragged
             else {
@@ -6124,6 +6106,9 @@ LGraphNode.prototype.executeAction = function(action)
             }
         }
 
+		if(	this.onSelectionChange )
+			this.onSelectionChange( this.selected_nodes );
+
         this.setDirty(true);
     };
 
@@ -6180,6 +6165,8 @@ LGraphNode.prototype.executeAction = function(action)
         this.selected_nodes = {};
         this.current_node = null;
         this.highlighted_links = {};
+		if(	this.onSelectionChange )
+			this.onSelectionChange( this.selected_nodes );
         this.setDirty(true);
     };
 
@@ -8090,13 +8077,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.stroke();
                     ctx.fillStyle = w.value ? "#89A" : "#333";
                     ctx.beginPath();
-                    ctx.arc(
-                        width - margin * 2,
-                        y + H * 0.5,
-                        H * 0.36,
-                        0,
-                        Math.PI * 2
-                    );
+                    ctx.arc( width - margin * 2, y + H * 0.5, H * 0.36, 0, Math.PI * 2 );
                     ctx.fill();
                     if (show_text) {
                         ctx.fillStyle = secondary_text_color;
@@ -8125,12 +8106,7 @@ LGraphNode.prototype.executeAction = function(action)
                     if (w.marker) {
                         var marker_nvalue = (w.marker - w.options.min) / range;
                         ctx.fillStyle = "#AA9";
-                        ctx.fillRect(
-                            margin + marker_nvalue * (width - margin * 2),
-                            y,
-                            2,
-                            H
-                        );
+                        ctx.fillRect( margin + marker_nvalue * (width - margin * 2), y, 2, H );
                     }
                     if (show_text) {
                         ctx.textAlign = "center";
@@ -8381,11 +8357,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         function inner_value_change(widget, value) {
             widget.value = value;
-            if (
-                widget.property &&
-                node.properties[widget.property] !== undefined
-            ) {
-                node.properties[widget.property] = value;
+            if ( widget.property && node.properties[widget.property] !== undefined ) {
+                node.setProperty( widget.property, value );
             }
             if (widget.callback) {
                 widget.callback(widget.value, that, node, pos, event);
@@ -8824,8 +8797,9 @@ LGraphNode.prototype.executeAction = function(action)
 
         var entries = [];
         for (var i in node.properties) {
-            var value =
-                node.properties[i] !== undefined ? node.properties[i] : " ";
+            var value = node.properties[i] !== undefined ? node.properties[i] : " ";
+			if( typeof value == "object" )
+				value = JSON.stringify(value);
             //value could contain invalid html characters, clean that
             value = LGraphCanvas.decodeHTML(value);
             entries.push({
@@ -9358,13 +9332,6 @@ LGraphNode.prototype.executeAction = function(action)
             type = typeof node.properties[property];
         }
 
-        //for arrays
-        if (type == "object") {
-            if (node.properties[property].length) {
-                type = "array";
-            }
-        }
-
         var info = null;
         if (node.getPropertyInfo) {
             info = node.getPropertyInfo(property);
@@ -9384,7 +9351,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var input_html = "";
 
-        if (type == "string" || type == "number" || type == "array") {
+        if (type == "string" || type == "number" || type == "array" || type == "object") {
             input_html = "<input autofocus type='text' class='value'/>";
         } else if (type == "enum" && info.values) {
             input_html = "<select autofocus type='text' class='value'>";
@@ -9439,10 +9406,9 @@ LGraphNode.prototype.executeAction = function(action)
                 input.addEventListener("blur", function(e) {
                     this.focus();
                 });
-                input.value =
-                    node.properties[property] !== undefined
-                        ? node.properties[property]
-                        : "";
+				var v = node.properties[property] !== undefined ? node.properties[property] : "";
+				v = JSON.stringify(v);
+                input.value = v;
                 input.addEventListener("keydown", function(e) {
                     if (e.keyCode != 13) {
                         return;
@@ -9465,8 +9431,8 @@ LGraphNode.prototype.executeAction = function(action)
             if (typeof node.properties[property] == "number") {
                 value = Number(value);
             }
-            if (type == "array") {
-                value = value.split(",").map(Number);
+            if (type == "array" || type == "object") {
+                value = JSON.parse(value);
             }
             node.properties[property] = value;
             if (node._graph) {
@@ -25761,6 +25727,9 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
         this.connectSocket();
         this._last_sent_data = [];
         this._last_received_data = [];
+
+		if(typeof(SillyClient) == "undefined")
+			console.warn("remember to add SillyClient.js to your project: https://tamats.com/projects/sillyserver/src/sillyclient.js");
     }
 
     LGSillyClient.title = "SillyClient";
@@ -25800,12 +25769,44 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
 
         for (var i = 1; i < this.inputs.length; ++i) {
             var data = this.getInputData(i);
+			var prev_data = this._last_sent_data[i];
             if (data != null) {
-                if (only_send_changes && this._last_sent_data[i] == data) {
-                    continue;
+                if (only_send_changes)
+				{	
+					var is_equal = true;
+					if( data && data.length && prev_data && prev_data.length == data.length && data.constructor !== String)
+					{
+						for(var j = 0; j < data.length; ++j)
+							if( prev_data[j] != data[j] )
+							{
+								is_equal = false;
+								break;
+							}
+					}
+					else if(this._last_sent_data[i] != data)
+						is_equal = false;
+					if(is_equal)
+							continue;
                 }
                 this._server.sendMessage({ type: 0, channel: i, data: data });
-                this._last_sent_data[i] = data;
+				if( data.length && data.constructor !== String )
+				{
+					if( this._last_sent_data[i] )
+					{
+						this._last_sent_data[i].length = data.length;
+						for(var j = 0; j < data.length; ++j)
+							this._last_sent_data[i][j] = data[j];
+					}
+					else //create
+					{
+						if(data.constructor === Array)
+							this._last_sent_data[i] = data.concat();
+						else
+							this._last_sent_data[i] = new data.constructor( data );
+					}
+				}
+				else
+	                this._last_sent_data[i] = data; //should be cloned
             }
         }
 
