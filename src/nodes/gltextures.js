@@ -432,7 +432,8 @@
 
 	function LGraphTextureSave() {
 		this.addInput("Texture", "Texture");
-		this.addOutput("", "Texture");
+		this.addOutput("tex", "Texture");
+		this.addOutput("name", "string");
 		this.properties = { name: "", generate_mipmaps: false };
 	}
 
@@ -469,6 +470,7 @@
 
 		this._texture = tex;
 		this.setOutputData(0, tex);
+		this.setOutputData(1, this.properties.name);
 	};
 
 	LiteGraph.registerNodeType("texture/save", LGraphTextureSave);

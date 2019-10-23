@@ -3122,18 +3122,42 @@
      * Allows to pass
      *
      * @method addWidget
-     * @return {Object} the created widget
+     * @param {String} type the widget type (could be "number","string","combo"
+     * @param {String} name the text to show on the widget
+     * @param {String} value the default value
+     * @param {Function} callback function to call when it changes (optionally, it can be the name of the property to modify)
+     * @param {Object} options the object that contains special properties of this widget 
+     * @return {Object} the created widget object
      */
-    LGraphNode.prototype.addWidget = function(
-        type,
-        name,
-        value,
-        callback,
-        options
-    ) {
+    LGraphNode.prototype.addWidget = function( type, name, value, callback, options )
+	{
         if (!this.widgets) {
             this.widgets = [];
         }
+
+		if(!options && callback && callback.constructor === Object)
+		{
+			options = callback;
+			callback = null;
+		}
+
+		if(options && options.constructor === String) //options can be the property name
+			options = { property: options };
+
+		if(callback && callback.constructor === String) //callback can be the property name
+		{
+			if(!options)
+				options = {};
+			options.property = callback;
+			callback = null;
+		}
+
+		if(callback && callback.constructor !== Function)
+		{
+			console.warn("addWidget: callback must be a function");
+			callback = null;
+		}
+
         var w = {
             type: type.toLowerCase(),
             name: name,
@@ -3146,8 +3170,8 @@
             w.y = w.options.y;
         }
 
-        if (!callback) {
-            console.warn("LiteGraph addWidget(...) without a callback");
+        if (!callback && !w.options.callback && !w.options.property) {
+            console.warn("LiteGraph addWidget(...) without a callback or property assigned");
         }
         if (type == "combo" && !w.options.values) {
             throw "LiteGraph addWidget('combo',...) requires to pass values in options: { values:['red','blue'] }";
@@ -5118,7 +5142,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }
 
-                if (is_double_click && !this.read_only ) {
+                if (is_double_click && !this.read_only && this.allow_searchbox) {
                     this.showSearchBox(e);
                 }
 
@@ -8133,6 +8157,8 @@ LGraphNode.prototype.executeAction = function(action)
                         ctx.moveTo(margin + 16, posY + 5);
                         ctx.lineTo(margin + 6, posY + H * 0.5);
                         ctx.lineTo(margin + 16, posY + H - 5);
+                        ctx.fill();
+                        ctx.beginPath();
                         ctx.moveTo(width - margin - 16, posY + 5);
                         ctx.lineTo(width - margin - 6, posY + H * 0.5);
                         ctx.lineTo(width - margin - 16, posY + H - 5);
@@ -8188,6 +8214,7 @@ LGraphNode.prototype.executeAction = function(action)
             posY += H + 4;
         }
         ctx.restore();
+		ctx.textAlign = "left";
     };
 
     /**
@@ -8357,8 +8384,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         function inner_value_change(widget, value) {
             widget.value = value;
-            if ( widget.property && node.properties[widget.property] !== undefined ) {
-                node.setProperty( widget.property, value );
+            if ( widget.options && widget.options.property && node.properties[widget.options.property] !== undefined ) {
+                node.setProperty( widget.options.property, value );
             }
             if (widget.callback) {
                 widget.callback(widget.value, that, node, pos, event);
@@ -9262,11 +9289,15 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }
 
+				var filter = graphcanvas.graph.filter;
+
                 if (Array.prototype.filter) {
                     //filter supported
                     //types
                     var keys = Object.keys(LiteGraph.registered_node_types);
                     var filtered = keys.filter(function(item) {
+						if(filter && item.filter != filter )
+							return -1;
                         return item.toLowerCase().indexOf(str) !== -1;
                     });
                     for (var i = 0; i < filtered.length; i++) {
@@ -9280,6 +9311,8 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 } else {
                     for (var i in LiteGraph.registered_node_types) {
+						if(filter && LiteGraph.registered_node_types[i].filter != filter )
+							continue;
                         if (i.indexOf(str) != -1) {
                             addResult(i);
                             if (
@@ -16351,7 +16384,8 @@ if (typeof exports != "undefined") {
 
 	function LGraphTextureSave() {
 		this.addInput("Texture", "Texture");
-		this.addOutput("", "Texture");
+		this.addOutput("tex", "Texture");
+		this.addOutput("name", "string");
 		this.properties = { name: "", generate_mipmaps: false };
 	}
 
@@ -16388,6 +16422,7 @@ if (typeof exports != "undefined") {
 
 		this._texture = tex;
 		this.setOutputData(0, tex);
+		this.setOutputData(1, this.properties.name);
 	};
 
 	LiteGraph.registerNodeType("texture/save", LGraphTextureSave);
