@@ -319,7 +319,7 @@
 
     MathClamp.title = "Clamp";
     MathClamp.desc = "Clamp number between min and max";
-    MathClamp.filter = "shader";
+    //MathClamp.filter = "shader";
 
     MathClamp.prototype.onExecute = function() {
         var v = this.getInputData(0);
