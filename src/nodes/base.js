@@ -26,7 +26,7 @@
         this.enabled = true;
 
         //create inner graph
-        this.subgraph = new LGraph();
+        this.subgraph = new LiteGraph.LGraph();
         this.subgraph._subgraph_node = this;
         this.subgraph._is_subgraph = true;
 
