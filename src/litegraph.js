@@ -10175,7 +10175,8 @@ LGraphNode.prototype.executeAction = function(action)
         if (
             options.event &&
             options.event.constructor !== MouseEvent &&
-            options.event.constructor !== CustomEvent
+            options.event.constructor !== CustomEvent &&
+	    options.event.constructor !== PointerEvent
         ) {
             console.error(
                 "Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it."
