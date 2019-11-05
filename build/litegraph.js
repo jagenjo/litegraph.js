@@ -9171,7 +9171,21 @@ LGraphNode.prototype.executeAction = function(action)
         var graphcanvas = LGraphCanvas.active_canvas;
         var canvas = graphcanvas.canvas;
 
+        var root_document = canvas.ownerDocument || document;
+		if( root_document.fullscreenElement )
+	        root_document.fullscreenElement.appendChild(dialog);
+		else
+		    root_document.body.appendChild(dialog);
+
+        //compute best position
         var rect = canvas.getBoundingClientRect();
+
+        var left = ( event ? event.clientX : (rect.left + rect.width * 0.5) ) - 80;
+        var top = ( event ? event.clientY : (rect.top + rect.height * 0.5) ) - 20;
+        dialog.style.left = left + "px";
+        dialog.style.top = top + "px";
+
+		/*
         var offsetx = -20;
         var offsety = -20;
         if (rect) {
@@ -9186,8 +9200,9 @@ LGraphNode.prototype.executeAction = function(action)
             dialog.style.left = canvas.width * 0.5 + offsetx + "px";
             dialog.style.top = canvas.height * 0.5 + offsety + "px";
         }
-
         canvas.parentNode.appendChild(dialog);
+		*/
+
         input.focus();
 
         function select(name) {
@@ -10177,7 +10192,8 @@ LGraphNode.prototype.executeAction = function(action)
         if (
             options.event &&
             options.event.constructor !== MouseEvent &&
-            options.event.constructor !== CustomEvent
+            options.event.constructor !== CustomEvent &&
+	    options.event.constructor !== PointerEvent
         ) {
             console.error(
                 "Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it."
@@ -10659,7 +10675,7 @@ if (typeof exports != "undefined") {
         this.enabled = true;
 
         //create inner graph
-        this.subgraph = new LGraph();
+        this.subgraph = new LiteGraph.LGraph();
         this.subgraph._subgraph_node = this;
         this.subgraph._is_subgraph = true;
 
