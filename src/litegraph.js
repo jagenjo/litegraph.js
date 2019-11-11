@@ -6078,13 +6078,6 @@ LGraphNode.prototype.executeAction = function(action)
         }
     };
 
-    LGraphCanvas.prototype.processNodeDeselected = function(node) {
-        this.deselectNode(node);
-        if (this.onNodeDeselected) {
-            this.onNodeDeselected(node);
-        }
-    };
-
     /**
      * selects a given node (or adds it to the current selection)
      * @method selectNode
@@ -6161,6 +6154,10 @@ LGraphNode.prototype.executeAction = function(action)
         }
         node.is_selected = false;
 
+        if (this.onNodeDeselected) {
+            this.onNodeDeselected(node);
+        }
+
         //remove highlighted
         if (node.inputs) {
             for (var i = 0; i < node.inputs.length; ++i) {
@@ -6197,6 +6194,9 @@ LGraphNode.prototype.executeAction = function(action)
                 node.onDeselected();
             }
             node.is_selected = false;
+			if (this.onNodeDeselected) {
+				this.onNodeDeselected(node);
+			}
         }
         this.selected_nodes = {};
         this.current_node = null;
