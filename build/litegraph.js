@@ -6214,9 +6214,12 @@ LGraphNode.prototype.executeAction = function(action)
      **/
     LGraphCanvas.prototype.deleteSelectedNodes = function() {
         for (var i in this.selected_nodes) {
-            var m = this.selected_nodes[i];
+            var node = this.selected_nodes[i];
             //if(m == this.node_in_panel) this.showNodePanel(null);
-            this.graph.remove(m);
+            this.graph.remove(node);
+			if (this.onNodeDeselected) {
+				this.onNodeDeselected(node);
+			}
         }
         this.selected_nodes = {};
         this.current_node = null;
