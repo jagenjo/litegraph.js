@@ -9166,6 +9166,8 @@ LGraphNode.prototype.executeAction = function(action)
                 }
                 e.preventDefault();
                 e.stopPropagation();
+				e.stopImmediatePropagation();
+				return true;
             });
         }
 
