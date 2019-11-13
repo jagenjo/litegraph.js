@@ -9286,7 +9286,7 @@ LGraphNode.prototype.executeAction = function(action)
                 return;
             }
             selected.classList.add("selected");
-            selected.scrollIntoView();
+            selected.scrollIntoView({block: "end", behaviour: "smooth"});
         }
 
         function refreshHelper() {
