@@ -5908,7 +5908,13 @@ LGraphNode.prototype.executeAction = function(action)
 
         for (var i = 0; i < selected_nodes_array.length; ++i) {
             var node = selected_nodes_array[i];
-            clipboard_info.nodes.push(node.clone().serialize());
+			var cloned = node.clone();
+			if(!cloned)
+			{
+				console.warn("node type not found: " + node.type );
+				continue;
+			}
+            clipboard_info.nodes.push(cloned.serialize());
             if (node.inputs && node.inputs.length) {
                 for (var j = 0; j < node.inputs.length; ++j) {
                     var input = node.inputs[j];
@@ -6842,6 +6848,8 @@ LGraphNode.prototype.executeAction = function(action)
             glow = true;
         }
 
+        var low_quality = this.ds.scale < 0.6; //zoomed out
+
         //only render if it forces it to do it
         if (this.live_mode) {
             if (!node.flags.collapsed) {
@@ -6856,7 +6864,7 @@ LGraphNode.prototype.executeAction = function(action)
         var editor_alpha = this.editor_alpha;
         ctx.globalAlpha = editor_alpha;
 
-        if (this.render_shadows) {
+        if (this.render_shadows && !low_quality) {
             ctx.shadowColor = LiteGraph.DEFAULT_SHADOW_COLOR;
             ctx.shadowOffsetX = 2 * this.ds.scale;
             ctx.shadowOffsetY = 2 * this.ds.scale;
@@ -6938,7 +6946,7 @@ LGraphNode.prototype.executeAction = function(action)
         ctx.textAlign = horizontal ? "center" : "left";
         ctx.font = this.inner_text_font;
 
-        var render_text = this.ds.scale > 0.6;
+        var render_text = !low_quality;
 
         var out_slot = this.connecting_output;
         ctx.lineWidth = 1;
@@ -7000,9 +7008,11 @@ LGraphNode.prototype.executeAction = function(action)
                         ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
                         ctx.closePath();
                     } else {
-                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+						if(low_quality)
+	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 ); //faster
+						else
+	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
                     }
-
                     ctx.fill();
 
                     //render name
@@ -7072,7 +7082,10 @@ LGraphNode.prototype.executeAction = function(action)
                         ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
                         ctx.closePath();
                     } else {
-                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+						if(low_quality)
+	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 );
+						else
+	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
                     }
 
                     //trigger
@@ -7081,7 +7094,8 @@ LGraphNode.prototype.executeAction = function(action)
 
                     //if(slot.links != null && slot.links.length)
                     ctx.fill();
-                    ctx.stroke();
+					if(!low_quality)
+	                    ctx.stroke();
 
                     //render output name
                     if (render_text) {
@@ -7415,15 +7429,20 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 
                 ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
-                ctx.beginPath();
-                ctx.arc(
-                    title_height * 0.5,
-                    title_height * -0.5,
-                    box_size * 0.5,
-                    0,
-                    Math.PI * 2
-                );
-                ctx.fill();
+				if(low_quality)
+					ctx.fillRect( title_height * 0.5 - box_size *0.5, title_height * -0.5 - box_size *0.5, box_size , box_size  );
+				else
+				{
+					ctx.beginPath();
+					ctx.arc(
+						title_height * 0.5,
+						title_height * -0.5,
+						box_size * 0.5,
+						0,
+						Math.PI * 2
+					);
+					ctx.fill();
+				}
             } else {
                 if (low_quality) {
                     ctx.fillStyle = "black";
@@ -8101,7 +8120,8 @@ LGraphNode.prototype.executeAction = function(action)
                         this.dirty_canvas = true;
                     }
                     ctx.fillRect(margin, y, width - margin * 2, H);
-                    ctx.strokeRect(margin, y, width - margin * 2, H);
+					if(show_text)
+	                    ctx.strokeRect( margin, y, width - margin * 2, H );
                     if (show_text) {
                         ctx.textAlign = "center";
                         ctx.fillStyle = text_color;
@@ -8113,9 +8133,13 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.strokeStyle = outline_color;
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
-                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+                    if (show_text)
+	                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+					else
+	                    ctx.rect(margin, posY, width - margin * 2, H );
                     ctx.fill();
-                    ctx.stroke();
+					if(show_text)
+	                    ctx.stroke();
                     ctx.fillStyle = w.value ? "#89A" : "#333";
                     ctx.beginPath();
                     ctx.arc( width - margin * 2, y + H * 0.5, H * 0.36, 0, Math.PI * 2 );
@@ -8143,7 +8167,8 @@ LGraphNode.prototype.executeAction = function(action)
                     var nvalue = (w.value - w.options.min) / range;
                     ctx.fillStyle = active_widget == w ? "#89A" : "#678";
                     ctx.fillRect(margin, y, nvalue * (width - margin * 2), H);
-                    ctx.strokeRect(margin, y, width - margin * 2, H);
+					if(show_text)
+	                    ctx.strokeRect(margin, y, width - margin * 2, H);
                     if (w.marker) {
                         var marker_nvalue = (w.marker - w.options.min) / range;
                         ctx.fillStyle = "#AA9";
@@ -8165,10 +8190,13 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.strokeStyle = outline_color;
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
-                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+					if(show_text)
+	                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+					else
+	                    ctx.rect(margin, posY, width - margin * 2, H );
                     ctx.fill();
-                    ctx.stroke();
                     if (show_text) {
+	                    ctx.stroke();
                         ctx.fillStyle = text_color;
                         ctx.beginPath();
                         ctx.moveTo(margin + 16, posY + 5);
@@ -8209,10 +8237,13 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.strokeStyle = outline_color;
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
-                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+                    if (show_text)
+	                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+					else
+	                    ctx.rect( margin, posY, width - margin * 2, H );
                     ctx.fill();
-                    ctx.stroke();
                     if (show_text) {
+	                    ctx.stroke();
                         ctx.fillStyle = secondary_text_color;
                         if (w.name != null) {
                             ctx.fillText(w.name, margin * 2, y + H * 0.7);
