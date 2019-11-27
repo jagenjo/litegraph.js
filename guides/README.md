@@ -4,7 +4,8 @@ Here is a list of useful info when working with LiteGraph.
 The library is divided in four levels:
 * **LGraphNode**: the base class of a node (this library uses is own system of inheritance)
 * **LGraph**: the container of a whole graph made of nodes
-* **LGraphCanvas**: the class in charge of rendering/interaction with the nodes inside the browser
+* **LGraphCanvas**: the class in charge of rendering/interaction with the nodes inside the browser.
+
 And in ```the src/``` folder there is also another class included:
 * **LiteGraph.Editor**: A wrapper around LGraphCanvas that adds buttons around it.
 
