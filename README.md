@@ -18,7 +18,7 @@ Try it in the [demo site](http://tamats.com/projects/litegraph/demo).
 - Live mode system (hides the graph but calls nodes to render whatever they want, useful to create UIs)
 - Graphs can be executed in NodeJS
 - Highly customizable nodes (color, shape, slots vertical or horizontal, widgets, custom rendering)
-- Easy to integrate in any JS application
+- Easy to integrate in any JS application (one single file, no dependencies)
 
 ## Nodes provided
 Although it is easy to create new node types, LiteGraph comes with some default nodes that could be useful for many cases:
