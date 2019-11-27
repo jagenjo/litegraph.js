@@ -119,10 +119,12 @@ MyNodeClass.shape = LiteGraph.ROUND_SHAPE;
 
 You can draw something inside a node using the callbacks ```onDrawForeground``` and ```onDrawBackground```. The only difference is that onDrawForeground gets called in Live Mode and onDrawBackground not.
 
-You do not have to worry about the coordinates system, [0,0] is the top-left corner of the node content area (not the title).
+Both functions receive the (Canvas2D rendering context)[https://developer.mozilla.org/es/docs/Web/API/CanvasRenderingContext2D] and the LGraphCanvas instance where the node is being rendered.
+
+You do not have to worry about the coordinates system, (0,0) is the top-left corner of the node content area (not the title).
 
 ```js
-node.onDrawForeground = function(canvas, ctx)
+node.onDrawForeground = function(ctx, graphcanvas)
 {
   if(this.flags.collapsed)
     return;
