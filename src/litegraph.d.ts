@@ -209,11 +209,11 @@ export const LiteGraph: {
     /** if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration), which could lead to exploits */
     allow_scripts: boolean;
     /** node types by string */
-    registered_node_types: Record<string, LGraphNode>;
+    registered_node_types: Record<string, LGraphNodeConstructor>;
     /** used for dropping files in the canvas */
-    node_types_by_file_extension: Record<string, LGraphNode>;
+    node_types_by_file_extension: Record<string, LGraphNodeConstructor>;
     /** node types by class name */
-    Nodes: Record<string, LGraphNode>;
+    Nodes: Record<string, LGraphNodeConstructor>;
 
     /** used to add extra features to the search box */
     searchbox_extras: Record<
