@@ -217,6 +217,19 @@ function MyNode()
 }
 ```
 
+# Execution Flow
+To execute a graph you must call ```graph.runStep()```.
+
+This function will call the method ```node.onExecute()``` for every node in the graph.
+
+The order of execution is determined by the system according to the morphology of the graph (nodes without inputs are considered level 0, then nodes connected to nodes of level 0 are level 1, and so on). This order is computed only when the graph morphology changes (new nodes are created, connections change).
+
+It is up to the developer to decide how to handle inputs and outputs from inside the node.
+
+The data send through outputs using ```this.setOutputData(0,data)``` is stored in the link, so if the node connected through that link does ```this.getInputData(0)``` it will receive the same data sent.
+
+For rendering, the nodes are executed according to their order in the ```graph._nodes``` array, which changes when the user interact with the GraphCanvas (clicked nodes are moved to the back of the array so they are rendered the last).
+
 
 ## Integration
 
