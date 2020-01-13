@@ -4,7 +4,7 @@ A library in Javascript to create graphs in the browser similar to Unreal Bluepr
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
-Try it in the [demo site](http://tamats.com/projects/litegraph/demo).
+Try it in the [demo site](https://tamats.com/projects/litegraph/demo).
 
 ![Node Graph](imgs/node_graph_example.png "WebGLStudio")
 
@@ -18,7 +18,7 @@ Try it in the [demo site](http://tamats.com/projects/litegraph/demo).
 - Live mode system (hides the graph but calls nodes to render whatever they want, useful to create UIs)
 - Graphs can be executed in NodeJS
 - Highly customizable nodes (color, shape, slots vertical or horizontal, widgets, custom rendering)
-- Easy to integrate in any JS application
+- Easy to integrate in any JS application (one single file, no dependencies)
 
 ## Nodes provided
 Although it is easy to create new node types, LiteGraph comes with some default nodes that could be useful for many cases:

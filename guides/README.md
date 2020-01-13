@@ -1,38 +1,50 @@
 # LiteGraph
 
-Here is a list of useful info when working with LiteGraph
+Here is a list of useful info when working with LiteGraph.
+The library is divided in four levels:
+* **LGraphNode**: the base class of a node (this library uses is own system of inheritance)
+* **LGraph**: the container of a whole graph made of nodes
+* **LGraphCanvas**: the class in charge of rendering/interaction with the nodes inside the browser.
+
+And in ```the src/``` folder there is also another class included:
+* **LiteGraph.Editor**: A wrapper around LGraphCanvas that adds buttons around it.
 
 ## LGraphNode
 
 LGraphNode is the base class used for all the nodes classes.
 To extend the other classes all the methods contained in LGraphNode.prototype are copyed to the classes when registered.
 
-When you create a new node type you do not have to inherit from that class, when the node is registered all the methods are copied to your node prototype.
+When you create a new node type you do not have to inherit from that class, when the node is registered all the methods are copied to your node prototype.  This is done inside the functions ```LiteGraph.registerNodeType(...)```.
 
 Here is an example of how to create your own node:
 
 ```javascript
-//node constructor class
+//your node constructor class
 function MyAddNode()
 {
+  //add some input slots
   this.addInput("A","number");
   this.addInput("B","number");
+  //add some output slots
   this.addOutput("A+B","number");
+  //add some properties
   this.properties = { precision: 1 };
 }
 
-//name to show
+//name to show on the canvas
 MyAddNode.title = "Sum";
 
 //function to call when the node is executed
 MyAddNode.prototype.onExecute = function()
 {
+  //retrieve data from inputs
   var A = this.getInputData(0);
   if( A === undefined )
     A = 0;
   var B = this.getInputData(1);
   if( B === undefined )
     B = 0;
+  //assing data to otputs
   this.setOutputData( 0, A + B );
 }
 
@@ -44,30 +56,31 @@ LiteGraph.registerNodeType("basic/sum", MyAddNode );
 
 ## Node settings
 
-There are several settings that could be defined per node:
-* **size**: ```[width,height]``` 
-* **properties**: object containing the properties that could be configured by the user
+There are several settings that could be defined or modified per node:
+* **size**: ```[width,height]``` the size of the area inside the node (excluding title). Every row is LiteGraph.NODE_SLOT_HEIGHT pixels height.
+* **properties**: object containing the properties that could be configured by the user, and serialized when saving the graph
 * **shape**: the shape of the object (could be LiteGraph.BOX,LiteGraph.ROUND,LiteGraph.CARD)
 * **flags**: several flags
   * **resizable**: if it can be resized dragging the corner
   * **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
   * **clip_area**: clips the content when rendering the node
+  * **collapsed**: if it is shown collapsed (small)
 
-There are several callbacks that could be defined:
-* **onAdded**: when added to graph
-* **onRemoved**: when removed from graph
-* **onStart**:	when the graph starts playing
-* **onStop**:	when the graph stops playing
-* **onDrawBackground**: render something inside the node (not visible in Live mode)
-* **onDrawForeground**: render something inside the node
-* **onMouseDown,onMouseMove,onMouseUp,onMouseEnter,onMouseLeave**
+There are several callbacks that could be defined by the user:
+* **onAdded**: called when added to graph
+* **onRemoved**: called when removed from graph
+* **onStart**:	called when the graph starts playing
+* **onStop**:	called when the graph stops playing
+* **onDrawBackground**: render custom node content on canvas (not visible in Live mode)
+* **onDrawForeground**: render custom node content on canvas (on top of slots)
+* **onMouseDown,onMouseMove,onMouseUp,onMouseEnter,onMouseLeave** to catch mouse events
 * **onDblClick**: double clicked in the editor
-* **onExecute**: execute the node
+* **onExecute**: called when it is time to execute the node
 * **onPropertyChanged**: when a property is changed in the panel (return true to skip default behaviour)
-* **onGetInputs**: returns an array of possible inputs
+* **onGetInputs**: returns an array of possible inputs in the form of [ ["name","type"], [...], [...] ]
 * **onGetOutputs**: returns an array of possible outputs
-* **onSerialize**: before serializing
-* **onSelected**: selected in the editor
+* **onSerialize**: before serializing, receives an object where to store data
+* **onSelected**: selected in the editor, receives an object where to read data
 * **onDeselected**: deselected from the editor
 * **onDropItem**: DOM item dropped over the node
 * **onDropFile**: file dropped over the node
@@ -119,10 +132,12 @@ MyNodeClass.shape = LiteGraph.ROUND_SHAPE;
 
 You can draw something inside a node using the callbacks ```onDrawForeground``` and ```onDrawBackground```. The only difference is that onDrawForeground gets called in Live Mode and onDrawBackground not.
 
-You do not have to worry about the coordinates system, [0,0] is the top-left corner of the node content area (not the title).
+Both functions receive the [Canvas2D rendering context](https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D) and the LGraphCanvas instance where the node is being rendered.
+
+You do not have to worry about the coordinates system, (0,0) is the top-left corner of the node content area (not the title).
 
 ```js
-node.onDrawForeground = function(canvas, ctx)
+node.onDrawForeground = function(ctx, graphcanvas)
 {
   if(this.flags.collapsed)
     return;
@@ -201,6 +216,19 @@ function MyNode()
   this.addWidget("text","Surname","", { property: "surname"}); //this will modify the node.properties 
 }
 ```
+
+# Execution Flow
+To execute a graph you must call ```graph.runStep()```.
+
+This function will call the method ```node.onExecute()``` for every node in the graph.
+
+The order of execution is determined by the system according to the morphology of the graph (nodes without inputs are considered level 0, then nodes connected to nodes of level 0 are level 1, and so on). This order is computed only when the graph morphology changes (new nodes are created, connections change).
+
+It is up to the developer to decide how to handle inputs and outputs from inside the node.
+
+The data send through outputs using ```this.setOutputData(0,data)``` is stored in the link, so if the node connected through that link does ```this.getInputData(0)``` it will receive the same data sent.
+
+For rendering, the nodes are executed according to their order in the ```graph._nodes``` array, which changes when the user interact with the GraphCanvas (clicked nodes are moved to the back of the array so they are rendered the last).
 
 
 ## Integration
