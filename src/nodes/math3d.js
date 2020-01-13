@@ -1,6 +1,69 @@
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
+
+	function Math3DMat4()
+	{
+        this.addInput("T", "vec3");
+        this.addInput("R", "vec3");
+        this.addInput("S", "vec3");
+        this.addOutput("mat4", "mat4");
+		this.properties = {
+			"T":[0,0,0],
+			"R":[0,0,0],
+			"S":[1,1,1],
+			R_in_degrees: true
+		};
+		this._result = mat4.create();
+		this._must_update = true;
+	}
+
+	Math3DMat4.title = "mat4";
+	Math3DMat4.temp_quat = new Float32Array([0,0,0,1]);
+	Math3DMat4.temp_mat4 = new Float32Array(16);
+	Math3DMat4.temp_vec3 = new Float32Array(3);
+
+	Math3DMat4.prototype.onPropertyChanged = function(name, value)
+	{
+		this._must_update = true;
+	}
+
+	Math3DMat4.prototype.onExecute = function()
+	{
+		var M = this._result;
+		var Q = Math3DMat4.temp_quat;
+		var temp_mat4 = Math3DMat4.temp_mat4;
+		var temp_vec3 = Math3DMat4.temp_vec3;
+
+		var T = this.getInputData(0);
+		var R = this.getInputData(1);
+		var S = this.getInputData(2);
+
+		if( this._must_update || T || R || S )
+		{
+			T = T || this.properties.T;
+			R = R || this.properties.R;
+			S = S || this.properties.S;
+			mat4.identity( M );
+			mat4.translate( M, M, T );
+			if(this.properties.R_in_degrees)
+			{
+				temp_vec3.set( R );
+				vec3.scale(temp_vec3,temp_vec3,DEG2RAD);
+				quat.fromEuler( Q, temp_vec3 );
+			}
+			else
+				quat.fromEuler( Q, R );
+			mat4.fromQuat( temp_mat4, Q );
+			mat4.multiply( M, M, temp_mat4 );
+			mat4.scale( M, M, S );
+		}
+
+		this.setOutputData(0, M);		
+	}
+
+    LiteGraph.registerNodeType("math3d/mat4", Math3DMat4);
+
     //Math 3D operation
     function Math3DOperation() {
         this.addInput("A", "number,vec3");

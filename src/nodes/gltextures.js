@@ -10,7 +10,8 @@
 	LGraphCanvas.link_type_colors["Texture"] = "#987";
 
 	function LGraphTexture() {
-		this.addOutput("Texture", "Texture");
+		this.addOutput("tex", "Texture");
+		this.addOutput("name", "string");
 		this.properties = { name: "", filter: true };
 		this.size = [
 			LGraphTexture.image_preview_size,
@@ -222,6 +223,8 @@
 		}
 
 		if (!tex) {
+			this.setOutputData( 0, null );
+			this.setOutputData( 1, "" );
 			return;
 		}
 
@@ -233,9 +236,10 @@
 			tex.setParameter(gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 		}
 
-		this.setOutputData(0, tex);
+		this.setOutputData( 0, tex );
+		this.setOutputData( 1, tex.fullpath || tex.filename );
 
-		for (var i = 1; i < this.outputs.length; i++) {
+		for (var i = 2; i < this.outputs.length; i++) {
 			var output = this.outputs[i];
 			if (!output) {
 				continue;
@@ -3027,10 +3031,106 @@
 		}\n\
 		";
 
-	LiteGraph.registerNodeType(
-		"texture/depth_range",
-		LGraphTextureDepthRange
-	);
+	LiteGraph.registerNodeType( "texture/depth_range", LGraphTextureDepthRange );
+
+
+	// Texture Depth *****************************************
+	function LGraphTextureLinearDepth() {
+		this.addInput("Texture", "Texture");
+		this.addOutput("Texture", "Texture");
+		this.properties = {
+			precision: LGraphTexture.DEFAULT,
+			invert: false
+		};
+		this._uniforms = {
+			u_texture: 0,
+			u_near: 0.1,
+			u_far: 10000
+		};
+	}
+
+	LGraphTextureLinearDepth.widgets_info = {
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureLinearDepth.title = "Linear Depth";
+	LGraphTextureLinearDepth.desc = "Creates a color texture with linear depth";
+
+	LGraphTextureLinearDepth.prototype.onExecute = function() {
+		if (!this.isOutputConnected(0)) {
+			return;
+		} //saves work
+
+		var tex = this.getInputData(0);
+		if (!tex || (tex.format != gl.DEPTH_COMPONENT && tex.format != gl.DEPTH_STENCIL) ) {
+			return;
+		}
+
+		var precision = this.properties.precision == LGraphTexture.HIGH ? gl.HIGH_PRECISION_FORMAT : gl.UNSIGNED_BYTE;
+
+		if ( !this._temp_texture || this._temp_texture.type != precision || this._temp_texture.width != tex.width || this._temp_texture.height != tex.height ) {
+			this._temp_texture = new GL.Texture(tex.width, tex.height, {
+				type: precision,
+				format: gl.RGB,
+				filter: gl.LINEAR
+			});
+		}
+
+		var uniforms = this._uniforms;
+
+		uniforms.u_near = tex.near_far_planes[0];
+		uniforms.u_far = tex.near_far_planes[1];
+		uniforms.u_invert = this.properties.invert ? 1 : 0;
+
+		gl.disable(gl.BLEND);
+		gl.disable(gl.DEPTH_TEST);
+		var mesh = Mesh.getScreenQuad();
+		if(!LGraphTextureLinearDepth._shader)
+			LGraphTextureLinearDepth._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureLinearDepth.pixel_shader);
+		var shader = LGraphTextureLinearDepth._shader;
+
+		//NEAR AND FAR PLANES
+		var planes = null;
+		if (tex.near_far_planes) {
+			planes = tex.near_far_planes;
+		} else if (window.LS && LS.Renderer._main_camera) {
+			planes = LS.Renderer._main_camera._uniforms.u_camera_planes;
+		} else {
+			planes = [0.1, 1000];
+		} //hardcoded
+		uniforms.u_camera_planes = planes;
+
+		this._temp_texture.drawTo(function() {
+			tex.bind(0);
+			shader.uniforms(uniforms).draw(mesh);
+		});
+
+		this._temp_texture.near_far_planes = planes;
+		this.setOutputData(0, this._temp_texture);
+	};
+
+	LGraphTextureLinearDepth.pixel_shader =
+		"precision highp float;\n\
+		precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		uniform float u_near;\n\
+		uniform float u_far;\n\
+		uniform int u_invert;\n\
+		\n\
+		void main() {\n\
+			float zNear = u_near;\n\
+			float zFar = u_far;\n\
+			float depth = texture2D(u_texture, v_coord).x;\n\
+			depth = depth * 2.0 - 1.0;\n\
+			float f = zNear * (depth + 1.0) / (zFar + zNear - depth * (zFar - zNear));\n\
+			if( u_invert == 1 )\n\
+				f = 1.0 - f;\n\
+			gl_FragColor = vec4(vec3(f),1.0);\n\
+		}\n\
+		";
+
+	LiteGraph.registerNodeType( "texture/linear_depth", LGraphTextureLinearDepth );
 
 	// Texture Blur *****************************************
 	function LGraphTextureBlur() {
@@ -4155,6 +4255,211 @@ void main(void){\n\
 
 	LiteGraph.registerNodeType("texture/lensfx", LGraphLensFX);
 
+
+	function LGraphTextureCurve() {
+		this.addInput("in", "Texture");
+		this.addOutput("out", "Texture");
+		this.properties = { precision: LGraphTexture.LOW, split_channels: false };
+		this._values = new Uint8Array(256*4);
+		this._values.fill(255);
+		this._curve_texture = null;
+		this._uniforms = { u_texture: 0, u_curve: 1, u_range: 1.0 };
+		this._must_update = true;
+		this._points = {
+			RGB: [[0,0],[1,1]],
+			R: [[0,0],[1,1]],
+			G: [[0,0],[1,1]],
+			B: [[0,0],[1,1]]
+		};
+		this.curve_editor = null;
+		this.addWidget("toggle","Split Channels",false,"split_channels");
+		this.addWidget("combo","Channel","RGB",{ values:["RGB","R","G","B"]});
+		this.curve_offset = 68;
+		this.size = [ 240, 160 ];
+	}
+
+	LGraphTextureCurve.title = "Curve";
+
+	LGraphTextureCurve.prototype.onExecute = function() {
+		var tex = this.getInputData(0);
+		if (!tex) {
+			return;
+		}
+
+		if (!this.isOutputConnected(0)) {
+			return;
+		} //saves work
+
+		var temp = this._temp_texture;
+		if ( !temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type ) {
+			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR } );
+		}
+
+		var shader = LGraphTextureCurve._shader;
+		if (!shader) {
+			shader = LGraphTextureCurve._shader = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureCurve.pixel_shader );
+		}
+
+		if(this._must_update || !this._curve_texture )
+			this.updateCurve();
+
+		var uniforms = this._uniforms;
+		var curve_texture = this._curve_texture;
+
+		//apply shader
+		temp.drawTo(function() {
+			gl.disable(gl.DEPTH_TEST);
+			tex.bind(0);
+			curve_texture.bind(1);
+			shader.uniforms(uniforms).draw(GL.Mesh.getScreenQuad());
+		});
+
+		this.setOutputData(0, temp);
+	};
+
+	LGraphTextureCurve.prototype.sampleCurve = function(f,points)
+	{
+		var points = points || this._points.RGB;
+		if(!points)
+			return;
+		for(var i = 0; i < points.length - 1; ++i)
+		{
+			var p = points[i];
+			var pn = points[i+1];
+			if(pn[0] < f)
+				continue;
+			var r = (pn[0] - p[0]);
+			if( Math.abs(r) < 0.00001 )
+				return p[1];
+			var local_f = (f - p[0]) / r;
+			return p[1] * (1.0 - local_f) + pn[1] * local_f;
+		}
+		return 0;
+	}
+
+	LGraphTextureCurve.prototype.updateCurve = function()
+	{
+		var values = this._values;
+		var num = values.length / 4;
+		var split = this.properties.split_channels;
+		for(var i = 0; i < num; ++i)
+		{
+			if(split)
+			{
+				values[i*4] = Math.clamp( this.sampleCurve(i/num,this._points.R)*255,0,255);
+				values[i*4+1] = Math.clamp( this.sampleCurve(i/num,this._points.G)*255,0,255);
+				values[i*4+2] = Math.clamp( this.sampleCurve(i/num,this._points.B)*255,0,255);
+			}
+			else
+			{
+				var v = this.sampleCurve(i/num);//sample curve
+				values[i*4] = values[i*4+1] = values[i*4+2] = Math.clamp(v*255,0,255);
+			}
+			values[i*4+3] = 255; //alpha fixed
+		}
+		if(!this._curve_texture)
+			this._curve_texture = new GL.Texture(256,1,{ format: gl.RGBA, magFilter: gl.LINEAR, wrap: gl.CLAMP_TO_EDGE });
+		this._curve_texture.uploadData(values,null,true);
+	}
+
+	LGraphTextureCurve.prototype.onSerialize = function(o)
+	{
+		var curves = {};
+		for(var i in this._points)
+			curves[i] = this._points[i].concat();
+		o.curves = curves;
+	}
+
+	LGraphTextureCurve.prototype.onConfigure = function(o)
+	{
+		this._points = o.curves;
+		if(this.curve_editor)
+			curve_editor.points = this._points;
+		this._must_update = true;
+	}
+
+	LGraphTextureCurve.prototype.onMouseDown = function(e, localpos, graphcanvas)
+	{
+		if(this.curve_editor)
+		{
+			var r = this.curve_editor.onMouseDown([localpos[0],localpos[1]-this.curve_offset], graphcanvas);
+			if(r)
+				this.captureInput(true);
+			return r;
+		}
+	}
+
+	LGraphTextureCurve.prototype.onMouseMove = function(e, localpos, graphcanvas)
+	{
+		if(this.curve_editor)
+			return this.curve_editor.onMouseMove([localpos[0],localpos[1]-this.curve_offset], graphcanvas);
+	}
+
+	LGraphTextureCurve.prototype.onMouseUp = function(e, localpos, graphcanvas)
+	{
+		if(this.curve_editor)
+			return this.curve_editor.onMouseUp([localpos[0],localpos[1]-this.curve_offset], graphcanvas);
+		this.captureInput(false);
+	}
+
+	LGraphTextureCurve.channel_line_colors = { "RGB":"#666","R":"#F33","G":"#3F3","B":"#33F" };
+
+	LGraphTextureCurve.prototype.onDrawBackground = function(ctx, graphcanvas)
+	{
+		if(this.flags.collapsed)
+			return;
+
+		if(!this.curve_editor)
+			this.curve_editor = new LiteGraph.CurveEditor(this._points.R);
+		ctx.save();
+		ctx.translate(0,this.curve_offset);
+		var channel = this.widgets[1].value;
+
+		if(this.properties.split_channels)
+		{
+			if(channel == "RGB")
+			{
+				this.widgets[1].value = channel = "R";
+				this.widgets[1].disabled = false;
+			}
+			this.curve_editor.points = this._points.R;
+			this.curve_editor.draw( ctx, [this.size[0],this.size[1] - this.curve_offset], graphcanvas, "#111", LGraphTextureCurve.channel_line_colors.R, true );
+			ctx.globalCompositeOperation = "lighten";
+			this.curve_editor.points = this._points.G;
+			this.curve_editor.draw( ctx, [this.size[0],this.size[1] - this.curve_offset], graphcanvas, null, LGraphTextureCurve.channel_line_colors.G, true );
+			this.curve_editor.points = this._points.B;
+			this.curve_editor.draw( ctx, [this.size[0],this.size[1] - this.curve_offset], graphcanvas, null, LGraphTextureCurve.channel_line_colors.B, true );
+			ctx.globalCompositeOperation = "source-over";
+		}
+		else
+		{
+			this.widgets[1].value = channel = "RGB";
+			this.widgets[1].disabled = true;
+		}
+
+		this.curve_editor.points = this._points[channel];
+		this.curve_editor.draw( ctx, [this.size[0],this.size[1] - this.curve_offset], graphcanvas, this.properties.split_channels ? null : "#111", LGraphTextureCurve.channel_line_colors[channel]  );
+		ctx.restore();
+	}
+
+	LGraphTextureCurve.pixel_shader =
+		"precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		uniform sampler2D u_curve;\n\
+		uniform float u_range;\n\
+		\n\
+		void main() {\n\
+			vec4 color = texture2D( u_texture, v_coord ) * u_range;\n\
+			color.x = texture2D( u_curve, vec2( color.x, 0.5 ) ).x;\n\
+			color.y = texture2D( u_curve, vec2( color.y, 0.5 ) ).y;\n\
+			color.z = texture2D( u_curve, vec2( color.z, 0.5 ) ).z;\n\
+			//color.w = texture2D( u_curve, vec2( color.w, 0.5 ) ).w;\n\
+			gl_FragColor = color;\n\
+		}";
+
+	LiteGraph.registerNodeType("texture/curve", LGraphTextureCurve);
+
 	//simple exposition, but plan to expand it to support different gamma curves
 	function LGraphExposition() {
 		this.addInput("in", "Texture");
@@ -4391,6 +4696,7 @@ void main(void){\n\
 			//rgb = xyYtoRGB(xyY);\n\
 			//second\n\
 			rgb = (rgb / lum) * Ld;\n\
+			rgb = max(rgb,vec3(0.001));\n\
 			rgb = pow( rgb, vec3( u_igamma ) );\n\
 			gl_FragColor = vec4( rgb, color.a );\n\
 		}";
