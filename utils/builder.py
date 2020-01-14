@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
 import re, os, sys, time, tempfile, shutil
 import argparse
@@ -58,16 +58,16 @@ def packJSCode(files):
               os.system("java -jar %s --js %s --js_output_file %s" % (compiler_path, src_file, "temp.js") )
         sys.stderr.write('\033[92m' + "OK\n" + '\033[0m')
     
-    os.write(f1,data)
+    os.write(f1,str.encode(data))
     os.close(f1)
     
-    #print " + Compiling all..."
+    #print(" + Compiling all...")
     #os.system("java -jar %s --js %s --js_output_file %s" % (compiler_path, fullcode_path, output_file) )
-    #print " * Done"
+    #print(" * Done")
     return fullcode_path
 
 def compileAndMinify(input_path, output_path):
-    print " + Compiling and minifying..."
+    print(" + Compiling and minifying...")
     if output_path != None:
         os.system("java -jar %s --js %s --js_output_file %s" % (compiler_path, input_path, output_path) )
         sys.stderr.write(" * Stored in " + output_path + "\n");
