@@ -86,7 +86,7 @@
         this._ws.onmessage = function(e) {
             that.boxcolor = "#AFA";
             var data = JSON.parse(e.data);
-            if (data.room && data.room != this.properties.room) {
+            if (data.room && data.room != that.properties.room) {
                 return;
             }
             if (e.data.type == 1) {
