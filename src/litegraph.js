@@ -8312,6 +8312,7 @@ LGraphNode.prototype.executeAction = function(action)
                         break;
                     case "number":
                     case "combo":
+						var old_value = w.value;
                         if (event.type == "mousemove" && w.type == "number") {
                             w.value +=
                                 event.deltaX * 0.1 * (w.options.step || 1);
@@ -8375,13 +8376,15 @@ LGraphNode.prototype.executeAction = function(action)
                                     return false;
                                 }
                             }
-                        }
-                        setTimeout(
-                            function() {
-                                inner_value_change(this, this.value);
-                            }.bind(w),
-                            20
-                        );
+                        } //mousedown
+
+						if( old_value != w.value )
+							setTimeout(
+								function() {
+									inner_value_change(this, this.value);
+								}.bind(w),
+								20
+							);
                         this.dirty_canvas = true;
                         break;
                     case "toggle":
@@ -8411,7 +8414,7 @@ LGraphNode.prototype.executeAction = function(action)
                             w.mouse(ctx, event, [x, y], node);
                         }
                         break;
-                }
+                } //end switch
 
                 return w;
             }

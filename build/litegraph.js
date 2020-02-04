@@ -8314,6 +8314,7 @@ LGraphNode.prototype.executeAction = function(action)
                         break;
                     case "number":
                     case "combo":
+						var old_value = w.value;
                         if (event.type == "mousemove" && w.type == "number") {
                             w.value +=
                                 event.deltaX * 0.1 * (w.options.step || 1);
@@ -8377,13 +8378,15 @@ LGraphNode.prototype.executeAction = function(action)
                                     return false;
                                 }
                             }
-                        }
-                        setTimeout(
-                            function() {
-                                inner_value_change(this, this.value);
-                            }.bind(w),
-                            20
-                        );
+                        } //mousedown
+
+						if( old_value != w.value )
+							setTimeout(
+								function() {
+									inner_value_change(this, this.value);
+								}.bind(w),
+								20
+							);
                         this.dirty_canvas = true;
                         break;
                     case "toggle":
@@ -8413,7 +8416,7 @@ LGraphNode.prototype.executeAction = function(action)
                             w.mouse(ctx, event, [x, y], node);
                         }
                         break;
-                }
+                } //end switch
 
                 return w;
             }
@@ -12472,6 +12475,47 @@ if (typeof exports != "undefined") {
     };
 
     LiteGraph.registerNodeType("widget/number", WidgetNumber);
+
+
+    /* Combo ****************/
+
+    function WidgetCombo() {
+        this.addOutput("", "string");
+        this.addOutput("change", LiteGraph.EVENT);
+        this.size = [80, 60];
+        this.properties = { value: "A", values:"A;B;C" };
+        this.old_y = -1;
+        this.mouse_captured = false;
+		this._values = this.properties.values.split(";");
+		var that = this;
+        this.widgets_up = true;
+		this.widget = this.addWidget("combo","", this.properties.value, function(v){
+			that.properties.value = v;
+            that.triggerSlot(1, v);
+		}, { property: "value", values: this._values } );
+    }
+
+    WidgetCombo.title = "Combo";
+    WidgetCombo.desc = "Widget to select from a list";
+
+    WidgetCombo.prototype.onExecute = function() {
+        this.setOutputData( 0, this.properties.value );
+    };
+
+    WidgetCombo.prototype.onPropertyChanged = function(name, value) {
+		if(name == "values")
+		{
+			this._values = value.split(";");
+			this.widget.options.values = this._values;
+		}
+		else if(name == "value")
+		{
+			this.widget.value = value;
+		}
+	};
+
+    LiteGraph.registerNodeType("widget/combo", WidgetCombo);
+
 
     /* Knob ****************/
 
