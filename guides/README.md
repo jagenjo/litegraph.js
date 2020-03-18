@@ -244,3 +244,63 @@ If you want to start the graph then:
 ```js
 graph.start();
 ```
+
+## Events
+
+When we run a step in a graph (using ```graph.runStep()```) every node onExecute method will be called.
+But sometimes you want that actions are only performed when some trigger is activated, for this situations you can use Events.
+
+Events allow to trigger executions in nodes only when an event is dispatched from one node.
+
+To define slots for nodes you must use the type LiteGraph.ACTION for inputs, and LIteGraph.EVENT for outputs:
+
+```js
+function MyNode()
+{
+  this.addInput("play", LiteGraph.ACTION );
+  this.addInput("onFinish", LiteGraph.EVENT );  
+}
+```
+
+Now to execute some code when an event is received from an input, you must define the method onAction:
+
+```js
+MyNode.prototype.onAction = function(action, data)
+{
+   if(action == "play")
+   {
+     //do your action...
+   }
+
+}
+```
+
+And the last thing is to trigger events when something in your node happens. You could trigger them from inside the onExecute or from any other interaction:
+
+```js
+MyNode.prototype.onAction = function(action, data)
+{
+   if( this.button_was_clicked )
+    this.triggerSlot(0); //triggers event in slot 0
+}
+```
+
+There are some nodes already available to handle events, like delaying, counting, etc.
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+
