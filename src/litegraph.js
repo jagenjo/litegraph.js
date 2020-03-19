@@ -163,7 +163,8 @@
 					get: function(v) {
 						return this._shape;
 					},
-					enumerable: true
+					enumerable: true,
+					configurable: true
 				});
 
 				//warnings
