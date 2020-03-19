@@ -301,12 +301,17 @@
 	{
 		var type = this.properties.type;
 		this.type_widget.value = type;
+		if(this.outputs[0].type != type)
+		{
+			this.outputs[0].type = type;
+			this.disconnectOutput(0);
+		}
 		if(type == "number")
 		{
 			this.value_widget.type = "number";
 			this.value_widget.value = 0;
 		}
-		else if(type == "bool")
+		else if(type == "boolean")
 		{
 			this.value_widget.type = "toggle";
 			this.value_widget.value = true;
@@ -372,8 +377,10 @@
         var data = this.graph.inputs[name];
         if (!data) {
             this.setOutputData(0, this.properties.value );
+			return;
         }
-        this.setOutputData(0, data.value === undefined ? this.properties.value : data.value);
+
+        this.setOutputData(0, data.value !== undefined ? data.value : this.properties.value );
     };
 
     GraphInput.prototype.onRemoved = function() {
@@ -493,6 +500,14 @@
     function ConstantNumber() {
         this.addOutput("value", "number");
         this.addProperty("value", 1.0);
+        this.widget = this.addWidget(
+            "number",
+            "value",
+            1,
+            "value"
+        );
+        this.widgets_up = true;
+        this.size = [180, 30];
     }
 
     ConstantNumber.title = "Const Number";
@@ -509,16 +524,35 @@
         return this.title;
     };
 
-    ConstantNumber.prototype.setValue = function(v) {
-        this.properties.value = v;
-    };
-
     ConstantNumber.prototype.onDrawBackground = function(ctx) {
         //show the current value
         this.outputs[0].label = this.properties["value"].toFixed(3);
     };
 
     LiteGraph.registerNodeType("basic/const", ConstantNumber);
+
+    function ConstantBoolean() {
+        this.addOutput("", "boolean");
+        this.addProperty("value", true);
+        this.widget = this.addWidget(
+            "toggle",
+            "value",
+            true,
+            "value"
+        );
+        this.widgets_up = true;
+        this.size = [140, 30];
+    }
+
+    ConstantBoolean.title = "Const Boolean";
+    ConstantBoolean.desc = "Constant boolean";
+    ConstantBoolean.prototype.getTitle = ConstantNumber.prototype.getTitle;
+
+    ConstantBoolean.prototype.onExecute = function() {
+        this.setOutputData(0, this.properties["value"]);
+    };
+
+    LiteGraph.registerNodeType("basic/boolean", ConstantBoolean);
 
     function ConstantString() {
         this.addOutput("", "string");
@@ -527,22 +561,14 @@
             "text",
             "value",
             "",
-            this.setValue.bind(this)
+            "value" //link to property value
         );
         this.widgets_up = true;
-        this.size = [100, 30];
+        this.size = [180, 30];
     }
 
     ConstantString.title = "Const String";
     ConstantString.desc = "Constant string";
-
-    ConstantString.prototype.setValue = function(v) {
-        this.properties.value = v;
-    };
-
-    ConstantString.prototype.onPropertyChanged = function(name, value) {
-        this.widget.value = value;
-    };
 
     ConstantString.prototype.getTitle = ConstantNumber.prototype.getTitle;
 

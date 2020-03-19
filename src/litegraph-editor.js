@@ -3,12 +3,9 @@ function Editor(container_id, options) {
     options = options || {};
 
     //fill container
-    var html =
-        "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
-    html +=
-        "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
-    html +=
-        "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
+    var html = "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
+    html += "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
+    html += "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
 
     var root = document.createElement("div");
     this.root = root;
@@ -16,6 +13,7 @@ function Editor(container_id, options) {
     root.innerHTML = html;
 
     this.tools = root.querySelector(".tools");
+    this.content = root.querySelector(".content");
     this.footer = root.querySelector(".footer");
 
     var canvas = root.querySelector(".graphcanvas");
@@ -27,6 +25,9 @@ function Editor(container_id, options) {
     graph.onAfterExecute = function() {
         graphcanvas.draw(true);
     };
+
+	graphcanvas.onDropItem = this.onDropItem.bind(this);
+	graphcanvas.onShowNodePanel = this.onShowNodePanel.bind(this);
 
     //add stuff
     //this.addToolsButton("loadsession_button","Load","imgs/icon-load.png", this.onLoadButton.bind(this), ".tools-left" );
@@ -104,56 +105,159 @@ Editor.prototype.addLoadCounter = function() {
     }, 200);
 };
 
-Editor.prototype.addToolsButton = function(
-    id,
-    name,
-    icon_url,
-    callback,
-    container
-) {
+Editor.prototype.addToolsButton = function( id, name, icon_url, callback, container ) {
     if (!container) {
         container = ".tools";
     }
 
-    var button = this.createButton(name, icon_url);
+    var button = this.createButton(name, icon_url, callback);
     button.id = id;
-    button.addEventListener("click", callback);
-
     this.root.querySelector(container).appendChild(button);
 };
 
 Editor.prototype.createPanel = function(title, options) {
+	options = options || {};
+
+    var ref_window = options.window || window;
     var root = document.createElement("div");
     root.className = "dialog";
-    root.innerHTML =
-        "<div class='dialog-header'><span class='dialog-title'>" +
-        title +
-        "</span></div><div class='dialog-content'></div><div class='dialog-footer'></div>";
+    root.innerHTML = "<div class='dialog-header'><span class='dialog-title'></span></div><div class='dialog-content'></div><div class='dialog-footer'></div>";
     root.header = root.querySelector(".dialog-header");
+	if(options.closable)
+	{
+	    var close = document.createElement("span");
+		close.innerHTML = "&#10005;";
+		close.classList.add("close");
+		close.addEventListener("click",function(){
+			root.close();
+		});
+		root.header.appendChild(close);
+	}
+    root.title_element = root.querySelector(".dialog-title");
+	root.title_element.innerText = title;
     root.content = root.querySelector(".dialog-content");
     root.footer = root.querySelector(".dialog-footer");
+	root.close = function()
+	{
+		this.parentNode.removeChild(this);
+	}
+
+	root.addButton = function( name, callback, options )
+	{
+		var elem = document.createElement("button");
+		elem.innerText = name;
+		elem.options = options;
+		elem.addEventListener("click",callback);
+		root.footer.appendChild(elem);
+		return elem;
+	}
+
+	root.addWidget = function( type, name, value, options, callback )
+	{
+		options = options || {};
+		var str_value = String(value);
+		if(type == "number")
+			str_value = value.toFixed(3);
+
+		var elem = document.createElement("div");
+		elem.className = "property";
+		elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
+		elem.querySelector(".property_name").innerText = name;
+		var value_element = elem.querySelector(".property_value");
+		value_element.innerText = str_value;
+		elem.dataset["property"] = name;
+		elem.dataset["type"] = options.type || type;
+		elem.options = options;
+		elem.value = value;
+
+		//if( type == "code" )
+		//	elem.addEventListener("click", function(){ inner_showCodePad( node, this.dataset["property"] ); });
+		if (type == "boolean")
+		{
+			elem.classList.add("boolean");
+			if(value)
+				elem.classList.add("bool-on");
+			elem.addEventListener("click", function(){ 
+				//var v = node.properties[this.dataset["property"]]; 
+				//node.setProperty(this.dataset["property"],!v); this.innerText = v ? "true" : "false"; 
+				var propname = this.dataset["property"];
+				this.value = !this.value;
+				this.classList.toggle("bool-on");
+				this.querySelector(".property_value").innerText = this.value ? "true" : "false";
+				innerChange(propname, this.value );
+			});
+		}
+		else if (type == "string" || type == "number")
+		{
+			value_element.setAttribute("contenteditable",true);
+			value_element.addEventListener("keydown", function(e){ 
+				if(e.code == "Enter")
+				{
+					e.preventDefault();
+					this.blur();
+				}
+			});
+			value_element.addEventListener("blur", function(){ 
+				var v = this.innerText;
+				var propname = this.parentNode.dataset["property"];
+				var proptype = this.parentNode.dataset["type"];
+				if( proptype == "number")
+					v = Number(v);
+				innerChange(propname, v);
+			});
+		}
+		else if (type == "enum")
+			value_element.addEventListener("click", function(event){ 
+				var values = options.values || [];
+				var propname = this.parentNode.dataset["property"];
+				var elem_that = this;
+				var menu = new LiteGraph.ContextMenu(values,{
+						event: event,
+						className: "dark",
+						callback: inner_clicked
+					},
+					ref_window);
+				function inner_clicked(v, option, event) {
+					//node.setProperty(propname,v); 
+					//graphcanvas.dirty_canvas = true;
+					elem_that.innerText = v;
+					innerChange(propname,v);
+					return false;
+				}
+			});
+
+		root.content.appendChild(elem);
+
+		function innerChange(name, value)
+		{
+			console.log("change",name,value);
+			//that.dirty_canvas = true;
+			if(options.callback)
+				options.callback(name,value);
+			if(callback)
+				callback(name,value);
+		}
+
+		return elem;
+	}
 
     return root;
 };
 
-Editor.prototype.createButton = function(name, icon_url) {
+Editor.prototype.createButton = function(name, icon_url, callback) {
     var button = document.createElement("button");
     if (icon_url) {
         button.innerHTML = "<img src='" + icon_url + "'/> ";
     }
     button.innerHTML += name;
+	if(callback)
+		button.addEventListener("click", callback );
     return button;
 };
 
 Editor.prototype.onLoadButton = function() {
-    var panel = this.createPanel("Load session");
-    var close = this.createButton("Close");
-    close.style.float = "right";
-    close.addEventListener("click", function() {
-        panel.parentNode.removeChild(panel);
-    });
-    panel.header.appendChild(close);
-    panel.content.innerHTML = "test";
+    var panel = this.createPanel("Load session",{closable:true});
+	//TO DO
 
     this.root.appendChild(panel);
 };
@@ -191,6 +295,177 @@ Editor.prototype.onLiveButton = function() {
         ? "<img src='imgs/icon-record.png'/> Live"
         : "<img src='imgs/icon-gear.png'/> Edit";
 };
+
+Editor.prototype.onDropItem = function(e)
+{
+	var that = this;
+	for(var i = 0; i < e.dataTransfer.files.length; ++i)
+	{
+		var file = e.dataTransfer.files[i];
+		var ext = LGraphCanvas.getFileExtension(file.name);
+		var reader = new FileReader();
+		if(ext == "json")
+		{
+			reader.onload = function(event) {
+				var data = JSON.parse( event.target.result );
+				that.graph.configure(data);
+			};
+			reader.readAsText(file);
+		}
+	}
+}
+
+//shows the left side panel with the node info
+Editor.prototype.onShowNodePanel = function(node)
+{
+	var panel = document.querySelector("#node-panel");
+	if(panel)
+		panel.close();
+    var ref_window = this.graphcanvas.getCanvasWindow();
+	panel = this.createPanel(node.title || "",{closable: true, window: ref_window });
+	panel.id = "node-panel";
+	panel.classList.add("settings");
+	var that = this;
+	var graphcanvas = this.graphcanvas;
+
+	function inner_refresh()
+	{
+		panel.content.innerHTML = ""; //clear
+		var elem = document.createElement("div");
+		elem.innerHTML = "<span class='node_type'>"+node.type+"</span><span class='node_desc'>"+(node.constructor.desc || "")+"</span><span class='separator'></span>";
+		panel.content.appendChild(elem);
+
+		for(var i in node.properties)
+		{
+			var value = node.properties[i];
+			var info = node.getPropertyInfo(i);
+			var type = info.type || "string";
+			panel.addWidget( info.widget || info.type, i, value, info, function(name,value){
+				node.setProperty(name,value);
+				graphcanvas.dirty_canvas = true;
+			});
+		}
+
+		panel.addButton("Delete",function(){
+            node.graph.remove(node);
+			panel.close();
+		}).classList.add("delete");
+
+		/*
+		for(var i in node.properties)
+		{
+			var value = node.properties[i];
+			var type = "string";
+			var info = node.getPropertyInfo(i);
+			var type = info.type;
+
+			var str_value = String(value);
+			if(type == "number")
+				str_value = value.toFixed(3);
+
+			var elem = document.createElement("div");
+			elem.className = "property";
+			elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
+			elem.querySelector(".property_name").innerText = i;
+			var value_element = elem.querySelector(".property_value");
+			value_element.innerText = str_value;
+			elem.dataset["property"] = i;
+			elem.dataset["type"] = type;
+			elem.datainfo = info;
+
+			if( type == "code" )
+				elem.addEventListener("click", function(){ inner_showCodePad( node, this.dataset["property"] ); });
+			else if (type == "boolean")
+				elem.addEventListener("click", function(){ 
+					var v = node.properties[this.dataset["property"]]; 
+					node.setProperty(this.dataset["property"],!v); this.innerText = v ? "true" : "false"; 
+				});
+			else if (type == "string" || type == "number")
+			{
+				value_element.setAttribute("contenteditable",true);
+				value_element.addEventListener("change", function(){ 
+					var v = this.innerText;
+					var propname = this.parentNode.dataset["property"];
+					if( propname == "number")
+						v = Number(v);
+					node.setProperty(propname,v); 
+					that.dirty_canvas = true;
+				});
+			}
+			else if (type == "enum")
+				value_element.addEventListener("click", function(event){ 
+					var values = this.parentNode.datainfo.values || [];
+					var propname = this.parentNode.dataset["property"];
+					var elem_that = this;
+					var menu = new LiteGraph.ContextMenu(values,{
+							event: event,
+							className: "dark",
+							callback: inner_clicked
+						},
+						ref_window);
+					function inner_clicked(v, option, event) {
+						node.setProperty(propname,v); 
+						elem_that.innerText = v;
+						graphcanvas.dirty_canvas = true;
+						return false;
+					}
+				});
+			else //generic
+				elem.addEventListener("click", function(){ 
+					that.graphcanvas.showEditPropertyValue( node, this.dataset["property"], {onclose: inner_refresh} ); 
+				});
+			panel.content.appendChild(elem);
+		}
+		*/
+	}
+
+	function inner_showCodePad( node, propname )
+	{
+		panel.style.top = "calc( 50% - 250px)";
+		panel.style.left = "calc( 50% - 400px)";
+		panel.style.width = "800px";
+		panel.style.height = "500px";
+
+		if(window.CodeFlask) //disabled for now
+		{
+			panel.content.innerHTML = "<div class='code'></div>";
+			var flask = new CodeFlask( "div.code", { language: 'js' });
+			flask.updateCode(node.properties[propname]);
+			flask.onUpdate( function(code) {
+				node.setProperty(propname, code);
+			});
+		}
+		else
+		{
+			panel.content.innerHTML = "<textarea class='code'></textarea>";
+			var textarea = panel.content.querySelector("textarea");
+			textarea.value = node.properties[propname];
+			textarea.addEventListener("keydown", function(e){
+				//console.log(e);
+				if(e.code == "Enter" && e.ctrlKey )
+				{
+					console.log("Assigned");
+					node.setProperty(propname, textarea.value);
+				}
+			});
+			textarea.style.height = "calc(100% - 40px)";
+		}
+		var assign = that.createButton( "Assign", null, function(){
+			node.setProperty(propname, textarea.value);
+		});
+		panel.content.appendChild(assign);
+		var button = that.createButton( "Close", null, function(){
+			panel.style.height = "";
+			inner_refresh();
+		});
+		button.style.float = "right";
+		panel.content.appendChild(button);
+	}
+
+	inner_refresh();
+
+	this.content.appendChild( panel );
+}
 
 Editor.prototype.goFullscreen = function() {
     if (this.root.requestFullscreen) {

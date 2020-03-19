@@ -642,6 +642,8 @@
         new MIDIInterface(function(midi) {
             that._midi = midi;
         });
+
+		this.addWidget("combo","Device",this.properties.port,{ property: "port", values: this.getMIDIOutputs.bind(this) });
     }
 
     LGMIDIOut.MIDIInterface = MIDIInterface;
@@ -650,21 +652,27 @@
     LGMIDIOut.desc = "Sends MIDI to output channel";
     LGMIDIOut.color = MIDI_COLOR;
 
-    LGMIDIOut.prototype.getPropertyInfo = function(name) {
+    LGMIDIOut.prototype.onGetPropertyInfo = function(name) {
         if (!this._midi) {
             return;
         }
 
         if (name == "port") {
-            var values = {};
-            for (var i = 0; i < this._midi.output_ports.size; ++i) {
-                var output = this._midi.output_ports.get(i);
-                values[i] =
-                    i + ".- " + output.name + " version:" + output.version;
-            }
+			var values = this.getMIDIOutputs();
             return { type: "enum", values: values };
         }
     };
+
+	LGMIDIOut.prototype.getMIDIOutputs = function()
+	{
+		var values = {};
+		for (var i = 0; i < this._midi.output_ports.size; ++i) {
+			var output = this._midi.output_ports.get(i);
+			if(output)
+				values[i] = i + ".- " + output.name + " version:" + output.version;
+		}
+		return values;
+	}
 
     LGMIDIOut.prototype.onAction = function(event, midi_event) {
         //console.log(midi_event);
@@ -686,6 +694,7 @@
     };
 
     LiteGraph.registerNodeType("midi/output", LGMIDIOut);
+
 
     function LGMIDIShow() {
         this.addInput("on_midi", LiteGraph.EVENT);

@@ -742,15 +742,14 @@
 			precision: LGraphTexture.DEFAULT
 		};
 
-		this.properties.code =
-			"//time: time in seconds\n//texSize: vec2 with res\nuniform float u_value;\nuniform vec4 u_color;\n\nvoid main() {\n  vec2 uv = v_coord;\n  vec3 color = vec3(0.0);\n	//your code here\n	color.xy=uv;\n\ngl_FragColor = vec4(color, 1.0);\n}\n";
+		this.properties.code = LGraphTextureShader.pixel_shader;
 		this._uniforms = { u_value: 1, u_color: vec4.create(), in_texture: 0, texSize: vec2.create(), time: 0 };
 	}
 
 	LGraphTextureShader.title = "Shader";
 	LGraphTextureShader.desc = "Texture shader";
 	LGraphTextureShader.widgets_info = {
-		code: { type: "code" },
+		code: { type: "code", lang: "glsl" },
 		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
 	};
 
@@ -853,10 +852,7 @@
 		}
 
 		this._shader_code = this.properties.code;
-		this._shader = new GL.Shader(
-			Shader.SCREEN_VERTEX_SHADER,
-			LGraphTextureShader.pixel_shader + this.properties.code
-		);
+		this._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, this.properties.code );
 		if (!this._shader) {
 			this.boxcolor = "red";
 			return null;
@@ -929,10 +925,20 @@
 	};
 
 	LGraphTextureShader.pixel_shader =
-		"precision highp float;\n\
-		\n\
-		varying vec2 v_coord;\n\
-		uniform float time;\n\
+"precision highp float;\n\
+\n\
+varying vec2 v_coord;\n\
+uniform float time; //time in seconds\n\
+uniform vec2 texSize; //tex resolution\n\
+uniform float u_value;\n\
+uniform vec4 u_color;\n\n\
+void main() {\n\
+	vec2 uv = v_coord;\n\
+	vec3 color = vec3(0.0);\n\
+	//your code here\n\
+	color.xy=uv;\n\n\
+	gl_FragColor = vec4(color, 1.0);\n\
+}\n\
 ";
 
 	LiteGraph.registerNodeType("texture/shader", LGraphTextureShader);
@@ -4893,7 +4899,7 @@ void main(void){\n\
 		this.addInput("v");
 		this.addOutput("out", "Texture");
 		this.properties = {
-			code: "",
+			code: LGraphTextureCanvas2D.default_code,
 			width: 512,
 			height: 512,
 			clear: true,
@@ -4902,11 +4908,14 @@ void main(void){\n\
 		};
 		this._func = null;
 		this._temp_texture = null;
+		this.compileCode();
 	}
 
 	LGraphTextureCanvas2D.title = "Canvas2D";
 	LGraphTextureCanvas2D.desc = "Executes Canvas2D code inside a texture or the viewport.";
 	LGraphTextureCanvas2D.help = "Set width and height to 0 to match viewport size.";
+
+	LGraphTextureCanvas2D.default_code = "//vars: canvas,ctx,time\nctx.fillStyle='red';\nctx.fillRect(0,0,50,50);\n";
 
 	LGraphTextureCanvas2D.widgets_info = {
 		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES },

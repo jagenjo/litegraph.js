@@ -65,8 +65,9 @@
 
 	LGraphPoints3D.OBJECT = 20;
 	LGraphPoints3D.OBJECT_UNIFORMLY = 21;
+	LGraphPoints3D.OBJECT_INSIDE = 22;
 
-	LGraphPoints3D.MODE_VALUES = { "rectangle":LGraphPoints3D.RECTANGLE, "circle":LGraphPoints3D.CIRCLE, "cube":LGraphPoints3D.CUBE, "sphere":LGraphPoints3D.SPHERE, "hemisphere":LGraphPoints3D.HEMISPHERE, "inside_sphere":LGraphPoints3D.INSIDE_SPHERE, "object":LGraphPoints3D.OBJECT, "object_uniformly":LGraphPoints3D.OBJECT_UNIFORMLY };
+	LGraphPoints3D.MODE_VALUES = { "rectangle":LGraphPoints3D.RECTANGLE, "circle":LGraphPoints3D.CIRCLE, "cube":LGraphPoints3D.CUBE, "sphere":LGraphPoints3D.SPHERE, "hemisphere":LGraphPoints3D.HEMISPHERE, "inside_sphere":LGraphPoints3D.INSIDE_SPHERE, "object":LGraphPoints3D.OBJECT, "object_uniformly":LGraphPoints3D.OBJECT_UNIFORMLY, "object_inside":LGraphPoints3D.OBJECT_INSIDE };
 
 	LGraphPoints3D.widgets_info = {
 		mode: { widget: "combo", values: LGraphPoints3D.MODE_VALUES }
@@ -164,7 +165,7 @@
 				if(normals)
 				{
 					for(var i = 0; i < normals.length; i+=3)
-						normals.set(i, UP);
+						normals.set(UP, i);
 				}
 			}
 			else if( mode == LGraphPoints3D.SPHERE)
@@ -195,7 +196,7 @@
 				if(normals)
 				{
 					for(var i = 0; i < normals.length; i+=3)
-						normals.set(i, UP);
+						normals.set(UP, i);
 				}
 			}
 		}
@@ -212,7 +213,7 @@
 				if(normals)
 				{
 					for(var i = 0; i < normals.length; i+=3)
-						normals.set(i, UP);
+						normals.set(UP, i);
 				}
 			}
 			else if( mode == LGraphPoints3D.CUBE)
@@ -226,7 +227,7 @@
 				if(normals)
 				{
 					for(var i = 0; i < normals.length; i+=3)
-						normals.set(i, UP);
+						normals.set(UP, i);
 				}
 			}
 			else if( mode == LGraphPoints3D.SPHERE)
@@ -260,6 +261,12 @@
 			else if( mode == LGraphPoints3D.OBJECT_UNIFORMLY)
 			{
 				LGraphPoints3D.generateFromObject( points, normals, size, obj, true );
+			}
+			else if( mode == LGraphPoints3D.OBJECT_INSIDE)
+			{
+				LGraphPoints3D.generateFromInsideObject( points, size, obj );
+				//if(normals)
+				//	LGraphPoints3D.generateSphericalNormals( points, normals );
 			}
 			else
 				console.warn("wrong mode in LGraphPoints3D");
@@ -466,6 +473,36 @@
 		}
 	}
 
+	LGraphPoints3D.generateFromInsideObject = function( points, size, mesh )
+	{
+		if(!mesh || mesh.constructor !== GL.Mesh)
+			return;
+
+		var aabb = mesh.getBoundingBox();
+		if(!mesh.octree)
+			mesh.octree = new GL.Octree( mesh );
+		var octree = mesh.octree;
+		var origin = vec3.create();
+		var direction = vec3.fromValues(1,0,0);
+		var temp = vec3.create();
+		var i = 0;
+		var tries = 0;
+		while(i < size && tries < points.length * 10) //limit to avoid problems
+		{
+			tries += 1
+			var r = vec3.random(temp); //random point inside the aabb
+			r[0] = (r[0] * 2 - 1) * aabb[3] + aabb[0];
+			r[1] = (r[1] * 2 - 1) * aabb[4] + aabb[1];
+			r[2] = (r[2] * 2 - 1) * aabb[5] + aabb[2];
+			origin.set(r);
+			var hit = octree.testRay( origin, direction, 0, 10000, true, GL.Octree.ALL );
+			if(!hit || hit.length % 2 == 0) //not inside
+				continue;
+			points.set( r, i );
+			i+=3;
+		}
+	}
+
 	LiteGraph.registerNodeType( "geometry/points3D", LGraphPoints3D );
 
 
@@ -474,11 +511,13 @@
 		this.addInput("points", "geometry");
 		this.addOutput("instances", "[mat4]");
 		this.properties = {
-			mode: 1
+			mode: 1,
+			autoupdate: true
 		};
 
 		this.must_update = true;
 		this.matrices = [];
+		this.first_time = true;
 	}
 
 	LGraphPointsToInstances.NORMAL = 0;
@@ -506,8 +545,13 @@
 		if( !this.isOutputConnected(0) )
 			return;
 
-		if( geo._version != this._version || geo._id != this._geometry_id )
+		var has_changed = (geo._version != this._version || geo._id != this._geometry_id);
+
+		if( has_changed && this.properties.autoupdate || this.first_time )
+		{
+			this.first_time = false;
 			this.updateInstances( geo );
+		}
 
 		this.setOutputData( 0, this.matrices );
 	}
@@ -611,7 +655,8 @@
 		this.geometry = {
 			type: "triangles",
 			vertices: null,
-			_id: generateGeometryId()
+			_id: generateGeometryId(),
+			_version: 0
 		};
 
 		this._last_geometry_id = -1;
@@ -730,7 +775,7 @@
 		this.addInput("sides", "number");
 		this.addInput("radius", "number");
 		this.addOutput("out", "geometry");
-		this.properties = { sides: 6, radius: 1 }
+		this.properties = { sides: 6, radius: 1, uvs: false }
 
 		this.geometry = {
 			type: "line_loop",
@@ -768,6 +813,13 @@
 		if( !vertices || vertices.length != num )
 			vertices = this.geometry.vertices = new Float32Array( 3*sides );
 		var delta = (Math.PI * 2) / sides;
+		var gen_uvs = this.properties.uvs;
+		if(gen_uvs)
+		{
+			uvs = this.geometry.coords = new Float32Array( 3*sides );
+		}
+
+
 		for(var i = 0; i < sides; ++i)
 		{
 			var angle = delta * -i;
@@ -777,6 +829,12 @@
 			vertices[i*3] = x;
 			vertices[i*3+1] = y;
 			vertices[i*3+2] = z;
+
+			if(gen_uvs)
+			{
+				
+
+			}
 		}
 		this.geometry._id = ++this.geometry_id;
 		this.geometry._version = ++this.version;

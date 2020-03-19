@@ -132,8 +132,12 @@
                 }
             }
 
-			if( !Object.hasOwnProperty( base_class.prototype, "shape") )
+            var prev = this.registered_node_types[type];
+			if(prev)
+				console.log("replacing node type: " + type);
+			else
 			{
+				if( !Object.hasOwnProperty( base_class.prototype, "shape") )
 				Object.defineProperty(base_class.prototype, "shape", {
 					set: function(v) {
 						switch (v) {
@@ -161,11 +165,25 @@
 					},
 					enumerable: true
 				});
-			}
 
-            var prev = this.registered_node_types[type];
-			if(prev)
-				console.log("replacing node type: " + type);
+				//warnings
+				if (base_class.prototype.onPropertyChange) {
+					console.warn(
+						"LiteGraph node class " +
+							type +
+							" has onPropertyChange method, it must be called onPropertyChanged with d at the end"
+					);
+				}
+
+				//used to know which nodes create when dragging files to the canvas
+				if (base_class.supported_extensions) {
+					for (var i in base_class.supported_extensions) {
+						var ext = base_class.supported_extensions[i];
+						if(ext && ext.constructor === String)
+							this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
+					}
+				}
+			}
 
             this.registered_node_types[type] = base_class;
             if (base_class.constructor.name) {
@@ -177,25 +195,21 @@
             if (prev && LiteGraph.onNodeTypeReplaced) {
                 LiteGraph.onNodeTypeReplaced(type, base_class, prev);
             }
-
-            //warnings
-            if (base_class.prototype.onPropertyChange) {
-                console.warn(
-                    "LiteGraph node class " +
-                        type +
-                        " has onPropertyChange method, it must be called onPropertyChanged with d at the end"
-                );
-            }
-
-			//used to know which nodes create when dragging files to the canvas
-            if (base_class.supported_extensions) {
-                for (var i in base_class.supported_extensions) {
-					var ext = base_class.supported_extensions[i];
-					if(ext && ext.constructor === String)
-	                    this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
-                }
-            }
         },
+
+        /**
+         * removes a node type from the system
+         * @method unregisterNodeType
+         * @param {String|Object} type name of the node or the node constructor itself
+         */
+        unregisterNodeType: function(type) {
+			var base_class = type.constructor === String ? this.registered_node_types[type] : type;
+			if(!base_class)
+				throw("node type not found: " + type );
+			delete this.registered_node_types[base_class.type];
+			if(base_class.constructor.name)
+				delete this.Nodes[base_class.constructor.name];
+		},
 
         /**
          * Create a new nodetype by passing a function, it wraps it with a proper class and generates inputs according to the parameters of the function.
@@ -681,24 +695,29 @@
         interval = interval || 0;
         var that = this;
 
-        if (
-            interval == 0 &&
-            typeof window != "undefined" &&
-            window.requestAnimationFrame
-        ) {
+		//execute once per frame
+        if ( interval == 0 && typeof window != "undefined" && window.requestAnimationFrame ) {
             function on_frame() {
                 if (that.execution_timer_id != -1) {
                     return;
                 }
                 window.requestAnimationFrame(on_frame);
+				if(that.onBeforeStep)
+					that.onBeforeStep();
                 that.runStep(1, !this.catch_errors);
+				if(that.onAfterStep)
+					that.onAfterStep();
             }
             this.execution_timer_id = -1;
             on_frame();
-        } else {
+        } else { //execute every 'interval' ms
             this.execution_timer_id = setInterval(function() {
                 //execute
+				if(that.onBeforeStep)
+					that.onBeforeStep();
                 that.runStep(1, !this.catch_errors);
+				if(that.onAfterStep)
+					that.onAfterStep();
             }, interval);
         }
     };
@@ -1893,7 +1912,7 @@
 
         //copy all stored fields
         for (var i in data) {
-			if(i == "nodes" || i == "groups")
+			if(i == "nodes" || i == "groups" ) //links must be accepted
 				continue;
             this[i] = data[i];
         }
@@ -2203,6 +2222,8 @@
 			for (var i = 0; i < this.widgets.length; ++i)
 			{
 				var w = this.widgets[i];
+				if(!w)
+					continue;
 				if(w.options && w.options.property && this.properties[ w.options.property ])
 					w.value = JSON.parse( JSON.stringify( this.properties[ w.options.property ] ) );
 			}
@@ -2265,7 +2286,10 @@
         if (this.widgets && this.serialize_widgets) {
             o.widgets_values = [];
             for (var i = 0; i < this.widgets.length; ++i) {
-                o.widgets_values[i] = this.widgets[i].value;
+				if(this.widgets[i])
+	                o.widgets_values[i] = this.widgets[i].value;
+				else
+					o.widgets_values[i] = null;
             }
         }
 
@@ -2366,6 +2390,18 @@
             if( this.onPropertyChanged(name, value, prev_value) === false ) //abort change
 				this.properties[name] = prev_value;
         }
+		if(this.widgets) //widgets could be linked to properties
+			for(var i = 0; i < this.widgets.length; ++i)
+			{
+				var w = this.widgets[i];
+				if(!w)
+					continue;
+				if(w.options.property == name)
+				{
+					w.value = value;
+					break;
+				}
+			}
     };
 
     // Execution *************************
@@ -3130,13 +3166,51 @@
     };
 
     /**
-     * Allows to pass
+     * returns all the info available about a property of this node.
+     *
+     * @method getPropertyInfo
+     * @param {String} property name of the property
+     * @return {Object} the object with all the available info
+    */
+    LGraphNode.prototype.getPropertyInfo = function( property )
+	{
+        var info = null;
+
+		//there are several ways to define info about a property
+		//legacy mode
+		if (this.properties_info) {
+            for (var i = 0; i < this.properties_info.length; ++i) {
+                if (this.properties_info[i].name == property) {
+                    info = this.properties_info[i];
+                    break;
+                }
+            }
+        }
+		//litescene mode using the constructor
+		if(this.constructor["@" + property])
+			info = this.constructor["@" + property];
+
+		//litescene mode using the constructor
+		if (this.onGetPropertyInfo) {
+            info = this.onGetPropertyInfo(property);
+        }
+
+        if (!info)
+            info = {};
+		if(!info.type)
+			info.type = typeof this.properties[property];
+
+		return info;
+	}
+
+    /**
+     * Defines a widget inside the node, it will be rendered on top of the node, you can control lots of properties
      *
      * @method addWidget
      * @param {String} type the widget type (could be "number","string","combo"
      * @param {String} name the text to show on the widget
      * @param {String} value the default value
-     * @param {Function} callback function to call when it changes (optionally, it can be the name of the property to modify)
+     * @param {Function|String} callback function to call when it changes (optionally, it can be the name of the property to modify)
      * @param {Object} options the object that contains special properties of this widget 
      * @return {Object} the created widget object
      */
@@ -5452,16 +5526,8 @@ LGraphNode.prototype.executeAction = function(action)
         LGraphCanvas.active_canvas = this;
 
         //restore the mousemove event back to the canvas
-        document.removeEventListener(
-            "mousemove",
-            this._mousemove_callback,
-            true
-        );
-        this.canvas.addEventListener(
-            "mousemove",
-            this._mousemove_callback,
-            true
-        );
+        document.removeEventListener("mousemove",this._mousemove_callback,true);
+        this.canvas.addEventListener("mousemove",this._mousemove_callback,true);
         document.removeEventListener("mouseup", this._mouseup_callback, true);
 
         this.adjustMouseEvent(e);
@@ -5470,6 +5536,12 @@ LGraphNode.prototype.executeAction = function(action)
         this.last_mouse_dragging = false;
 
         if (e.which == 1) {
+
+			if( this.node_widget )
+			{
+				this.processNodeWidgets( this.node_widget[0], this.canvas_mouse, e );
+			}
+
             //left button
             this.node_widget = null;
 
@@ -8280,7 +8352,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         for (var i = 0; i < node.widgets.length; ++i) {
             var w = node.widgets[i];
-			if(w.disabled)
+			if(!w || w.disabled)
 				continue;
             if ( w == active_widget || (x > 6 && x < width - 12 && y > w.last_y && y < w.last_y + LiteGraph.NODE_WIDGET_HEIGHT) ) {
                 //inside widget
@@ -8314,18 +8386,11 @@ LGraphNode.prototype.executeAction = function(action)
                     case "combo":
 						var old_value = w.value;
                         if (event.type == "mousemove" && w.type == "number") {
-                            w.value +=
-                                event.deltaX * 0.1 * (w.options.step || 1);
-                            if (
-                                w.options.min != null &&
-                                w.value < w.options.min
-                            ) {
+                            w.value += event.deltaX * 0.1 * (w.options.step || 1);
+                            if ( w.options.min != null && w.value < w.options.min ) {
                                 w.value = w.options.min;
                             }
-                            if (
-                                w.options.max != null &&
-                                w.value > w.options.max
-                            ) {
+                            if ( w.options.max != null && w.value > w.options.max ) {
                                 w.value = w.options.max;
                             }
                         } else if (event.type == "mousedown") {
@@ -8337,38 +8402,33 @@ LGraphNode.prototype.executeAction = function(action)
                             var delta = x < 40 ? -1 : x > width - 40 ? 1 : 0;
                             if (w.type == "number") {
                                 w.value += delta * 0.1 * (w.options.step || 1);
-                                if (
-                                    w.options.min != null &&
-                                    w.value < w.options.min
-                                ) {
+                                if ( w.options.min != null && w.value < w.options.min ) {
                                     w.value = w.options.min;
                                 }
-                                if (
-                                    w.options.max != null &&
-                                    w.value > w.options.max
-                                ) {
+                                if ( w.options.max != null && w.value > w.options.max ) {
                                     w.value = w.options.max;
                                 }
-                            } else if (delta) {
-                                var index = values.indexOf(w.value) + delta;
+                            } else if (delta) { //used for combos 
+								var values_list = values.constructor === Array ? values : Object.keys(values);
+                                var index = values_list.indexOf(w.value) + delta;
                                 if (index >= values.length) {
                                     index = 0;
                                 }
                                 if (index < 0) {
-                                    index = values.length - 1;
+                                    index = values_list.length - 1;
                                 }
-                                w.value = values[index];
-                            } else {
-                                var menu = new LiteGraph.ContextMenu(
-                                    values,
-                                    {
+								if( values.constructor === Array )
+	                                w.value = values[index];
+								else
+	                                w.value = values[ values_list[index] ];
+                            } else { //combo
+                                var menu = new LiteGraph.ContextMenu(values,{
                                         scale: Math.max(1, this.ds.scale),
                                         event: event,
                                         className: "dark",
                                         callback: inner_clicked.bind(w)
                                     },
-                                    ref_window
-                                );
+                                    ref_window);
                                 function inner_clicked(v, option, event) {
                                     this.value = v;
                                     inner_value_change(this, v);
@@ -8376,7 +8436,18 @@ LGraphNode.prototype.executeAction = function(action)
                                     return false;
                                 }
                             }
-                        } //mousedown
+                        } //end mousedown
+						else if(event.type == "mouseup" && w.type == "number")
+						{
+                            var delta = x < 40 ? -1 : x > width - 40 ? 1 : 0;
+							if (event.click_time < 200 && delta == 0) {
+								this.prompt("Value",w.value,function(v) {
+										this.value = Number(v);
+										inner_value_change(this, this.value);
+									}.bind(w),
+									event);
+							}
+						}
 
 						if( old_value != w.value )
 							setTimeout(
@@ -8398,15 +8469,11 @@ LGraphNode.prototype.executeAction = function(action)
                     case "string":
                     case "text":
                         if (event.type == "mousedown") {
-                            this.prompt(
-                                "Value",
-                                w.value,
-                                function(v) {
+                            this.prompt("Value",w.value,function(v) {
                                     this.value = v;
                                     inner_value_change(this, v);
                                 }.bind(w),
-                                event
-                            );
+                                event);
                         }
                         break;
                     default:
@@ -9421,11 +9488,7 @@ LGraphNode.prototype.executeAction = function(action)
         return dialog;
     };
 
-    LGraphCanvas.prototype.showEditPropertyValue = function(
-        node,
-        property,
-        options
-    ) {
+    LGraphCanvas.prototype.showEditPropertyValue = function( node, property, options ) {
         if (!node || node.properties[property] === undefined) {
             return;
         }
@@ -9433,28 +9496,8 @@ LGraphNode.prototype.executeAction = function(action)
         options = options || {};
         var that = this;
 
-        var type = "string";
-
-        if (node.properties[property] !== null) {
-            type = typeof node.properties[property];
-        }
-
-        var info = null;
-        if (node.getPropertyInfo) {
-            info = node.getPropertyInfo(property);
-        }
-        if (node.properties_info) {
-            for (var i = 0; i < node.properties_info.length; ++i) {
-                if (node.properties_info[i].name == property) {
-                    info = node.properties_info[i];
-                    break;
-                }
-            }
-        }
-
-        if (info !== undefined && info !== null && info.type) {
-            type = info.type;
-        }
+        var info = node.getPropertyInfo(property);
+		var type = info.type;
 
         var input_html = "";
 
@@ -9548,9 +9591,13 @@ LGraphNode.prototype.executeAction = function(action)
             if (node.onPropertyChanged) {
                 node.onPropertyChanged(property, value);
             }
+			if(options.onclose)
+				options.onclose();
             dialog.close();
             node.setDirtyCanvas(true, true);
         }
+
+		return dialog;
     };
 
     LGraphCanvas.prototype.createDialog = function(html, options) {

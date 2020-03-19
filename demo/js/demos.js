@@ -99,7 +99,6 @@ TestWidgetsNode.title = "Widgets";
 
 LiteGraph.registerNodeType("features/widgets", TestWidgetsNode );
 
-
 //Show value inside the debug console
 function TestSpecialNode()
 {

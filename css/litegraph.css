@@ -285,6 +285,7 @@
     background-color: #333;
     font-size: 1.2em;
     box-shadow: 0 0 10px black !important;
+	z-index: 10;
 }
 
 .graphdialog.rounded {

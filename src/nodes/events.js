@@ -20,22 +20,30 @@
     //convert to Event if the value is true
     function TriggerEvent() {
         this.size = [60, 30];
-        this.addInput("in", "");
+        this.addInput("if", "");
         this.addOutput("true", LiteGraph.EVENT);
         this.addOutput("change", LiteGraph.EVENT);
-		this.was_true = false;
+        this.addOutput("false", LiteGraph.EVENT);
+		this.properties = { only_on_change: true };
+		this.prev = 0;
     }
 
     TriggerEvent.title = "TriggerEvent";
-    TriggerEvent.desc = "Triggers event if value is true";
+    TriggerEvent.desc = "Triggers event if input evaluates to true";
 
     TriggerEvent.prototype.onExecute = function(action, param) {
 		var v = this.getInputData(0);
-		if(v)
+		var changed = (v != this.prev);
+		if(this.prev === 0)
+			changed = false;
+		var must_resend = (changed && this.properties.only_on_change) || (!changed && !this.properties.only_on_change);
+		if(v && must_resend )
 	        this.triggerSlot(0, param);
-		if(v && !this.was_true)
+		if(!v && must_resend)
+	        this.triggerSlot(2, param);
+		if(changed)
 	        this.triggerSlot(1, param);
-		this.was_true = v;
+		this.prev = v;
     };
 
     LiteGraph.registerNodeType("events/trigger", TriggerEvent);
