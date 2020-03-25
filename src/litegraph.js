@@ -7538,7 +7538,7 @@ LGraphNode.prototype.executeAction = function(action)
             }
             if (!low_quality) {
                 ctx.font = this.title_text_font;
-                var title = node.getTitle();
+                var title = String(node.getTitle());
                 if (title) {
                     if (selected) {
                         ctx.fillStyle = "white";
@@ -7548,11 +7548,11 @@ LGraphNode.prototype.executeAction = function(action)
                             this.node_title_color;
                     }
                     if (node.flags.collapsed) {
-                        ctx.textAlign = "center";
+                        ctx.textAlign = "left";
                         var measure = ctx.measureText(title);
                         ctx.fillText(
-                            title,
-                            title_height + measure.width * 0.5,
+                            title.substr(0,20), //avoid urls too long
+                            title_height,// + measure.width * 0.5,
                             LiteGraph.NODE_TITLE_TEXT_Y - title_height
                         );
                         ctx.textAlign = "left";
@@ -8307,6 +8307,11 @@ LGraphNode.prototype.executeAction = function(action)
 	                    ctx.rect( margin, posY, width - margin * 2, H );
                     ctx.fill();
                     if (show_text) {
+						ctx.save();
+						ctx.beginPath();
+						ctx.rect(margin, posY, width - margin * 2, H);
+						ctx.clip();
+
 	                    ctx.stroke();
                         ctx.fillStyle = secondary_text_color;
                         if (w.name != null) {
@@ -8315,6 +8320,8 @@ LGraphNode.prototype.executeAction = function(action)
                         ctx.fillStyle = text_color;
                         ctx.textAlign = "right";
                         ctx.fillText(w.value, width - margin * 2, y + H * 0.7);
+
+						ctx.restore();
                     }
                     break;
                 default:
@@ -10289,11 +10296,12 @@ LGraphNode.prototype.executeAction = function(action)
             }
         }
 
-        if (
-            options.event &&
-            options.event.constructor !== MouseEvent &&
-            options.event.constructor !== CustomEvent &&
-	    options.event.constructor !== PointerEvent
+		var eventClass = null;
+		if(options.event) //use strings because comparing classes between windows doesnt work
+			eventClass = options.event.constructor.name;
+        if ( eventClass !== "MouseEvent" &&
+            eventClass !== "CustomEvent" &&
+			eventClass !== "PointerEvent"
         ) {
             console.error(
                 "Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it."

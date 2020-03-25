@@ -143,9 +143,7 @@
             if (callback) {
                 callback(this);
             }
-            that.trace(
-                "Image loaded, size: " + that.img.width + "x" + that.img.height
-            );
+            console.log( "Image loaded, size: " + that.img.width + "x" + that.img.height );
             this.dirty = true;
             that.boxcolor = "#9F9";
             that.setDirtyCanvas(true);
@@ -427,7 +425,7 @@
         if (name == "scale") {
             this.properties[name] = parseFloat(value);
             if (this.properties[name] == 0) {
-                this.trace("Error in scale");
+                console.error("Error in scale");
                 this.properties[name] = 1.0;
             }
         } else {
@@ -597,10 +595,23 @@
     ImageVideo.prototype.loadVideo = function(url) {
         this._video_url = url;
 
+		var pos = url.substr(0,10).indexOf(":");
+		var protocol = "";
+		if(pos != -1)
+			protocol = url.substr(0,pos);
+
+		var host = "";
+		if(protocol)
+		{
+			host = url.substr(0,url.indexOf("/",protocol.length + 3));
+			host = host.substr(protocol.length+3);
+		}
+
         if (
             this.properties.use_proxy &&
-            url.substr(0, 4) == "http" &&
-            LiteGraph.proxy
+            protocol &&
+            LiteGraph.proxy &&
+			host != location.host
         ) {
             url = LiteGraph.proxy + url.substr(url.indexOf(":") + 3);
         }
@@ -615,41 +626,38 @@
         var that = this;
         this._video.addEventListener("loadedmetadata", function(e) {
             //onload
-            that.trace("Duration: " + this.duration + " seconds");
-            that.trace("Size: " + this.videoWidth + "," + this.videoHeight);
+            console.log("Duration: " + this.duration + " seconds");
+            console.log("Size: " + this.videoWidth + "," + this.videoHeight);
             that.setDirtyCanvas(true);
             this.width = this.videoWidth;
             this.height = this.videoHeight;
         });
         this._video.addEventListener("progress", function(e) {
             //onload
-            //that.trace("loading...");
+            console.log("video loading...");
         });
         this._video.addEventListener("error", function(e) {
-            console.log("Error loading video: " + this.src);
-            that.trace("Error loading video: " + this.src);
+            console.error("Error loading video: " + this.src);
             if (this.error) {
                 switch (this.error.code) {
                     case this.error.MEDIA_ERR_ABORTED:
-                        that.trace("You stopped the video.");
+                        console.error("You stopped the video.");
                         break;
                     case this.error.MEDIA_ERR_NETWORK:
-                        that.trace("Network error - please try again later.");
+                        console.error("Network error - please try again later.");
                         break;
                     case this.error.MEDIA_ERR_DECODE:
-                        that.trace("Video is broken..");
+                        console.error("Video is broken..");
                         break;
                     case this.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
-                        that.trace(
-                            "Sorry, your browser can't play this video."
-                        );
+                        console.error("Sorry, your browser can't play this video.");
                         break;
                 }
             }
         });
 
         this._video.addEventListener("ended", function(e) {
-            that.trace("Ended.");
+            console.log("Video Ended.");
             this.play(); //loop
         });
 
@@ -666,7 +674,7 @@
     };
 
     ImageVideo.prototype.play = function() {
-        if (this._video) {
+        if (this._video && this._video.videoWidth ) { //is loaded
             this._video.play();
         }
     };
@@ -694,7 +702,7 @@
         if (!this._video) {
             return;
         }
-        this.trace("Video paused");
+        console.log("Video paused");
         this._video.pause();
     };
 

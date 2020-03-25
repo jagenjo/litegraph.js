@@ -345,8 +345,10 @@
                 if (v === undefined) {
                     continue;
                 }
-                if (input.name == "gain") {
+                if (input.name == "gain")
                     this.audionode.gain.value = v;
+                else if (input.name == "src") {
+                    this.setProperty("src",v);
                 } else if (input.name == "playbackRate") {
                     this.properties.playbackRate = v;
                     for (var j = 0; j < this._audionodes.length; ++j) {
@@ -458,6 +460,7 @@
     LGAudioSource.prototype.onGetInputs = function() {
         return [
             ["playbackRate", "number"],
+			["src","string"],
             ["Play", LiteGraph.ACTION],
             ["Stop", LiteGraph.ACTION]
         ];
