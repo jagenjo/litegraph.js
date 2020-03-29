@@ -186,7 +186,14 @@ function MyNodeType()
 This is the list of supported widgets:
 * **"number"** to change a value of a number, the syntax is ```this.addWidget("number","Number", current_value, callback, { min: 0, max: 100, step: 1} );```
 * **"slider"** to change a number by draging the mouse, the syntax is the same as number.
-* **"combo"** to select between multiple choices, the syntax is: ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```
+* **"combo"** to select between multiple choices, the syntax is:
+
+  ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```
+  
+  or if you want to use objects:
+  
+  ```this.addWidget("combo","Combo", value1, callback, { values: { "title1":value1, "title2":value2 } );```
+  
 * **"text"** to edit a short string
 * **"toggle"** like a checkbox
 * **"button"**
