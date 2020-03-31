@@ -1017,6 +1017,7 @@ export declare class LGraphCanvas {
     /** Create menu for `Add Node` */
     static onMenuAdd: ContextMenuEventListener;
     static showMenuNodeOptionalInputs: ContextMenuEventListener;
+    static showMenuNodeOptionalOutputs: ContextMenuEventListener;
     static onShowMenuNodeProperties: ContextMenuEventListener;
     static onResizeNode: ContextMenuEventListener;
     static onMenuNodeCollapse: ContextMenuEventListener;
