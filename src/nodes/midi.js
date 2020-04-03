@@ -328,7 +328,7 @@
         MIDIEvent.commands_reversed[MIDIEvent.commands[i]] = i;
     }
 
-    //MIDI wrapper
+    //MIDI wrapper, instantiate by MIDIIn and MIDIOut
     function MIDIInterface(on_ready, on_error) {
         if (!navigator.requestMIDIAccess) {
             this.error = "not suppoorted";
@@ -347,9 +347,12 @@
             cc: []
         };
 
-        navigator
-            .requestMIDIAccess()
-            .then(this.onMIDISuccess.bind(this), this.onMIDIFailure.bind(this));
+		this.input_ports = null;
+		this.input_ports_info = [];
+		this.output_ports = null;
+		this.output_ports_info = [];
+
+        navigator.requestMIDIAccess().then(this.onMIDISuccess.bind(this), this.onMIDIFailure.bind(this));
     }
 
     MIDIInterface.input = null;
@@ -370,80 +373,34 @@
     MIDIInterface.prototype.updatePorts = function() {
         var midi = this.midi;
         this.input_ports = midi.inputs;
+		this.input_ports_info = [];
+        this.output_ports = midi.outputs;
+		this.output_ports_info = [];
+
         var num = 0;
 
         var it = this.input_ports.values();
         var it_value = it.next();
         while (it_value && it_value.done === false) {
             var port_info = it_value.value;
-            console.log(
-                "Input port [type:'" +
-                    port_info.type +
-                    "'] id:'" +
-                    port_info.id +
-                    "' manufacturer:'" +
-                    port_info.manufacturer +
-                    "' name:'" +
-                    port_info.name +
-                    "' version:'" +
-                    port_info.version +
-                    "'"
-            );
+			this.input_ports_info.push(port_info);
+            console.log( "Input port [type:'" + port_info.type + "'] id:'" + port_info.id + "' manufacturer:'" + port_info.manufacturer + "' name:'" + port_info.name + "' version:'" + port_info.version + "'" );
             num++;
             it_value = it.next();
         }
         this.num_input_ports = num;
 
         num = 0;
-        this.output_ports = midi.outputs;
         var it = this.output_ports.values();
         var it_value = it.next();
         while (it_value && it_value.done === false) {
             var port_info = it_value.value;
-            console.log(
-                "Output port [type:'" +
-                    port_info.type +
-                    "'] id:'" +
-                    port_info.id +
-                    "' manufacturer:'" +
-                    port_info.manufacturer +
-                    "' name:'" +
-                    port_info.name +
-                    "' version:'" +
-                    port_info.version +
-                    "'"
-            );
+			this.output_ports_info.push(port_info);
+            console.log( "Output port [type:'" + port_info.type + "'] id:'" + port_info.id + "' manufacturer:'" + port_info.manufacturer + "' name:'" + port_info.name + "' version:'" + port_info.version + "'" );
             num++;
             it_value = it.next();
         }
         this.num_output_ports = num;
-
-        /* OLD WAY
-	for (var i = 0; i < this.input_ports.size; ++i) {
-		  var input = this.input_ports.get(i);
-		  if(!input)
-			  continue; //sometimes it is null?!
-			console.log( "Input port [type:'" + input.type + "'] id:'" + input.id +
-		  "' manufacturer:'" + input.manufacturer + "' name:'" + input.name +
-		  "' version:'" + input.version + "'" );
-			num++;
-	  }
-	this.num_input_ports = num;
-
-
-	num = 0;
-	this.output_ports = midi.outputs;
-	for (var i = 0; i < this.output_ports.size; ++i) {
-		  var output = this.output_ports.get(i);
-		  if(!output)
-			  continue; 
-		console.log( "Output port [type:'" + output.type + "'] id:'" + output.id +
-		  "' manufacturer:'" + output.manufacturer + "' name:'" + output.name +
-		  "' version:'" + output.version + "'" );
-			num++;
-	  }
-	this.num_output_ports = num;
-	*/
     };
 
     MIDIInterface.prototype.onMIDIFailure = function(msg) {
@@ -493,7 +450,7 @@
             return;
         }
 
-        var output_port = this.output_ports.get("output-" + port);
+        var output_port = this.output_ports_info[port];//this.output_ports.get("output-" + port);
         if (!output_port) {
             return;
         }
@@ -540,10 +497,9 @@
 
         if (name == "port") {
             var values = {};
-            for (var i = 0; i < this._midi.input_ports.size; ++i) {
-                var input = this._midi.input_ports.get("input-" + i);
-                values[i] =
-                    i + ".- " + input.name + " version:" + input.version;
+            for (var i = 0; i < this._midi.input_ports_info.length; ++i) {
+                var input = this._midi.input_ports_info[i];
+                values[i] = i + ".- " + input.name + " version:" + input.version;
             }
             return { type: "enum", values: values };
         }
@@ -641,9 +597,10 @@
         var that = this;
         new MIDIInterface(function(midi) {
             that._midi = midi;
+			that.widget.options.values = that.getMIDIOutputs();
         });
-
-		this.addWidget("combo","Device",this.properties.port,{ property: "port", values: this.getMIDIOutputs.bind(this) });
+		this.widget = this.addWidget("combo","Device",this.properties.port,{ property: "port", values: this.getMIDIOutputs.bind(this) });
+		this.size = [340,60];
     }
 
     LGMIDIOut.MIDIInterface = MIDIInterface;
@@ -662,14 +619,20 @@
             return { type: "enum", values: values };
         }
     };
+	LGMIDIOut.default_ports = {0:"unknown"};
 
 	LGMIDIOut.prototype.getMIDIOutputs = function()
 	{
 		var values = {};
-		for (var i = 0; i < this._midi.output_ports.size; ++i) {
-			var output = this._midi.output_ports.get(i);
-			if(output)
-				values[i] = i + ".- " + output.name + " version:" + output.version;
+		if(!this._midi)
+			return LGMIDIOut.default_ports;
+		if(this._midi.output_ports_info)
+		for (var i = 0; i < this._midi.output_ports_info.length; ++i) {
+			var output = this._midi.output_ports_info[i];
+			if(!output)
+				continue;
+			var name = i + ".- " + output.name + " version:" + output.version;
+			values[i] = name;
 		}
 		return values;
 	}
@@ -680,7 +643,7 @@
             return;
         }
         if (event == "send") {
-            this._midi.sendMIDI(this.port, midi_event);
+            this._midi.sendMIDI(this.properties.port, midi_event);
         }
         this.trigger("midi", midi_event);
     };

@@ -318,6 +318,7 @@ Editor.prototype.onDropItem = function(e)
 //shows the left side panel with the node info
 Editor.prototype.onShowNodePanel = function(node)
 {
+	window.SELECTED_NODE = node;
 	var panel = document.querySelector("#node-panel");
 	if(panel)
 		panel.close();

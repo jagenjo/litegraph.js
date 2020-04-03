@@ -275,6 +275,7 @@
         }
     }
 
+	LGAudioSource.desc = "Plays an audio file";
     LGAudioSource["@src"] = { widget: "resource" };
     LGAudioSource.supported_extensions = ["wav", "ogg", "mp3"];
 
@@ -290,7 +291,7 @@
         }
 
         if (this.properties.autoplay) {
-            this.playBuffer(this._audiobuffer);
+			this.playBuffer(this._audiobuffer);
         }
     };
 
@@ -403,7 +404,10 @@
         audionode.playbackRate.value = this.properties.playbackRate;
         this._audionodes.push(audionode);
         audionode.connect(this.audionode); //connect to gain
-        this._audionodes.push(audionode);
+
+		this._audionodes.push(audionode);
+
+		this.trigger("start");
 
         audionode.onended = function() {
             //console.log("ended!");
@@ -467,7 +471,7 @@
     };
 
     LGAudioSource.prototype.onGetOutputs = function() {
-        return [["buffer", "audiobuffer"], ["ended", LiteGraph.EVENT]];
+        return [["buffer", "audiobuffer"], ["start", LiteGraph.EVENT], ["ended", LiteGraph.EVENT]];
     };
 
     LGAudioSource.prototype.onDropFile = function(file) {

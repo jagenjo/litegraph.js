@@ -7310,6 +7310,7 @@ LGraphNode.prototype.executeAction = function(action)
 
 		if(text == null)
 			return;
+		text = text.substr(0,30); //avoid weird
 
 		ctx.font = "14px Courier New";
 		var info = ctx.measureText(text);
@@ -8289,8 +8290,17 @@ LGraphNode.prototype.executeAction = function(action)
                                 y + H * 0.7
                             );
                         } else {
+							var v = w.value;
+							if( w.options.values )
+							{
+								var values = w.options.values;
+								if( values.constructor === Function )
+									values = values();
+								if(values && values.constructor !== Array)
+									v = values[ w.value ];
+							}
                             ctx.fillText(
-                                w.value,
+                                v,
                                 width - margin * 2 - 20,
                                 y + H * 0.7
                             );
@@ -8321,8 +8331,7 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                         ctx.fillStyle = text_color;
                         ctx.textAlign = "right";
-                        ctx.fillText(w.value, width - margin * 2, y + H * 0.7);
-
+                        ctx.fillText(String(w.value).substr(0,30), width - margin * 2, y + H * 0.7); //30 chars max
 						ctx.restore();
                     }
                     break;
@@ -8408,6 +8417,7 @@ LGraphNode.prototype.executeAction = function(action)
                             if (values && values.constructor === Function) {
                                 values = w.options.values(w, node);
                             }
+							var values_list = values.constructor === Array ? values : Object.keys(values);
 
                             var delta = x < 40 ? -1 : x > width - 40 ? 1 : 0;
                             if (w.type == "number") {
@@ -8418,21 +8428,25 @@ LGraphNode.prototype.executeAction = function(action)
                                 if ( w.options.max != null && w.value > w.options.max ) {
                                     w.value = w.options.max;
                                 }
-                            } else if (delta) { //used for combos 
-								var values_list = values.constructor === Array ? values : Object.keys(values);
-                                var index = values_list.indexOf(w.value) + delta;
-                                if (index >= values.length) {
-                                    index = 0;
+                            } else if (delta) { //clicked in arrow, used for combos 
+								var index = -1;
+								if(values.constructor === Object)
+									index = values_list.indexOf( String( w.value ) ) + delta;
+								else
+									index = values_list.indexOf( w.value ) + delta;
+                                if (index >= values_list.length) {
+                                    index = values_list.length - 1;
                                 }
                                 if (index < 0) {
-                                    index = values_list.length - 1;
+                                    index = 0;
                                 }
 								if( values.constructor === Array )
 	                                w.value = values[index];
 								else
-	                                w.value = values[ values_list[index] ];
-                            } else { //combo
-                                var menu = new LiteGraph.ContextMenu(values,{
+	                                w.value = index;
+                            } else { //combo clicked 
+								var text_values = values != values_list ? Object.values(values) : values;
+                                var menu = new LiteGraph.ContextMenu(text_values, {
                                         scale: Math.max(1, this.ds.scale),
                                         event: event,
                                         className: "dark",
@@ -8440,6 +8454,8 @@ LGraphNode.prototype.executeAction = function(action)
                                     },
                                     ref_window);
                                 function inner_clicked(v, option, event) {
+									if(values != values_list)
+										v = text_values.indexOf(v);
                                     this.value = v;
                                     inner_value_change(this, v);
                                     that.dirty_canvas = true;
@@ -11378,27 +11394,8 @@ if (typeof exports != "undefined") {
             enumerable: true
         });
 
-        this.name_widget = this.addWidget(
-            "text",
-            "Name",
-            this.properties.name,
-            function(v) {
-                if (!v) {
-                    return;
-                }
-                that.properties.name = v;
-            }
-        );
-        this.type_widget = this.addWidget(
-            "text",
-            "Type",
-            this.properties.type,
-            function(v) {
-                v = v || "";
-                that.properties.type = v;
-            }
-        );
-
+        this.name_widget = this.addWidget("text","Name",this.properties.name,"name");
+        this.type_widget = this.addWidget("text","Type",this.properties.type,"type");
         this.widgets_up = true;
         this.size = [180, 60];
     }
@@ -11437,12 +11434,7 @@ if (typeof exports != "undefined") {
     function ConstantNumber() {
         this.addOutput("value", "number");
         this.addProperty("value", 1.0);
-        this.widget = this.addWidget(
-            "number",
-            "value",
-            1,
-            "value"
-        );
+        this.widget = this.addWidget("number","value",1,"value");
         this.widgets_up = true;
         this.size = [180, 30];
     }
@@ -11461,6 +11453,11 @@ if (typeof exports != "undefined") {
         return this.title;
     };
 
+	ConstantNumber.prototype.setValue = function(v)
+	{
+		this.setProperty("value",v);
+	}
+
     ConstantNumber.prototype.onDrawBackground = function(ctx) {
         //show the current value
         this.outputs[0].label = this.properties["value"].toFixed(3);
@@ -11471,12 +11468,7 @@ if (typeof exports != "undefined") {
     function ConstantBoolean() {
         this.addOutput("", "boolean");
         this.addProperty("value", true);
-        this.widget = this.addWidget(
-            "toggle",
-            "value",
-            true,
-            "value"
-        );
+        this.widget = this.addWidget("toggle","value",true,"value");
         this.widgets_up = true;
         this.size = [140, 30];
     }
@@ -11489,17 +11481,14 @@ if (typeof exports != "undefined") {
         this.setOutputData(0, this.properties["value"]);
     };
 
+	ConstantBoolean.prototype.setValue = ConstantNumber.prototype.setValue;
+
     LiteGraph.registerNodeType("basic/boolean", ConstantBoolean);
 
     function ConstantString() {
         this.addOutput("", "string");
         this.addProperty("value", "");
-        this.widget = this.addWidget(
-            "text",
-            "value",
-            "",
-            "value" //link to property value
-        );
+        this.widget = this.addWidget("text","value","","value");  //link to property value
         this.widgets_up = true;
         this.size = [180, 30];
     }
@@ -11513,17 +11502,124 @@ if (typeof exports != "undefined") {
         this.setOutputData(0, this.properties["value"]);
     };
 
+	ConstantString.prototype.setValue = ConstantNumber.prototype.setValue;
+
+	ConstantString.prototype.onDropFile = function(file)
+	{
+		var that = this;
+		var reader = new FileReader();
+		reader.onload = function(e)
+		{
+			that.setProperty("value",e.target.result);
+		}
+		reader.readAsText(file);
+	}
+
     LiteGraph.registerNodeType("basic/string", ConstantString);
 
+    function ConstantFile() {
+        this.addInput("url", "");
+        this.addOutput("", "");
+        this.addProperty("url", "");
+        this.addProperty("type", "text");
+        this.widget = this.addWidget("text","url","","url");
+        this._data = null;
+    }
+
+    ConstantFile.title = "Const File";
+    ConstantFile.desc = "Fetches a file from an url";
+    ConstantFile["@type"] = { type: "enum", values: ["text","arraybuffer","blob","json"] };
+
+    ConstantFile.prototype.onPropertyChanged = function(name, value) {
+        if (name == "url")
+		{
+			if( value == null || value == "")
+				this._data = null;
+			else
+			{
+				this.fetchFile(value);
+			}
+		}
+	}
+
+    ConstantFile.prototype.onExecute = function() {
+		var url = this.getInputData(0) || this.properties.url;
+		if(url && (url != this._url || this._type != this.properties.type))
+			this.fetchFile(url);
+        this.setOutputData(0, this._data );
+    };
+
+	ConstantFile.prototype.setValue = ConstantNumber.prototype.setValue;
+
+    ConstantFile.prototype.fetchFile = function(url) {
+		var that = this;
+		if(!url || url.constructor !== String)
+		{
+			that._data = null;
+            that.boxcolor = null;
+			return;
+		}
+
+		this._url = url;
+		this._type = this.properties.type;
+        if (url.substr(0, 4) == "http" && LiteGraph.proxy) {
+            url = LiteGraph.proxy + url.substr(url.indexOf(":") + 3);
+        }
+		fetch(url)
+		.then(function(response) {
+			if(!response.ok)
+				 throw new Error("File not found");
+
+			if(that.properties.type == "arraybuffer")
+				return response.arrayBuffer();
+			else if(that.properties.type == "text")
+				return response.text();
+			else if(that.properties.type == "json")
+				return response.json();
+			else if(that.properties.type == "blob")
+				return response.blob();
+		})
+		.then(function(data) {
+			that._data = data;
+            that.boxcolor = "#AEA";
+		})
+		.catch(function(error) {
+			that._data = null;
+            that.boxcolor = "red";
+			console.error("error fetching file:",url);
+		});
+    };
+
+	ConstantFile.prototype.onDropFile = function(file)
+	{
+		var that = this;
+		this._url = file.name;
+		this._type = this.properties.type;
+		this.properties.url = file.name;
+		var reader = new FileReader();
+		reader.onload = function(e)
+		{
+            that.boxcolor = "#AEA";
+			var v = e.target.result;
+			if( that.properties.type == "json" )
+				v = JSON.parse(v);
+			that._data = v;
+		}
+		if(that.properties.type == "arraybuffer")
+			reader.readAsArrayBuffer(file);
+		else if(that.properties.type == "text" || that.properties.type == "json")
+			reader.readAsText(file);
+		else if(that.properties.type == "blob")
+			return reader.readAsBinaryString(file);
+	}
+
+    LiteGraph.registerNodeType("basic/file", ConstantFile);
+
+	//to store json objects
     function ConstantData() {
         this.addOutput("", "");
         this.addProperty("value", "");
-        this.widget = this.addWidget(
-            "text",
-            "json",
-            "",
-            this.setValue.bind(this)
-        );
+        this.widget = this.addWidget("text","json","","value");
         this.widgets_up = true;
         this.size = [140, 30];
         this._value = null;
@@ -11531,11 +11627,6 @@ if (typeof exports != "undefined") {
 
     ConstantData.title = "Const Data";
     ConstantData.desc = "Constant Data";
-
-    ConstantData.prototype.setValue = function(v) {
-        this.properties.value = v;
-        this.onPropertyChanged("value", v);
-    };
 
     ConstantData.prototype.onPropertyChanged = function(name, value) {
         this.widget.value = value;
@@ -11555,18 +11646,68 @@ if (typeof exports != "undefined") {
         this.setOutputData(0, this._value);
     };
 
+	ConstantData.prototype.setValue = ConstantNumber.prototype.setValue;
+
     LiteGraph.registerNodeType("basic/data", ConstantData);
+
+    function ArrayElement() {
+        this.addInput("array", "array,table,string");
+        this.addInput("index", "number");
+        this.addOutput("value", "");
+		this.addProperty("index",0);
+    }
+
+    ArrayElement.title = "Array[i]";
+    ArrayElement.desc = "Returns an element from an array";
+
+    ArrayElement.prototype.onExecute = function() {
+        var array = this.getInputData(0);
+        var index = this.getInputData(1);
+		if(index == null)
+			index = this.properties.index;
+		if(array == null || index == null )
+			return;
+        this.setOutputData(0, array[Math.floor(Number(index))] );
+    };
+
+    LiteGraph.registerNodeType("basic/array[]", ArrayElement);
+
+    function TableElement() {
+        this.addInput("table", "table");
+        this.addInput("row", "number");
+        this.addInput("col", "number");
+        this.addOutput("value", "");
+		this.addProperty("row",0);
+		this.addProperty("column",0);
+    }
+
+    TableElement.title = "Table[row][col]";
+    TableElement.desc = "Returns an element from a table";
+
+    TableElement.prototype.onExecute = function() {
+        var table = this.getInputData(0);
+        var row = this.getInputData(1);
+        var col = this.getInputData(2);
+		if(row == null)
+			row = this.properties.row;
+		if(col == null)
+			col = this.properties.column;
+		if(table == null || row == null || col == null)
+			return;
+		var row = table[Math.floor(Number(row))];
+		if(row)
+	        this.setOutputData(0, row[Math.floor(Number(col))] );
+		else
+	        this.setOutputData(0, null );
+    };
+
+    LiteGraph.registerNodeType("basic/table[][]", TableElement);
 
     function ObjectProperty() {
         this.addInput("obj", "");
         this.addOutput("", "");
         this.addProperty("value", "");
-        this.widget = this.addWidget(
-            "text",
-            "prop.",
-            "",
-            this.setValue.bind(this)
-        );
+        this.widget = this.addWidget("text","prop.","",this.setValue.bind(this) );
         this.widgets_up = true;
         this.size = [140, 30];
         this._value = null;
@@ -11675,6 +11816,18 @@ if (typeof exports != "undefined") {
 
     LiteGraph.registerNodeType("basic/variable", Variable);
 
+    function length(v) {
+        if(v && v.length != null)
+			return Number(v.length);
+		return 0;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "basic/length",
+        length,
+        ["*"],
+        "number"
+    );
 
 	function DownloadData() {
         this.size = [60, 30];
@@ -15345,8 +15498,8 @@ if (typeof exports != "undefined") {
     LiteGraph.wrapFunctionAsNode(
         "string/compare",
         compare,
-        ["String", "String"],
-        "Boolean"
+        ["string", "string"],
+        "boolean"
     );
 
     function concatenate(a, b) {
@@ -15362,8 +15515,8 @@ if (typeof exports != "undefined") {
     LiteGraph.wrapFunctionAsNode(
         "string/concatenate",
         concatenate,
-        ["String", "String"],
-        "String"
+        ["string", "string"],
+        "string"
     );
 
     function contains(a, b) {
@@ -15376,8 +15529,8 @@ if (typeof exports != "undefined") {
     LiteGraph.wrapFunctionAsNode(
         "string/contains",
         contains,
-        ["String", "String"],
-        "Boolean"
+        ["string", "string"],
+        "boolean"
     );
 
     function toUpperCase(a) {
@@ -15390,22 +15543,33 @@ if (typeof exports != "undefined") {
     LiteGraph.wrapFunctionAsNode(
         "string/toUpperCase",
         toUpperCase,
-        ["String"],
-        "String"
+        ["string"],
+        "string"
     );
 
-    function split(a, b) {
-        if (a != null && a.constructor === String) {
-            return a.split(b || " ");
-        }
-        return [a];
+    function split(str, separator) {
+		if(separator == null)
+			separator = this.properties.separator;
+        if (str == null )
+	        return [];
+		if( str.constructor === String )
+			return str.split(separator || " ");
+		else if( str.constructor === Array )
+		{
+			var r = [];
+			for(var i = 0; i < str.length; ++i)
+				r[i] = str[i].split(separator || " ");
+			return r;
+		}
+        return null;
     }
 
     LiteGraph.wrapFunctionAsNode(
         "string/split",
-        toUpperCase,
-        ["String", "String"],
-        "Array"
+        split,
+        ["string,array", "string"],
+        "array",
+		{ separator: "," }
     );
 
     function toFixed(a) {
@@ -15418,10 +15582,41 @@ if (typeof exports != "undefined") {
     LiteGraph.wrapFunctionAsNode(
         "string/toFixed",
         toFixed,
-        ["Number"],
-        "String",
+        ["number"],
+        "string",
         { precision: 0 }
     );
+
+
+    function StringToTable() {
+        this.addInput("", "string");
+        this.addOutput("table", "table");
+        this.addOutput("rows", "number");
+        this.addProperty("value", "");
+        this.addProperty("separator", ",");
+		this._table = null;
+    }
+
+    StringToTable.title = "toTable";
+    StringToTable.desc = "Splits a string to table";
+
+    StringToTable.prototype.onExecute = function() {
+        var input = this.getInputData(0);
+		if(!input)
+			return;
+		var separator = this.properties.separator || ",";
+		if(input != this._str || separator != this._last_separator )
+		{
+			this._last_separator = separator;
+			this._str = input;
+			this._table = input.split("\n").map(function(a){ return a.trim().split(separator)});
+		}
+        this.setOutputData(0, this._table );
+        this.setOutputData(1, this._table ? this._table.length : 0 );
+    };
+
+    LiteGraph.registerNodeType("string/toTable", StringToTable);
+
 })(this);
 
 (function(global) {
@@ -24598,7 +24793,7 @@ function LGraphGeometryDisplace() {
         MIDIEvent.commands_reversed[MIDIEvent.commands[i]] = i;
     }
 
-    //MIDI wrapper
+    //MIDI wrapper, instantiate by MIDIIn and MIDIOut
     function MIDIInterface(on_ready, on_error) {
         if (!navigator.requestMIDIAccess) {
             this.error = "not suppoorted";
@@ -24617,9 +24812,12 @@ function LGraphGeometryDisplace() {
             cc: []
         };
 
-        navigator
-            .requestMIDIAccess()
-            .then(this.onMIDISuccess.bind(this), this.onMIDIFailure.bind(this));
+		this.input_ports = null;
+		this.input_ports_info = [];
+		this.output_ports = null;
+		this.output_ports_info = [];
+
+        navigator.requestMIDIAccess().then(this.onMIDISuccess.bind(this), this.onMIDIFailure.bind(this));
     }
 
     MIDIInterface.input = null;
@@ -24640,80 +24838,34 @@ function LGraphGeometryDisplace() {
     MIDIInterface.prototype.updatePorts = function() {
         var midi = this.midi;
         this.input_ports = midi.inputs;
+		this.input_ports_info = [];
+        this.output_ports = midi.outputs;
+		this.output_ports_info = [];
+
         var num = 0;
 
         var it = this.input_ports.values();
         var it_value = it.next();
         while (it_value && it_value.done === false) {
             var port_info = it_value.value;
-            console.log(
-                "Input port [type:'" +
-                    port_info.type +
-                    "'] id:'" +
-                    port_info.id +
-                    "' manufacturer:'" +
-                    port_info.manufacturer +
-                    "' name:'" +
-                    port_info.name +
-                    "' version:'" +
-                    port_info.version +
-                    "'"
-            );
+			this.input_ports_info.push(port_info);
+            console.log( "Input port [type:'" + port_info.type + "'] id:'" + port_info.id + "' manufacturer:'" + port_info.manufacturer + "' name:'" + port_info.name + "' version:'" + port_info.version + "'" );
             num++;
             it_value = it.next();
         }
         this.num_input_ports = num;
 
         num = 0;
-        this.output_ports = midi.outputs;
         var it = this.output_ports.values();
         var it_value = it.next();
         while (it_value && it_value.done === false) {
             var port_info = it_value.value;
-            console.log(
-                "Output port [type:'" +
-                    port_info.type +
-                    "'] id:'" +
-                    port_info.id +
-                    "' manufacturer:'" +
-                    port_info.manufacturer +
-                    "' name:'" +
-                    port_info.name +
-                    "' version:'" +
-                    port_info.version +
-                    "'"
-            );
+			this.output_ports_info.push(port_info);
+            console.log( "Output port [type:'" + port_info.type + "'] id:'" + port_info.id + "' manufacturer:'" + port_info.manufacturer + "' name:'" + port_info.name + "' version:'" + port_info.version + "'" );
             num++;
             it_value = it.next();
         }
         this.num_output_ports = num;
-
-        /* OLD WAY
-	for (var i = 0; i < this.input_ports.size; ++i) {
-		  var input = this.input_ports.get(i);
-		  if(!input)
-			  continue; //sometimes it is null?!
-			console.log( "Input port [type:'" + input.type + "'] id:'" + input.id +
-		  "' manufacturer:'" + input.manufacturer + "' name:'" + input.name +
-		  "' version:'" + input.version + "'" );
-			num++;
-	  }
-	this.num_input_ports = num;
-
-
-	num = 0;
-	this.output_ports = midi.outputs;
-	for (var i = 0; i < this.output_ports.size; ++i) {
-		  var output = this.output_ports.get(i);
-		  if(!output)
-			  continue; 
-		console.log( "Output port [type:'" + output.type + "'] id:'" + output.id +
-		  "' manufacturer:'" + output.manufacturer + "' name:'" + output.name +
-		  "' version:'" + output.version + "'" );
-			num++;
-	  }
-	this.num_output_ports = num;
-	*/
     };
 
     MIDIInterface.prototype.onMIDIFailure = function(msg) {
@@ -24763,7 +24915,7 @@ function LGraphGeometryDisplace() {
             return;
         }
 
-        var output_port = this.output_ports.get("output-" + port);
+        var output_port = this.output_ports_info[port];//this.output_ports.get("output-" + port);
         if (!output_port) {
             return;
         }
@@ -24810,10 +24962,9 @@ function LGraphGeometryDisplace() {
 
         if (name == "port") {
             var values = {};
-            for (var i = 0; i < this._midi.input_ports.size; ++i) {
-                var input = this._midi.input_ports.get("input-" + i);
-                values[i] =
-                    i + ".- " + input.name + " version:" + input.version;
+            for (var i = 0; i < this._midi.input_ports_info.length; ++i) {
+                var input = this._midi.input_ports_info[i];
+                values[i] = i + ".- " + input.name + " version:" + input.version;
             }
             return { type: "enum", values: values };
         }
@@ -24911,9 +25062,10 @@ function LGraphGeometryDisplace() {
         var that = this;
         new MIDIInterface(function(midi) {
             that._midi = midi;
+			that.widget.options.values = that.getMIDIOutputs();
         });
-
-		this.addWidget("combo","Device",this.properties.port,{ property: "port", values: this.getMIDIOutputs.bind(this) });
+		this.widget = this.addWidget("combo","Device",this.properties.port,{ property: "port", values: this.getMIDIOutputs.bind(this) });
+		this.size = [340,60];
     }
 
     LGMIDIOut.MIDIInterface = MIDIInterface;
@@ -24932,14 +25084,20 @@ function LGraphGeometryDisplace() {
             return { type: "enum", values: values };
         }
     };
+	LGMIDIOut.default_ports = {0:"unknown"};
 
 	LGMIDIOut.prototype.getMIDIOutputs = function()
 	{
 		var values = {};
-		for (var i = 0; i < this._midi.output_ports.size; ++i) {
-			var output = this._midi.output_ports.get(i);
-			if(output)
-				values[i] = i + ".- " + output.name + " version:" + output.version;
+		if(!this._midi)
+			return LGMIDIOut.default_ports;
+		if(this._midi.output_ports_info)
+		for (var i = 0; i < this._midi.output_ports_info.length; ++i) {
+			var output = this._midi.output_ports_info[i];
+			if(!output)
+				continue;
+			var name = i + ".- " + output.name + " version:" + output.version;
+			values[i] = name;
 		}
 		return values;
 	}
@@ -24950,7 +25108,7 @@ function LGraphGeometryDisplace() {
             return;
         }
         if (event == "send") {
-            this._midi.sendMIDI(this.port, midi_event);
+            this._midi.sendMIDI(this.properties.port, midi_event);
         }
         this.trigger("midi", midi_event);
     };
@@ -26035,6 +26193,7 @@ function LGraphGeometryDisplace() {
         }
     }
 
+	LGAudioSource.desc = "Plays an audio file";
     LGAudioSource["@src"] = { widget: "resource" };
     LGAudioSource.supported_extensions = ["wav", "ogg", "mp3"];
 
@@ -26050,7 +26209,7 @@ function LGraphGeometryDisplace() {
         }
 
         if (this.properties.autoplay) {
-            this.playBuffer(this._audiobuffer);
+			this.playBuffer(this._audiobuffer);
         }
     };
 
@@ -26163,7 +26322,10 @@ function LGraphGeometryDisplace() {
         audionode.playbackRate.value = this.properties.playbackRate;
         this._audionodes.push(audionode);
         audionode.connect(this.audionode); //connect to gain
-        this._audionodes.push(audionode);
+
+		this._audionodes.push(audionode);
+
+		this.trigger("start");
 
         audionode.onended = function() {
             //console.log("ended!");
@@ -26227,7 +26389,7 @@ function LGraphGeometryDisplace() {
     };
 
     LGAudioSource.prototype.onGetOutputs = function() {
-        return [["buffer", "audiobuffer"], ["ended", LiteGraph.EVENT]];
+        return [["buffer", "audiobuffer"], ["start", LiteGraph.EVENT], ["ended", LiteGraph.EVENT]];
     };
 
     LGAudioSource.prototype.onDropFile = function(file) {
