@@ -4585,14 +4585,12 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
-        /*
-	if(this.graph)
-		this.graph.canvas = null; //remove old graph link to the canvas
-	this.graph = graph;
-	if(this.graph)
-		this.graph.canvas = this;
-	*/
         graph.attachCanvas(this);
+
+		//remove the graph stack in case a subgraph was open
+		if (this._graph_stack)
+			this._graph_stack = null;
+
         this.setDirty(true, true);
     };
 
@@ -11177,7 +11175,7 @@ if (typeof exports != "undefined") {
     };
 
     Subgraph.prototype.serialize = function() {
-        var data = LGraphNode.prototype.serialize.call(this);
+        var data = LiteGraph.LGraphNode.prototype.serialize.call(this);
         data.subgraph = this.subgraph.serialize();
         return data;
     };
@@ -11649,6 +11647,51 @@ if (typeof exports != "undefined") {
 	ConstantData.prototype.setValue = ConstantNumber.prototype.setValue;
 
     LiteGraph.registerNodeType("basic/data", ConstantData);
+
+	//to store json objects
+    function ConstantArray() {
+        this.addInput("", "");
+        this.addOutput("", "array");
+        this.addProperty("value", "");
+        this.widget = this.addWidget("text","array","","value");
+        this.widgets_up = true;
+        this.size = [140, 30];
+        this._value = null;
+    }
+
+    ConstantArray.title = "Const Array";
+    ConstantArray.desc = "Constant Array";
+
+    ConstantArray.prototype.onPropertyChanged = function(name, value) {
+        this.widget.value = value;
+        if (value == null || value == "") {
+            return;
+        }
+
+        try {
+            this._value = JSON.parse(value);
+            this.boxcolor = "#AEA";
+        } catch (err) {
+            this.boxcolor = "red";
+        }
+    };
+
+    ConstantArray.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+		if(v && v.length)
+		{
+			if(!this._value)
+				this._value = new Array();
+			this._value.length = v.length;
+			for(var i = 0; i < v.length; ++i)
+				this._value[i] = v[i];
+		}
+		this.setOutputData(0, this._value);
+    };
+
+	ConstantArray.prototype.setValue = ConstantNumber.prototype.setValue;
+
+    LiteGraph.registerNodeType("basic/array", ConstantArray);
 
     function ArrayElement() {
         this.addInput("array", "array,table,string");
@@ -14845,143 +14888,6 @@ if (typeof exports != "undefined") {
 
     LiteGraph.registerNodeType("math3d/xyzw-to-vec4", Math3DXYZWToVec4);
 
-    //if glMatrix is installed...
-    if (global.glMatrix) {
-        function Math3DQuaternion() {
-            this.addOutput("quat", "quat");
-            this.properties = { x: 0, y: 0, z: 0, w: 1 };
-            this._value = quat.create();
-        }
-
-        Math3DQuaternion.title = "Quaternion";
-        Math3DQuaternion.desc = "quaternion";
-
-        Math3DQuaternion.prototype.onExecute = function() {
-            this._value[0] = this.properties.x;
-            this._value[1] = this.properties.y;
-            this._value[2] = this.properties.z;
-            this._value[3] = this.properties.w;
-            this.setOutputData(0, this._value);
-        };
-
-        LiteGraph.registerNodeType("math3d/quaternion", Math3DQuaternion);
-
-        function Math3DRotation() {
-            this.addInputs([["degrees", "number"], ["axis", "vec3"]]);
-            this.addOutput("quat", "quat");
-            this.properties = { angle: 90.0, axis: vec3.fromValues(0, 1, 0) };
-
-            this._value = quat.create();
-        }
-
-        Math3DRotation.title = "Rotation";
-        Math3DRotation.desc = "quaternion rotation";
-
-        Math3DRotation.prototype.onExecute = function() {
-            var angle = this.getInputData(0);
-            if (angle == null) {
-                angle = this.properties.angle;
-            }
-            var axis = this.getInputData(1);
-            if (axis == null) {
-                axis = this.properties.axis;
-            }
-
-            var R = quat.setAxisAngle(this._value, axis, angle * 0.0174532925);
-            this.setOutputData(0, R);
-        };
-
-        LiteGraph.registerNodeType("math3d/rotation", Math3DRotation);
-
-        //Math3D rotate vec3
-        function Math3DRotateVec3() {
-            this.addInputs([["vec3", "vec3"], ["quat", "quat"]]);
-            this.addOutput("result", "vec3");
-            this.properties = { vec: [0, 0, 1] };
-        }
-
-        Math3DRotateVec3.title = "Rot. Vec3";
-        Math3DRotateVec3.desc = "rotate a point";
-
-        Math3DRotateVec3.prototype.onExecute = function() {
-            var vec = this.getInputData(0);
-            if (vec == null) {
-                vec = this.properties.vec;
-            }
-            var quat = this.getInputData(1);
-            if (quat == null) {
-                this.setOutputData(vec);
-            } else {
-                this.setOutputData(
-                    0,
-                    vec3.transformQuat(vec3.create(), vec, quat)
-                );
-            }
-        };
-
-        LiteGraph.registerNodeType("math3d/rotate_vec3", Math3DRotateVec3);
-
-        function Math3DMultQuat() {
-            this.addInputs([["A", "quat"], ["B", "quat"]]);
-            this.addOutput("A*B", "quat");
-
-            this._value = quat.create();
-        }
-
-        Math3DMultQuat.title = "Mult. Quat";
-        Math3DMultQuat.desc = "rotate quaternion";
-
-        Math3DMultQuat.prototype.onExecute = function() {
-            var A = this.getInputData(0);
-            if (A == null) {
-                return;
-            }
-            var B = this.getInputData(1);
-            if (B == null) {
-                return;
-            }
-
-            var R = quat.multiply(this._value, A, B);
-            this.setOutputData(0, R);
-        };
-
-        LiteGraph.registerNodeType("math3d/mult-quat", Math3DMultQuat);
-
-        function Math3DQuatSlerp() {
-            this.addInputs([
-                ["A", "quat"],
-                ["B", "quat"],
-                ["factor", "number"]
-            ]);
-            this.addOutput("slerp", "quat");
-            this.addProperty("factor", 0.5);
-
-            this._value = quat.create();
-        }
-
-        Math3DQuatSlerp.title = "Quat Slerp";
-        Math3DQuatSlerp.desc = "quaternion spherical interpolation";
-
-        Math3DQuatSlerp.prototype.onExecute = function() {
-            var A = this.getInputData(0);
-            if (A == null) {
-                return;
-            }
-            var B = this.getInputData(1);
-            if (B == null) {
-                return;
-            }
-            var factor = this.properties.factor;
-            if (this.getInputData(2) != null) {
-                factor = this.getInputData(2);
-            }
-
-            var R = quat.slerp(this._value, A, B, factor);
-            this.setOutputData(0, R);
-        };
-
-        LiteGraph.registerNodeType("math3d/quat-slerp", Math3DQuatSlerp);
-    } //glMatrix
 })(this);
 
 (function(global) {

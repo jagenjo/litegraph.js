@@ -4583,14 +4583,12 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
-        /*
-	if(this.graph)
-		this.graph.canvas = null; //remove old graph link to the canvas
-	this.graph = graph;
-	if(this.graph)
-		this.graph.canvas = this;
-	*/
         graph.attachCanvas(this);
+
+		//remove the graph stack in case a subgraph was open
+		if (this._graph_stack)
+			this._graph_stack = null;
+
         this.setDirty(true, true);
     };
 
