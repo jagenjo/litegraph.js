@@ -1239,7 +1239,7 @@ export declare class LGraphCanvas {
     /** draws the front canvas (the one containing all the nodes) */
     drawFrontCanvas(): void;
     /** draws some useful stats in the corner of the canvas */
-    renderInfo(): void;
+    renderInfo(ctx: CanvasRenderingContext2D, x: number, y: number): void;
     /** draws the back canvas (the one containing the background and the connections) */
     drawBackCanvas(): void;
     /** draws the given node inside the canvas */
