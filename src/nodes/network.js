@@ -86,10 +86,10 @@
         this._ws.onmessage = function(e) {
             that.boxcolor = "#AFA";
             var data = JSON.parse(e.data);
-            if (data.room && data.room != this.properties.room) {
+            if (data.room && data.room != that.properties.room) {
                 return;
             }
-            if (e.data.type == 1) {
+            if (data.type == 1) {
                 if (
                     data.data.object_class &&
                     LiteGraph[data.data.object_class]
@@ -105,7 +105,7 @@
                     that.triggerSlot(0, data.data);
                 }
             } else {
-                that._last_received_data[e.data.channel || 0] = data.data;
+                that._last_received_data[data.channel || 0] = data.data;
             }
         };
         this._ws.onerror = function(e) {
