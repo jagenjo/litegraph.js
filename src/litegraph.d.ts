@@ -242,7 +242,7 @@ export const LiteGraph: {
     wrapFunctionAsNode(
         name: string,
         func: (...args: any[]) => any,
-        param_types?: [],
+        param_types?: string[],
         return_type?: string,
         properties?: object
     ): void;
