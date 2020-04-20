@@ -1216,7 +1216,7 @@ export declare class LGraphCanvas {
     /** selects a given node (or adds it to the current selection) */
     selectNode(node: LGraphNode, add?: boolean): void;
     /** selects several nodes (or adds them to the current selection) */
-    selectNodes(nodes: LGraphNode[], add?: boolean): void;
+    selectNodes(nodes?: LGraphNode[], add?: boolean): void;
     /** removes a node from the current selection */
     deselectNode(node: LGraphNode): void;
     /** removes all nodes from the current selection */
