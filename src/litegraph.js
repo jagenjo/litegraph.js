@@ -1555,7 +1555,7 @@
 
     /**
      * Tell this graph it has a global graph input of this type
-     * @method addInput
+     * @method addGlobalInput
      * @param {String} name
      * @param {String} type
      * @param {*} value [optional]
@@ -1581,7 +1581,7 @@
 
     /**
      * Assign a data to the global graph input
-     * @method setInputData
+     * @method setGlobalInputData
      * @param {String} name
      * @param {*} data
      */
@@ -10194,8 +10194,8 @@ LGraphNode.prototype.executeAction = function(action)
 
     //API *************************************************
     //like rect but rounded corners
-    if (this.CanvasRenderingContext2D) {
-        CanvasRenderingContext2D.prototype.roundRect = function(
+    if (global.CanvasRenderingContext2D) {
+        global.CanvasRenderingContext2D.prototype.roundRect = function(
             x,
             y,
             width,
