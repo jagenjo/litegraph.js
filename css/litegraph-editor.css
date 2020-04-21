@@ -251,6 +251,21 @@
 	color: #AAA;
 }
 
+.litegraph-editor .dialog .dialog-content h3 {
+	margin: 10px;
+}
+
+.litegraph-editor .dialog .dialog-content .connections {
+	flex-direction: row;
+}
+
+.litegraph-editor .dialog .dialog-content .connections .connections_side {
+	width: calc(50% - 5px);
+	min-height: 100px;
+	background-color: black;
+	display: flex;
+}
+
 .litegraph-editor .dialog .node_type {
 	font-size: 1.2em;
 	display: block;

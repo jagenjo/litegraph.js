@@ -142,6 +142,16 @@ Editor.prototype.createPanel = function(title, options) {
 		this.parentNode.removeChild(this);
 	}
 
+	root.addHTML = function(code, classname)
+	{
+		var elem = document.createElement("div");
+		if(classname)
+			elem.className = classname;
+		elem.innerHTML = code;
+		root.content.appendChild(elem);
+		return elem;
+	}
+
 	root.addButton = function( name, callback, options )
 	{
 		var elem = document.createElement("button");
@@ -150,6 +160,13 @@ Editor.prototype.createPanel = function(title, options) {
 		elem.addEventListener("click",callback);
 		root.footer.appendChild(elem);
 		return elem;
+	}
+
+	root.addSeparator = function()
+	{
+		var elem = document.createElement("div");
+		elem.className = "separator";
+		root.content.appendChild(elem);
 	}
 
 	root.addWidget = function( type, name, value, options, callback )
@@ -332,92 +349,40 @@ Editor.prototype.onShowNodePanel = function(node)
 	function inner_refresh()
 	{
 		panel.content.innerHTML = ""; //clear
-		var elem = document.createElement("div");
-		elem.innerHTML = "<span class='node_type'>"+node.type+"</span><span class='node_desc'>"+(node.constructor.desc || "")+"</span><span class='separator'></span>";
-		panel.content.appendChild(elem);
+		panel.addHTML("<span class='node_type'>"+node.type+"</span><span class='node_desc'>"+(node.constructor.desc || "")+"</span><span class='separator'></span>");
+
+		panel.addHTML("<h3>Properties</h3>");
 
 		for(var i in node.properties)
 		{
 			var value = node.properties[i];
 			var info = node.getPropertyInfo(i);
 			var type = info.type || "string";
+
+			//in case the user wants control over the side panel widget
+			if( node.onAddPropertyToPanel && node.onAddPropertyToPanel(i,panel) )
+				continue;
+
 			panel.addWidget( info.widget || info.type, i, value, info, function(name,value){
 				node.setProperty(name,value);
 				graphcanvas.dirty_canvas = true;
 			});
 		}
 
+		panel.addSeparator();
+
+		/*
+		panel.addHTML("<h3>Connections</h3>");
+		var connection_containers = panel.addHTML("<div class='inputs connections_side'></div><div class='outputs connections_side'></div>","connections");
+		var inputs = connection_containers.querySelector(".inputs");
+		var outputs = connection_containers.querySelector(".outputs");
+		*/
+
+
 		panel.addButton("Delete",function(){
             node.graph.remove(node);
 			panel.close();
 		}).classList.add("delete");
-
-		/*
-		for(var i in node.properties)
-		{
-			var value = node.properties[i];
-			var type = "string";
-			var info = node.getPropertyInfo(i);
-			var type = info.type;
-
-			var str_value = String(value);
-			if(type == "number")
-				str_value = value.toFixed(3);
-
-			var elem = document.createElement("div");
-			elem.className = "property";
-			elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
-			elem.querySelector(".property_name").innerText = i;
-			var value_element = elem.querySelector(".property_value");
-			value_element.innerText = str_value;
-			elem.dataset["property"] = i;
-			elem.dataset["type"] = type;
-			elem.datainfo = info;
-
-			if( type == "code" )
-				elem.addEventListener("click", function(){ inner_showCodePad( node, this.dataset["property"] ); });
-			else if (type == "boolean")
-				elem.addEventListener("click", function(){ 
-					var v = node.properties[this.dataset["property"]]; 
-					node.setProperty(this.dataset["property"],!v); this.innerText = v ? "true" : "false"; 
-				});
-			else if (type == "string" || type == "number")
-			{
-				value_element.setAttribute("contenteditable",true);
-				value_element.addEventListener("change", function(){ 
-					var v = this.innerText;
-					var propname = this.parentNode.dataset["property"];
-					if( propname == "number")
-						v = Number(v);
-					node.setProperty(propname,v); 
-					that.dirty_canvas = true;
-				});
-			}
-			else if (type == "enum")
-				value_element.addEventListener("click", function(event){ 
-					var values = this.parentNode.datainfo.values || [];
-					var propname = this.parentNode.dataset["property"];
-					var elem_that = this;
-					var menu = new LiteGraph.ContextMenu(values,{
-							event: event,
-							className: "dark",
-							callback: inner_clicked
-						},
-						ref_window);
-					function inner_clicked(v, option, event) {
-						node.setProperty(propname,v); 
-						elem_that.innerText = v;
-						graphcanvas.dirty_canvas = true;
-						return false;
-					}
-				});
-			else //generic
-				elem.addEventListener("click", function(){ 
-					that.graphcanvas.showEditPropertyValue( node, this.dataset["property"], {onclose: inner_refresh} ); 
-				});
-			panel.content.appendChild(elem);
-		}
-		*/
 	}
 
 	function inner_showCodePad( node, propname )

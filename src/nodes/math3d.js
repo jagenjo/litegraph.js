@@ -464,6 +464,21 @@
 			var target_min = this.properties.target_min;
 			var target_max = this.properties.target_max;
 
+			//swap to avoid errors
+			/*
+			if(range_min > range_max)
+			{
+				range_min = range_max;
+				range_max = this.properties.range_min;
+			}
+
+			if(target_min > target_max)
+			{
+				target_min = target_max;
+				target_max = this.properties.target_min;
+			}
+			*/
+
 			for(var i = 0; i < 3; ++i)
 			{
 				var r = range_max[i] - range_min[i];
