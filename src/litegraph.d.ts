@@ -242,7 +242,7 @@ export const LiteGraph: {
     wrapFunctionAsNode(
         name: string,
         func: (...args: any[]) => any,
-        param_types?: [],
+        param_types?: string[],
         return_type?: string,
         properties?: object
     ): void;
@@ -1216,7 +1216,7 @@ export declare class LGraphCanvas {
     /** selects a given node (or adds it to the current selection) */
     selectNode(node: LGraphNode, add?: boolean): void;
     /** selects several nodes (or adds them to the current selection) */
-    selectNodes(nodes: LGraphNode[], add?: boolean): void;
+    selectNodes(nodes?: LGraphNode[], add?: boolean): void;
     /** removes a node from the current selection */
     deselectNode(node: LGraphNode): void;
     /** removes all nodes from the current selection */
@@ -1239,7 +1239,7 @@ export declare class LGraphCanvas {
     /** draws the front canvas (the one containing all the nodes) */
     drawFrontCanvas(): void;
     /** draws some useful stats in the corner of the canvas */
-    renderInfo(): void;
+    renderInfo(ctx: CanvasRenderingContext2D, x: number, y: number): void;
     /** draws the back canvas (the one containing the background and the connections) */
     drawBackCanvas(): void;
     /** draws the given node inside the canvas */

@@ -1555,7 +1555,7 @@
 
     /**
      * Tell this graph it has a global graph input of this type
-     * @method addGlobalInput
+     * @method addInput
      * @param {String} name
      * @param {String} type
      * @param {*} value [optional]
@@ -1581,7 +1581,7 @@
 
     /**
      * Assign a data to the global graph input
-     * @method setGlobalInputData
+     * @method setInputData
      * @param {String} name
      * @param {*} data
      */
