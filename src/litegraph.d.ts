@@ -932,6 +932,7 @@ export declare class LGraphNode {
     ): boolean;
     /** Called by `LGraphCanvas.processContextMenu` */
     getMenuOptions?(graphCanvas: LGraphCanvas): ContextMenuItem[];
+    getSlotMenuOptions?(slot: INodeSlot): ContextMenuItem[];
 }
 
 export type LGraphNodeConstructor<T extends LGraphNode = LGraphNode> = {
