@@ -8453,7 +8453,7 @@ LGraphNode.prototype.executeAction = function(action)
                 //inside widget
                 switch (w.type) {
                     case "button":
-                        if (event.type === "mousemove") {
+                        if (event.type === "mousedown") {
                             break;
                         }
                         if (w.callback) {
