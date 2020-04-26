@@ -10194,8 +10194,8 @@ LGraphNode.prototype.executeAction = function(action)
 
     //API *************************************************
     //like rect but rounded corners
-    if (global.CanvasRenderingContext2D) {
-        global.CanvasRenderingContext2D.prototype.roundRect = function(
+    if (typeof(window) != "undefined" && window.CanvasRenderingContext2D) {
+        window.CanvasRenderingContext2D.prototype.roundRect = function(
             x,
             y,
             width,
