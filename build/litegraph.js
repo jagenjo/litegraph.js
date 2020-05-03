@@ -5581,6 +5581,10 @@ LGraphNode.prototype.executeAction = function(action)
                     this.resizing_node.size[0] = LiteGraph.NODE_MIN_WIDTH;
                 }
 
+		        if (this.resizing_node.onResize) {
+		            this.resizing_node.onResize(this.resizing_node.size);
+				}
+
                 this.canvas.style.cursor = "se-resize";
                 this.dirty_canvas = true;
                 this.dirty_bgcanvas = true;
@@ -10539,11 +10543,13 @@ LGraphNode.prototype.executeAction = function(action)
 
             var body_rect = document.body.getBoundingClientRect();
             var root_rect = root.getBoundingClientRect();
+			if(body_rect.height == 0)
+				console.error("document.body height is 0. That is dangerous, set html,body { height: 100%; }");
 
-            if (left > body_rect.width - root_rect.width - 10) {
+            if (body_rect.width && left > body_rect.width - root_rect.width - 10) {
                 left = body_rect.width - root_rect.width - 10;
             }
-            if (top > body_rect.height - root_rect.height - 10) {
+            if (body_rect.height && top > body_rect.height - root_rect.height - 10) {
                 top = body_rect.height - root_rect.height - 10;
             }
         }
