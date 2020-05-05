@@ -928,8 +928,20 @@ export declare class LGraphNode {
     onConnectInput?(
         inputIndex: number,
         type: INodeOutputSlot["type"],
-        outputSlot: INodeOutputSlot
+        outputSlot: INodeOutputSlot,
+        this: this,
+        slotIndex: number
     ): boolean;
+    
+    /** a connection changed (new one or removed) (LiteGraph.INPUT or LiteGraph.OUTPUT, slot, true if connected, link_info, input_info or output_info ) */
+    onConnectionsChange(
+        type: number,
+        slotIndex: number,
+        isConnected: boolean,
+        link: LLink,
+        ioSlot: (INodeOutputSlot | INodeInputSlot)
+    ): void;                           
+
     /** Called by `LGraphCanvas.processContextMenu` */
     getMenuOptions?(graphCanvas: LGraphCanvas): ContextMenuItem[];
 }
@@ -1114,6 +1126,20 @@ export declare class LGraphCanvas {
     onDrawOverlay: ((ctx: CanvasRenderingContext2D) => void) | null;
     /** Called by `LGraphCanvas.processMouseDown` */
     onMouse: ((event: MouseEvent) => boolean) | null;
+    /** Called by `LGraphCanvas.drawFrontCanvas` and `LGraphCanvas.drawLinkTooltip` */
+    onDrawLinkTooltip: ((ctx: CanvasRenderingContext2D, link: LLink, this: this) => void) | null;
+    /** Called by `LGraphCanvas.selectNodes` */
+    onNodeMoved: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.processNodeSelected` */
+    onNodeSelected: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.deselectNode` */
+    onNodeDeselected: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.processNodeDblClicked` */
+    onShowNodePanel: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.processNodeDblClicked` */
+    onNodeDblClicked: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.selectNodes` */
+    onSelectionChange: ((nodes: Record<number, LGraphNode>) => void) | null;
     /** Called by `LGraphCanvas.showSearchBox` */
     onSearchBox:
         | ((
