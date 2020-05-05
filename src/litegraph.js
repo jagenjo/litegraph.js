@@ -3589,10 +3589,7 @@
 
         //allows nodes to block connection
         if (target_node.onConnectInput) {
-            if (
-                target_node.onConnectInput(target_slot, output.type, output) ===
-                false
-            ) {
+            if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
                 return null;
             }
         }
