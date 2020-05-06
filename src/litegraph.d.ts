@@ -929,7 +929,7 @@ export declare class LGraphNode {
         inputIndex: number,
         type: INodeOutputSlot["type"],
         outputSlot: INodeOutputSlot,
-        this: this,
+        _this: this,
         slotIndex: number
     ): boolean;
     
@@ -1127,7 +1127,7 @@ export declare class LGraphCanvas {
     /** Called by `LGraphCanvas.processMouseDown` */
     onMouse: ((event: MouseEvent) => boolean) | null;
     /** Called by `LGraphCanvas.drawFrontCanvas` and `LGraphCanvas.drawLinkTooltip` */
-    onDrawLinkTooltip: ((ctx: CanvasRenderingContext2D, link: LLink, this: this) => void) | null;
+    onDrawLinkTooltip: ((ctx: CanvasRenderingContext2D, link: LLink, _this: this) => void) | null;
     /** Called by `LGraphCanvas.selectNodes` */
     onNodeMoved: ((node: LGraphNode) => void) | null;
     /** Called by `LGraphCanvas.processNodeSelected` */
@@ -1139,7 +1139,7 @@ export declare class LGraphCanvas {
     /** Called by `LGraphCanvas.processNodeDblClicked` */
     onNodeDblClicked: ((node: LGraphNode) => void) | null;
     /** Called by `LGraphCanvas.selectNodes` */
-    onSelectionChange: ((nodes: Record<number, LGraphNode>) => void) | null;
+    onSelectionChange: ((nodes) => void) | null;
     /** Called by `LGraphCanvas.showSearchBox` */
     onSearchBox:
         | ((
