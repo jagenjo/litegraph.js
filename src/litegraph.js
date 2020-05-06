@@ -10082,25 +10082,30 @@ LGraphNode.prototype.executeAction = function(action)
         if (slot) {
             //on slot
             menu_info = [];
-            if (
-                slot &&
-                slot.output &&
-                slot.output.links &&
-                slot.output.links.length
-            ) {
-                menu_info.push({ content: "Disconnect Links", slot: slot });
+            if (node.getSlotMenuOptions) {
+                menu_info = node.getSlotMenuOptions(slot);
+            } else {
+                if (
+                    slot &&
+                    slot.output &&
+                    slot.output.links &&
+                    slot.output.links.length
+                ) {
+                    menu_info.push({ content: "Disconnect Links", slot: slot });
+                }
+                var _slot = slot.input || slot.output;
+                menu_info.push(
+                    _slot.locked
+                        ? "Cannot remove"
+                        : { content: "Remove Slot", slot: slot }
+                );
+                menu_info.push(
+                    _slot.nameLocked
+                        ? "Cannot rename"
+                        : { content: "Rename Slot", slot: slot }
+                );
+    
             }
-            var _slot = slot.input || slot.output;
-            menu_info.push(
-                _slot.locked
-                    ? "Cannot remove"
-                    : { content: "Remove Slot", slot: slot }
-            );
-            menu_info.push(
-                _slot.nameLocked
-                    ? "Cannot rename"
-                    : { content: "Rename Slot", slot: slot }
-            );
             options.title =
                 (slot.input ? slot.input.type : slot.output.type) || "*";
             if (slot.input && slot.input.type == LiteGraph.ACTION) {
