@@ -62,7 +62,7 @@ export interface IWidget<TValue = any, TOptions = any> {
         width: number,
         posY: number,
         height: number
-    ): void;
+    ): number | undefined;
     /**
      * Called by `LGraphCanvas.processNodeWidgets`
      * https://github.com/jagenjo/litegraph.js/issues/76
@@ -73,6 +73,8 @@ export interface IWidget<TValue = any, TOptions = any> {
         pos: Vector2,
         node: LGraphNode
     ): void;
+    /** Called by `LGraphNode.computeSize` */
+    computeSize?(width: number): [number, number];
 }
 export interface IButtonWidget extends IWidget<null, {}> {
     type: "button";
