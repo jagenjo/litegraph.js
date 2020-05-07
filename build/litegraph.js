@@ -20511,7 +20511,6 @@ LGraphNode.prototype.executeAction = function(action)
         var margin = 15;
 
         for (var i = 0; i < widgets.length; ++i) {
-            var h = H;
             var w = widgets[i];
             var y = posY;
             if (w.y) {
@@ -20682,11 +20681,11 @@ LGraphNode.prototype.executeAction = function(action)
                     break;
                 default:
                     if (w.draw) {
-                        h = w.draw(ctx, node, width, y, H) || H;
+                        w.draw(ctx, node, width, y, H);
                     }
                     break;
             }
-            posY += h + 4;
+            posY += (w.computeSize ? w.computeSize(width)[1] : H) + 4;
 			ctx.globalAlpha = this.editor_alpha;
 
         }
@@ -20718,7 +20717,8 @@ LGraphNode.prototype.executeAction = function(action)
             var w = node.widgets[i];
 			if(!w || w.disabled)
 				continue;
-            if ( w == active_widget || (x > 6 && x < width - 12 && y > w.last_y && y < w.last_y + LiteGraph.NODE_WIDGET_HEIGHT) ) {
+			var widget_height = w.computeSize ? w.computeSize(width)[1] : LiteGraph.NODE_WIDGET_HEIGHT;
+            if ( w == active_widget || (x > 6 && x < width - 12 && y > w.last_y && y < w.last_y + widget_height) ) {
                 //inside widget
                 switch (w.type) {
                     case "button":
@@ -20852,7 +20852,7 @@ LGraphNode.prototype.executeAction = function(action)
                         break;
                     default:
                         if (w.mouse) {
-                            w.mouse(ctx, event, [x, y], node);
+                            this.dirty_canvas = w.mouse(event, [x, y], node);
                         }
                         break;
                 } //end switch
