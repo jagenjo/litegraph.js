@@ -62,17 +62,16 @@ export interface IWidget<TValue = any, TOptions = any> {
         width: number,
         posY: number,
         height: number
-    ): number | undefined;
+    ): void;
     /**
      * Called by `LGraphCanvas.processNodeWidgets`
      * https://github.com/jagenjo/litegraph.js/issues/76
      */
     mouse?(
-        ctx: undefined,
         event: MouseEvent,
         pos: Vector2,
         node: LGraphNode
-    ): void;
+    ): boolean;
     /** Called by `LGraphNode.computeSize` */
     computeSize?(width: number): [number, number];
 }
