@@ -433,6 +433,11 @@ export declare class LGraph {
      * @param node the instance of the node
      */
     add(node: LGraphNode, skip_compute_order?: boolean): void;
+    /**
+     * Called when a new node is added
+     * @param node the instance of the node
+     */
+    onNodeAdded(node: LGraphNode): void;
     /** Removes a node from the graph */
     remove(node: LGraphNode): void;
     /** Returns a node by its id. */
