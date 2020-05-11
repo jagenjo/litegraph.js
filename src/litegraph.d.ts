@@ -865,12 +865,12 @@ export declare class LGraphNode {
 
     // https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#custom-node-appearance
     onDrawBackground?(
-        canvas: HTMLCanvasElement,
-        ctx: CanvasRenderingContext2D
+        ctx: CanvasRenderingContext2D,
+        canvas: HTMLCanvasElement
     ): void;
     onDrawForeground?(
-        canvas: HTMLCanvasElement,
-        ctx: CanvasRenderingContext2D
+        ctx: CanvasRenderingContext2D,
+        canvas: HTMLCanvasElement
     ): void;
 
     // https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#custom-node-behaviour
