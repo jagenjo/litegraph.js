@@ -68,11 +68,12 @@ export interface IWidget<TValue = any, TOptions = any> {
      * https://github.com/jagenjo/litegraph.js/issues/76
      */
     mouse?(
-        ctx: undefined,
         event: MouseEvent,
         pos: Vector2,
         node: LGraphNode
-    ): void;
+    ): boolean;
+    /** Called by `LGraphNode.computeSize` */
+    computeSize?(width: number): [number, number];
 }
 export interface IButtonWidget extends IWidget<null, {}> {
     type: "button";
@@ -1145,7 +1146,7 @@ export declare class LGraphCanvas {
     /** Called by `LGraphCanvas.processNodeDblClicked` */
     onNodeDblClicked: ((node: LGraphNode) => void) | null;
     /** Called by `LGraphCanvas.selectNodes` */
-    onSelectionChange: ((nodes) => void) | null;
+    onSelectionChange: ((nodes: Record<number, LGraphNode>) => void) | null;
     /** Called by `LGraphCanvas.showSearchBox` */
     onSearchBox:
         | ((
