@@ -504,7 +504,7 @@ Editor.prototype.addMiniWindow = function(w, h) {
 
     var close_button = document.createElement("div");
     close_button.className = "corner-button";
-    close_button.innerHTML = "X";
+    close_button.innerHTML = "&#10060;";
     close_button.addEventListener("click", function(e) {
         graphcanvas.setGraph(null);
         miniwindow.parentNode.removeChild(miniwindow);

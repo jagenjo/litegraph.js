@@ -236,6 +236,10 @@
         this.addProperty("min", 0);
         this.addProperty("max", 1);
         this.addProperty("smooth", true);
+        this.addProperty("seed", 0);
+        this.addProperty("octaves", 1);
+        this.addProperty("persistence", 0.8);
+        this.addProperty("speed", 1);
         this.size = [90, 30];
     }
 
@@ -266,7 +270,22 @@
 
     MathNoise.prototype.onExecute = function() {
         var f = this.getInputData(0) || 0;
-        var r = MathNoise.getValue(f, this.properties.smooth);
+		var iterations = this.properties.octaves || 1;
+		var r = 0;
+		var amp = 1;
+		var seed = this.properties.seed || 0;
+		f += seed;
+		var speed = this.properties.speed || 1;
+		var total_amp = 0;
+		for(var i = 0; i < iterations; ++i)
+		{
+			r += MathNoise.getValue(f * (1+i) * speed, this.properties.smooth) * amp;
+			total_amp += amp;
+			amp *= this.properties.persistence;
+			if(amp < 0.001)
+				break;
+		}
+		r /= total_amp;
         var min = this.properties.min;
         var max = this.properties.max;
         this._last_v = r * (max - min) + min;

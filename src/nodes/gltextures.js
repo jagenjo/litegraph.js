@@ -4259,7 +4259,7 @@ void main(void){\n\
 
 	LiteGraph.registerNodeType("texture/lensfx", LGraphLensFX);
 
-
+	//applies a curve (or generates one)
 	function LGraphTextureCurve() {
 		this.addInput("in", "Texture");
 		this.addOutput("out", "Texture");
@@ -4283,21 +4283,32 @@ void main(void){\n\
 	}
 
 	LGraphTextureCurve.title = "Curve";
+	LGraphTextureCurve.desc = "Generates or applies a curve to a texture";
+	LGraphTextureCurve.widgets_info = {
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
 
 	LGraphTextureCurve.prototype.onExecute = function() {
-		var tex = this.getInputData(0);
-		if (!tex) {
-			return;
-		}
-
 		if (!this.isOutputConnected(0)) {
 			return;
 		} //saves work
 
+		var tex = this.getInputData(0);
+
 		var temp = this._temp_texture;
-		if ( !temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type ) {
-			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR } );
+		var type = LGraphTexture.getTextureType(this.properties.precision);
+
+		if(!tex) //generate one texture, nothing else
+		{
+			if(this._must_update || !this._curve_texture )
+				this.updateCurve();
+			this.setOutputData(0, this._curve_texture);
+			return;
 		}
+		
+		//apply curve to input texture
+		if ( !temp || temp.type != type )
+			temp = this._temp_texture = new GL.Texture( 256, 1, { type: type, format: gl.RGBA, filter: gl.LINEAR } );
 
 		var shader = LGraphTextureCurve._shader;
 		if (!shader) {

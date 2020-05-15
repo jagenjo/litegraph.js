@@ -6117,7 +6117,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.adjustMouseEvent(e);
 
         var pos = [e.canvasX, e.canvasY];
-        var node = this.graph.getNodeOnPos(pos[0], pos[1]);
+        var node = this.graph ? this.graph.getNodeOnPos(pos[0], pos[1]) : null;
 
         if (!node) {
             var r = null;
@@ -8414,7 +8414,7 @@ LGraphNode.prototype.executeAction = function(action)
                     break;
                 default:
                     if (w.draw) {
-                        w.draw(ctx, node, w, y, H);
+                        w.draw(ctx, node, width, y, H);
                     }
                     break;
             }
@@ -13970,6 +13970,10 @@ if (typeof exports != "undefined") {
         this.addProperty("min", 0);
         this.addProperty("max", 1);
         this.addProperty("smooth", true);
+        this.addProperty("seed", 0);
+        this.addProperty("octaves", 1);
+        this.addProperty("persistence", 0.8);
+        this.addProperty("speed", 1);
         this.size = [90, 30];
     }
 
@@ -14000,7 +14004,22 @@ if (typeof exports != "undefined") {
 
     MathNoise.prototype.onExecute = function() {
         var f = this.getInputData(0) || 0;
-        var r = MathNoise.getValue(f, this.properties.smooth);
+		var iterations = this.properties.octaves || 1;
+		var r = 0;
+		var amp = 1;
+		var seed = this.properties.seed || 0;
+		f += seed;
+		var speed = this.properties.speed || 1;
+		var total_amp = 0;
+		for(var i = 0; i < iterations; ++i)
+		{
+			r += MathNoise.getValue(f * (1+i) * speed, this.properties.smooth) * amp;
+			total_amp += amp;
+			amp *= this.properties.persistence;
+			if(amp < 0.001)
+				break;
+		}
+		r /= total_amp;
         var min = this.properties.min;
         var max = this.properties.max;
         this._last_v = r * (max - min) + min;
@@ -20890,7 +20909,7 @@ void main(void){\n\
 
 	LiteGraph.registerNodeType("texture/lensfx", LGraphLensFX);
 
-
+	//applies a curve (or generates one)
 	function LGraphTextureCurve() {
 		this.addInput("in", "Texture");
 		this.addOutput("out", "Texture");
@@ -20914,21 +20933,32 @@ void main(void){\n\
 	}
 
 	LGraphTextureCurve.title = "Curve";
+	LGraphTextureCurve.desc = "Generates or applies a curve to a texture";
+	LGraphTextureCurve.widgets_info = {
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
 
 	LGraphTextureCurve.prototype.onExecute = function() {
-		var tex = this.getInputData(0);
-		if (!tex) {
-			return;
-		}
-
 		if (!this.isOutputConnected(0)) {
 			return;
 		} //saves work
 
+		var tex = this.getInputData(0);
+
 		var temp = this._temp_texture;
-		if ( !temp || temp.width != tex.width || temp.height != tex.height || temp.type != tex.type ) {
-			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: tex.type, format: gl.RGBA, filter: gl.LINEAR } );
+		var type = LGraphTexture.getTextureType(this.properties.precision);
+
+		if(!tex) //generate one texture, nothing else
+		{
+			if(this._must_update || !this._curve_texture )
+				this.updateCurve();
+			this.setOutputData(0, this._curve_texture);
+			return;
 		}
+		
+		//apply curve to input texture
+		if ( !temp || temp.type != type )
+			temp = this._temp_texture = new GL.Texture( 256, 1, { type: type, format: gl.RGBA, filter: gl.LINEAR } );
 
 		var shader = LGraphTextureCurve._shader;
 		if (!shader) {

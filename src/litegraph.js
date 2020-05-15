@@ -6115,7 +6115,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.adjustMouseEvent(e);
 
         var pos = [e.canvasX, e.canvasY];
-        var node = this.graph.getNodeOnPos(pos[0], pos[1]);
+        var node = this.graph ? this.graph.getNodeOnPos(pos[0], pos[1]) : null;
 
         if (!node) {
             var r = null;
@@ -8412,7 +8412,7 @@ LGraphNode.prototype.executeAction = function(action)
                     break;
                 default:
                     if (w.draw) {
-                        w.draw(ctx, node, w, y, H);
+                        w.draw(ctx, node, width, y, H);
                     }
                     break;
             }

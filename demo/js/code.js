@@ -1,7 +1,7 @@
 var webgl_canvas = null;
 
 LiteGraph.node_images_path = "../nodes_data/";
-var editor = new LiteGraph.Editor("main");
+var editor = new LiteGraph.Editor("main",{miniwindow:true});
 window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
 window.addEventListener("resize", function() { editor.graphcanvas.resize(); } );
