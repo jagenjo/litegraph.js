@@ -3596,7 +3596,14 @@
 
         //allows nodes to block connection
         if (target_node.onConnectInput) {
+<<<<<<< HEAD
             if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
+=======
+            if (
+                target_node.onConnectInput(target_slot, output.type, output) ===
+                false
+            ) {
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
                 return null;
             }
         }
@@ -5590,8 +5597,13 @@ LGraphNode.prototype.executeAction = function(action)
                     widgets_height += 8;
                 }
 
+<<<<<<< HEAD
                 if (this.resizing_node.size[1] < min_height) {
                 var min_height = max_slots * LiteGraph.NODE_SLOT_HEIGHT + widgets_height;
+=======
+                var min_height = max_slots * LiteGraph.NODE_SLOT_HEIGHT + widgets_height;
+                if (this.resizing_node.size[1] < min_height) {
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
                     this.resizing_node.size[1] = min_height;
                 }
 
@@ -10098,6 +10110,7 @@ LGraphNode.prototype.executeAction = function(action)
         if (slot) {
             //on slot
             menu_info = [];
+<<<<<<< HEAD
             if (node.getSlotMenuOptions) {
                 menu_info = node.getSlotMenuOptions(slot);
             } else {
@@ -10122,6 +10135,27 @@ LGraphNode.prototype.executeAction = function(action)
                 );
     
             }
+=======
+            if (
+                slot &&
+                slot.output &&
+                slot.output.links &&
+                slot.output.links.length
+            ) {
+                menu_info.push({ content: "Disconnect Links", slot: slot });
+            }
+            var _slot = slot.input || slot.output;
+            menu_info.push(
+                _slot.locked
+                    ? "Cannot remove"
+                    : { content: "Remove Slot", slot: slot }
+            );
+            menu_info.push(
+                _slot.nameLocked
+                    ? "Cannot rename"
+                    : { content: "Rename Slot", slot: slot }
+            );
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
             options.title =
                 (slot.input ? slot.input.type : slot.output.type) || "*";
             if (slot.input && slot.input.type == LiteGraph.ACTION) {
@@ -10559,6 +10593,7 @@ LGraphNode.prototype.executeAction = function(action)
 
             var body_rect = document.body.getBoundingClientRect();
             var root_rect = root.getBoundingClientRect();
+<<<<<<< HEAD
 			if(body_rect.height == 0)
 				console.error("document.body height is 0. That is dangerous, set html,body { height: 100%; }");
 
@@ -10566,6 +10601,13 @@ LGraphNode.prototype.executeAction = function(action)
                 left = body_rect.width - root_rect.width - 10;
             }
             if (body_rect.height && top > body_rect.height - root_rect.height - 10) {
+=======
+
+            if (left > body_rect.width - root_rect.width - 10) {
+                left = body_rect.width - root_rect.width - 10;
+            }
+            if (top > body_rect.height - root_rect.height - 10) {
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
                 top = body_rect.height - root_rect.height - 10;
             }
         }
@@ -18154,8 +18196,13 @@ void main() {\n\
 		};
 		this._uniforms = {
 			u_texture: 0,
+<<<<<<< HEAD
 			u_camera_planes: null, //filled later
 			u_ires: vec2.create()
+=======
+			u_near: 0.1,
+			u_far: 10000
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
 		};
 	}
 
@@ -18187,6 +18234,12 @@ void main() {\n\
 		}
 
 		var uniforms = this._uniforms;
+<<<<<<< HEAD
+=======
+
+		uniforms.u_near = tex.near_far_planes[0];
+		uniforms.u_far = tex.near_far_planes[1];
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
 		uniforms.u_invert = this.properties.invert ? 1 : 0;
 
 		gl.disable(gl.BLEND);
@@ -18206,8 +18259,11 @@ void main() {\n\
 			planes = [0.1, 1000];
 		} //hardcoded
 		uniforms.u_camera_planes = planes;
+<<<<<<< HEAD
 		//uniforms.u_ires.set([1/tex.width, 1/tex.height]);
 		uniforms.u_ires.set([0,0]);
+=======
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
 
 		this._temp_texture.drawTo(function() {
 			tex.bind(0);
@@ -18223,6 +18279,7 @@ void main() {\n\
 		precision highp float;\n\
 		varying vec2 v_coord;\n\
 		uniform sampler2D u_texture;\n\
+<<<<<<< HEAD
 		uniform vec2 u_camera_planes;\n\
 		uniform int u_invert;\n\
 		uniform vec2 u_ires;\n\
@@ -18231,6 +18288,17 @@ void main() {\n\
 			float zNear = u_camera_planes.x;\n\
 			float zFar = u_camera_planes.y;\n\
 			float depth = texture2D(u_texture, v_coord + u_ires*0.5).x * 2.0 - 1.0;\n\
+=======
+		uniform float u_near;\n\
+		uniform float u_far;\n\
+		uniform int u_invert;\n\
+		\n\
+		void main() {\n\
+			float zNear = u_near;\n\
+			float zFar = u_far;\n\
+			float depth = texture2D(u_texture, v_coord).x;\n\
+			depth = depth * 2.0 - 1.0;\n\
+>>>>>>> 11a1026074c4a5e5b0d60e24f1cb7bfd89f21701
 			float f = zNear * (depth + 1.0) / (zFar + zNear - depth * (zFar - zNear));\n\
 			if( u_invert == 1 )\n\
 				f = 1.0 - f;\n\

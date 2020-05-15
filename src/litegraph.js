@@ -5590,8 +5590,8 @@ LGraphNode.prototype.executeAction = function(action)
                     widgets_height += 8;
                 }
 
-                if (this.resizing_node.size[1] < min_height) {
                 var min_height = max_slots * LiteGraph.NODE_SLOT_HEIGHT + widgets_height;
+                if (this.resizing_node.size[1] < min_height) {
                     this.resizing_node.size[1] = min_height;
                 }
 
