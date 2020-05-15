@@ -1146,7 +1146,7 @@ export declare class LGraphCanvas {
     /** Called by `LGraphCanvas.processNodeDblClicked` */
     onNodeDblClicked: ((node: LGraphNode) => void) | null;
     /** Called by `LGraphCanvas.selectNodes` */
-    onSelectionChange: ((nodes) => void) | null;
+    onSelectionChange: ((nodes: Record<number, LGraphNode>) => void) | null;
     /** Called by `LGraphCanvas.showSearchBox` */
     onSearchBox:
         | ((

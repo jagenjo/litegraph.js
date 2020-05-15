@@ -5585,8 +5585,8 @@ LGraphNode.prototype.executeAction = function(action)
                         if (widgets[i].computeSize)
                             widgets_height += widgets[i].computeSize(this.resizing_node.size[0])[1] + 4;
                         else
-                    }
                             widgets_height += LiteGraph.NODE_WIDGET_HEIGHT + 4;
+                    }
                     widgets_height += 8;
                 }
 
