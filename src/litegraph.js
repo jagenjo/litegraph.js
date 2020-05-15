@@ -3173,20 +3173,6 @@
         var size = out || new Float32Array([0, 0]);
         rows = Math.max(rows, 1);
         var font_size = LiteGraph.NODE_TEXT_SIZE; //although it should be graphcanvas.inner_text_font size
-        size[1] = (this.constructor.slot_start_y || 0) + rows * LiteGraph.NODE_SLOT_HEIGHT;
-
-        var widgets_height = 0;
-        if (this.widgets && this.widgets.length) {
-            widgets_height = this.widgets.length * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 8;
-        }
-
-		//compute height using widgets height
-		if( this.widgets_up )
-            size[1] = Math.max( size[1], widgets_height );
-		else if( this.widgets_start_y != null )
-            size[1] = Math.max( size[1], widgets_height + this.widgets_start_y );
-		else
-            size[1] += widgets_height;
 
         var font_size = font_size;
         var title_width = compute_text_size(this.title);
@@ -3220,6 +3206,27 @@
         if (this.widgets && this.widgets.length) {
             size[0] = Math.max(size[0], LiteGraph.NODE_WIDTH * 1.5);
         }
+
+        size[1] = (this.constructor.slot_start_y || 0) + rows * LiteGraph.NODE_SLOT_HEIGHT;
+
+        var widgets_height = 0;
+        if (this.widgets && this.widgets.length) {
+            for (var i = 0, l = this.widgets.length; i < l; ++i) {
+                if (this.widgets[i].computeSize)
+                    widgets_height += this.widgets[i].computeSize(size[0])[1] + 4;
+                else
+                    widgets_height += LiteGraph.NODE_WIDGET_HEIGHT + 4;
+            }
+            widgets_height += 8;
+        }
+
+        //compute height using widgets height
+        if( this.widgets_up )
+            size[1] = Math.max( size[1], widgets_height );
+        else if( this.widgets_start_y != null )
+            size[1] = Math.max( size[1], widgets_height + this.widgets_start_y );
+        else
+            size[1] += widgets_height;
 
         if (this.onResize) {
             this.onResize(size);
@@ -5566,19 +5573,27 @@ LGraphNode.prototype.executeAction = function(action)
                     this.resizing_node.inputs ? this.resizing_node.inputs.length : 0,
                     this.resizing_node.outputs ? this.resizing_node.outputs.length : 0
                 );
-                var min_height =
-                    max_slots * LiteGraph.NODE_SLOT_HEIGHT +
-                    (this.resizing_node.widgets ? this.resizing_node.widgets.length : 0) * (LiteGraph.NODE_WIDGET_HEIGHT + 4) + 4;
-                if (this.resizing_node.size[1] < min_height) {
-                    this.resizing_node.size[1] = min_height;
-                }
+
                 if (this.resizing_node.size[0] < LiteGraph.NODE_MIN_WIDTH) {
                     this.resizing_node.size[0] = LiteGraph.NODE_MIN_WIDTH;
                 }
 
-		        if (this.resizing_node.onResize) {
-		            this.resizing_node.onResize(this.resizing_node.size);
-				}
+                var widgets = this.resizing_node.widgets;
+                var widgets_height = 0;
+                if (widgets && widgets.length) {
+                    for (var i = 0, l = widgets.length; i < l; ++i) {
+                        if (widgets[i].computeSize)
+                            widgets_height += widgets[i].computeSize(this.resizing_node.size[0])[1] + 4;
+                        else
+                            widgets_height += LiteGraph.NODE_WIDGET_HEIGHT + 4;
+                    }
+                    widgets_height += 8;
+                }
+
+                var min_height = max_slots * LiteGraph.NODE_SLOT_HEIGHT + widgets_height;
+                if (this.resizing_node.size[1] < min_height) {
+                    this.resizing_node.size[1] = min_height;
+                }
 
                 this.canvas.style.cursor = "se-resize";
                 this.dirty_canvas = true;
@@ -8416,7 +8431,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                     break;
             }
-            posY += H + 4;
+            posY += (w.computeSize ? w.computeSize(width)[1] : H) + 4;
 			ctx.globalAlpha = this.editor_alpha;
 
         }
@@ -8448,7 +8463,8 @@ LGraphNode.prototype.executeAction = function(action)
             var w = node.widgets[i];
 			if(!w || w.disabled)
 				continue;
-            if ( w == active_widget || (x > 6 && x < width - 12 && y > w.last_y && y < w.last_y + LiteGraph.NODE_WIDGET_HEIGHT) ) {
+			var widget_height = w.computeSize ? w.computeSize(width)[1] : LiteGraph.NODE_WIDGET_HEIGHT;
+            if ( w == active_widget || (x > 6 && x < width - 12 && y > w.last_y && y < w.last_y + widget_height) ) {
                 //inside widget
                 switch (w.type) {
                     case "button":
@@ -8582,7 +8598,7 @@ LGraphNode.prototype.executeAction = function(action)
                         break;
                     default:
                         if (w.mouse) {
-                            w.mouse(ctx, event, [x, y], node);
+                            this.dirty_canvas = w.mouse(event, [x, y], node);
                         }
                         break;
                 } //end switch
@@ -10082,25 +10098,30 @@ LGraphNode.prototype.executeAction = function(action)
         if (slot) {
             //on slot
             menu_info = [];
-            if (
-                slot &&
-                slot.output &&
-                slot.output.links &&
-                slot.output.links.length
-            ) {
-                menu_info.push({ content: "Disconnect Links", slot: slot });
+            if (node.getSlotMenuOptions) {
+                menu_info = node.getSlotMenuOptions(slot);
+            } else {
+                if (
+                    slot &&
+                    slot.output &&
+                    slot.output.links &&
+                    slot.output.links.length
+                ) {
+                    menu_info.push({ content: "Disconnect Links", slot: slot });
+                }
+                var _slot = slot.input || slot.output;
+                menu_info.push(
+                    _slot.locked
+                        ? "Cannot remove"
+                        : { content: "Remove Slot", slot: slot }
+                );
+                menu_info.push(
+                    _slot.nameLocked
+                        ? "Cannot rename"
+                        : { content: "Rename Slot", slot: slot }
+                );
+    
             }
-            var _slot = slot.input || slot.output;
-            menu_info.push(
-                _slot.locked
-                    ? "Cannot remove"
-                    : { content: "Remove Slot", slot: slot }
-            );
-            menu_info.push(
-                _slot.nameLocked
-                    ? "Cannot rename"
-                    : { content: "Rename Slot", slot: slot }
-            );
             options.title =
                 (slot.input ? slot.input.type : slot.output.type) || "*";
             if (slot.input && slot.input.type == LiteGraph.ACTION) {

@@ -1,5 +1,6 @@
 (function(global) {
     var LiteGraph = global.LiteGraph;
+    var LGraphTexture = global.LGraphTexture;
 
     //Works with Litegl.js to create WebGL nodes
     if (typeof GL != "undefined") {
