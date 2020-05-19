@@ -783,7 +783,7 @@
                 window.requestAnimationFrame(on_frame);
 				if(that.onBeforeStep)
 					that.onBeforeStep();
-                that.runStep(1, !this.catch_errors);
+                that.runStep(1, !that.catch_errors);
 				if(that.onAfterStep)
 					that.onAfterStep();
             }
@@ -794,7 +794,7 @@
                 //execute
 				if(that.onBeforeStep)
 					that.onBeforeStep();
-                that.runStep(1, !this.catch_errors);
+                that.runStep(1, !that.catch_errors);
 				if(that.onAfterStep)
 					that.onAfterStep();
             }, interval);
