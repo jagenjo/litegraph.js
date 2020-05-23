@@ -32,18 +32,15 @@
 
         this.subgraph.onTrigger = this.onSubgraphTrigger.bind(this);
 
+		//nodes input node added inside
         this.subgraph.onInputAdded = this.onSubgraphNewInput.bind(this);
         this.subgraph.onInputRenamed = this.onSubgraphRenamedInput.bind(this);
-        this.subgraph.onInputTypeChanged = this.onSubgraphTypeChangeInput.bind(
-            this
-        );
+        this.subgraph.onInputTypeChanged = this.onSubgraphTypeChangeInput.bind(this);
         this.subgraph.onInputRemoved = this.onSubgraphRemovedInput.bind(this);
 
         this.subgraph.onOutputAdded = this.onSubgraphNewOutput.bind(this);
         this.subgraph.onOutputRenamed = this.onSubgraphRenamedOutput.bind(this);
-        this.subgraph.onOutputTypeChanged = this.onSubgraphTypeChangeOutput.bind(
-            this
-        );
+        this.subgraph.onOutputTypeChanged = this.onSubgraphTypeChangeOutput.bind(this);
         this.subgraph.onOutputRemoved = this.onSubgraphRemovedOutput.bind(this);
     }
 
@@ -239,6 +236,95 @@
         node.configure(data);
         return node;
     };
+
+	Subgraph.prototype.buildFromNodes = function(nodes)
+	{
+		//clear all?
+		//TODO
+
+		//nodes that connect data between parent graph and subgraph
+		var subgraph_inputs = [];
+		var subgraph_outputs = [];
+
+		//mark inner nodes
+		var ids = {};
+		var min_x = 0;
+		var max_x = 0;
+		for(var i = 0; i < nodes.length; ++i)
+		{
+			var node = nodes[i];
+			ids[ node.id ] = node;
+			min_x = Math.min( node.pos[0], min_x );
+			max_x = Math.max( node.pos[0], min_x );
+		}
+		
+		var last_input_y = 0;
+		var last_output_y = 0;
+
+		for(var i = 0; i < nodes.length; ++i)
+		{
+			var node = nodes[i];
+			//check inputs
+			if( node.inputs )
+				for(var j = 0; j < node.inputs.length; ++j)
+				{
+					var input = node.inputs[j];
+					if( !input || !input.link )
+						continue;
+					var link = node.graph.links[ input.link ];
+					if(!link)
+						continue;
+					if( ids[ link.origin_id ] )
+						continue;
+					//this.addInput(input.name,link.type);
+					this.subgraph.addInput(input.name,link.type);
+					/*
+					var input_node = LiteGraph.createNode("graph/input");
+					this.subgraph.add( input_node );
+					input_node.pos = [min_x - 200, last_input_y ];
+					last_input_y += 100;
+					*/
+				}
+
+			//check outputs
+			if( node.outputs )
+				for(var j = 0; j < node.outputs.length; ++j)
+				{
+					var output = node.outputs[j];
+					if( !output || !output.links || !output.links.length )
+						continue;
+					var is_external = false;
+					for(var k = 0; k < output.links.length; ++k)
+					{
+						var link = node.graph.links[ output.links[k] ];
+						if(!link)
+							continue;
+						if( ids[ link.target_id ] )
+							continue;
+						is_external = true;
+						break;
+					}
+					if(!is_external)
+						continue;
+					//this.addOutput(output.name,output.type);
+					/*
+					var output_node = LiteGraph.createNode("graph/output");
+					this.subgraph.add( output_node );
+					output_node.pos = [max_x + 50, last_output_y ];
+					last_output_y += 100;
+					*/
+				}
+		}
+
+		//detect inputs and outputs
+			//split every connection in two data_connection nodes
+			//keep track of internal connections
+			//connect external connections
+
+		//clone nodes inside subgraph and try to reconnect them
+
+		//connect edge subgraph nodes to extarnal connections nodes
+	}
 
     LiteGraph.Subgraph = Subgraph;
     LiteGraph.registerNodeType("graph/subgraph", Subgraph);
@@ -710,10 +796,11 @@
     function ConstantArray() {
         this.addInput("", "");
         this.addOutput("", "array");
+        this.addOutput("length", "number");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","array","","value");
         this.widgets_up = true;
-        this.size = [140, 30];
+        this.size = [140, 50];
         this._value = null;
     }
 
@@ -727,7 +814,10 @@
         }
 
         try {
-            this._value = JSON.parse(value);
+			if(value[0] != "[")
+	            this._value = JSON.parse("[" + value + "]");
+			else
+	            this._value = JSON.parse(value);
             this.boxcolor = "#AEA";
         } catch (err) {
             this.boxcolor = "red";
@@ -736,7 +826,7 @@
 
     ConstantArray.prototype.onExecute = function() {
         var v = this.getInputData(0);
-		if(v && v.length)
+		if(v && v.length) //clone
 		{
 			if(!this._value)
 				this._value = new Array();
@@ -745,6 +835,7 @@
 				this._value[i] = v[i];
 		}
 		this.setOutputData(0, this._value);
+		this.setOutputData(1, this._value ? ( this._value.length || 0) : 0 );
     };
 
 	ConstantArray.prototype.setValue = ConstantNumber.prototype.setValue;
@@ -772,6 +863,8 @@
     };
 
     LiteGraph.registerNodeType("basic/array[]", ArrayElement);
+
+
 
     function TableElement() {
         this.addInput("table", "table");
@@ -926,7 +1019,7 @@
     LiteGraph.wrapFunctionAsNode(
         "basic/length",
         length,
-        ["*"],
+        [""],
         "number"
     );
 

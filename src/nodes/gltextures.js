@@ -4260,6 +4260,54 @@ void main(void){\n\
 
 	LiteGraph.registerNodeType("texture/lensfx", LGraphLensFX);
 
+
+	function LGraphTextureFromData() {
+		this.addInput("in", "");
+		this.properties = { precision: LGraphTexture.LOW, width: 0, height: 0, channels: 1 };
+		this.addOutput("out", "Texture");
+	}
+
+	LGraphTextureFromData.title = "Data->Tex";
+	LGraphTextureFromData.desc = "Generates or applies a curve to a texture";
+	LGraphTextureFromData.widgets_info = {
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureFromData.prototype.onExecute = function() {
+		if (!this.isOutputConnected(0)) {
+			return;
+		} //saves work
+
+		var data = this.getInputData(0);
+		if(!data)
+			return;
+
+		var channels = this.properties.channels;
+		var w = this.properties.width;
+		var h = this.properties.height;
+		if(!w || !h)
+		{
+			w = Math.floor(data.length / channels);
+			h = 1;
+		}
+		var format = gl.RGBA;
+		if( channels == 3 )
+			format = gl.RGB;
+		else if( channels == 1 )
+			format = gl.LUMINANCE;
+
+		var temp = this._temp_texture;
+		var type = LGraphTexture.getTextureType( this.properties.precision );
+		if ( !temp || temp.width != w || temp.height != h || temp.type != type ) {
+			temp = this._temp_texture = new GL.Texture( w, h, { type: type, format: format, filter: gl.LINEAR } );
+		}
+
+		temp.uploadData( data );
+		this.setOutputData(0, temp);
+	}
+
+	LiteGraph.registerNodeType("texture/fromdata", LGraphTextureFromData);
+
 	//applies a curve (or generates one)
 	function LGraphTextureCurve() {
 		this.addInput("in", "Texture");
@@ -4297,8 +4345,6 @@ void main(void){\n\
 		var tex = this.getInputData(0);
 
 		var temp = this._temp_texture;
-		var type = LGraphTexture.getTextureType(this.properties.precision);
-
 		if(!tex) //generate one texture, nothing else
 		{
 			if(this._must_update || !this._curve_texture )
@@ -4306,10 +4352,12 @@ void main(void){\n\
 			this.setOutputData(0, this._curve_texture);
 			return;
 		}
+
+		var type = LGraphTexture.getTextureType( this.properties.precision, tex );
 		
 		//apply curve to input texture
-		if ( !temp || temp.type != type )
-			temp = this._temp_texture = new GL.Texture( 256, 1, { type: type, format: gl.RGBA, filter: gl.LINEAR } );
+		if ( !temp || temp.type != type || temp.width != tex.width || temp.height != tex.height || temp.format != tex.format)
+			temp = this._temp_texture = new GL.Texture( tex.width, tex.height, { type: type, format: tex.format, filter: gl.LINEAR } );
 
 		var shader = LGraphTextureCurve._shader;
 		if (!shader) {
@@ -4331,7 +4379,7 @@ void main(void){\n\
 		});
 
 		this.setOutputData(0, temp);
-	};
+	}
 
 	LGraphTextureCurve.prototype.sampleCurve = function(f,points)
 	{

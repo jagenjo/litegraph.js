@@ -91,6 +91,8 @@ function TestWidgetsNode()
 	this.text = this.addWidget("text","Text", "edit me", function(v){}, {} );
 	this.toggle = this.addWidget("toggle","Toggle", true, function(v){}, { on: "enabled", off:"disabled"} );
 	this.button = this.addWidget("button","Button", null, function(v){}, {} );
+	this.toggle2 = this.addWidget("toggle","Disabled", true, function(v){}, { on: "enabled", off:"disabled"} );
+	this.toggle2.disabled = true;
 	this.size = this.computeSize();
 	this.serialize_widgets = true;
 }

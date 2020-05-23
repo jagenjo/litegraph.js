@@ -68,12 +68,22 @@
     function Math3DOperation() {
         this.addInput("A", "number,vec3");
         this.addInput("B", "number,vec3");
-        this.addOutput("=", "vec3");
+        this.addOutput("=", "number,vec3");
         this.addProperty("OP", "+", "enum", { values: Math3DOperation.values });
 		this._result = vec3.create();
     }
 
-    Math3DOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
+    Math3DOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min","dot","cross"];
+
+    LiteGraph.registerSearchboxExtra("math3d/operation", "CROSS()", {
+        properties: {"OP":"cross"},
+        title: "CROSS()"
+    });
+
+    LiteGraph.registerSearchboxExtra("math3d/operation", "DOT()", {
+        properties: {"OP":"dot"},
+        title: "DOT()"
+    });
 
 	Math3DOperation.title = "Operation";
     Math3DOperation.desc = "Easy math 3D operators";
@@ -135,6 +145,11 @@
                 result[0] = Math.min(A[0],B[0]);
                 result[1] = Math.min(A[1],B[1]);
                 result[2] = Math.min(A[2],B[2]);
+            case "dot":
+                result = vec3.dot(A,B);
+                break;
+            case "cross":
+                vec3.cross(result,A,B);
                 break;
             default:
                 console.warn("Unknown operation: " + this.properties.OP);
@@ -351,6 +366,53 @@
         };
 
         LiteGraph.registerNodeType("math3d/rotation", Math3DRotation);
+
+
+        function MathEulerToQuat() {
+            this.addInput("euler", "vec3");
+            this.addOutput("quat", "quat");
+            this.properties = { euler:[0,0,0], use_yaw_pitch_roll: false };
+			this._degs = vec3.create();
+            this._value = quat.create();
+        }
+
+        MathEulerToQuat.title = "Euler->Quat";
+        MathEulerToQuat.desc = "Converts euler angles (in degrees) to quaternion";
+
+        MathEulerToQuat.prototype.onExecute = function() {
+            var euler = this.getInputData(0);
+            if (euler == null) {
+                euler = this.properties.euler;
+            }
+			vec3.scale( this._degs, euler, DEG2RAD );
+			if(this.properties.use_yaw_pitch_roll)
+				this._degs = [this._degs[2],this._degs[0],this._degs[1]];
+            var R = quat.fromEuler(this._value, this._degs);
+            this.setOutputData(0, R);
+        };
+
+        LiteGraph.registerNodeType("math3d/euler_to_quat", MathEulerToQuat);
+
+        function MathQuatToEuler() {
+            this.addInput(["quat", "quat"]);
+            this.addOutput("euler", "vec3");
+			this._value = vec3.create();
+        }
+
+        MathQuatToEuler.title = "Euler->Quat";
+        MathQuatToEuler.desc = "Converts rotX,rotY,rotZ in degrees to quat";
+
+        MathQuatToEuler.prototype.onExecute = function() {
+            var q = this.getInputData(0);
+			if(!q)
+				return;
+            var R = quat.toEuler(this._value, q);
+			vec3.scale( this._value, this._value, DEG2RAD );
+            this.setOutputData(0, this._value);
+        };
+
+        LiteGraph.registerNodeType("math3d/quat_to_euler", MathQuatToEuler);
+
 
         //Math3D rotate vec3
         function Math3DRotateVec3() {
