@@ -31,7 +31,7 @@
     "bugs": {
         "url": "https://github.com/jagenjo/litegraph.js/issues"
     },
-    "homepage": "https://github.com/kriffe/litegraph.js#readme",
+    "homepage": "https://github.com/jagenjo/litegraph.js#readme",
     "devDependencies": {
         "express": "^4.17.1",
         "google-closure-compiler": "^20171112.0.0",
