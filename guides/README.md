@@ -12,7 +12,7 @@ And in ```the src/``` folder there is also another class included:
 ## LGraphNode
 
 LGraphNode is the base class used for all the nodes classes.
-To extend the other classes all the methods contained in LGraphNode.prototype are copyed to the classes when registered.
+To extend the other classes all the methods contained in LGraphNode.prototype are copied to the classes when registered.
 
 When you create a new node type you do not have to inherit from that class, when the node is registered all the methods are copied to your node prototype.  This is done inside the functions ```LiteGraph.registerNodeType(...)```.
 
@@ -59,7 +59,7 @@ LiteGraph.registerNodeType("basic/sum", MyAddNode );
 There are several settings that could be defined or modified per node:
 * **size**: ```[width,height]``` the size of the area inside the node (excluding title). Every row is LiteGraph.NODE_SLOT_HEIGHT pixels height.
 * **properties**: object containing the properties that could be configured by the user, and serialized when saving the graph
-* **shape**: the shape of the object (could be LiteGraph.BOX,LiteGraph.ROUND,LiteGraph.CARD)
+* **shape**: the shape of the object (could be LiteGraph.BOX_SHAPE,LiteGraph.ROUND_SHAPE,LiteGraph.CARD_SHAPE)
 * **flags**: several flags
   * **resizable**: if it can be resized dragging the corner
   * **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
@@ -102,7 +102,7 @@ Slots have the next information:
 
  * **name**: string with the name of the slot (used also to show in the canvas)
  * **type**: string specifying the data type traveling through this link
- * **link or links**: depending if the slot is input or ouput contains the id of the link or an array of ids
+ * **link or links**: depending if the slot is input or output contains the id of the link or an array of ids
  * **label**: optional, string used to rename the name as shown in the canvas.
  * **dir**: optional, could be LiteGraph.UP, LiteGraph.RIGHT, LiteGraph.DOWN, LiteGraph.LEFT
  * **color_on**: color to render when it is connected

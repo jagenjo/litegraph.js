@@ -1,7 +1,7 @@
 {
     "name": "litegraph.js",
     "version": "0.7.8",
-    "description": "A graph node editor similar to PD or UDK Blueprints, it works in a HTML5 Canvas and allow to exported graphs to be included in applications.",
+    "description": "A graph node editor similar to PD or UDK Blueprints. It works in an HTML5 Canvas and allows to export graphs to be included in applications.",
     "main": "build/litegraph.js",
     "types": "src/litegraph.d.ts",
     "directories": {
@@ -31,7 +31,7 @@
     "bugs": {
         "url": "https://github.com/jagenjo/litegraph.js/issues"
     },
-    "homepage": "https://github.com/kriffe/litegraph.js#readme",
+    "homepage": "https://github.com/jagenjo/litegraph.js#readme",
     "devDependencies": {
         "express": "^4.17.1",
         "google-closure-compiler": "^20171112.0.0",
