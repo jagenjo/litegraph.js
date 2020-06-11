@@ -14493,12 +14493,14 @@ if (typeof exports != "undefined") {
 
     //Math operation
     function MathOperation() {
-        this.addInput("A", "number");
+        this.addInput("A", "number,array,object");
         this.addInput("B", "number");
         this.addOutput("=", "number");
         this.addProperty("A", 1);
         this.addProperty("B", 1);
         this.addProperty("OP", "+", "enum", { values: MathOperation.values });
+		this._func = function(A,B) { return A + B; };
+		this._result = []; //only used for arrays
     }
 
     MathOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
@@ -14525,11 +14527,34 @@ if (typeof exports != "undefined") {
         this.properties["value"] = v;
     };
 
+    MathOperation.prototype.onPropertyChanged = function(name, value)
+	{
+		if (name != "OP")
+			return;
+        switch (this.properties.OP) {
+            case "+": this._func = function(A,B) { return A + B; }; break;
+            case "-": this._func = function(A,B) { return A - B; }; break;
+            case "x":
+            case "X":
+            case "*": this._func = function(A,B) { return A * B; }; break;
+            case "/": this._func = function(A,B) { return A / B; }; break;
+            case "%": this._func = function(A,B) { return A % B; }; break;
+            case "^": this._func = function(A,B) { return Math.pow(A, B); }; break;
+            case "max": this._func = function(A,B) { return Math.max(A, B); }; break;
+            case "min": this._func = function(A,B) { return Math.min(A, B); }; break;
+			default: 
+				console.warn("Unknown operation: " + this.properties.OP);
+				this._func = function(A) { return A; };
+				break;
+        }
+	}
+
     MathOperation.prototype.onExecute = function() {
         var A = this.getInputData(0);
         var B = this.getInputData(1);
-        if (A != null) {
-            this.properties["A"] = A;
+        if ( A != null ) {
+			if( A.constructor === Number )
+	            this.properties["A"] = A;
         } else {
             A = this.properties["A"];
         }
@@ -14540,38 +14565,26 @@ if (typeof exports != "undefined") {
             B = this.properties["B"];
         }
 
-        var result = 0;
-        switch (this.properties.OP) {
-            case "+":
-                result = A + B;
-                break;
-            case "-":
-                result = A - B;
-                break;
-            case "x":
-            case "X":
-            case "*":
-                result = A * B;
-                break;
-            case "/":
-                result = A / B;
-                break;
-            case "%":
-                result = A % B;
-                break;
-            case "^":
-                result = Math.pow(A, B);
-                break;
-            case "max":
-                result = Math.max(A, B);
-                break;
-            case "min":
-                result = Math.min(A, B);
-                break;
-            default:
-                console.warn("Unknown operation: " + this.properties.OP);
-        }
-        this.setOutputData(0, result);
+		var result;
+		if(A.constructor === Number)
+		{
+	        result = 0;
+			result = this._func(A,B);
+		}
+		else if(A.constructor === Array)
+		{
+			result = this._result;
+			result.length = A.length;
+			for(var i = 0; i < A.length; ++i)
+				result[i] = this._func(A[i],B);
+		}
+		else
+		{
+			result = {};
+			for(var i in A)
+				result[i] = this._func(A[i],B);
+		}
+	    this.setOutputData(0, result);
     };
 
     MathOperation.prototype.onDrawBackground = function(ctx) {
@@ -14601,6 +14614,7 @@ if (typeof exports != "undefined") {
         properties: {OP:"min"},
         title: "MIN()"
     });
+
 
     //Math compare
     function MathCompare() {
@@ -19084,6 +19098,124 @@ void main() {\n\
 		";
 
 	LiteGraph.registerNodeType("texture/LUT", LGraphTextureLUT);
+
+
+	// Texture LUT *****************************************
+	function LGraphTextureEncode() {
+		this.addInput("Texture", "Texture");
+		this.addInput("Atlas", "Texture");
+		this.addOutput("", "Texture");
+		this.properties = { enabled: true, num_row_symbols: 4, symbol_size: 16, brightness: 1, colorize: false, filter: false, invert: false, precision: LGraphTexture.DEFAULT, texture: null };
+
+		if (!LGraphTextureEncode._shader) {
+			LGraphTextureEncode._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureEncode.pixel_shader );
+		}
+
+		this._uniforms = {
+				u_texture: 0,
+				u_textureB: 1,
+				u_row_simbols: 4,
+				u_simbol_size: 16,
+				u_res: vec2.create()
+		};
+	}
+
+	LGraphTextureEncode.widgets_info = {
+		texture: { widget: "texture" },
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureEncode.title = "Encode";
+	LGraphTextureEncode.desc = "Apply a texture atlas to encode a texture";
+
+	LGraphTextureEncode.prototype.onExecute = function() {
+		if (!this.isOutputConnected(0)) {
+			return;
+		} //saves work
+
+		var tex = this.getInputData(0);
+
+		if (this.properties.precision === LGraphTexture.PASS_THROUGH || this.properties.enabled === false) {
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		if (!tex) {
+			return;
+		}
+
+		var symbols_tex = this.getInputData(1);
+
+		if (!symbols_tex) {
+			symbols_tex = LGraphTexture.getTexture(this.properties.texture);
+		}
+
+		if (!symbols_tex) {
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		symbols_tex.bind(0);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.properties.filter ? gl.LINEAR : gl.NEAREST );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.properties.filter ? gl.LINEAR : gl.NEAREST );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE );
+		gl.bindTexture(gl.TEXTURE_2D, null);
+
+		var uniforms = this._uniforms;
+		uniforms.u_row_simbols = Math.floor(this.properties.num_row_symbols);
+		uniforms.u_symbol_size = this.properties.symbol_size;
+		uniforms.u_brightness = this.properties.brightness;
+		uniforms.u_invert = this.properties.invert ? 1 : 0;
+		uniforms.u_colorize = this.properties.colorize ? 1 : 0;
+
+		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
+		uniforms.u_res[0] = this._tex.width;
+		uniforms.u_res[1] = this._tex.height;
+		this._tex.bind(0);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
+
+		this._tex.drawTo(function() {
+			symbols_tex.bind(1);
+			tex.toViewport(LGraphTextureEncode._shader, uniforms);
+		});
+
+		this.setOutputData(0, this._tex);
+	};
+
+	LGraphTextureEncode.pixel_shader =
+		"precision highp float;\n\
+		precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		uniform sampler2D u_textureB;\n\
+		uniform float u_row_simbols;\n\
+		uniform float u_symbol_size;\n\
+		uniform float u_brightness;\n\
+		uniform float u_invert;\n\
+		uniform float u_colorize;\n\
+		uniform vec2 u_res;\n\
+		\n\
+		void main() {\n\
+			vec2 total_symbols = u_res / u_symbol_size;\n\
+			vec2 uv = floor(v_coord * total_symbols) / total_symbols; //pixelate \n\
+			vec2 local_uv = mod(v_coord * u_res, u_symbol_size) / u_symbol_size;\n\
+			lowp vec4 textureColor = texture2D(u_texture, uv );\n\
+			float lum = clamp(u_brightness * (textureColor.x + textureColor.y + textureColor.z)/3.0,0.0,1.0);\n\
+			if( u_invert == 1.0 ) lum = 1.0 - lum;\n\
+			float index = floor( lum * (u_row_simbols * u_row_simbols - 1.0));\n\
+			float col = mod( index, u_row_simbols );\n\
+			float row = u_row_simbols - floor( index / u_row_simbols ) - 1.0;\n\
+			vec2 simbol_uv = ( vec2( col, row ) + local_uv ) / u_row_simbols;\n\
+			vec4 color = texture2D( u_textureB, simbol_uv );\n\
+			if(u_colorize == 1.0)\n\
+				color *= textureColor;\n\
+			gl_FragColor = color;\n\
+		}\n\
+		";
+
+	LiteGraph.registerNodeType("texture/encode", LGraphTextureEncode);
 
 	// Texture Channels *****************************************
 	function LGraphTextureChannels() {
@@ -26070,6 +26202,9 @@ function LGraphGeometryDisplace() {
 	{
 		this._playing = true;
 		this._current_time = 0;
+		if(!this._midi)
+			return;
+
 		for(var i = 0; i < this._midi.tracks; ++i)
 		{
 			var track = this._midi.track[i];

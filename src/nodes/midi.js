@@ -1306,6 +1306,9 @@
 	{
 		this._playing = true;
 		this._current_time = 0;
+		if(!this._midi)
+			return;
+
 		for(var i = 0; i < this._midi.tracks; ++i)
 		{
 			var track = this._midi.track[i];

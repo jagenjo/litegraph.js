@@ -627,12 +627,14 @@
 
     //Math operation
     function MathOperation() {
-        this.addInput("A", "number");
+        this.addInput("A", "number,array,object");
         this.addInput("B", "number");
         this.addOutput("=", "number");
         this.addProperty("A", 1);
         this.addProperty("B", 1);
         this.addProperty("OP", "+", "enum", { values: MathOperation.values });
+		this._func = function(A,B) { return A + B; };
+		this._result = []; //only used for arrays
     }
 
     MathOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
@@ -659,11 +661,34 @@
         this.properties["value"] = v;
     };
 
+    MathOperation.prototype.onPropertyChanged = function(name, value)
+	{
+		if (name != "OP")
+			return;
+        switch (this.properties.OP) {
+            case "+": this._func = function(A,B) { return A + B; }; break;
+            case "-": this._func = function(A,B) { return A - B; }; break;
+            case "x":
+            case "X":
+            case "*": this._func = function(A,B) { return A * B; }; break;
+            case "/": this._func = function(A,B) { return A / B; }; break;
+            case "%": this._func = function(A,B) { return A % B; }; break;
+            case "^": this._func = function(A,B) { return Math.pow(A, B); }; break;
+            case "max": this._func = function(A,B) { return Math.max(A, B); }; break;
+            case "min": this._func = function(A,B) { return Math.min(A, B); }; break;
+			default: 
+				console.warn("Unknown operation: " + this.properties.OP);
+				this._func = function(A) { return A; };
+				break;
+        }
+	}
+
     MathOperation.prototype.onExecute = function() {
         var A = this.getInputData(0);
         var B = this.getInputData(1);
-        if (A != null) {
-            this.properties["A"] = A;
+        if ( A != null ) {
+			if( A.constructor === Number )
+	            this.properties["A"] = A;
         } else {
             A = this.properties["A"];
         }
@@ -674,38 +699,26 @@
             B = this.properties["B"];
         }
 
-        var result = 0;
-        switch (this.properties.OP) {
-            case "+":
-                result = A + B;
-                break;
-            case "-":
-                result = A - B;
-                break;
-            case "x":
-            case "X":
-            case "*":
-                result = A * B;
-                break;
-            case "/":
-                result = A / B;
-                break;
-            case "%":
-                result = A % B;
-                break;
-            case "^":
-                result = Math.pow(A, B);
-                break;
-            case "max":
-                result = Math.max(A, B);
-                break;
-            case "min":
-                result = Math.min(A, B);
-                break;
-            default:
-                console.warn("Unknown operation: " + this.properties.OP);
-        }
-        this.setOutputData(0, result);
+		var result;
+		if(A.constructor === Number)
+		{
+	        result = 0;
+			result = this._func(A,B);
+		}
+		else if(A.constructor === Array)
+		{
+			result = this._result;
+			result.length = A.length;
+			for(var i = 0; i < A.length; ++i)
+				result[i] = this._func(A[i],B);
+		}
+		else
+		{
+			result = {};
+			for(var i in A)
+				result[i] = this._func(A[i],B);
+		}
+	    this.setOutputData(0, result);
     };
 
     MathOperation.prototype.onDrawBackground = function(ctx) {
@@ -735,6 +748,7 @@
         properties: {OP:"min"},
         title: "MIN()"
     });
+
 
     //Math compare
     function MathCompare() {

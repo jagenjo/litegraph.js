@@ -2241,6 +2241,124 @@ void main() {\n\
 
 	LiteGraph.registerNodeType("texture/LUT", LGraphTextureLUT);
 
+
+	// Texture LUT *****************************************
+	function LGraphTextureEncode() {
+		this.addInput("Texture", "Texture");
+		this.addInput("Atlas", "Texture");
+		this.addOutput("", "Texture");
+		this.properties = { enabled: true, num_row_symbols: 4, symbol_size: 16, brightness: 1, colorize: false, filter: false, invert: false, precision: LGraphTexture.DEFAULT, texture: null };
+
+		if (!LGraphTextureEncode._shader) {
+			LGraphTextureEncode._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureEncode.pixel_shader );
+		}
+
+		this._uniforms = {
+				u_texture: 0,
+				u_textureB: 1,
+				u_row_simbols: 4,
+				u_simbol_size: 16,
+				u_res: vec2.create()
+		};
+	}
+
+	LGraphTextureEncode.widgets_info = {
+		texture: { widget: "texture" },
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureEncode.title = "Encode";
+	LGraphTextureEncode.desc = "Apply a texture atlas to encode a texture";
+
+	LGraphTextureEncode.prototype.onExecute = function() {
+		if (!this.isOutputConnected(0)) {
+			return;
+		} //saves work
+
+		var tex = this.getInputData(0);
+
+		if (this.properties.precision === LGraphTexture.PASS_THROUGH || this.properties.enabled === false) {
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		if (!tex) {
+			return;
+		}
+
+		var symbols_tex = this.getInputData(1);
+
+		if (!symbols_tex) {
+			symbols_tex = LGraphTexture.getTexture(this.properties.texture);
+		}
+
+		if (!symbols_tex) {
+			this.setOutputData(0, tex);
+			return;
+		}
+
+		symbols_tex.bind(0);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, this.properties.filter ? gl.LINEAR : gl.NEAREST );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, this.properties.filter ? gl.LINEAR : gl.NEAREST );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE );
+		gl.bindTexture(gl.TEXTURE_2D, null);
+
+		var uniforms = this._uniforms;
+		uniforms.u_row_simbols = Math.floor(this.properties.num_row_symbols);
+		uniforms.u_symbol_size = this.properties.symbol_size;
+		uniforms.u_brightness = this.properties.brightness;
+		uniforms.u_invert = this.properties.invert ? 1 : 0;
+		uniforms.u_colorize = this.properties.colorize ? 1 : 0;
+
+		this._tex = LGraphTexture.getTargetTexture( tex, this._tex, this.properties.precision );
+		uniforms.u_res[0] = this._tex.width;
+		uniforms.u_res[1] = this._tex.height;
+		this._tex.bind(0);
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST );
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST );
+
+		this._tex.drawTo(function() {
+			symbols_tex.bind(1);
+			tex.toViewport(LGraphTextureEncode._shader, uniforms);
+		});
+
+		this.setOutputData(0, this._tex);
+	};
+
+	LGraphTextureEncode.pixel_shader =
+		"precision highp float;\n\
+		precision highp float;\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		uniform sampler2D u_textureB;\n\
+		uniform float u_row_simbols;\n\
+		uniform float u_symbol_size;\n\
+		uniform float u_brightness;\n\
+		uniform float u_invert;\n\
+		uniform float u_colorize;\n\
+		uniform vec2 u_res;\n\
+		\n\
+		void main() {\n\
+			vec2 total_symbols = u_res / u_symbol_size;\n\
+			vec2 uv = floor(v_coord * total_symbols) / total_symbols; //pixelate \n\
+			vec2 local_uv = mod(v_coord * u_res, u_symbol_size) / u_symbol_size;\n\
+			lowp vec4 textureColor = texture2D(u_texture, uv );\n\
+			float lum = clamp(u_brightness * (textureColor.x + textureColor.y + textureColor.z)/3.0,0.0,1.0);\n\
+			if( u_invert == 1.0 ) lum = 1.0 - lum;\n\
+			float index = floor( lum * (u_row_simbols * u_row_simbols - 1.0));\n\
+			float col = mod( index, u_row_simbols );\n\
+			float row = u_row_simbols - floor( index / u_row_simbols ) - 1.0;\n\
+			vec2 simbol_uv = ( vec2( col, row ) + local_uv ) / u_row_simbols;\n\
+			vec4 color = texture2D( u_textureB, simbol_uv );\n\
+			if(u_colorize == 1.0)\n\
+				color *= textureColor;\n\
+			gl_FragColor = color;\n\
+		}\n\
+		";
+
+	LiteGraph.registerNodeType("texture/encode", LGraphTextureEncode);
+
 	// Texture Channels *****************************************
 	function LGraphTextureChannels() {
 		this.addInput("Texture", "Texture");
