@@ -3171,10 +3171,10 @@
     /**
      * computes the minimum size of a node according to its inputs and output slots
      * @method computeSize
-     * @param {number} minHeight
+     * @param {number} the optional target width
      * @return {number} the total size
      */
-    LGraphNode.prototype.computeSize = function(out) {
+    LGraphNode.prototype.computeSize = function(width, out) {
         if (this.constructor.size) {
             return this.constructor.size.concat();
         }
@@ -3226,7 +3226,7 @@
         if (this.widgets && this.widgets.length) {
             for (var i = 0, l = this.widgets.length; i < l; ++i) {
                 if (this.widgets[i].computeSize)
-                    widgets_height += this.widgets[i].computeSize(size[0])[1] + 4;
+                    widgets_height += this.widgets[i].computeSize(Math.max(size[0], width || 0))[1] + 4;
                 else
                     widgets_height += LiteGraph.NODE_WIDGET_HEIGHT + 4;
             }
@@ -5575,7 +5575,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (this.resizing_node && !this.live_mode) {
                 //convert mouse to node space
 				var desired_size = [ e.canvasX - this.resizing_node.pos[0], e.canvasY - this.resizing_node.pos[1] ];
-				var min_size = this.resizing_node.computeSize();
+				var min_size = this.resizing_node.computeSize(desired_size[0]);
 				desired_size[0] = Math.max( min_size[0], desired_size[0] );
 				desired_size[1] = Math.max( min_size[1], desired_size[1] );
 				this.resizing_node.setSize( desired_size );
