@@ -660,7 +660,7 @@
 					u_texture: 0,
 					u_textureB: 1,
 					value: value,
-					texSize: [width, height],
+					texSize: [width, height,1/width,1/height],
 					time: time
 				})
 				.draw(mesh);
@@ -675,7 +675,7 @@
 		uniform sampler2D u_texture;\n\
 		uniform sampler2D u_textureB;\n\
 		varying vec2 v_coord;\n\
-		uniform vec2 texSize;\n\
+		uniform vec4 texSize;\n\
 		uniform float time;\n\
 		uniform float value;\n\
 		\n\
@@ -712,6 +712,20 @@
 	LGraphTextureOperation.registerPreset("displace","texture2D(u_texture, uv + (colorB.xy - vec2(0.5)) * value).xyz");
 	LGraphTextureOperation.registerPreset("grayscale","vec3(color.x + color.y + color.z) * value / 3.0");
 	LGraphTextureOperation.registerPreset("saturation","mix( vec3(color.x + color.y + color.z) / 3.0, color, value )");
+	LGraphTextureOperation.registerPreset("normalmap","\n\
+		float z0 = texture2D(u_texture, uv + vec2(-texSize.z, -texSize.w) ).x;\n\
+		float z1 = texture2D(u_texture, uv + vec2(0.0, -texSize.w) ).x;\n\
+		float z2 = texture2D(u_texture, uv + vec2(texSize.z, -texSize.w) ).x;\n\
+		float z3 = texture2D(u_texture, uv + vec2(-texSize.z, 0.0) ).x;\n\
+		float z4 = color.x;\n\
+		float z5 = texture2D(u_texture, uv + vec2(texSize.z, 0.0) ).x;\n\
+		float z6 = texture2D(u_texture, uv + vec2(-texSize.z, texSize.w) ).x;\n\
+		float z7 = texture2D(u_texture, uv + vec2(0.0, texSize.w) ).x;\n\
+		float z8 = texture2D(u_texture, uv + vec2(texSize.z, texSize.w) ).x;\n\
+		vec3 normal = vec3( z2 + 2.0*z4 + z7 - z0 - 2.0*z3 - z5, z5 + 2.0*z6 + z7 -z0 - 2.0*z1 - z2, 1.0 );\n\
+		normal.xy *= value;\n\
+		result.xyz = normalize(normal) * 0.5 + vec3(0.5);\n\
+	");
 	LGraphTextureOperation.registerPreset("threshold","vec3(color.x > colorB.x * value ? 1.0 : 0.0,color.y > colorB.y * value ? 1.0 : 0.0,color.z > colorB.z * value ? 1.0 : 0.0)");
 
 	//webglstudio stuff...
@@ -744,7 +758,7 @@
 		};
 
 		this.properties.code = LGraphTextureShader.pixel_shader;
-		this._uniforms = { u_value: 1, u_color: vec4.create(), in_texture: 0, texSize: vec2.create(), time: 0 };
+		this._uniforms = { u_value: 1, u_color: vec4.create(), in_texture: 0, texSize: vec4.create(), time: 0 };
 	}
 
 	LGraphTextureShader.title = "Shader";
@@ -910,6 +924,8 @@
 		}
 		uniforms.texSize[0] = w;
 		uniforms.texSize[1] = h;
+		uniforms.texSize[2] = 1/w;
+		uniforms.texSize[3] = 1/h;
 		uniforms.time = this.graph.getTime();
 		uniforms.u_value = this.properties.u_value;
 		uniforms.u_color.set( this.properties.u_color );
@@ -930,7 +946,7 @@
 \n\
 varying vec2 v_coord;\n\
 uniform float time; //time in seconds\n\
-uniform vec2 texSize; //tex resolution\n\
+uniform vec4 texSize; //tex resolution\n\
 uniform float u_value;\n\
 uniform vec4 u_color;\n\n\
 void main() {\n\
@@ -1579,6 +1595,69 @@ void main() {\n\
 		"texture/downsample",
 		LGraphTextureDownsample
 	);
+
+
+
+	function LGraphTextureResize() {
+		this.addInput("Texture", "Texture");
+		this.addOutput("", "Texture");
+		this.properties = {
+			size: [512,512],
+			generate_mipmaps: false,
+			precision: LGraphTexture.DEFAULT
+		};
+	}
+
+	LGraphTextureResize.title = "Resize";
+	LGraphTextureResize.desc = "Resize Texture";
+	LGraphTextureResize.widgets_info = {
+		iterations: { type: "number", step: 1, precision: 0, min: 0 },
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphTextureResize.prototype.onExecute = function() {
+		var tex = this.getInputData(0);
+		if (!tex && !this._temp_texture) {
+			return;
+		}
+
+		if (!this.isOutputConnected(0)) {
+			return;
+		} //saves work
+
+		//we do not allow any texture different than texture 2D
+		if (!tex || tex.texture_type !== GL.TEXTURE_2D) {
+			return;
+		}
+
+		var width = this.properties.size[0] | 0;
+		var height = this.properties.size[1] | 0;
+		if(width == 0)
+			width = tex.width;
+		if(height == 0)
+			height = tex.height;
+		var type = tex.type;
+		if (this.properties.precision === LGraphTexture.LOW) {
+			type = gl.UNSIGNED_BYTE;
+		} else if (this.properties.precision === LGraphTexture.HIGH) {
+			type = gl.HIGH_PRECISION_FORMAT;
+		}
+
+		if( !this._texture || this._texture.width != width || this._texture.height != height || this._texture.type != type )
+			this._texture = new GL.Texture( width, height, { type: type } );
+
+		tex.copyTo( this._texture );
+
+		if (this.properties.generate_mipmaps) {
+			this._texture.bind(0);
+			gl.generateMipmap(this._texture.texture_type);
+			this._texture.unbind(0);
+		}
+
+		this.setOutputData(0, this._texture);
+	};
+
+	LiteGraph.registerNodeType( "texture/resize", LGraphTextureResize );
 
 	// Texture Average  *****************************************
 	function LGraphTextureAverage() {
@@ -2247,7 +2326,7 @@ void main() {\n\
 		this.addInput("Texture", "Texture");
 		this.addInput("Atlas", "Texture");
 		this.addOutput("", "Texture");
-		this.properties = { enabled: true, num_row_symbols: 4, symbol_size: 16, brightness: 1, colorize: false, filter: false, invert: false, precision: LGraphTexture.DEFAULT, texture: null };
+		this.properties = { enabled: true, num_row_symbols: 4, symbol_size: 16, brightness: 1, colorize: false, filter: false, invert: false, precision: LGraphTexture.DEFAULT, generate_mipmaps: false, texture: null };
 
 		if (!LGraphTextureEncode._shader) {
 			LGraphTextureEncode._shader = new GL.Shader( Shader.SCREEN_VERTEX_SHADER, LGraphTextureEncode.pixel_shader );
@@ -2322,6 +2401,12 @@ void main() {\n\
 			symbols_tex.bind(1);
 			tex.toViewport(LGraphTextureEncode._shader, uniforms);
 		});
+
+		if (this.properties.generate_mipmaps) {
+			this._tex.bind(0);
+			gl.generateMipmap(this._tex.texture_type);
+			this._tex.unbind(0);
+		}
 
 		this.setOutputData(0, this._tex);
 	};

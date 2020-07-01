@@ -52,6 +52,7 @@
         return [["enabled", "boolean"]];
     };
 
+	/*
     Subgraph.prototype.onDrawTitle = function(ctx) {
         if (this.flags.collapsed) {
             return;
@@ -68,6 +69,7 @@
         ctx.lineTo(x + w * 0.5, -w * 0.3);
         ctx.fill();
     };
+	*/
 
     Subgraph.prototype.onDblClick = function(e, pos, graphcanvas) {
         var that = this;
@@ -76,6 +78,7 @@
         }, 10);
     };
 
+	/*
     Subgraph.prototype.onMouseDown = function(e, pos, graphcanvas) {
         if (
             !this.flags.collapsed &&
@@ -88,6 +91,7 @@
             }, 10);
         }
     };
+	*/
 
     Subgraph.prototype.onAction = function(action, param) {
         this.subgraph.onAction(action, param);

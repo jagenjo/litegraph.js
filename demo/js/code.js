@@ -1,7 +1,7 @@
 var webgl_canvas = null;
 
 LiteGraph.node_images_path = "../nodes_data/";
-var editor = new LiteGraph.Editor("main",{miniwindow:true});
+var editor = new LiteGraph.Editor("main",{miniwindow:false});
 window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
 window.addEventListener("resize", function() { editor.graphcanvas.resize(); } );
@@ -17,7 +17,7 @@ LiteGraph.allow_scripts = true;
 //create scene selector
 var elem = document.createElement("span");
 elem.className = "selector";
-elem.innerHTML = "Demo <select><option>Empty</option></select> <button id='save'>Save</button><button id='load'>Load</button><button id='download'>Download</button> | <button id='webgl'>WebGL</button>";
+elem.innerHTML = "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button>";
 editor.tools.appendChild(elem);
 var select = elem.querySelector("select");
 select.addEventListener("change", function(e){
@@ -102,6 +102,7 @@ function enableWebGL()
 		"js/libs/litegl.js",
 		"../src/nodes/gltextures.js",
 		"../src/nodes/glfx.js",
+		"../src/nodes/shaders.js",
 		"../src/nodes/geometry.js"
 	];
 
