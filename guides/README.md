@@ -64,7 +64,7 @@ There are several settings that could be defined or modified per node:
   * **collapsed**: if it is shown collapsed (small)
 * **redraw_on_mouse**: forces a redraw if the mouse passes over the widget
 * **widgets_up**: widgets do not start after the slots
-* **widgets_y**: widgets should start being drawn from this Y
+* **widgets_start_y**: widgets should start being drawn from this Y
 * **clip_area**: clips the content when rendering the node
 * **resizable**: if it can be resized dragging the corner
 * **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
