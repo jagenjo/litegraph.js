@@ -53,6 +53,7 @@
         CIRCLE_SHAPE: 3,
         CARD_SHAPE: 4,
         ARROW_SHAPE: 5,
+        SQUARE_SHAPE: 6,
 
         //enums
         INPUT: 1,
@@ -6962,6 +6963,44 @@ LGraphNode.prototype.executeAction = function(action)
 
     var temp_vec2 = new Float32Array(2);
 
+    function drawSlotGraphic(ctx, pos, shape, horizontal) {
+        ctx.beginPath();
+
+        switch (shape) {
+            case (LiteGraph.BOX_SHAPE):
+                if (horizontal) {
+                    ctx.rect(
+                        pos[0] - 5 + 0.5,
+                        pos[1] - 8 + 0.5,
+                        10,
+                        14
+                    );
+                } else {
+                    ctx.rect(
+                        pos[0] - 6 + 0.5,
+                        pos[1] - 5 + 0.5,
+                        14,
+                        10
+                    );
+                }
+                break;
+            case (LiteGraph.ARROW_SHAPE):
+                ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
+                ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
+                ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
+                ctx.closePath();
+                break;
+            case (LiteGraph.SQUARE_SHAPE):
+                ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8); //faster
+                break;
+            case (LiteGraph.CIRCLE_SHAPE):
+            default:
+                ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+                break;
+        }
+        ctx.fill();
+    }
+
     /**
      * draws the given node inside the canvas
      * @method drawNode
@@ -7117,39 +7156,9 @@ LGraphNode.prototype.executeAction = function(action)
                         max_y = pos[1] + LiteGraph.NODE_SLOT_HEIGHT * 0.5;
                     }
 
-                    ctx.beginPath();
-
-                    if (
-                        slot.type === LiteGraph.EVENT ||
-                        slot.shape === LiteGraph.BOX_SHAPE
-                    ) {
-                        if (horizontal) {
-                            ctx.rect(
-                                pos[0] - 5 + 0.5,
-                                pos[1] - 8 + 0.5,
-                                10,
-                                14
-                            );
-                        } else {
-                            ctx.rect(
-                                pos[0] - 6 + 0.5,
-                                pos[1] - 5 + 0.5,
-                                14,
-                                10
-                            );
-                        }
-                    } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
-                        ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
-                        ctx.closePath();
-                    } else {
-						if(low_quality)
-	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 ); //faster
-						else
-	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
-                    }
-                    ctx.fill();
+                    var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
+                            || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
+                    drawSlotGraphic(ctx, pos, shape, horizontal);
 
                     //render name
                     if (render_text) {
@@ -7190,46 +7199,11 @@ LGraphNode.prototype.executeAction = function(action)
                               this.default_connection_color.output_on
                             : slot.color_off ||
                               this.default_connection_color.output_off;
-                    ctx.beginPath();
-                    //ctx.rect( node.size[0] - 14,i*14,10,10);
 
-                    if (
-                        slot.type === LiteGraph.EVENT ||
-                        slot.shape === LiteGraph.BOX_SHAPE
-                    ) {
-                        if (horizontal) {
-                            ctx.rect(
-                                pos[0] - 5 + 0.5,
-                                pos[1] - 8 + 0.5,
-                                10,
-                                14
-                            );
-                        } else {
-                            ctx.rect(
-                                pos[0] - 6 + 0.5,
-                                pos[1] - 5 + 0.5,
-                                14,
-                                10
-                            );
-                        }
-                    } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
-                        ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
-                        ctx.closePath();
-                    } else {
-						if(low_quality)
-	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 );
-						else
-	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
-                    }
+                    var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
+                        || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
+                    drawSlotGraphic(ctx, pos, shape, horizontal);
 
-                    //trigger
-                    //if(slot.node_id != null && slot.slot == -1)
-                    //	ctx.fillStyle = "#F85";
-
-                    //if(slot.links != null && slot.links.length)
-                    ctx.fill();
 					if(!low_quality)
 	                    ctx.stroke();
 
