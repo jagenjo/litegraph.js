@@ -11,6 +11,11 @@ export type widgetTypes =
     | "text"
     | "toggle"
     | "button";
+export type SlotShape =
+    | typeof LiteGraph.BOX_SHAPE
+    | typeof LiteGraph.CIRCLE_SHAPE
+    | typeof LiteGraph.ARROW_SHAPE
+    | typeof LiteGraph.SQUARE_SHAPE
 
 /** https://github.com/jagenjo/litegraph.js/tree/master/guides#node-slots */
 export interface INodeSlot {
@@ -24,6 +29,7 @@ export interface INodeSlot {
         | typeof LiteGraph.LEFT;
     color_on?: string;
     color_off?: string;
+    shape?: SlotShape;
     locked?: boolean;
     nameLocked?: boolean;
 }
@@ -174,6 +180,7 @@ export const LiteGraph: {
     CIRCLE_SHAPE: 3;
     CARD_SHAPE: 4;
     ARROW_SHAPE: 5;
+    SQUARE_SHAPE: 6;
 
     //enums
     INPUT: 1;
