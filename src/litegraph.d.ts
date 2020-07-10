@@ -951,6 +951,17 @@ export declare class LGraphNode {
         _this: this,
         slotIndex: number
     ): boolean;
+
+    /**
+     * Called just before connection (or disconnect - if input is linked).
+     * A convenient place to switch to another input, or create new one.
+     * This allow for ability to automatically add slots if needed
+     * @param inputIndex
+     * @return selected input slot index, can differ from parameter value
+     */
+    onBeforeConnectInput?(
+        inputIndex: number
+    ): number;
     
     /** a connection changed (new one or removed) (LiteGraph.INPUT or LiteGraph.OUTPUT, slot, true if connected, link_info, input_info or output_info ) */
     onConnectionsChange(
