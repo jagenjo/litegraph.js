@@ -53,6 +53,7 @@
         CIRCLE_SHAPE: 3,
         CARD_SHAPE: 4,
         ARROW_SHAPE: 5,
+        SQUARE_SHAPE: 6,
 
         //enums
         INPUT: 1,
@@ -93,6 +94,16 @@
         Nodes: {}, //node types by classname
 
         searchbox_extras: {}, //used to add extra features to the search box
+
+        /**
+         * Removes all previously registered node's types
+         */
+        clearRegisteredTypes: function() {
+            this.registered_node_types = {};
+            this.node_types_by_file_extension = {};
+            this.Nodes = {};
+            this.searchbox_extras = {};
+        },
 
         /**
          * Register a node class so it can be listed when the user wants to create a new one
@@ -3592,28 +3603,33 @@
             return null;
         }
 
-        //if there is something already plugged there, disconnect
-        if (target_node.inputs[target_slot].link != null) {
-            target_node.disconnectInput(target_slot);
-        }
-
-        //why here??
-        //this.setDirtyCanvas(false,true);
-        //this.graph.connectionChange( this );
-
-        var output = this.outputs[slot];
-
-        //allows nodes to block connection
-        if (target_node.onConnectInput) {
-            if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
-                return null;
-            }
-        }
-
-        var input = target_node.inputs[target_slot];
-        var link_info = null;
-
         if (LiteGraph.isValidConnection(output.type, input.type)) {
+            if (target_node.onBeforeConnectInput) {
+                // This way node can choose another slot (if selected is occupied)
+                target_slot = target_node.onBeforeConnectInput(target_slot);
+            }
+
+            //if there is something already plugged there, disconnect
+            if (target_node.inputs[target_slot].link != null) {
+                target_node.disconnectInput(target_slot);
+            }
+
+            //why here??
+            //this.setDirtyCanvas(false,true);
+            //this.graph.connectionChange( this );
+
+            var output = this.outputs[slot];
+
+            //allows nodes to block connection
+            if (target_node.onConnectInput) {
+                if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
+                    return null;
+                }
+            }
+
+            var input = target_node.inputs[target_slot];
+            var link_info = null;
+
             link_info = new LLink(
                 ++this.graph.last_link_id,
                 input.type,
@@ -5575,7 +5591,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (this.resizing_node && !this.live_mode) {
                 //convert mouse to node space
 				var desired_size = [ e.canvasX - this.resizing_node.pos[0], e.canvasY - this.resizing_node.pos[1] ];
-				var min_size = this.resizing_node.computeSize();
+				var min_size = this.resizing_node.computeSize(desired_size[0]);
 				desired_size[0] = Math.max( min_size[0], desired_size[0] );
 				desired_size[1] = Math.max( min_size[1], desired_size[1] );
 				this.resizing_node.setSize( desired_size );
@@ -6962,6 +6978,44 @@ LGraphNode.prototype.executeAction = function(action)
 
     var temp_vec2 = new Float32Array(2);
 
+    function drawSlotGraphic(ctx, pos, shape, horizontal) {
+        ctx.beginPath();
+
+        switch (shape) {
+            case (LiteGraph.BOX_SHAPE):
+                if (horizontal) {
+                    ctx.rect(
+                        pos[0] - 5 + 0.5,
+                        pos[1] - 8 + 0.5,
+                        10,
+                        14
+                    );
+                } else {
+                    ctx.rect(
+                        pos[0] - 6 + 0.5,
+                        pos[1] - 5 + 0.5,
+                        14,
+                        10
+                    );
+                }
+                break;
+            case (LiteGraph.ARROW_SHAPE):
+                ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
+                ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
+                ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
+                ctx.closePath();
+                break;
+            case (LiteGraph.SQUARE_SHAPE):
+                ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8); //faster
+                break;
+            case (LiteGraph.CIRCLE_SHAPE):
+            default:
+                ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
+                break;
+        }
+        ctx.fill();
+    }
+
     /**
      * draws the given node inside the canvas
      * @method drawNode
@@ -7117,39 +7171,9 @@ LGraphNode.prototype.executeAction = function(action)
                         max_y = pos[1] + LiteGraph.NODE_SLOT_HEIGHT * 0.5;
                     }
 
-                    ctx.beginPath();
-
-                    if (
-                        slot.type === LiteGraph.EVENT ||
-                        slot.shape === LiteGraph.BOX_SHAPE
-                    ) {
-                        if (horizontal) {
-                            ctx.rect(
-                                pos[0] - 5 + 0.5,
-                                pos[1] - 8 + 0.5,
-                                10,
-                                14
-                            );
-                        } else {
-                            ctx.rect(
-                                pos[0] - 6 + 0.5,
-                                pos[1] - 5 + 0.5,
-                                14,
-                                10
-                            );
-                        }
-                    } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
-                        ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
-                        ctx.closePath();
-                    } else {
-						if(low_quality)
-	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 ); //faster
-						else
-	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
-                    }
-                    ctx.fill();
+                    var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
+                            || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
+                    drawSlotGraphic(ctx, pos, shape, horizontal);
 
                     //render name
                     if (render_text) {
@@ -7190,46 +7214,11 @@ LGraphNode.prototype.executeAction = function(action)
                               this.default_connection_color.output_on
                             : slot.color_off ||
                               this.default_connection_color.output_off;
-                    ctx.beginPath();
-                    //ctx.rect( node.size[0] - 14,i*14,10,10);
 
-                    if (
-                        slot.type === LiteGraph.EVENT ||
-                        slot.shape === LiteGraph.BOX_SHAPE
-                    ) {
-                        if (horizontal) {
-                            ctx.rect(
-                                pos[0] - 5 + 0.5,
-                                pos[1] - 8 + 0.5,
-                                10,
-                                14
-                            );
-                        } else {
-                            ctx.rect(
-                                pos[0] - 6 + 0.5,
-                                pos[1] - 5 + 0.5,
-                                14,
-                                10
-                            );
-                        }
-                    } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
-                        ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
-                        ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
-                        ctx.closePath();
-                    } else {
-						if(low_quality)
-	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 );
-						else
-	                        ctx.arc(pos[0], pos[1], 4, 0, Math.PI * 2);
-                    }
+                    var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
+                        || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
+                    drawSlotGraphic(ctx, pos, shape, horizontal);
 
-                    //trigger
-                    //if(slot.node_id != null && slot.slot == -1)
-                    //	ctx.fillStyle = "#F85";
-
-                    //if(slot.links != null && slot.links.length)
-                    ctx.fill();
 					if(!low_quality)
 	                    ctx.stroke();
 
