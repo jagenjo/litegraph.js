@@ -96,6 +96,16 @@
         searchbox_extras: {}, //used to add extra features to the search box
 
         /**
+         * Removes all previously registered node's types
+         */
+        clearRegisteredTypes: function() {
+            this.registered_node_types = {};
+            this.node_types_by_file_extension = {};
+            this.Nodes = {};
+            this.searchbox_extras = {};
+        },
+
+        /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
          * @param {String} type name of the node and path
