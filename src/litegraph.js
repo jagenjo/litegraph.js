@@ -3603,10 +3603,14 @@
             return null;
         }
 
+        var output = this.outputs[slot];
+        var input = target_node.inputs[target_slot];
+
         if (LiteGraph.isValidConnection(output.type, input.type)) {
             if (target_node.onBeforeConnectInput) {
                 // This way node can choose another slot (if selected is occupied)
                 target_slot = target_node.onBeforeConnectInput(target_slot);
+                input = target_node.inputs[target_slot];
             }
 
             //if there is something already plugged there, disconnect
@@ -3618,8 +3622,6 @@
             //this.setDirtyCanvas(false,true);
             //this.graph.connectionChange( this );
 
-            var output = this.outputs[slot];
-
             //allows nodes to block connection
             if (target_node.onConnectInput) {
                 if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
@@ -3627,7 +3629,6 @@
                 }
             }
 
-            var input = target_node.inputs[target_slot];
             var link_info = null;
 
             link_info = new LLink(
