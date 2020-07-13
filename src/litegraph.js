@@ -6978,7 +6978,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     var temp_vec2 = new Float32Array(2);
 
-    function drawSlotGraphic(ctx, pos, shape, horizontal) {
+    LGraphCanvas.prototype.drawSlotGraphic = function(ctx, pos, shape, horizontal) {
         ctx.beginPath();
 
         switch (shape) {
@@ -7173,7 +7173,7 @@ LGraphNode.prototype.executeAction = function(action)
 
                     var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
                             || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
-                    drawSlotGraphic(ctx, pos, shape, horizontal);
+                    this.drawSlotGraphic(ctx, pos, shape, horizontal);
 
                     //render name
                     if (render_text) {
@@ -7217,7 +7217,7 @@ LGraphNode.prototype.executeAction = function(action)
 
                     var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
                         || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
-                    drawSlotGraphic(ctx, pos, shape, horizontal);
+                    this.drawSlotGraphic(ctx, pos, shape, horizontal);
 
 					if(!low_quality)
 	                    ctx.stroke();
