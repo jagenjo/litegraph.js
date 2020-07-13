@@ -3602,16 +3602,15 @@
         //this.graph.connectionChange( this );
 
         var output = this.outputs[slot];
-
+        var input = target_node.inputs[target_slot];
+        var link_info = null;
+        
         //allows nodes to block connection
         if (target_node.onConnectInput) {
             if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
                 return null;
             }
         }
-
-        var input = target_node.inputs[target_slot];
-        var link_info = null;
 
         if (LiteGraph.isValidConnection(output.type, input.type)) {
             link_info = new LLink(

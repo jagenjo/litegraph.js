@@ -437,6 +437,11 @@
 		else if( name == "type" )
 		{
 			v = v || "";
+
+            if (this.graph) {
+                this.graph.changeInputType(this.name_in_graph, v)
+            }
+
 			this.updateType(v);
 		}
 		else if( name == "value" )
