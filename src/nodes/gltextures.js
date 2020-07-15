@@ -1229,6 +1229,20 @@ void main() {\n\
 	LGraphTextureToViewport.desc = "Texture to viewport";
 
 	LGraphTextureToViewport._prev_viewport = new Float32Array(4);
+
+	LGraphTextureToViewport.prototype.onDrawBackground = function( ctx )
+	{
+		if ( this.flags.collapsed || this.size[1] <= 40 )
+			return;
+
+		var tex = this.getInputData(0);
+		if (!tex) {
+			return;
+		}
+
+		ctx.drawImage( ctx == gl ? tex : gl.canvas, 10,30, this.size[0] -20, this.size[1] -40);
+	}
+
 	LGraphTextureToViewport.prototype.onExecute = function() {
 		var tex = this.getInputData(0);
 		if (!tex) {

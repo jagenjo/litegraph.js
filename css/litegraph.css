@@ -261,12 +261,11 @@
 
 .litegraph .dialog .dialog-content {
     height: calc(100% - 90px);
-    width: calc(100% - 10px);
+    width: 100%;
 	min-height: 100px;
-    /*background-color: black;*/
-    padding: 4px;
     display: inline-block;
 	color: #AAA;
+    /*background-color: black;*/
 }
 
 .litegraph .dialog .dialog-content h3 {
@@ -308,7 +307,7 @@
 
 .litegraph .dialog .property {
 	margin-bottom: 2px;
-	padding: 0;
+	padding: 4px;
 }
 
 .litegraph .dialog .property_name {
@@ -362,7 +361,7 @@
 }
 
 .litegraph .subgraph_property {
-	padding-bottom: 4px;
+	padding: 4px;
 }
 
 .litegraph .subgraph_property:hover {
