@@ -3603,10 +3603,14 @@
             return null;
         }
 
+        var output = this.outputs[slot];
+        var input = target_node.inputs[target_slot];
+
         if (LiteGraph.isValidConnection(output.type, input.type)) {
             if (target_node.onBeforeConnectInput) {
                 // This way node can choose another slot (if selected is occupied)
                 target_slot = target_node.onBeforeConnectInput(target_slot);
+                input = target_node.inputs[target_slot];
             }
 
             //if there is something already plugged there, disconnect
@@ -3618,8 +3622,6 @@
             //this.setDirtyCanvas(false,true);
             //this.graph.connectionChange( this );
 
-            var output = this.outputs[slot];
-
             //allows nodes to block connection
             if (target_node.onConnectInput) {
                 if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
@@ -3627,7 +3629,6 @@
                 }
             }
 
-            var input = target_node.inputs[target_slot];
             var link_info = null;
 
             link_info = new LLink(
@@ -6978,7 +6979,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     var temp_vec2 = new Float32Array(2);
 
-    function drawSlotGraphic(ctx, pos, shape, horizontal) {
+    LGraphCanvas.prototype.drawSlotGraphic = function(ctx, pos, shape, horizontal) {
         ctx.beginPath();
 
         switch (shape) {
@@ -7173,7 +7174,7 @@ LGraphNode.prototype.executeAction = function(action)
 
                     var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
                             || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
-                    drawSlotGraphic(ctx, pos, shape, horizontal);
+                    this.drawSlotGraphic(ctx, pos, shape, horizontal);
 
                     //render name
                     if (render_text) {
@@ -7217,7 +7218,7 @@ LGraphNode.prototype.executeAction = function(action)
 
                     var shape = slot.shape || (slot.type === LiteGraph.EVENT && LiteGraph.BOX_SHAPE)
                         || (low_quality && LiteGraph.SQUARE_SHAPE) || LiteGraph.CIRCLE_SHAPE;
-                    drawSlotGraphic(ctx, pos, shape, horizontal);
+                    this.drawSlotGraphic(ctx, pos, shape, horizontal);
 
 					if(!low_quality)
 	                    ctx.stroke();
