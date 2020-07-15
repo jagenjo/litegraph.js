@@ -19,6 +19,7 @@ Try it in the [demo site](https://tamats.com/projects/litegraph/demo).
 - Graphs can be executed in NodeJS
 - Highly customizable nodes (color, shape, slots vertical or horizontal, widgets, custom rendering)
 - Easy to integrate in any JS application (one single file, no dependencies)
+- Typescript support
 
 ## Nodes provided
 Although it is easy to create new node types, LiteGraph comes with some default nodes that could be useful for many cases:
@@ -180,6 +181,7 @@ You can write any feedback to javi.agenjo@gmail.com
 - InventivetalentDev
 - NateScarlet
 - coderofsalvation
+- ilyabesk
 
 
 

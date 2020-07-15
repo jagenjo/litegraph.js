@@ -60,11 +60,14 @@ There are several settings that could be defined or modified per node:
 * **size**: ```[width,height]``` the size of the area inside the node (excluding title). Every row is LiteGraph.NODE_SLOT_HEIGHT pixels height.
 * **properties**: object containing the properties that could be configured by the user, and serialized when saving the graph
 * **shape**: the shape of the object (could be LiteGraph.BOX_SHAPE,LiteGraph.ROUND_SHAPE,LiteGraph.CARD_SHAPE)
-* **flags**: several flags
-  * **resizable**: if it can be resized dragging the corner
-  * **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
-  * **clip_area**: clips the content when rendering the node
+* **flags**: flags that can be changed by the user and will be stored when serialized
   * **collapsed**: if it is shown collapsed (small)
+* **redraw_on_mouse**: forces a redraw if the mouse passes over the widget
+* **widgets_up**: widgets do not start after the slots
+* **widgets_start_y**: widgets should start being drawn from this Y
+* **clip_area**: clips the content when rendering the node
+* **resizable**: if it can be resized dragging the corner
+* **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
 
 There are several callbacks that could be defined by the user:
 * **onAdded**: called when added to graph
