@@ -4,7 +4,7 @@ A library in Javascript to create graphs in the browser similar to Unreal Bluepr
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
-Try it in the [demo site](https://tamats.com/projects/litegraph/demo).
+Try it in the [demo site](https://tamats.com/projects/litegraph/editor).
 
 ![Node Graph](imgs/node_graph_example.png "WebGLStudio")
 

@@ -34,14 +34,16 @@
 	LGraphTexture.image_preview_size = 256;
 
 	//flags to choose output texture type
+	LGraphTexture.UNDEFINED = 0; //not specified
 	LGraphTexture.PASS_THROUGH = 1; //do not apply FX
 	LGraphTexture.COPY = 2; //create new texture with the same properties as the origin texture
 	LGraphTexture.LOW = 3; //create new texture with low precision (byte)
 	LGraphTexture.HIGH = 4; //create new texture with high precision (half-float)
 	LGraphTexture.REUSE = 5; //reuse input texture
-	LGraphTexture.DEFAULT = 2;
+	LGraphTexture.DEFAULT = 2; //use the default
 
 	LGraphTexture.MODE_VALUES = {
+		"undefined": LGraphTexture.UNDEFINED,
 		"pass through": LGraphTexture.PASS_THROUGH,
 		copy: LGraphTexture.COPY,
 		low: LGraphTexture.LOW,

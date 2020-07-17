@@ -175,6 +175,32 @@
 		return "";
 	}
 
+	//used to plug incompatible stuff
+	var convertVarToGLSLType = LiteGraph.convertVarToGLSLType = function convertVarToGLSLType( varname, type, target_type )
+	{
+		if(type == target_type)
+			return varname;
+		if(type == "float")
+			return target_type + "(" + varname + ")";
+		if(target_type == "vec2") //works for vec2,vec3 and vec4
+			return "vec2(" + varname + ".xy)";
+		if(target_type == "vec3") //works for vec2,vec3 and vec4
+		{
+			if(type == "vec2")
+				return "vec3(" + varname + ",0.0)";
+			if(type == "vec4")
+				return "vec4(" + varname + ".xyz)";
+		}
+		if(target_type == "vec4")
+		{
+			if(type == "vec2")
+				return "vec4(" + varname + ",0.0,0.0)";
+			if(target_type == "vec3")
+				return "vec4(" + varname + ",1.0)";
+		}
+		return null;
+	}
+
 	//used to host a shader body **************************************
 	function LGShaderContext()
 	{
@@ -294,17 +320,30 @@
 	// applies a shader graph to texture, it can be uses as an example
 
 	function LGraphShaderGraph() {
-		this.addOutput("out", "texture");
-		this.properties = { width: 0, height: 0, alpha: false, precision: 0 };
 
+		//before inputs
         this.subgraph = new LiteGraph.LGraph();
         this.subgraph._subgraph_node = this;
         this.subgraph._is_subgraph = true;
 		this.subgraph.filter = "shader";
 
-		var subnode = LiteGraph.createNode("output/fragcolor");
-		subnode.pos = [300,100];
-		this.subgraph.add( subnode );
+		this.addInput("in", "texture");
+		this.addOutput("out", "texture");
+		this.properties = { width: 0, height: 0, alpha: false, precision: typeof(LGraphTexture) != "undefined" ? LGraphTexture.DEFAULT : 2 };
+
+		var inputNode = this.subgraph.findNodesByType("input/uniform")[0];
+		inputNode.pos = [200,300];
+
+		var sampler = LiteGraph.createNode("texture/sampler2D");
+		sampler.pos = [400,300];
+		this.subgraph.add( sampler );
+
+		var outnode = LiteGraph.createNode("output/fragcolor");
+		outnode.pos = [600,300];
+		this.subgraph.add( outnode );
+
+		inputNode.connect( 0, sampler );
+		sampler.connect( 0, outnode );
 
 		this.size = [180,60];
 		this.redraw_on_mouse = true; //force redraw
@@ -337,6 +376,7 @@ gl_FragColor = color;\n\
 	LGraphShaderGraph.title = "ShaderGraph";
 	LGraphShaderGraph.desc = "Builds a shader using a graph";
 	LGraphShaderGraph.input_node_type = "input/uniform";
+	LGraphShaderGraph.output_node_type = "output/fragcolor";
 	LGraphShaderGraph.title_color = SHADERNODES_COLOR;
 
 	LGraphShaderGraph.prototype.onSerialize = function(o)
@@ -353,15 +393,21 @@ gl_FragColor = color;\n\
 		if (!this.isOutputConnected(0))
 			return;
 
+		//read input texture
+		var intex = this.getInputData(0);
+		if(intex && intex.constructor != GL.Texture)
+			intex = null;
+
 		var w = this.properties.width | 0;
 		var h = this.properties.height | 0;
 		if (w == 0) {
-			w = gl.viewport_data[2];
+			w = intex ? intex.width : gl.viewport_data[2];
 		} //0 means default
 		if (h == 0) {
-			h = gl.viewport_data[3];
+			h = intex ? intex.height : gl.viewport_data[3];
 		} //0 means default
-		var type = LGraphTexture.getTextureType(this.properties.precision);
+
+		var type = LGraphTexture.getTextureType( this.properties.precision, intex );
 
 		var texture = this._texture;
 		if ( !texture || texture.width != w || texture.height != h || texture.type != type ) {
@@ -1027,8 +1073,16 @@ gl_FragColor = color;\n\
 		for(var i = 0; i < func_desc.params.length; ++i)
 		{
 			var p = func_desc.params[i];
-			//if( p.type == "T" && inlinks[i].type != base_type )
-			params.push( inlinks[i].name );
+			var param_code = inlinks[i].name;
+			if(param_code == null) //not plugged
+			{
+				param_code = "(1.0)";
+				inlinks[i].type = "float";
+			}
+			if( (p.type == "T" && inlinks[i].type != base_type) ||
+				(p.type != "T" && inlinks[i].type != base_type) )
+				param_code = convertVarToGLSLType( inlinks[i].name, inlinks[i].type, base_type );
+			params.push( param_code );
 		}
 		
 		context.addCode("code", return_type + " " + outlink + " = "+func_desc.func+"("+params.join(",")+");", this.shader_destination );
