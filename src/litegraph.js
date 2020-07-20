@@ -265,6 +265,16 @@
         },
 
         /**
+         * Removes all previously registered node's types
+         */
+        clearRegisteredTypes: function() {
+            this.registered_node_types = {};
+            this.node_types_by_file_extension = {};
+            this.Nodes = {};
+            this.searchbox_extras = {};
+        },
+
+        /**
          * Adds this method to all nodetypes, existing and to be created
          * (You can add it to LGraphNode.prototype but then existing node types wont have it)
          * @method addNodeMethod
@@ -1579,10 +1589,10 @@
             return;
         }
 
-		node.graph.beforeChange();
+		this.beforeChange();
         this.inputs[name] = { name: name, type: type, value: value };
         this._version++;
-		node.graph.afterChange();
+		this.afterChange();
 
         if (this.onInputAdded) {
             this.onInputAdded(name, type);

@@ -38,7 +38,7 @@
 		"mod": "T mod(T x,T y)", //"T mod(T x,float y)"
 		"min": "T min(T x,T y)",
 		"max": "T max(T x,T y)",
-		"clamp": "T clamp(T x,T minVal,T maxVal)",
+		"clamp": "T clamp(T x,T minVal = 0.0,T maxVal = 1.0)",
 		"mix": "T mix(T x,T y,T a)", //"T mix(T x,T y,float a)"
 		"step": "T step(T edge, T x)", //"T step(float edge, T x)"
 		"smoothstep": "T smoothstep(T edge, T x)", //"T smoothstep(float edge, T x)"
@@ -68,8 +68,13 @@
 			var params = op.substr(index2 + 1, op.length - index2 - 2).split(",");
 			for(var j in params)
 			{
-				var p = params[j].split(" ");
-				params[j] = { type: p[0], name: p[1] };
+				var p = params[j].split(" ").filter(function(a){ return a; });
+				params[j] = { type: p[0].trim(), name: p[1].trim() };
+				if(params[j].name.indexOf("=") != -1)
+				{
+					params[j].name.split("=");
+				}
+
 			}
 			GLSL_functions[i] = { return_type: return_type, func: func_name, params: params };
 			GLSL_functions_name.push( func_name );
@@ -545,7 +550,10 @@ gl_FragColor = color;\n\
 		var over = LiteGraph.isInsideRectangle(pos[0],pos[1],this.pos[0],this.pos[1] + y,this.size[0],LiteGraph.NODE_TITLE_HEIGHT);
 		ctx.fillStyle = over ? "#555" : "#222";
 		ctx.beginPath();
-		ctx.roundRect( 0, y, this.size[0]+1, LiteGraph.NODE_TITLE_HEIGHT, 0, 8);
+		if (this._shape == LiteGraph.BOX_SHAPE)
+			ctx.rect(0, y, this.size[0]+1, LiteGraph.NODE_TITLE_HEIGHT);
+		else
+			ctx.roundRect( 0, y, this.size[0]+1, LiteGraph.NODE_TITLE_HEIGHT, 0, 8);
 		ctx.fill();
 
 		//button
@@ -577,7 +585,12 @@ gl_FragColor = color;\n\
 
 	LiteGraph.registerNodeType( "texture/shaderGraph", LGraphShaderGraph );
 
-	//Shader Nodes ***************************
+	function shaderNodeFromFunction( classname, params, return_type, code )
+	{
+		//TODO
+	}
+
+	//Shader Nodes ***********************************************************
 
 	//applies a shader graph to a code
 	function LGraphShaderUniform() {
@@ -1237,34 +1250,3 @@ gl_FragColor = color;\n\
 })(this);
 
 
-/*
-// https://blog.undefinist.com/writing-a-shader-graph/
-
-\sin
-f,Out
-float->float
-{1} = sin({0});
-
-\mul
-A,B,Out
-T,T->T
-T,float->T
-{2} = {0} * {1};
-
-\clamp
-f,min,max,Out
-float,float=0,float=1->float
-vec2,vec2=vec2(0.0),vec2=vec2(1.0)->vec2
-vec3,vec3=vec3(0.0),vec3=vec3(1.0)->vec3
-vec4,vec4=vec4(0.0),vec4=vec4(1.0)->vec4
-{3}=clamp({0},{1},{2});
-
-\mix
-A,B,f,Out
-float,float,float->float
-vec2,vec2,float->vec2
-vec3,vec3,float->vec3
-vec4,vec4,float->vec4
-{3} = mix({0},{1},{2});
-
-*/
