@@ -126,6 +126,29 @@
 
     LiteGraph.registerNodeType("events/filter", FilterEvent);
 
+
+    function EventBranch() {
+        this.addInput("in", LiteGraph.ACTION);
+        this.addInput("cond", "boolean");
+        this.addOutput("true", LiteGraph.EVENT);
+        this.addOutput("false", LiteGraph.EVENT);
+        this.size = [120, 60];
+		this._value = false;
+    }
+
+    EventBranch.title = "Branch";
+    EventBranch.desc = "If condition is true, outputs triggers true, otherwise false";
+
+    EventBranch.prototype.onExecute = function() {
+		this._value = this.getInputData(1);
+	}
+
+    EventBranch.prototype.onAction = function(action, param) {
+		this.triggerSlot(this._value ? 0 : 1);
+	}
+
+    LiteGraph.registerNodeType("events/branch", EventBranch);
+
     //Show value inside the debug console
     function EventCounter() {
         this.addInput("inc", LiteGraph.ACTION);

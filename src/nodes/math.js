@@ -854,6 +854,7 @@
         this.addProperty("A", 1);
         this.addProperty("B", 1);
         this.addProperty("OP", ">", "enum", { values: MathCondition.values });
+		this.addWidget("combo","Cond.",this.properties.OP,{ property: "OP", values: MathCondition.values } );
 
         this.size = [80, 60];
     }
@@ -920,6 +921,37 @@
     };
 
     LiteGraph.registerNodeType("math/condition", MathCondition);
+
+
+    function MathBranch() {
+        this.addInput("in", "");
+        this.addInput("cond", "boolean");
+        this.addOutput("true", "");
+        this.addOutput("false", "");
+        this.size = [80, 60];
+    }
+
+    MathBranch.title = "Branch";
+    MathBranch.desc = "If condition is true, outputs IN in true, otherwise in false";
+
+    MathBranch.prototype.onExecute = function() {
+        var V = this.getInputData(0);
+        var cond = this.getInputData(1);
+
+		if(cond)
+		{
+			this.setOutputData(0, V);
+			this.setOutputData(1, null);
+		}
+		else
+		{
+			this.setOutputData(0, null);
+			this.setOutputData(1, V);
+		}
+	}
+
+    LiteGraph.registerNodeType("math/branch", MathBranch);
+
 
     function MathAccumulate() {
         this.addInput("inc", "number");

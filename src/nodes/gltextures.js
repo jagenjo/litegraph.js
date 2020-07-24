@@ -35,7 +35,7 @@
 
 	//flags to choose output texture type
 	LGraphTexture.UNDEFINED = 0; //not specified
-	LGraphTexture.PASS_THROUGH = 1; //do not apply FX
+	LGraphTexture.PASS_THROUGH = 1; //do not apply FX (like disable but passing the in to the out)
 	LGraphTexture.COPY = 2; //create new texture with the same properties as the origin texture
 	LGraphTexture.LOW = 3; //create new texture with low precision (byte)
 	LGraphTexture.HIGH = 4; //create new texture with high precision (half-float)
@@ -116,11 +116,12 @@
 			!target ||
 			target.width != origin.width ||
 			target.height != origin.height ||
-			target.type != tex_type
+			target.type != tex_type ||
+			target.format != origin.format 
 		) {
 			target = new GL.Texture(origin.width, origin.height, {
 				type: tex_type,
-				format: gl.RGBA,
+				format: origin.format,
 				filter: gl.LINEAR
 			});
 		}
@@ -5015,18 +5016,18 @@ void main(void){\n\
 
 	LGraphTexturePerlin.widgets_info = {
 		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES },
-		width: { type: "Number", precision: 0, step: 1 },
-		height: { type: "Number", precision: 0, step: 1 },
-		octaves: { type: "Number", precision: 0, step: 1, min: 1, max: 50 }
+		width: { type: "number", precision: 0, step: 1 },
+		height: { type: "number", precision: 0, step: 1 },
+		octaves: { type: "number", precision: 0, step: 1, min: 1, max: 50 }
 	};
 
 	LGraphTexturePerlin.prototype.onGetInputs = function() {
 		return [
-			["seed", "Number"],
-			["persistence", "Number"],
-			["octaves", "Number"],
-			["scale", "Number"],
-			["amplitude", "Number"],
+			["seed", "number"],
+			["persistence", "number"],
+			["octaves", "number"],
+			["scale", "number"],
+			["amplitude", "number"],
 			["offset", "vec2"]
 		];
 	};
@@ -5197,8 +5198,8 @@ void main(void){\n\
 	LGraphTextureCanvas2D.widgets_info = {
 		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES },
 		code: { type: "code" },
-		width: { type: "Number", precision: 0, step: 1 },
-		height: { type: "Number", precision: 0, step: 1 }
+		width: { type: "number", precision: 0, step: 1 },
+		height: { type: "number", precision: 0, step: 1 }
 	};
 
 	LGraphTextureCanvas2D.prototype.onPropertyChanged = function( name, value ) {

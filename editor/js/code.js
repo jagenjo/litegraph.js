@@ -102,7 +102,7 @@ function enableWebGL()
 		"js/libs/litegl.js",
 		"../src/nodes/gltextures.js",
 		"../src/nodes/glfx.js",
-		"../src/nodes/shaders.js",
+		"../src/nodes/glshaders.js",
 		"../src/nodes/geometry.js"
 	];
 

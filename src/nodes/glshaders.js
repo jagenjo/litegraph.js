@@ -40,8 +40,8 @@
 		"max": "T max(T x,T y)",
 		"clamp": "T clamp(T x,T minVal = 0.0,T maxVal = 1.0)",
 		"mix": "T mix(T x,T y,T a)", //"T mix(T x,T y,float a)"
-		"step": "T step(T edge, T x)", //"T step(float edge, T x)"
-		"smoothstep": "T smoothstep(T edge, T x)", //"T smoothstep(float edge, T x)"
+		"step": "T step(T edge, T edge2, T x)", //"T step(float edge, T x)"
+		"smoothstep": "T smoothstep(T edge, T edge2, T x)", //"T smoothstep(float edge, T x)"
 		"length":"float length(T x)",
 		"distance":"float distance(T p0, T p1)",
 		"normalize":"T normalize(T x)",
@@ -70,11 +70,8 @@
 			{
 				var p = params[j].split(" ").filter(function(a){ return a; });
 				params[j] = { type: p[0].trim(), name: p[1].trim() };
-				if(params[j].name.indexOf("=") != -1)
-				{
-					params[j].name.split("=");
-				}
-
+				if(p[2] == "=")
+					params[j].value = p[3].trim();
 			}
 			GLSL_functions[i] = { return_type: return_type, func: func_name, params: params };
 			GLSL_functions_name.push( func_name );
@@ -102,8 +99,13 @@
 					origin_node.propagateDestination( dest_name );
 			}
 		}
+		if(!node_ctor.prototype.onPropertyChanged)
+			node_ctor.prototype.onPropertyChanged = function()
+			{
+				 this.graph._version++;
+			}
 
-		LiteGraph.registerNodeType( type, node_ctor );
+		LiteGraph.registerNodeType( "shader::" + type, node_ctor );
 	}
 
 	function getShaderNodeVarName( node, name )
@@ -129,7 +131,7 @@
 
 	function getOutputLinkID( node, slot )
 	{
-		if (!node.isOutputConnected(0))
+		if (!node.isOutputConnected(slot))
 			return null;
 		return "link_" + node.id + "_" + slot;
 	}
@@ -140,9 +142,12 @@
 	LGShaders.getShaderNodeVarName = getShaderNodeVarName;
 	LGShaders.parseGLSLDescriptions = parseGLSLDescriptions;
 
-	var valueToGLSL = LiteGraph.valueToGLSL = function valueToGLSL( v, type )
+	//given a const number, it transform it to a string that matches a type
+	var valueToGLSL = LiteGraph.valueToGLSL = function valueToGLSL( v, type, precision )
 	{
 		var n = 5; //num decimals
+		if(precision != null)
+			n = precision;
 		if(!type)
 		{
 			if(v.constructor === Number)
@@ -180,6 +185,86 @@
 		return "";
 	}
 
+	//makes sure that a var is of a type, and if not, it converts it
+	var varToTypeGLSL = LiteGraph.varToTypeGLSL = function varToTypeGLSL( v, input_type, output_type )
+	{
+		if(input_type == output_type)
+			return v;
+		if(v == null)
+			switch(output_type)
+			{
+				case "float": return "0.0";
+				case "vec2":  return "vec2(0.0)";
+				case "vec3":  return "vec3(0.0)";
+				case "vec4":  return "vec4(0.0,0.0,0.0,1.0)";
+				default: //null
+					return null;
+			}
+
+		if(!output_type)
+			throw("error: no output type specified");
+		if(output_type == "float")
+		{
+			switch(input_type)
+			{
+				//case "float":
+				case "vec2":
+				case "vec3":
+				case "vec4":
+					return v + ".x";
+					break;
+				default: //null
+					return "0.0";
+					break;
+			}
+		}
+		else if(output_type == "vec2")
+		{
+			switch(input_type)
+			{
+				case "float":
+					return "vec2("+v+")";
+				//case "vec2":
+				case "vec3":
+				case "vec4":
+					return v + ".xy";
+				default: //null
+					return "vec2(0.0)";
+			}
+		}
+		else if(output_type == "vec3")
+		{
+			switch(input_type)
+			{
+				case "float":
+					return "vec3("+v+")";
+				case "vec2":
+					return "vec3(" + v + ",0.0)";
+				//case "vec3":
+				case "vec4":
+					return v + ".xyz";
+				default: //null
+					return "vec3(0.0)";
+			}
+		}
+		else if(output_type == "vec4")
+		{
+			switch(input_type)
+			{
+				case "float":
+					return "vec4("+v+")";
+				case "vec2":
+					return "vec4(" + v + ",0.0,1.0)";
+				case "vec3":
+					return "vec4(" + v + ",1.0)";
+				default: //null
+					return "vec4(0.0,0.0,0.0,1.0)";
+			}
+		}
+		throw("type cannot be converted");
+	}
+
+
 	//used to plug incompatible stuff
 	var convertVarToGLSLType = LiteGraph.convertVarToGLSLType = function convertVarToGLSLType( varname, type, target_type )
 	{
@@ -209,21 +294,47 @@
 	//used to host a shader body **************************************
 	function LGShaderContext()
 	{
+		//to store the code template
 		this.vs_template = "";
 		this.fs_template = "";
+
+		//required so nodes now where to fetch the input data
+		this.buffer_names = {
+			uvs: "v_coord"
+		};
+
+		this.extra = {}; //to store custom info from the nodes (like if this shader supports a feature, etc)
+
+		this._functions = {};
 		this._uniforms = {};
 		this._codeparts = {};
+		this._uniform_value = null;
 	}
 
 	LGShaderContext.prototype.clear = function()
 	{
 		this._uniforms = {};
+		this._functions = {};
 		this._codeparts = {};
+		this._uniform_value = null;
+
+		this.extra = {};
 	}
 
-	LGShaderContext.prototype.addUniform = function( name, type )
+	LGShaderContext.prototype.addUniform = function( name, type, value )
 	{
 		this._uniforms[ name ] = type;
+		if(value != null)
+		{
+			if(!this._uniform_value)
+				this._uniform_value = {};
+			this._uniform_value[name] = value;
+		}
+	}
+
+	LGShaderContext.prototype.addFunction = function( name, code )
+	{
+		this._functions[name] = code;
 	}
 
 	LGShaderContext.prototype.addCode = function( hook, code, destinations )
@@ -239,17 +350,53 @@
 		}
 	}
 
-	LGShaderContext.prototype.computeShaderCode = function()
+	//the system works by grabbing code fragments from every node and concatenating them in blocks depending on where must they be attached
+	LGShaderContext.prototype.computeCodeBlocks = function( graph, extra_uniforms )
 	{
+		//prepare context
+		this.clear();
+
+		//grab output nodes
+		var vertexout = graph.findNodesByType("shader::output/vertex");
+		vertexout = vertexout && vertexout.length ? vertexout[0] : null;
+		var fragmentout = graph.findNodesByType("shader::output/fragcolor");
+		fragmentout = fragmentout && fragmentout.length ? fragmentout[0] : null;
+		if(!fragmentout) //??
+			return null; 
+
+		//propagate back destinations
+		graph.sendEventToAllNodes( "clearDestination" );
+		if(vertexout)
+			vertexout.propagateDestination("vs");
+		if(fragmentout)
+			fragmentout.propagateDestination("fs");
+
+		//gets code from graph
+		graph.sendEventToAllNodes("onGetCode", this );
+
 		var uniforms = "";
 		for(var i in this._uniforms)
 			uniforms += "uniform " + this._uniforms[i] + " " + i + ";\n";
+		if(extra_uniforms)
+			for(var i in extra_uniforms)
+				uniforms += "uniform " + extra_uniforms[i] + " " + i + ";\n";
 
-		var parts = this._codeparts;
-		parts.uniforms = uniforms;
+		var functions = "";
+		for(var i in this._functions)
+			functions += "//" + i + "\n" + this._functions[i] + "\n";
 
-		var vs_code = GL.Shader.replaceCodeUsingContext( this.vs_template, parts );
-		var fs_code = GL.Shader.replaceCodeUsingContext( this.fs_template, parts );
+		var blocks = this._codeparts;
+		blocks.uniforms = uniforms;
+		blocks.functions = functions;
+		return blocks;
+	}
+
+	//replaces blocks using the vs and fs template and returns the final codes
+	LGShaderContext.prototype.computeShaderCode = function( graph )
+	{
+		var blocks = this.computeCodeBlocks( graph );
+		var vs_code = GL.Shader.replaceCodeUsingContext( this.vs_template, blocks );
+		var fs_code = GL.Shader.replaceCodeUsingContext( this.fs_template, blocks );
 		return {
 			vs_code: vs_code,
 			fs_code: fs_code
@@ -257,10 +404,21 @@
 	}
 
 	//generates the shader code from the template and the 
-	LGShaderContext.prototype.computeShader = function( shader )
+	LGShaderContext.prototype.computeShader = function( graph, shader )
 	{
-		var finalcode = this.computeShaderCode();
+		var finalcode = this.computeShaderCode( graph );
 		console.log( finalcode.vs_code, finalcode.fs_code );
+
+		if(!LiteGraph.catch_exceptions)
+		{
+			this._shader_error = true;
+			if(shader)
+				shader.updateShader( finalcode.vs_code, finalcode.fs_code );
+			else
+				shader = new GL.Shader( finalcode.vs_code, finalcode.fs_code );
+			this._shader_error = false;
+			return shader;
+		}
 
 		try
 		{
@@ -277,7 +435,7 @@
 			{
 				console.error(err);
 				if(err.indexOf("Fragment shader") != -1)
-					console.log( finalcode.fs_code );
+					console.log( finalcode.fs_code.split("\n").map(function(v,i){ return i + ".- " + v; }).join("\n") );
 				else
 					console.log( finalcode.vs_code );
 			}
@@ -288,38 +446,45 @@
 		return null;//never here
 	}
 
-	//represents a fragment of code exported by a node
-	/*
-	function LGShaderCodeBlock( node, code, uniforms )
+	LGShaderContext.prototype.getShader = function( graph )
 	{
-		this.node = node || null;
-		this.uniforms = uniforms || null;
-		this.parts = {};
-		if(code)
+		//if graph not changed?
+		if(this._shader && this._shader._version == graph._version)
+			return this._shader;
+
+		//compile shader
+		var shader = this.computeShader( graph, this._shader );
+		if(!shader)
+			return null;
+		
+		this._shader = shader;
+		shader._version = graph._version;
+		return shader;
+	}
+
+	//some shader nodes could require to fill the box with some uniforms
+	LGShaderContext.prototype.fillUniforms = function( uniforms, param )
+	{
+		if(!this._uniform_value)
+			return;
+
+		for(var i in this._uniform_value)
 		{
-			if(code.constructor === String)
-				this.parts.code = code;
+			var v = this._uniform_value[i];
+			if(v == null)
+				continue;
+			if(v.constructor === Function)
+				uniforms[i] = v.call( this, param );
+			else if(v.constructor === GL.Texture)
+			{
+				//todo...
+			}
 			else
-				this.parts = code;
+				uniforms[i] = v;
 		}
 	}
 
-	LGShaderCodeBlock.prototype.addUniform = function( name, type )
-	{
-		if(!this.uniforms)
-			this.uniforms = {};
-		this.uniforms[ name ] = type;
-	}
-
-	LGShaderCodeBlock.prototype.addCode = function( hook, code )
-	{
-		if(!this.parts[ hook ])
-			this.parts[ hook ] = code + "\n";
-		else
-			this.parts[ hook ] += code + "\n";
-	}
-	*/
-
+	LiteGraph.ShaderContext = LiteGraph.Shaders.Context = LGShaderContext;
 
 	// LGraphShaderGraph *****************************
 	// applies a shader graph to texture, it can be uses as an example
@@ -336,14 +501,14 @@
 		this.addOutput("out", "texture");
 		this.properties = { width: 0, height: 0, alpha: false, precision: typeof(LGraphTexture) != "undefined" ? LGraphTexture.DEFAULT : 2 };
 
-		var inputNode = this.subgraph.findNodesByType("input/uniform")[0];
+		var inputNode = this.subgraph.findNodesByType("shader::input/uniform")[0];
 		inputNode.pos = [200,300];
 
-		var sampler = LiteGraph.createNode("texture/sampler2D");
+		var sampler = LiteGraph.createNode("shader::texture/sampler2D");
 		sampler.pos = [400,300];
 		this.subgraph.add( sampler );
 
-		var outnode = LiteGraph.createNode("output/fragcolor");
+		var outnode = LiteGraph.createNode("shader::output/fragcolor");
 		outnode.pos = [600,300];
 		this.subgraph.add( outnode );
 
@@ -356,21 +521,24 @@
 		this._uniforms = {};
 		this._shader = null;
 		this._context = new LGShaderContext();
-		this._context.vs_template = GL.Shader.SCREEN_VERTEX_SHADER;
+		this._context.vs_template = "#define VERTEX\n" + GL.Shader.SCREEN_VERTEX_SHADER;
 		this._context.fs_template = LGraphShaderGraph.template;
 	}
 
 	LGraphShaderGraph.template = "\n\
+#define FRAGMENT\n\
 precision highp float;\n\
 varying vec2 v_coord;\n\
 {{varying}}\n\
 {{uniforms}}\n\
+{{functions}}\n\
 {{fs_functions}}\n\
 void main() {\n\n\
 vec2 uv = v_coord;\n\
-vec4 color = vec4(0.0);\n\
+vec4 fragcolor = vec4(0.0);\n\
+vec4 fragcolor1 = vec4(0.0);\n\
 {{fs_code}}\n\
-gl_FragColor = color;\n\
+gl_FragColor = fragcolor;\n\
 }\n\
 	";
 
@@ -423,11 +591,12 @@ gl_FragColor = color;\n\
 			});
 		}
 		
-		var shader = this.getShader();
+		var shader = this.getShader( this.subgraph );
 		if(!shader)
 			return;
 
 		var uniforms = this._uniforms;
+		this._context.fillUniforms( uniforms );
 
 		var tex_slot = 0;
 		if(this.inputs)
@@ -463,7 +632,7 @@ gl_FragColor = color;\n\
 	//add input node inside subgraph
 	LGraphShaderGraph.prototype.onInputAdded = function( slot_info )
 	{
-		var subnode = LiteGraph.createNode("input/uniform");
+		var subnode = LiteGraph.createNode("shader::input/uniform");
 		subnode.setProperty("name",slot_info.name);
 		subnode.setProperty("type",slot_info.type);
 		this.subgraph.add( subnode );
@@ -472,7 +641,7 @@ gl_FragColor = color;\n\
 	//remove all
 	LGraphShaderGraph.prototype.onInputRemoved = function( slot, slot_info )
 	{
-		var nodes = this.subgraph.findNodesByType("input/uniform");
+		var nodes = this.subgraph.findNodesByType("shader::input/uniform");
 		for(var i = 0; i < nodes.length; ++i)
 		{
 			var node = nodes[i];
@@ -490,45 +659,11 @@ gl_FragColor = color;\n\
 
 	LGraphShaderGraph.prototype.getShader = function()
 	{
-		//if subgraph not changed?
-		if(this._shader && this._shader._version == this.subgraph._version)
-			return this._shader;
-
-		//prepare context
-		this._context.clear();
-
-		//grab output nodes
-		var vertexout = this.subgraph.findNodesByType("output/vertex");
-		vertexout = vertexout && vertexout.length ? vertexout[0] : null;
-		var fragmentout = this.subgraph.findNodesByType("output/fragcolor");
-		fragmentout = fragmentout && fragmentout.length ? fragmentout[0] : null;
-
-		if(!fragmentout) //??
-			return null; 
-
-		this.subgraph.sendEventToAllNodes( "clearDestination" );
-
-		//propagate back destinations
-		if(vertexout)
-			vertexout.propagateDestination("vs");
-		if(fragmentout)
-			fragmentout.propagateDestination("fs");
-
-		//gets code from graph
-		this.subgraph.sendEventToAllNodes("onGetCode", this._context );
-
-		//compile shader
-		var shader = this._context.computeShader();
+		var shader = this._context.getShader( this.subgraph );
 		if(!shader)
-		{
 			this.boxcolor = "red";
-			return this._shader;
-		}
 		else
 			this.boxcolor = null;
-		
-		this._shader = shader;
-		shader._version = this.subgraph._version;
 		return shader;
 	}
 
@@ -570,6 +705,11 @@ gl_FragColor = color;\n\
 		{
 			graphcanvas.showSubgraphPropertiesDialog(this);
 		}
+	}
+
+	LGraphShaderGraph.prototype.onDrawSubgraphBackground = function(graphcanvas)
+	{
+		//TODO
 	}
 
 	LGraphShaderGraph.prototype.getExtraMenuOptions = function(graphcanvas)
@@ -690,7 +830,7 @@ gl_FragColor = color;\n\
 		var code = "vec4 " + varname + " = vec4(0.0);\n";
 		if(texname)
 		{
-			var uvname = getInputLinkID( this, 1 ) || "v_coord";
+			var uvname = getInputLinkID( this, 1 ) || context.buffer_names.uvs;
 			code += varname + " = texture2D("+texname+","+uvname+");\n";
 		}
 
@@ -729,7 +869,7 @@ gl_FragColor = color;\n\
 	LGraphShaderConstant.prototype.getTitle = function()
 	{
 		if(this.flags.collapsed)
-			return valueToGLSL( this.properties.value, this.properties.type );
+			return valueToGLSL( this.properties.value, this.properties.type, 2 );
 		return "Const";
 	}
 
@@ -742,8 +882,21 @@ gl_FragColor = color;\n\
 			{
 				this.disconnectOutput(0);
 				this.outputs[0].type = value;
-				this.widgets.length = 1; //remove extra widgets
-				this.updateWidgets();
+			}
+			this.widgets.length = 1; //remove extra widgets
+			this.updateWidgets();
+		}
+		if(name == "value")
+		{
+			if(!value.length)
+				this.widgets[1].value = value;
+			else
+			{
+				this.widgets[1].value = value[1];
+				if(value.length > 2)
+					this.widgets[2].value = value[2];
+				if(value.length > 3)
+					this.widgets[3].value = value[3];
 			}
 		}
 	}
@@ -761,21 +914,21 @@ gl_FragColor = color;\n\
 				break;
 			case 'vec2': 
 				this.properties.value = old_value && old_value.length == 2 ? [old_value[0],old_value[1]] : [0,0,0];
-				this.addWidget("number","x",0,options, function(v){ that.properties.value[0] = v; }); 
-				this.addWidget("number","y",0,options, function(v){ that.properties.value[1] = v; }); 
+				this.addWidget("number","x",this.properties.value[0], function(v){ that.properties.value[0] = v; },options); 
+				this.addWidget("number","y",this.properties.value[1], function(v){ that.properties.value[1] = v; },options); 
 				break;
 			case 'vec3': 
 				this.properties.value = old_value && old_value.length == 3 ? [old_value[0],old_value[1],old_value[2]] : [0,0,0];
-				this.addWidget("number","x",0,options, function(v){ that.properties.value[0] = v; }); 
-				this.addWidget("number","y",0,options, function(v){ that.properties.value[1] = v; }); 
-				this.addWidget("number","z",0,options, function(v){ that.properties.value[2] = v; }); 
+				this.addWidget("number","x",this.properties.value[0], function(v){ that.properties.value[0] = v; },options); 
+				this.addWidget("number","y",this.properties.value[1], function(v){ that.properties.value[1] = v; },options); 
+				this.addWidget("number","z",this.properties.value[2], function(v){ that.properties.value[2] = v; },options); 
 				break;
 			case 'vec4': 
 				this.properties.value = old_value && old_value.length == 4 ? [old_value[0],old_value[1],old_value[2],old_value[3]] : [0,0,0,0];
-				this.addWidget("number","x",0,options, function(v){ that.properties.value[0] = v; }); 
-				this.addWidget("number","y",0,options, function(v){ that.properties.value[1] = v; }); 
-				this.addWidget("number","z",0,options, function(v){ that.properties.value[2] = v; }); 
-				this.addWidget("number","w",0,options, function(v){ that.properties.value[3] = v; }); 
+				this.addWidget("number","x",this.properties.value[0], function(v){ that.properties.value[0] = v; },options); 
+				this.addWidget("number","y",this.properties.value[1], function(v){ that.properties.value[1] = v; },options); 
+				this.addWidget("number","z",this.properties.value[2], function(v){ that.properties.value[2] = v; },options); 
+				this.addWidget("number","w",this.properties.value[3], function(v){ that.properties.value[3] = v; },options); 
 				break;
 			default:
 				console.error("unknown type for constant");
@@ -995,26 +1148,116 @@ gl_FragColor = color;\n\
 		var link_name = getInputLinkID( this, 0 );
 		if(!link_name)
 			return;
-
-		var code = link_name;
-		var type = this.getInputDataType(0);
-		if(type == "float")
-			code = "vec4(" + code + ");";
-		else if(type == "vec2")
-			code = "vec4(" + code + ",0.0,1.0);";
-		else if(type == "vec3")
-			code = "vec4(" + code + ",1.0);";
-
-		context.addCode("fs_code", "color = " + code + ";");
+		var type = this.getInputData(0);
+		var code = varToTypeGLSL( link_name, type, "vec4" );
+		context.addCode("fs_code", "fragcolor = " + code + ";");
 	}
 
 	registerShaderNode( "output/fragcolor", LGraphShaderFragColor );
 
 
+	/*
+	function LGraphShaderDiscard()
+	{
+		this.addInput("v","T");
+		this.addInput("min","T");
+		this.properties = { min_value: 0.0 };
+		this.addWidget("number","min",0,{ step: 0.01, property: "min_value" });
+	}
+
+	LGraphShaderDiscard.title = "Discard";
+
+	LGraphShaderDiscard.prototype.onGetCode = function( context )
+	{
+		if(!this.isOutputConnected(0))
+			return;
+
+		var inlink = getInputLinkID(this,0);
+		var inlink1 = getInputLinkID(this,1);
+
+		if(!inlink && !inlink1) //not connected
+			return;
+		context.addCode("code", return_type + " " + outlink + " = ( (" + inlink + " - "+minv+") / ("+ maxv+" - "+minv+") ) * ("+ maxv2+" - "+minv2+") + " + minv2 + ";", this.shader_destination );
+		this.setOutputData( 0, return_type );
+	}
+
+	registerShaderNode( "output/discard", LGraphShaderDiscard );
+	*/
+
 
 	// *************************************************
 
-	function LGraphShaderMath()
+	function LGraphShaderOperation()
+	{
+		this.addInput("A","float,vec2,vec3,vec4");
+		this.addInput("B","float,vec2,vec3,vec4");
+		this.addOutput("out","");
+		this.properties = {
+			operation: "*"
+		};
+		this.addWidget("combo","op.",this.properties.operation,{ property: "operation", values: LGraphShaderOperation.operations });
+	}
+
+	LGraphShaderOperation.title = "Operation";
+	LGraphShaderOperation.operations = ["+","-","*","/"];
+
+	LGraphShaderOperation.prototype.getTitle = function()
+	{
+		if(this.flags.collapsed)
+			return "A" + this.properties.operation + "B";
+		else
+			return "Operation";
+	}
+
+	LGraphShaderOperation.prototype.onGetCode = function( context )
+	{
+		if(!this.isOutputConnected(0))
+			return;
+
+		var inlinks = [];
+		for(var i = 0; i < 3; ++i)
+			inlinks.push( { name: getInputLinkID(this,i), type: this.getInputData(i) || "float" } );
+
+		var outlink = getOutputLinkID(this,0);
+		if(!outlink) //not connected
+			return;
+
+		//func_desc
+		var base_type = inlinks[0].type;
+		var return_type = base_type;
+		var op = this.properties.operation;
+
+		var params = [];
+		for(var i = 0; i < 2; ++i)
+		{
+			var param_code = inlinks[i].name;
+			if(param_code == null) //not plugged
+			{
+				param_code = p.value != null ? p.value : "(1.0)";
+				inlinks[i].type = "float";
+			}
+
+			//convert
+			if( inlinks[i].type != base_type ) 
+			{
+				if( inlinks[i].type == "float" && (op == "*" || op == "/") )
+				{
+					//I find hard to create the opposite condition now, so I prefeer an else
+				}
+				else
+					param_code = convertVarToGLSLType( param_code, inlinks[i].type, base_type );
+			}
+			params.push( param_code );
+		}
+		
+		context.addCode("code", return_type + " " + outlink + " = "+ params[0] + op + params[1] + ";", this.shader_destination );
+		this.setOutputData( 0, return_type );
+	}
+
+	registerShaderNode( "math/operation", LGraphShaderOperation );
+
+
+	function LGraphShaderFunc()
 	{
 		this.addInput("A","float,vec2,vec3,vec4");
 		this.addInput("B","float,vec2,vec3,vec4");
@@ -1026,9 +1269,9 @@ gl_FragColor = color;\n\
 		this.addWidget("combo","func",this.properties.func,{ property: "func", values: GLSL_functions_name });
 	}
 
-	LGraphShaderMath.title = "Math";
+	LGraphShaderFunc.title = "Func";
 
-	LGraphShaderMath.prototype.onPropertyChanged = function(name,value)
+	LGraphShaderFunc.prototype.onPropertyChanged = function(name,value)
 	{
 		this.graph._version++;
 
@@ -1044,14 +1287,17 @@ gl_FragColor = color;\n\
 
 			//add and update inputs
 			for(var i = 0; i < func_desc.params.length; ++i)
+			{
+				var p = func_desc.params[i];
 				if( this.inputs[i] )
-					this.inputs[i].name = func_desc.params[i].name;
+					this.inputs[i].name = p.name + (p.value ? " (" + p.value + ")" : "");
 				else
-					this.addInput( func_desc.params[i].name, "float,vec2,vec3,vec4" );
+					this.addInput( p.name, "float,vec2,vec3,vec4" );
+			}
 		}
 	}
 
-	LGraphShaderMath.prototype.getTitle = function()
+	LGraphShaderFunc.prototype.getTitle = function()
 	{
 		if(this.flags.collapsed)
 			return this.properties.func;
@@ -1059,7 +1305,7 @@ gl_FragColor = color;\n\
 			return "Func";
 	}
 
-	LGraphShaderMath.prototype.onGetCode = function( context )
+	LGraphShaderFunc.prototype.onGetCode = function( context )
 	{
 		if(!this.isOutputConnected(0))
 			return;
@@ -1089,12 +1335,12 @@ gl_FragColor = color;\n\
 			var param_code = inlinks[i].name;
 			if(param_code == null) //not plugged
 			{
-				param_code = "(1.0)";
+				param_code = p.value != null ? p.value : "(1.0)";
 				inlinks[i].type = "float";
 			}
 			if( (p.type == "T" && inlinks[i].type != base_type) ||
 				(p.type != "T" && inlinks[i].type != base_type) )
-				param_code = convertVarToGLSLType( inlinks[i].name, inlinks[i].type, base_type );
+				param_code = convertVarToGLSLType( param_code, inlinks[i].type, base_type );
 			params.push( param_code );
 		}
 		
@@ -1103,7 +1349,7 @@ gl_FragColor = color;\n\
 		this.setOutputData( 0, return_type );
 	}
 
-	registerShaderNode( "math/func", LGraphShaderMath );
+	registerShaderNode( "math/func", LGraphShaderFunc );
 
 
 
@@ -1181,12 +1427,102 @@ gl_FragColor = color;\n\
 
 	registerShaderNode( "utils/snippet", LGraphShaderSnippet );
 
-
 	//************************************
+
+	function LGraphShaderRand()
+	{
+		this.addOutput("out","float");
+	}
+
+	LGraphShaderRand.title = "Rand";
+
+	LGraphShaderRand.prototype.onGetCode = function( context )
+	{
+		if(!this.isOutputConnected(0))
+			return;
+
+		var outlink = getOutputLinkID(this,0);
+
+		context.addUniform( "u_rand" + this.id, "float", function(){ return Math.random(); });
+		context.addCode("code", "float " + outlink + " = u_rand" + this.id +";", this.shader_destination );
+		this.setOutputData( 0, "float" );
+	}
+
+	registerShaderNode( "input/rand", LGraphShaderRand );
+
+	//noise?
+	//https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+
+
+	function LGraphShaderTime()
+	{
+		this.addOutput("out","float");
+	}
+
+	LGraphShaderTime.title = "Time";
+
+	LGraphShaderTime.prototype.onGetCode = function( context )
+	{
+		if(!this.isOutputConnected(0))
+			return;
+
+		var outlink = getOutputLinkID(this,0);
+
+		context.addUniform( "u_time" + this.id, "float", function(){ return getTime() * 0.001; });
+		context.addCode("code", "float " + outlink + " = u_time" + this.id +";", this.shader_destination );
+		this.setOutputData( 0, "float" );
+	}
+
+	registerShaderNode( "input/time", LGraphShaderTime );
+
+
+	function LGraphShaderDither()
+	{
+		this.addInput("in","T");
+		this.addOutput("out","float");
+	}
+
+	LGraphShaderDither.title = "Dither";
+
+	LGraphShaderDither.prototype.onGetCode = function( context )
+	{
+		if(!this.isOutputConnected(0))
+			return;
+		var inlink = getInputLinkID(this,0);
+		var return_type = "float";
+		var outlink = getOutputLinkID(this,0);
+		var intype = this.getInputData(0);
+		inlink = varToTypeGLSL( inlink, intype, "float" );
+		context.addFunction("dither8x8", LGraphShaderDither.dither_func);
+		context.addCode("code", return_type + " " + outlink + " = dither8x8("+ inlink +");", this.shader_destination );
+		this.setOutputData( 0, return_type );
+	}
+
+	LGraphShaderDither.dither_values = [0.515625,0.140625,0.640625,0.046875,0.546875,0.171875,0.671875,0.765625,0.265625,0.890625,0.390625,0.796875,0.296875,0.921875,0.421875,0.203125,0.703125,0.078125,0.578125,0.234375,0.734375,0.109375,0.609375,0.953125,0.453125,0.828125,0.328125,0.984375,0.484375,0.859375,0.359375,0.0625,0.5625,0.1875,0.6875,0.03125,0.53125,0.15625,0.65625,0.8125,0.3125,0.9375,0.4375,0.78125,0.28125,0.90625,0.40625,0.25,0.75,0.125,0.625,0.21875,0.71875,0.09375,0.59375,1.0001,0.5,0.875,0.375,0.96875,0.46875,0.84375,0.34375];
+	
+	LGraphShaderDither.dither_func = "\n\
+		float dither8x8(float brightness) {\n\
+		  vec2 position = vec2(0.0);\n\
+		  #ifdef FRAGMENT\n\
+			position = gl_FragCoord.xy;\n\
+		  #endif\n\
+		  int x = int(mod(position.x, 8.0));\n\
+		  int y = int(mod(position.y, 8.0));\n\
+		  int index = x + y * 8;\n\
+		  float limit = 0.0;\n\
+		  if (x < 8) {\n\
+			if(index==0) limit = 0.015625;\n\
+			"+(LGraphShaderDither.dither_values.map( function(v,i){ return "else if(index== "+(i+1)+") limit = " + v + ";"}).join("\n"))+"\n\
+		  }\n\
+		  return brightness < limit ? 0.0 : 1.0;\n\
+		}\n",
+
+	registerShaderNode( "math/dither", LGraphShaderDither );
+
 	function LGraphShaderRemap()
 	{
-		this.addInput("","T,float,vec2,vec3,vec4");
-		this.addOutput("","T");
+		this.addInput("","float,vec2,vec3,vec4");
+		this.addOutput("","");
 		this.properties = {
 			min_value: 0,
 			max_value: 1,

@@ -8928,6 +8928,8 @@ LGraphNode.prototype.executeAction = function(action)
 			//value changed
 			if( old_value != w.value )
 			{
+				if(node.onWidgetChanged)
+					node.onWidgetChanged( w.name,w.value,old_value,w );
                 node.graph._version++;
 			}
 
@@ -9137,7 +9139,10 @@ LGraphNode.prototype.executeAction = function(action)
         var entries = [];
         for (var i in values) {
             if (values[i]) {
-                entries.push({ value: values[i], content: values[i], has_submenu: true });
+				var name = values[i];
+				if(name.indexOf("::") != -1) //in case it has a namespace like "shader::math/rand" it hides the namespace
+					name = name.split("::")[1];
+                entries.push({ value: values[i], content: name, has_submenu: true });
             }
         }
 
@@ -10187,6 +10192,7 @@ LGraphNode.prototype.executeAction = function(action)
 		{
 			options = options || {};
 			var str_value = String(value);
+			type = type.toLowerCase();
 			if(type == "number")
 				str_value = value.toFixed(3);
 
@@ -10775,7 +10781,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         if (node.getExtraMenuOptions) {
-            var extra = node.getExtraMenuOptions(this);
+            var extra = node.getExtraMenuOptions(this, options);
             if (extra) {
                 extra.push(null);
                 options = extra.concat(options);
