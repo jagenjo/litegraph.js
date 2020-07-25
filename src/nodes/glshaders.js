@@ -46,7 +46,9 @@
 		"distance":"float distance(T p0, T p1)",
 		"normalize":"T normalize(T x)",
 		"dot": "float dot(T x,T y)",
-		"cross": "vec3 cross(vec3 x,vec3 y)"
+		"cross": "vec3 cross(vec3 x,vec3 y)",
+		"reflect": "vec3 reflect(vec3 V,vec3 N)",
+		"refract": "vec3 refract(vec3 V,vec3 N, float IOR)"
 	};
 
 	//parse them
@@ -104,6 +106,36 @@
 			{
 				 this.graph._version++;
 			}
+
+		/*
+		if(!node_ctor.prototype.onGetCode)
+			node_ctor.prototype.onGetCode = function()
+			{
+				//check destination to avoid lonely nodes
+				if(!this.shader_destination)
+					return;
+				//grab inputs with types
+				var inputs = [];
+				if(this.inputs)
+				for(var i = 0; i < this.inputs.length; ++i)
+					inputs.push({ type: this.getInputData(i), name: getInputLinkID(this,i) });
+				var outputs = [];
+				if(this.outputs)
+				for(var i = 0; i < this.outputs.length; ++i)
+					outputs.push({ name: getOutputLinkID(this,i) });
+				//pass to code func
+				var results = this.extractCode(inputs);
+				//grab output, pass to next
+				if(results)
+				for(var i = 0; i < results.length; ++i)
+				{
+					var r = results[i];
+					if(!r)
+						continue;
+					this.setOutputData(i,r.value);
+				}
+			}
+		*/
 
 		LiteGraph.registerNodeType( "shader::" + type, node_ctor );
 	}
@@ -755,6 +787,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderUniform.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		var type = this.properties.type;
 		if( !type )
 			return;
@@ -792,6 +827,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderAttribute.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		var type = this.properties.type;
 		if( !type || LGShaders.GLSL_types.indexOf(type) == -1 )
 			return;
@@ -825,6 +863,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderSampler2D.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		var texname = getInputLinkID( this, 0 );
 		var varname = getShaderNodeVarName(this);
 		var code = "vec4 " + varname + " = vec4(0.0);\n";
@@ -937,6 +978,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderConstant.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		var value = valueToGLSL( this.properties.value, this.properties.type );
 		var link_name = getOutputLinkID(this,0);
 		if(!link_name) //not connected
@@ -972,6 +1016,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec2.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		var props = this.properties;
 
 		var varname = getShaderNodeVarName(this);
@@ -1038,6 +1085,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec3.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		var props = this.properties;
 
 		var varname = getShaderNodeVarName(this);
@@ -1102,6 +1152,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec4.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		var props = this.properties;
 
 		var varname = getShaderNodeVarName(this);
@@ -1211,6 +1264,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderOperation.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		if(!this.isOutputConnected(0))
 			return;
 
@@ -1307,6 +1363,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderFunc.prototype.onGetCode = function( context )
 	{
+		if(!this.shader_destination)
+			return;
+
 		if(!this.isOutputConnected(0))
 			return;
 
@@ -1389,7 +1448,7 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderSnippet.prototype.onGetCode = function( context )
 	{
-		if(!this.isOutputConnected(0))
+		if(!this.shader_destination || !this.isOutputConnected(0))
 			return;
 
 		var inlinkA = getInputLinkID(this,0);
@@ -1438,7 +1497,7 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderRand.prototype.onGetCode = function( context )
 	{
-		if(!this.isOutputConnected(0))
+		if(!this.shader_destination || !this.isOutputConnected(0))
 			return;
 
 		var outlink = getOutputLinkID(this,0);
@@ -1463,7 +1522,7 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderTime.prototype.onGetCode = function( context )
 	{
-		if(!this.isOutputConnected(0))
+		if(!this.shader_destination || !this.isOutputConnected(0))
 			return;
 
 		var outlink = getOutputLinkID(this,0);
@@ -1486,8 +1545,9 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderDither.prototype.onGetCode = function( context )
 	{
-		if(!this.isOutputConnected(0))
+		if(!this.shader_destination || !this.isOutputConnected(0))
 			return;
+
 		var inlink = getInputLinkID(this,0);
 		var return_type = "float";
 		var outlink = getOutputLinkID(this,0);
@@ -1550,7 +1610,7 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderRemap.prototype.onGetCode = function( context )
 	{
-		if(!this.isOutputConnected(0))
+		if(!this.shader_destination || !this.isOutputConnected(0))
 			return;
 
 		var inlink = getInputLinkID(this,0);

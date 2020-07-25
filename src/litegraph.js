@@ -8578,6 +8578,7 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.textAlign = "left";
 			if(w.disabled)
 				ctx.globalAlpha *= 0.5;
+			var widget_width = w.width || width;
 
             switch (w.type) {
                 case "button":
@@ -8586,13 +8587,13 @@ LGraphNode.prototype.executeAction = function(action)
                         w.clicked = false;
                         this.dirty_canvas = true;
                     }
-                    ctx.fillRect(margin, y, width - margin * 2, H);
+                    ctx.fillRect(margin, y, widget_width - margin * 2, H);
 					if(show_text && !w.disabled)
-	                    ctx.strokeRect( margin, y, width - margin * 2, H );
+	                    ctx.strokeRect( margin, y, widget_width - margin * 2, H );
                     if (show_text) {
                         ctx.textAlign = "center";
                         ctx.fillStyle = text_color;
-                        ctx.fillText(w.name, width * 0.5, y + H * 0.7);
+                        ctx.fillText(w.name, widget_width * 0.5, y + H * 0.7);
                     }
                     break;
                 case "toggle":
@@ -8601,15 +8602,15 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
                     if (show_text)
-	                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, H * 0.5);
 					else
-	                    ctx.rect(margin, posY, width - margin * 2, H );
+	                    ctx.rect(margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
 					if(show_text && !w.disabled)
 	                    ctx.stroke();
                     ctx.fillStyle = w.value ? "#89A" : "#333";
                     ctx.beginPath();
-                    ctx.arc( width - margin * 2, y + H * 0.5, H * 0.36, 0, Math.PI * 2 );
+                    ctx.arc( widget_width - margin * 2, y + H * 0.5, H * 0.36, 0, Math.PI * 2 );
                     ctx.fill();
                     if (show_text) {
                         ctx.fillStyle = secondary_text_color;
@@ -8622,31 +8623,31 @@ LGraphNode.prototype.executeAction = function(action)
                             w.value
                                 ? w.options.on || "true"
                                 : w.options.off || "false",
-                            width - 40,
+                            widget_width - 40,
                             y + H * 0.7
                         );
                     }
                     break;
                 case "slider":
                     ctx.fillStyle = background_color;
-                    ctx.fillRect(margin, y, width - margin * 2, H);
+                    ctx.fillRect(margin, y, widget_width - margin * 2, H);
                     var range = w.options.max - w.options.min;
                     var nvalue = (w.value - w.options.min) / range;
                     ctx.fillStyle = active_widget == w ? "#89A" : "#678";
-                    ctx.fillRect(margin, y, nvalue * (width - margin * 2), H);
+                    ctx.fillRect(margin, y, nvalue * (widget_width - margin * 2), H);
 					if(show_text && !w.disabled)
-	                    ctx.strokeRect(margin, y, width - margin * 2, H);
+	                    ctx.strokeRect(margin, y, widget_width - margin * 2, H);
                     if (w.marker) {
                         var marker_nvalue = (w.marker - w.options.min) / range;
                         ctx.fillStyle = "#AA9";
-                        ctx.fillRect( margin + marker_nvalue * (width - margin * 2), y, 2, H );
+                        ctx.fillRect( margin + marker_nvalue * (widget_width - margin * 2), y, 2, H );
                     }
                     if (show_text) {
                         ctx.textAlign = "center";
                         ctx.fillStyle = text_color;
                         ctx.fillText(
                             w.name + "  " + Number(w.value).toFixed(3),
-                            width * 0.5,
+                            widget_width * 0.5,
                             y + H * 0.7
                         );
                     }
@@ -8658,9 +8659,9 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
 					if(show_text)
-	                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, H * 0.5);
 					else
-	                    ctx.rect(margin, posY, width - margin * 2, H );
+	                    ctx.rect(margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
                     if (show_text) {
 						if(!w.disabled)
@@ -8674,9 +8675,9 @@ LGraphNode.prototype.executeAction = function(action)
 							ctx.lineTo(margin + 16, posY + H - 5);
 							ctx.fill();
 							ctx.beginPath();
-							ctx.moveTo(width - margin - 16, posY + 5);
-							ctx.lineTo(width - margin - 6, posY + H * 0.5);
-							ctx.lineTo(width - margin - 16, posY + H - 5);
+							ctx.moveTo(widget_width - margin - 16, posY + 5);
+							ctx.lineTo(widget_width - margin - 6, posY + H * 0.5);
+							ctx.lineTo(widget_width - margin - 16, posY + H - 5);
 							ctx.fill();
 						}
                         ctx.fillStyle = secondary_text_color;
@@ -8690,7 +8691,7 @@ LGraphNode.prototype.executeAction = function(action)
                                         ? w.options.precision
                                         : 3
                                 ),
-                                width - margin * 2 - 20,
+                                widget_width - margin * 2 - 20,
                                 y + H * 0.7
                             );
                         } else {
@@ -8705,7 +8706,7 @@ LGraphNode.prototype.executeAction = function(action)
 							}
                             ctx.fillText(
                                 v,
-                                width - margin * 2 - 20,
+                                widget_width - margin * 2 - 20,
                                 y + H * 0.7
                             );
                         }
@@ -8718,14 +8719,14 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
                     if (show_text)
-	                    ctx.roundRect(margin, posY, width - margin * 2, H, H * 0.5);
+	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, H * 0.5);
 					else
-	                    ctx.rect( margin, posY, width - margin * 2, H );
+	                    ctx.rect( margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
                     if (show_text) {
 						ctx.save();
 						ctx.beginPath();
-						ctx.rect(margin, posY, width - margin * 2, H);
+						ctx.rect(margin, posY, widget_width - margin * 2, H);
 						ctx.clip();
 
 	                    ctx.stroke();
@@ -8735,17 +8736,17 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                         ctx.fillStyle = text_color;
                         ctx.textAlign = "right";
-                        ctx.fillText(String(w.value).substr(0,30), width - margin * 2, y + H * 0.7); //30 chars max
+                        ctx.fillText(String(w.value).substr(0,30), widget_width - margin * 2, y + H * 0.7); //30 chars max
 						ctx.restore();
                     }
                     break;
                 default:
                     if (w.draw) {
-                        w.draw(ctx, node, width, y, H);
+                        w.draw(ctx, node, widget_width, y, H);
                     }
                     break;
             }
-            posY += (w.computeSize ? w.computeSize(width)[1] : H) + 4;
+            posY += (w.computeSize ? w.computeSize(widget_width)[1] : H) + 4;
 			ctx.globalAlpha = this.editor_alpha;
 
         }
@@ -8778,14 +8779,15 @@ LGraphNode.prototype.executeAction = function(action)
 			if(!w || w.disabled)
 				continue;
 			var widget_height = w.computeSize ? w.computeSize(width)[1] : LiteGraph.NODE_WIDGET_HEIGHT;
+			var widget_width = w.width || width;
 			//outside
 			if ( w != active_widget && 
-				(x < 6 || x > width - 12 || y < w.last_y || y > w.last_y + widget_height) ) 
+				(x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height) ) 
 				continue;
 
 			var old_value = w.value;
 
-            //if ( w == active_widget || (x > 6 && x < width - 12 && y > w.last_y && y < w.last_y + widget_height) ) {
+            //if ( w == active_widget || (x > 6 && x < widget_width - 12 && y > w.last_y && y < w.last_y + widget_height) ) {
 			//inside widget
 			switch (w.type) {
 				case "button":
@@ -8802,7 +8804,7 @@ LGraphNode.prototype.executeAction = function(action)
 					break;
 				case "slider":
 					var range = w.options.max - w.options.min;
-					var nvalue = Math.clamp((x - 10) / (width - 20), 0, 1);
+					var nvalue = Math.clamp((x - 10) / (widget_width - 20), 0, 1);
 					w.value =
 						w.options.min +
 						(w.options.max - w.options.min) * nvalue;
@@ -8834,7 +8836,7 @@ LGraphNode.prototype.executeAction = function(action)
 						if( w.type != "number")
 							values_list = values.constructor === Array ? values : Object.keys(values);
 
-						var delta = x < 40 ? -1 : x > width - 40 ? 1 : 0;
+						var delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
 						if (w.type == "number") {
 							w.value += delta * 0.1 * (w.options.step || 1);
 							if ( w.options.min != null && w.value < w.options.min ) {
@@ -8881,7 +8883,7 @@ LGraphNode.prototype.executeAction = function(action)
 					} //end mousedown
 					else if(event.type == "mouseup" && w.type == "number")
 					{
-						var delta = x < 40 ? -1 : x > width - 40 ? 1 : 0;
+						var delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
 						if (event.click_time < 200 && delta == 0) {
 							this.prompt("Value",w.value,function(v) {
 									this.value = Number(v);
