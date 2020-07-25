@@ -673,7 +673,7 @@
 
         if (typeof this.str == "string") {
             var lines = this.str.split("\\n");
-            for (var i in lines) {
+            for (var i=0; i < lines.length; i++) {
                 ctx.fillText(
                     lines[i],
                     this.properties["align"] == "left" ? 15 : this.size[0] - 15,
@@ -704,7 +704,7 @@
         this.last_ctx.font =
             this.properties["fontsize"] + "px " + this.properties["font"];
         var max = 0;
-        for (var i in lines) {
+        for (var i=0; i < lines.length; i++) {
             var w = this.last_ctx.measureText(lines[i]).width;
             if (max < w) {
                 max = w;
