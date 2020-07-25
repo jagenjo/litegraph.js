@@ -1,15 +1,15 @@
 # litegraph.js
 
-A library in Javascript to create graphs in the browser similar to Unreal Blueprints. Nodes can be programmed easily and it includes an editor to construct the graphs.
+A library in Javascript to create graphs in the browser similar to Unreal Blueprints. Nodes can be programmed easily and it includes an editor to construct and tests the graphs.
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
-Try it in the [demo site](https://tamats.com/projects/litegraph/demo).
+Try it in the [demo site](https://tamats.com/projects/litegraph/editor).
 
 ![Node Graph](imgs/node_graph_example.png "WebGLStudio")
 
 ## Features
-- Renders on Canvas2D (zoom in, zoom out, panning, can be used inside a WebGLTexture)
+- Renders on Canvas2D (zoom in/out and panning, easy to render complex interfaces, can be used inside a WebGLTexture)
 - Easy to use editor (searchbox, keyboard shortcuts, multiple selection, context menu, ...)
 - Optimized to support hundreds of nodes per graph (on editor but also on execution)
 - Customizable theme (colors, shapes, background)
@@ -19,6 +19,7 @@ Try it in the [demo site](https://tamats.com/projects/litegraph/demo).
 - Graphs can be executed in NodeJS
 - Highly customizable nodes (color, shape, slots vertical or horizontal, widgets, custom rendering)
 - Easy to integrate in any JS application (one single file, no dependencies)
+- Typescript support
 
 ## Nodes provided
 Although it is easy to create new node types, LiteGraph comes with some default nodes that could be useful for many cases:
@@ -35,7 +36,7 @@ You can install it using npm
 npm install litegraph.js
 ```
 
-Or downloading the ```build/litegraph.js``` version from this repository.
+Or downloading the ```build/litegraph.js``` and ```css/litegraph.css``` version from this repository.
 
 ## First project ##
 
@@ -179,6 +180,8 @@ You can write any feedback to javi.agenjo@gmail.com
 - rappestad
 - InventivetalentDev
 - NateScarlet
+- coderofsalvation
+- ilyabesk
 
 
 

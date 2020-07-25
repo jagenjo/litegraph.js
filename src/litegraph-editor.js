@@ -3,19 +3,17 @@ function Editor(container_id, options) {
     options = options || {};
 
     //fill container
-    var html =
-        "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
-    html +=
-        "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
-    html +=
-        "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
+    var html = "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
+    html += "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
+    html += "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
 
     var root = document.createElement("div");
     this.root = root;
-    root.className = "litegraph-editor";
+    root.className = "litegraph litegraph-editor";
     root.innerHTML = html;
 
     this.tools = root.querySelector(".tools");
+    this.content = root.querySelector(".content");
     this.footer = root.querySelector(".footer");
 
     var canvas = root.querySelector(".graphcanvas");
@@ -27,6 +25,8 @@ function Editor(container_id, options) {
     graph.onAfterExecute = function() {
         graphcanvas.draw(true);
     };
+
+	graphcanvas.onDropItem = this.onDropItem.bind(this);
 
     //add stuff
     //this.addToolsButton("loadsession_button","Load","imgs/icon-load.png", this.onLoadButton.bind(this), ".tools-left" );
@@ -104,56 +104,31 @@ Editor.prototype.addLoadCounter = function() {
     }, 200);
 };
 
-Editor.prototype.addToolsButton = function(
-    id,
-    name,
-    icon_url,
-    callback,
-    container
-) {
+Editor.prototype.addToolsButton = function( id, name, icon_url, callback, container ) {
     if (!container) {
         container = ".tools";
     }
 
-    var button = this.createButton(name, icon_url);
+    var button = this.createButton(name, icon_url, callback);
     button.id = id;
-    button.addEventListener("click", callback);
-
     this.root.querySelector(container).appendChild(button);
 };
 
-Editor.prototype.createPanel = function(title, options) {
-    var root = document.createElement("div");
-    root.className = "dialog";
-    root.innerHTML =
-        "<div class='dialog-header'><span class='dialog-title'>" +
-        title +
-        "</span></div><div class='dialog-content'></div><div class='dialog-footer'></div>";
-    root.header = root.querySelector(".dialog-header");
-    root.content = root.querySelector(".dialog-content");
-    root.footer = root.querySelector(".dialog-footer");
-
-    return root;
-};
-
-Editor.prototype.createButton = function(name, icon_url) {
+Editor.prototype.createButton = function(name, icon_url, callback) {
     var button = document.createElement("button");
     if (icon_url) {
         button.innerHTML = "<img src='" + icon_url + "'/> ";
     }
+	button.classList.add("btn");
     button.innerHTML += name;
+	if(callback)
+		button.addEventListener("click", callback );
     return button;
 };
 
 Editor.prototype.onLoadButton = function() {
-    var panel = this.createPanel("Load session");
-    var close = this.createButton("Close");
-    close.style.float = "right";
-    close.addEventListener("click", function() {
-        panel.parentNode.removeChild(panel);
-    });
-    panel.header.appendChild(close);
-    panel.content.innerHTML = "test";
+    var panel = this.graphcanvas.createPanel("Load session",{closable:true});
+	//TO DO
 
     this.root.appendChild(panel);
 };
@@ -192,6 +167,25 @@ Editor.prototype.onLiveButton = function() {
         : "<img src='imgs/icon-gear.png'/> Edit";
 };
 
+Editor.prototype.onDropItem = function(e)
+{
+	var that = this;
+	for(var i = 0; i < e.dataTransfer.files.length; ++i)
+	{
+		var file = e.dataTransfer.files[i];
+		var ext = LGraphCanvas.getFileExtension(file.name);
+		var reader = new FileReader();
+		if(ext == "json")
+		{
+			reader.onload = function(event) {
+				var data = JSON.parse( event.target.result );
+				that.graph.configure(data);
+			};
+			reader.readAsText(file);
+		}
+	}
+}
+
 Editor.prototype.goFullscreen = function() {
     if (this.root.requestFullscreen) {
         this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
@@ -225,7 +219,7 @@ Editor.prototype.addMiniWindow = function(w, h) {
     var canvas = miniwindow.querySelector("canvas");
     var that = this;
 
-    var graphcanvas = new LGraphCanvas(canvas, this.graph);
+    var graphcanvas = new LGraphCanvas( canvas, this.graph );
     graphcanvas.show_info = false;
     graphcanvas.background_image = "imgs/grid.png";
     graphcanvas.scale = 0.25;
@@ -263,7 +257,7 @@ Editor.prototype.addMiniWindow = function(w, h) {
 
     var close_button = document.createElement("div");
     close_button.className = "corner-button";
-    close_button.innerHTML = "X";
+    close_button.innerHTML = "&#10060;";
     close_button.addEventListener("click", function(e) {
         graphcanvas.setGraph(null);
         miniwindow.parentNode.removeChild(miniwindow);

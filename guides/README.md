@@ -12,7 +12,7 @@ And in ```the src/``` folder there is also another class included:
 ## LGraphNode
 
 LGraphNode is the base class used for all the nodes classes.
-To extend the other classes all the methods contained in LGraphNode.prototype are copyed to the classes when registered.
+To extend the other classes all the methods contained in LGraphNode.prototype are copied to the classes when registered.
 
 When you create a new node type you do not have to inherit from that class, when the node is registered all the methods are copied to your node prototype.  This is done inside the functions ```LiteGraph.registerNodeType(...)```.
 
@@ -59,12 +59,15 @@ LiteGraph.registerNodeType("basic/sum", MyAddNode );
 There are several settings that could be defined or modified per node:
 * **size**: ```[width,height]``` the size of the area inside the node (excluding title). Every row is LiteGraph.NODE_SLOT_HEIGHT pixels height.
 * **properties**: object containing the properties that could be configured by the user, and serialized when saving the graph
-* **shape**: the shape of the object (could be LiteGraph.BOX,LiteGraph.ROUND,LiteGraph.CARD)
-* **flags**: several flags
-  * **resizable**: if it can be resized dragging the corner
-  * **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
-  * **clip_area**: clips the content when rendering the node
+* **shape**: the shape of the object (could be LiteGraph.BOX_SHAPE,LiteGraph.ROUND_SHAPE,LiteGraph.CARD_SHAPE)
+* **flags**: flags that can be changed by the user and will be stored when serialized
   * **collapsed**: if it is shown collapsed (small)
+* **redraw_on_mouse**: forces a redraw if the mouse passes over the widget
+* **widgets_up**: widgets do not start after the slots
+* **widgets_start_y**: widgets should start being drawn from this Y
+* **clip_area**: clips the content when rendering the node
+* **resizable**: if it can be resized dragging the corner
+* **horizontal**: if the slots should be placed horizontally on the top and bottom of the node
 
 There are several callbacks that could be defined by the user:
 * **onAdded**: called when added to graph
@@ -102,7 +105,7 @@ Slots have the next information:
 
  * **name**: string with the name of the slot (used also to show in the canvas)
  * **type**: string specifying the data type traveling through this link
- * **link or links**: depending if the slot is input or ouput contains the id of the link or an array of ids
+ * **link or links**: depending if the slot is input or output contains the id of the link or an array of ids
  * **label**: optional, string used to rename the name as shown in the canvas.
  * **dir**: optional, could be LiteGraph.UP, LiteGraph.RIGHT, LiteGraph.DOWN, LiteGraph.LEFT
  * **color_on**: color to render when it is connected
@@ -186,7 +189,14 @@ function MyNodeType()
 This is the list of supported widgets:
 * **"number"** to change a value of a number, the syntax is ```this.addWidget("number","Number", current_value, callback, { min: 0, max: 100, step: 1} );```
 * **"slider"** to change a number by draging the mouse, the syntax is the same as number.
-* **"combo"** to select between multiple choices, the syntax is: ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```
+* **"combo"** to select between multiple choices, the syntax is:
+
+  ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```
+  
+  or if you want to use objects:
+  
+  ```this.addWidget("combo","Combo", value1, callback, { values: { "title1":value1, "title2":value2 } );```
+  
 * **"text"** to edit a short string
 * **"toggle"** like a checkbox
 * **"button"**
@@ -244,3 +254,63 @@ If you want to start the graph then:
 ```js
 graph.start();
 ```
+
+## Events
+
+When we run a step in a graph (using ```graph.runStep()```) every node onExecute method will be called.
+But sometimes you want that actions are only performed when some trigger is activated, for this situations you can use Events.
+
+Events allow to trigger executions in nodes only when an event is dispatched from one node.
+
+To define slots for nodes you must use the type LiteGraph.ACTION for inputs, and LIteGraph.EVENT for outputs:
+
+```js
+function MyNode()
+{
+  this.addInput("play", LiteGraph.ACTION );
+  this.addInput("onFinish", LiteGraph.EVENT );  
+}
+```
+
+Now to execute some code when an event is received from an input, you must define the method onAction:
+
+```js
+MyNode.prototype.onAction = function(action, data)
+{
+   if(action == "play")
+   {
+     //do your action...
+   }
+
+}
+```
+
+And the last thing is to trigger events when something in your node happens. You could trigger them from inside the onExecute or from any other interaction:
+
+```js
+MyNode.prototype.onAction = function(action, data)
+{
+   if( this.button_was_clicked )
+    this.triggerSlot(0); //triggers event in slot 0
+}
+```
+
+There are some nodes already available to handle events, like delaying, counting, etc.
+
+
+
+
+
+
+
+```
+
+
+
+
+
+
+
+
+
+

@@ -11,11 +11,17 @@ export type widgetTypes =
     | "text"
     | "toggle"
     | "button";
+export type SlotShape =
+    | typeof LiteGraph.BOX_SHAPE
+    | typeof LiteGraph.CIRCLE_SHAPE
+    | typeof LiteGraph.ARROW_SHAPE
+    | typeof LiteGraph.SQUARE_SHAPE
+    | number; // For custom shapes
 
 /** https://github.com/jagenjo/litegraph.js/tree/master/guides#node-slots */
 export interface INodeSlot {
     name: string;
-    type: string;
+    type: string | -1;
     label?: string;
     dir?:
         | typeof LiteGraph.UP
@@ -24,6 +30,7 @@ export interface INodeSlot {
         | typeof LiteGraph.LEFT;
     color_on?: string;
     color_off?: string;
+    shape?: SlotShape;
     locked?: boolean;
     nameLocked?: boolean;
 }
@@ -68,11 +75,12 @@ export interface IWidget<TValue = any, TOptions = any> {
      * https://github.com/jagenjo/litegraph.js/issues/76
      */
     mouse?(
-        ctx: undefined,
         event: MouseEvent,
         pos: Vector2,
         node: LGraphNode
-    ): void;
+    ): boolean;
+    /** Called by `LGraphNode.computeSize` */
+    computeSize?(width: number): [number, number];
 }
 export interface IButtonWidget extends IWidget<null, {}> {
     type: "button";
@@ -173,6 +181,7 @@ export const LiteGraph: {
     CIRCLE_SHAPE: 3;
     CARD_SHAPE: 4;
     ARROW_SHAPE: 5;
+    SQUARE_SHAPE: 6;
 
     //enums
     INPUT: 1;
@@ -228,6 +237,10 @@ export const LiteGraph: {
     createNode<T extends LGraphNode = LGraphNode>(type: string): T;
     /** Register a node class so it can be listed when the user wants to create a new one */
     registerNodeType(type: string, base: { new (): LGraphNode }): void;
+    /** removes a node type from the system */
+    unregisterNodeType(type: string): void;
+    /** Removes all previously registered node's types. */
+    clearRegisteredTypes(): void;
     /**
      * Create a new node type by passing a function, it wraps it with a proper class and generates inputs according to the parameters of the function.
      * Useful to wrap simple methods that do not require properties, and that only process some input to generate an output.
@@ -240,7 +253,7 @@ export const LiteGraph: {
     wrapFunctionAsNode(
         name: string,
         func: (...args: any[]) => any,
-        param_types?: [],
+        param_types?: string[],
         return_type?: string,
         properties?: object
     ): void;
@@ -431,6 +444,11 @@ export declare class LGraph {
      * @param node the instance of the node
      */
     add(node: LGraphNode, skip_compute_order?: boolean): void;
+    /**
+     * Called when a new node is added
+     * @param node the instance of the node
+     */
+    onNodeAdded(node: LGraphNode): void;
     /** Removes a node from the graph */
     remove(node: LGraphNode): void;
     /** Returns a node by its id. */
@@ -593,7 +611,9 @@ export declare class LGraphNode {
     properties: Record<string, any>;
     properties_info: any[];
 
-    flags: object;
+    flags: Partial<{
+        collapsed: boolean
+    }>;
 
     color: string;
     bgcolor: string;
@@ -614,6 +634,17 @@ export declare class LGraphNode {
         | typeof LiteGraph.ON_TRIGGER
         | typeof LiteGraph.NEVER
         | typeof LiteGraph.ALWAYS;
+
+    /** If set to true widgets do not start after the slots */
+    widgets_up: boolean;
+    /** widgets start at y distance from the top of the node */
+    widgets_start_y: number;
+    /** if you render outside the node, it will be clipped */
+    clip_area: boolean;
+    /** if set to false it wont be resizable with the mouse */
+    resizable: boolean;
+    /** slots are distributed horizontally */
+    horizontal: boolean;
 
     /** configure a node from an object containing the serialized info */
     configure(info: SerializedLGraphNode): void;
@@ -707,7 +738,7 @@ export declare class LGraphNode {
      */
     addOutput(
         name: string,
-        type: string,
+        type: string | -1,
         extra_info?: Partial<INodeOutputSlot>
     ): void;
     /**
@@ -715,7 +746,7 @@ export declare class LGraphNode {
      * @param array of triplets like [[name,type,extra_info],[...]]
      */
     addOutputs(
-        array: [string, string, Partial<INodeOutputSlot> | undefined][]
+        array: [string, string | -1, Partial<INodeOutputSlot> | undefined][]
     ): void;
     /** remove an existing output slot */
     removeOutput(slot: number): void;
@@ -727,7 +758,7 @@ export declare class LGraphNode {
      */
     addInput(
         name: string,
-        type: string,
+        type: string | -1,
         extra_info?: Partial<INodeInputSlot>
     ): void;
     /**
@@ -735,7 +766,7 @@ export declare class LGraphNode {
      * @param array of triplets like [[name,type,extra_info],[...]]
      */
     addInputs(
-        array: [string, string, Partial<INodeInputSlot> | undefined][]
+        array: [string, string | -1, Partial<INodeInputSlot> | undefined][]
     ): void;
     /** remove an existing input slot */
     removeInput(slot: number): void;
@@ -769,7 +800,7 @@ export declare class LGraphNode {
         type: T["type"],
         name: string,
         value: T["value"],
-        callback?: WidgetCallback<T>,
+        callback?: WidgetCallback<T> | string,
         options?: T["options"]
     ): T;
 
@@ -863,12 +894,12 @@ export declare class LGraphNode {
 
     // https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#custom-node-appearance
     onDrawBackground?(
-        canvas: HTMLCanvasElement,
-        ctx: CanvasRenderingContext2D
+        ctx: CanvasRenderingContext2D,
+        canvas: HTMLCanvasElement
     ): void;
     onDrawForeground?(
-        canvas: HTMLCanvasElement,
-        ctx: CanvasRenderingContext2D
+        ctx: CanvasRenderingContext2D,
+        canvas: HTMLCanvasElement
     ): void;
 
     // https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#custom-node-behaviour
@@ -926,10 +957,34 @@ export declare class LGraphNode {
     onConnectInput?(
         inputIndex: number,
         type: INodeOutputSlot["type"],
-        outputSlot: INodeOutputSlot
+        outputSlot: INodeOutputSlot,
+        _this: this,
+        slotIndex: number
     ): boolean;
+
+    /**
+     * Called just before connection (or disconnect - if input is linked).
+     * A convenient place to switch to another input, or create new one.
+     * This allow for ability to automatically add slots if needed
+     * @param inputIndex
+     * @return selected input slot index, can differ from parameter value
+     */
+    onBeforeConnectInput?(
+        inputIndex: number
+    ): number;
+    
+    /** a connection changed (new one or removed) (LiteGraph.INPUT or LiteGraph.OUTPUT, slot, true if connected, link_info, input_info or output_info ) */
+    onConnectionsChange(
+        type: number,
+        slotIndex: number,
+        isConnected: boolean,
+        link: LLink,
+        ioSlot: (INodeOutputSlot | INodeInputSlot)
+    ): void;                           
+
     /** Called by `LGraphCanvas.processContextMenu` */
     getMenuOptions?(graphCanvas: LGraphCanvas): ContextMenuItem[];
+    getSlotMenuOptions?(slot: INodeSlot): ContextMenuItem[];
 }
 
 export type LGraphNodeConstructor<T extends LGraphNode = LGraphNode> = {
@@ -1017,6 +1072,7 @@ export declare class LGraphCanvas {
     /** Create menu for `Add Node` */
     static onMenuAdd: ContextMenuEventListener;
     static showMenuNodeOptionalInputs: ContextMenuEventListener;
+    static showMenuNodeOptionalOutputs: ContextMenuEventListener;
     static onShowMenuNodeProperties: ContextMenuEventListener;
     static onResizeNode: ContextMenuEventListener;
     static onMenuNodeCollapse: ContextMenuEventListener;
@@ -1089,7 +1145,7 @@ export declare class LGraphCanvas {
     last_mouse_position: Vector2;
     /** Timestamp of last mouse click, defaults to 0 */
     last_mouseclick: number;
-    link_render_mode:
+    links_render_mode:
         | typeof LiteGraph.STRAIGHT_LINK
         | typeof LiteGraph.LINEAR_LINK
         | typeof LiteGraph.SPLINE_LINK;
@@ -1111,6 +1167,20 @@ export declare class LGraphCanvas {
     onDrawOverlay: ((ctx: CanvasRenderingContext2D) => void) | null;
     /** Called by `LGraphCanvas.processMouseDown` */
     onMouse: ((event: MouseEvent) => boolean) | null;
+    /** Called by `LGraphCanvas.drawFrontCanvas` and `LGraphCanvas.drawLinkTooltip` */
+    onDrawLinkTooltip: ((ctx: CanvasRenderingContext2D, link: LLink, _this: this) => void) | null;
+    /** Called by `LGraphCanvas.selectNodes` */
+    onNodeMoved: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.processNodeSelected` */
+    onNodeSelected: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.deselectNode` */
+    onNodeDeselected: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.processNodeDblClicked` */
+    onShowNodePanel: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.processNodeDblClicked` */
+    onNodeDblClicked: ((node: LGraphNode) => void) | null;
+    /** Called by `LGraphCanvas.selectNodes` */
+    onSelectionChange: ((nodes: Record<number, LGraphNode>) => void) | null;
     /** Called by `LGraphCanvas.showSearchBox` */
     onSearchBox:
         | ((
@@ -1213,7 +1283,7 @@ export declare class LGraphCanvas {
     /** selects a given node (or adds it to the current selection) */
     selectNode(node: LGraphNode, add?: boolean): void;
     /** selects several nodes (or adds them to the current selection) */
-    selectNodes(nodes: LGraphNode[], add?: boolean): void;
+    selectNodes(nodes?: LGraphNode[], add?: boolean): void;
     /** removes a node from the current selection */
     deselectNode(node: LGraphNode): void;
     /** removes all nodes from the current selection */
@@ -1236,11 +1306,13 @@ export declare class LGraphCanvas {
     /** draws the front canvas (the one containing all the nodes) */
     drawFrontCanvas(): void;
     /** draws some useful stats in the corner of the canvas */
-    renderInfo(): void;
+    renderInfo(ctx: CanvasRenderingContext2D, x: number, y: number): void;
     /** draws the back canvas (the one containing the background and the connections) */
     drawBackCanvas(): void;
     /** draws the given node inside the canvas */
     drawNode(node: LGraphNode, ctx: CanvasRenderingContext2D): void;
+    /** draws graphic for node's slot */
+    drawSlotGraphic(ctx: CanvasRenderingContext2D, pos: number[], shape: SlotShape, horizontal: boolean): void;
     /** draws the shape of the given node in the canvas */
     drawNodeShape(
         node: LGraphNode,

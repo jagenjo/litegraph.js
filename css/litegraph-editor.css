@@ -93,7 +93,7 @@
 
 /* BUTTONS **********************/
 
-.litegraph-editor button {
+.litegraph-editor .btn {
     /*font-family: "Metro Light";*/
     color: #ccc;
     font-size: 20px;
@@ -181,7 +181,7 @@
     display: inline-block;
     width: 90px;
     height: 15px;
-    background-image: url("../demo/imgs/load-progress-empty.png");
+    background-image: url("../editor/imgs/load-progress-empty.png");
 }
 
 .litegraph-editor .cpuload .fgload,
@@ -190,39 +190,24 @@
     width: 4px;
     height: 15px;
     max-width: 90px;
-    background-image: url("../demo/imgs/load-progress-full.png");
+    background-image: url("../editor/imgs/load-progress-full.png");
 }
 
-.litegraph-editor .dialog {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    margin-top: -150px;
-    margin-left: -200px;
-
-    background-color: #151515;
-
-    min-width: 400px;
-    min-height: 300px;
-    box-shadow: 0 0 2px black;
+.litegraph-editor textarea.code, .litegraph-editor div.code {
+	height: 100%;
+	width: 100%;
+	background-color: black;
+	padding: 4px;
+	font: 16px monospace;
+	overflow: auto;
+	resize: none;
+	outline: none;
 }
 
-.litegraph-editor .dialog .dialog-header,
-.litegraph-editor .dialog .dialog-footer {
-    height: 40px;
+.litegraph-editor .codeflask {
+	background-color: #2a2a2a;
 }
 
-.litegraph-editor .dialog .dialog-header .dialog-title {
-    font: 20px "Arial";
-    margin: 4px;
-    padding: 4px 10px;
-    display: inline-block;
-}
-
-.litegraph-editor .dialog .dialog-content {
-    height: calc(100% - 40px);
-    width: calc(100% - 10px);
-    background-color: black;
-    margin: 4px;
-    display: inline-block;
+.litegraph-editor .codeflask textarea {
+	opacity: 0;
 }
