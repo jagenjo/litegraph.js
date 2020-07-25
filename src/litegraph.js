@@ -197,6 +197,24 @@
             if (prev && LiteGraph.onNodeTypeReplaced) {
                 LiteGraph.onNodeTypeReplaced(type, base_class, prev);
             }
+
+            //warnings
+            if (base_class.prototype.onPropertyChange) {
+                console.warn(
+                    "LiteGraph node class " +
+                        type +
+                        " has onPropertyChange method, it must be called onPropertyChanged with d at the end"
+                );
+            }
+
+			//used to know which nodes create when dragging files to the canvas
+            if (base_class.supported_extensions) {
+                for (var i=0; i < base_class.supported_extensions.length; i++) {
+					var ext = base_class.supported_extensions[i];
+					if(ext && ext.constructor === String)
+	                    this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
+                }
+            }
         },
 
         /**
@@ -428,14 +446,14 @@
             var tmp = document.getElementsByTagName("script");
             //weird, this array changes by its own, so we use a copy
             var script_files = [];
-            for (var i in tmp) {
+            for (var i=0; i < tmp.length; i++) {
                 script_files.push(tmp[i]);
             }
 
             var docHeadObj = document.getElementsByTagName("head")[0];
             folder_wildcard = document.location.href + folder_wildcard;
 
-            for (var i in script_files) {
+            for (var i=0; i < script_files.length; i++) {
                 var src = script_files[i].src;
                 if (
                     !src ||
@@ -1967,8 +1985,8 @@
                     "weird LLink bug, link info is not a LLink but a regular object"
                 );
                 var link2 = new LLink();
-                for (var i in link) {
-                    link2[i] = link[i];
+                for (var j in link) { 
+                    link2[j] = link[j];
                 }
                 this.links[i] = link2;
                 link = link2;
@@ -9137,7 +9155,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var values = LiteGraph.getNodeTypesCategories( canvas.filter || graph.filter );
         var entries = [];
-        for (var i in values) {
+        for (var i=0; i < values.length; i++) {
             if (values[i]) {
 				var name = values[i];
 				if(name.indexOf("::") != -1) //in case it has a namespace like "shader::math/rand" it hides the namespace
@@ -9153,7 +9171,7 @@ LGraphNode.prototype.executeAction = function(action)
             var category = v.value;
             var node_types = LiteGraph.getNodeTypesInCategory( category, canvas.filter || graph.filter );
             var values = [];
-            for (var i in node_types) {
+            for (var i=0; i < node_types.length; i++) {
                 if (!node_types[i].skip_list) {
                     values.push({
                         content: node_types[i].title,
@@ -9208,7 +9226,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var entries = [];
         if (options) {
-            for (var i in options) {
+            for (var i=0; i < options.length; i++) {
                 var entry = options[i];
                 if (!entry) {
                     entries.push(null);
@@ -9288,7 +9306,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var entries = [];
         if (options) {
-            for (var i in options) {
+            for (var i=0; i < options.length; i++) {
                 var entry = options[i];
                 if (!entry) {
                     //separator?
@@ -11261,7 +11279,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         //entries
         var num = 0;
-        for (var i in values) {
+        for (var i=0; i < values.length; i++) {
             var name = values.constructor == Array ? values[i] : i;
             if (name != null && name.constructor !== String) {
                 name = name.content === undefined ? String(name) : name.content;
@@ -11553,7 +11571,7 @@ LGraphNode.prototype.executeAction = function(action)
             result.push(elements[i]);
         }
 
-        for (var i in result) {
+        for (var i=0; i < result.length; i++) {
             if (result[i].close) {
                 result[i].close();
             } else if (result[i].parentNode) {

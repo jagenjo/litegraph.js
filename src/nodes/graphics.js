@@ -238,7 +238,7 @@
 	c[2] = Math.abs( Math.sin( 0.01 * reModular.getTime() * Math.PI) );
 	*/
 
-        for (var i in result) {
+        for (var i=0; i < result.length; i++) {
             result[i] /= 255;
         }
 
