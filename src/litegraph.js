@@ -1179,7 +1179,7 @@
                     max_size = node.size[max_size_index];
                 }
                 node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
-                y += node.size[node_size_index] + margin + LiteGraph.NODE_TITLE_HEIGHT
+                y += node.size[node_size_index] + margin + LiteGraph.NODE_TITLE_HEIGHT;
             }
             x += max_size + margin;
         }
