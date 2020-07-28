@@ -80,6 +80,7 @@
         NO_TITLE: 1,
         TRANSPARENT_TITLE: 2,
         AUTOHIDE_TITLE: 3,
+        VERTICAL_LAYOUT: "vertical", // arrange nodes vertically
 
         proxy: null, //used to redirect calls
         node_images_path: "",
@@ -1146,7 +1147,7 @@
      * Positions every node in a more readable manner
      * @method arrange
      */
-    LGraph.prototype.arrange = function(margin) {
+    LGraph.prototype.arrange = function (margin, layout) {
         margin = margin || 100;
 
         var nodes = this.computeExecutionOrder(false, true);
@@ -1171,12 +1172,14 @@
             var y = margin + LiteGraph.NODE_TITLE_HEIGHT;
             for (var j = 0; j < column.length; ++j) {
                 var node = column[j];
-                node.pos[0] = x;
-                node.pos[1] = y;
-                if (node.size[0] > max_size) {
-                    max_size = node.size[0];
+                node.pos[0] = (layout == LiteGraph.VERTICAL_LAYOUT) ? y : x;
+                node.pos[1] = (layout == LiteGraph.VERTICAL_LAYOUT) ? x : y;
+                max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
+                if (node.size[max_size_index] > max_size) {
+                    max_size = node.size[max_size_index];
                 }
-                y += node.size[1] + margin + LiteGraph.NODE_TITLE_HEIGHT;
+                node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
+                y += node.size[node_size_index] + margin + LiteGraph.NODE_TITLE_HEIGHT
             }
             x += max_size + margin;
         }
