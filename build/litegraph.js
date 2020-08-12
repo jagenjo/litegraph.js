@@ -3974,63 +3974,67 @@
         }
 
         var link_id = this.inputs[slot].link;
-        this.inputs[slot].link = null;
+		if(link_id != null)
+		{
+			this.inputs[slot].link = null;
 
-        //remove other side
-        var link_info = this.graph.links[link_id];
-        if (link_info) {
-            var target_node = this.graph.getNodeById(link_info.origin_id);
-            if (!target_node) {
-                return false;
-            }
+			//remove other side
+			var link_info = this.graph.links[link_id];
+			if (link_info) {
+				var target_node = this.graph.getNodeById(link_info.origin_id);
+				if (!target_node) {
+					return false;
+				}
 
-            var output = target_node.outputs[link_info.origin_slot];
-            if (!output || !output.links || output.links.length == 0) {
-                return false;
-            }
+				var output = target_node.outputs[link_info.origin_slot];
+				if (!output || !output.links || output.links.length == 0) {
+					return false;
+				}
 
-            //search in the inputs list for this link
-            for (var i = 0, l = output.links.length; i < l; i++) {
-                if (output.links[i] == link_id) {
-                    output.links.splice(i, 1);
-                    break;
-                }
-            }
+				//search in the inputs list for this link
+				for (var i = 0, l = output.links.length; i < l; i++) {
+					if (output.links[i] == link_id) {
+						output.links.splice(i, 1);
+						break;
+					}
+				}
 
-            delete this.graph.links[link_id]; //remove from the pool
-            if (this.graph) {
-                this.graph._version++;
-            }
-            if (this.onConnectionsChange) {
-                this.onConnectionsChange(
-                    LiteGraph.INPUT,
-                    slot,
-                    false,
-                    link_info,
-                    input
-                );
-            }
-            if (target_node.onConnectionsChange) {
-                target_node.onConnectionsChange(
-                    LiteGraph.OUTPUT,
-                    i,
-                    false,
-                    link_info,
-                    output
-                );
-            }
-            if (this.graph && this.graph.onNodeConnectionChange) {
-                this.graph.onNodeConnectionChange(
-                    LiteGraph.OUTPUT,
-                    target_node,
-                    i
-                );
-                this.graph.onNodeConnectionChange(LiteGraph.INPUT, this, slot);
-            }
-        }
+				delete this.graph.links[link_id]; //remove from the pool
+				if (this.graph) {
+					this.graph._version++;
+				}
+				if (this.onConnectionsChange) {
+					this.onConnectionsChange(
+						LiteGraph.INPUT,
+						slot,
+						false,
+						link_info,
+						input
+					);
+				}
+				if (target_node.onConnectionsChange) {
+					target_node.onConnectionsChange(
+						LiteGraph.OUTPUT,
+						i,
+						false,
+						link_info,
+						output
+					);
+				}
+				if (this.graph && this.graph.onNodeConnectionChange) {
+					this.graph.onNodeConnectionChange(
+						LiteGraph.OUTPUT,
+						target_node,
+						i
+					);
+					this.graph.onNodeConnectionChange(LiteGraph.INPUT, this, slot);
+				}
+			}
+		} //link != null
 
         this.setDirtyCanvas(false, true);
-        this.graph.connectionChange(this);
+		if(this.graph)
+	        this.graph.connectionChange(this);
         return true;
     };
 
@@ -9924,7 +9928,7 @@ LGraphNode.prototype.executeAction = function(action)
                         continue;
                     }
 					var ctor = LiteGraph.registered_node_types[ extra.type ];
-					if( ctor && ctor.filter && ctor.filter != filter )
+					if( ctor && ctor.filter != filter )
 						continue;
                     addResult( extra.desc, "searchbox_extra" );
                     if ( LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit ) {
@@ -21243,8 +21247,239 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 
 	LiteGraph.registerNodeType("texture/blur", LGraphTextureBlur);
 
+	//Independent glow FX
+	//based on https://catlikecoding.com/unity/tutorials/advanced-rendering/bloom/
+	function FXGlow()
+	{
+		this.intensity = 1;
+		this.persistence = 0.99;
+		this.iterations = 16;
+		this.threshold = 0;
+		this.scale = 1;
+
+		this.dirt_texture = null;
+		this.dirt_factor = 0.5;
+
+		this._textures = [];
+		this._uniforms = {
+			u_intensity: 1,
+			u_texture: 0,
+			u_glow_texture: 1,
+			u_threshold: 0,
+			u_texel_size: vec2.create()
+		};
+	}
+
+	FXGlow.prototype.applyFX = function( tex, output_texture, glow_texture, average_texture ) {
+
+		var width = tex.width;
+		var height = tex.height;
+
+		var texture_info = {
+			format: tex.format,
+			type: tex.type,
+			minFilter: GL.LINEAR,
+			magFilter: GL.LINEAR,
+			wrap: gl.CLAMP_TO_EDGE
+		};
+
+		var uniforms = this._uniforms;
+		var textures = this._textures;
+
+		//cut
+		var shader = FXGlow._cut_shader;
+		if (!shader) {
+			shader = FXGlow._cut_shader = new GL.Shader(
+				GL.Shader.SCREEN_VERTEX_SHADER,
+				FXGlow.cut_pixel_shader
+			);
+		}
+
+		gl.disable(gl.DEPTH_TEST);
+		gl.disable(gl.BLEND);
+
+		uniforms.u_threshold = this.threshold;
+		var currentDestination = (textures[0] = GL.Texture.getTemporary(
+			width,
+			height,
+			texture_info
+		));
+		tex.blit( currentDestination, shader.uniforms(uniforms) );
+		var currentSource = currentDestination;
+
+		var iterations = this.iterations;
+		iterations = Math.clamp(iterations, 1, 16) | 0;
+		var texel_size = uniforms.u_texel_size;
+		var intensity = this.intensity;
+
+		uniforms.u_intensity = 1;
+		uniforms.u_delta = this.scale; //1
+
+		//downscale/upscale shader
+		var shader = FXGlow._shader;
+		if (!shader) {
+			shader = FXGlow._shader = new GL.Shader(
+				GL.Shader.SCREEN_VERTEX_SHADER,
+				FXGlow.scale_pixel_shader
+			);
+		}
+
+		var i = 1;
+		//downscale
+		for (; i < iterations; i++) {
+			width = width >> 1;
+			if ((height | 0) > 1) {
+				height = height >> 1;
+			}
+			if (width < 2) {
+				break;
+			}
+			currentDestination = textures[i] = GL.Texture.getTemporary(
+				width,
+				height,
+				texture_info
+			);
+			texel_size[0] = 1 / currentSource.width;
+			texel_size[1] = 1 / currentSource.height;
+			currentSource.blit(
+				currentDestination,
+				shader.uniforms(uniforms)
+			);
+			currentSource = currentDestination;
+		}
+
+		//average
+		if (average_texture) {
+			texel_size[0] = 1 / currentSource.width;
+			texel_size[1] = 1 / currentSource.height;
+			uniforms.u_intensity = intensity;
+			uniforms.u_delta = 1;
+			currentSource.blit(average_texture, shader.uniforms(uniforms));
+		}
+
+		//upscale and blend
+		gl.enable(gl.BLEND);
+		gl.blendFunc(gl.ONE, gl.ONE);
+		uniforms.u_intensity = this.persistence;
+		uniforms.u_delta = 0.5;
+
+		// i-=2 => -1 to point to last element in array, -1 to go to texture above
+		for ( i -= 2; i >= 0; i-- ) 
+		{
+			currentDestination = textures[i];
+			textures[i] = null;
+			texel_size[0] = 1 / currentSource.width;
+			texel_size[1] = 1 / currentSource.height;
+			currentSource.blit(
+				currentDestination,
+				shader.uniforms(uniforms)
+			);
+			GL.Texture.releaseTemporary(currentSource);
+			currentSource = currentDestination;
+		}
+		gl.disable(gl.BLEND);
+
+		//glow
+		if (glow_texture) {
+			currentSource.blit(glow_texture);
+		}
+
+		//final composition
+		if ( output_texture ) {
+			var final_texture = output_texture;
+			var dirt_texture = this.dirt_texture;
+			var dirt_factor = this.dirt_factor;
+			uniforms.u_intensity = intensity;
+
+			shader = dirt_texture
+				? FXGlow._dirt_final_shader
+				: FXGlow._final_shader;
+			if (!shader) {
+				if (dirt_texture) {
+					shader = FXGlow._dirt_final_shader = new GL.Shader(
+						GL.Shader.SCREEN_VERTEX_SHADER,
+						FXGlow.final_pixel_shader,
+						{ USE_DIRT: "" }
+					);
+				} else {
+					shader = FXGlow._final_shader = new GL.Shader(
+						GL.Shader.SCREEN_VERTEX_SHADER,
+						FXGlow.final_pixel_shader
+					);
+				}
+			}
+
+			final_texture.drawTo(function() {
+				tex.bind(0);
+				currentSource.bind(1);
+				if (dirt_texture) {
+					shader.setUniform("u_dirt_factor", dirt_factor);
+					shader.setUniform(
+						"u_dirt_texture",
+						dirt_texture.bind(2)
+					);
+				}
+				shader.toViewport(uniforms);
+			});
+		}
+
+		GL.Texture.releaseTemporary(currentSource);
+	};
+
+	FXGlow.cut_pixel_shader =
+		"precision highp float;\n\
+	varying vec2 v_coord;\n\
+	uniform sampler2D u_texture;\n\
+	uniform float u_threshold;\n\
+	void main() {\n\
+		gl_FragColor = max( texture2D( u_texture, v_coord ) - vec4( u_threshold ), vec4(0.0) );\n\
+	}";
+
+	FXGlow.scale_pixel_shader =
+		"precision highp float;\n\
+	varying vec2 v_coord;\n\
+	uniform sampler2D u_texture;\n\
+	uniform vec2 u_texel_size;\n\
+	uniform float u_delta;\n\
+	uniform float u_intensity;\n\
+	\n\
+	vec4 sampleBox(vec2 uv) {\n\
+		vec4 o = u_texel_size.xyxy * vec2(-u_delta, u_delta).xxyy;\n\
+		vec4 s = texture2D( u_texture, uv + o.xy ) + texture2D( u_texture, uv + o.zy) + texture2D( u_texture, uv + o.xw) + texture2D( u_texture, uv + o.zw);\n\
+		return s * 0.25;\n\
+	}\n\
+	void main() {\n\
+		gl_FragColor = u_intensity * sampleBox( v_coord );\n\
+	}";
+
+	FXGlow.final_pixel_shader =
+		"precision highp float;\n\
+	varying vec2 v_coord;\n\
+	uniform sampler2D u_texture;\n\
+	uniform sampler2D u_glow_texture;\n\
+	#ifdef USE_DIRT\n\
+		uniform sampler2D u_dirt_texture;\n\
+	#endif\n\
+	uniform vec2 u_texel_size;\n\
+	uniform float u_delta;\n\
+	uniform float u_intensity;\n\
+	uniform float u_dirt_factor;\n\
+	\n\
+	vec4 sampleBox(vec2 uv) {\n\
+		vec4 o = u_texel_size.xyxy * vec2(-u_delta, u_delta).xxyy;\n\
+		vec4 s = texture2D( u_glow_texture, uv + o.xy ) + texture2D( u_glow_texture, uv + o.zy) + texture2D( u_glow_texture, uv + o.xw) + texture2D( u_glow_texture, uv + o.zw);\n\
+		return s * 0.25;\n\
+	}\n\
+	void main() {\n\
+		vec4 glow = sampleBox( v_coord );\n\
+		#ifdef USE_DIRT\n\
+			glow = mix( glow, glow * texture2D( u_dirt_texture, v_coord ), u_dirt_factor );\n\
+		#endif\n\
+		gl_FragColor = texture2D( u_texture, v_coord ) + u_intensity * glow;\n\
+	}";
+
+
 	// Texture Glow *****************************************
-	//based in https://catlikecoding.com/unity/tutorials/advanced-rendering/bloom/
 	function LGraphTextureGlow() {
 		this.addInput("in", "Texture");
 		this.addInput("dirt", "Texture");
@@ -21260,19 +21495,12 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 			dirt_factor: 0.5,
 			precision: LGraphTexture.DEFAULT
 		};
-		this._textures = [];
-		this._uniforms = {
-			u_intensity: 1,
-			u_texture: 0,
-			u_glow_texture: 1,
-			u_threshold: 0,
-			u_texel_size: vec2.create()
-		};
+
+		this.fx = new FXGlow();
 	}
 
 	LGraphTextureGlow.title = "Glow";
 	LGraphTextureGlow.desc = "Filters a texture giving it a glow effect";
-	LGraphTextureGlow.weights = new Float32Array([0.5, 0.4, 0.3, 0.2]);
 
 	LGraphTextureGlow.widgets_info = {
 		iterations: {
@@ -21328,86 +21556,20 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 		var width = tex.width;
 		var height = tex.height;
 
-		var texture_info = {
-			format: tex.format,
-			type: tex.type,
-			minFilter: GL.LINEAR,
-			magFilter: GL.LINEAR,
-			wrap: gl.CLAMP_TO_EDGE
-		};
-		var type = LGraphTexture.getTextureType(
-			this.properties.precision,
-			tex
-		);
+		var fx = this.fx;
+		fx.threshold = this.getInputOrProperty("threshold");
+		fx.iterations = this.getInputOrProperty("iterations");
+		fx.intensity = this.getInputOrProperty("intensity");
+		fx.persistence = this.getInputOrProperty("persistence");
+		fx.dirt_texture = this.getInputData(1);
+		fx.dirt_factor = this.getInputOrProperty("dirt_factor");
+		fx.scale = this.properties.scale;
 
-		var uniforms = this._uniforms;
-		var textures = this._textures;
+		var type = LGraphTexture.getTextureType( this.properties.precision, tex );
 
-		//cut
-		var shader = LGraphTextureGlow._cut_shader;
-		if (!shader) {
-			shader = LGraphTextureGlow._cut_shader = new GL.Shader(
-				GL.Shader.SCREEN_VERTEX_SHADER,
-				LGraphTextureGlow.cut_pixel_shader
-			);
-		}
-
-		gl.disable(gl.DEPTH_TEST);
-		gl.disable(gl.BLEND);
-
-		uniforms.u_threshold = this.getInputOrProperty("threshold");
-		var currentDestination = (textures[0] = GL.Texture.getTemporary(
-			width,
-			height,
-			texture_info
-		));
-		tex.blit(currentDestination, shader.uniforms(uniforms));
-		var currentSource = currentDestination;
-
-		var iterations = this.getInputOrProperty("iterations");
-		iterations = Math.clamp(iterations, 1, 16) | 0;
-		var texel_size = uniforms.u_texel_size;
-		var intensity = this.getInputOrProperty("intensity");
-
-		uniforms.u_intensity = 1;
-		uniforms.u_delta = this.properties.scale; //1
-
-		//downscale/upscale shader
-		var shader = LGraphTextureGlow._shader;
-		if (!shader) {
-			shader = LGraphTextureGlow._shader = new GL.Shader(
-				GL.Shader.SCREEN_VERTEX_SHADER,
-				LGraphTextureGlow.scale_pixel_shader
-			);
-		}
-
-		var i = 1;
-		//downscale
-		for (; i < iterations; i++) {
-			width = width >> 1;
-			if ((height | 0) > 1) {
-				height = height >> 1;
-			}
-			if (width < 2) {
-				break;
-			}
-			currentDestination = textures[i] = GL.Texture.getTemporary(
-				width,
-				height,
-				texture_info
-			);
-			texel_size[0] = 1 / currentSource.width;
-			texel_size[1] = 1 / currentSource.height;
-			currentSource.blit(
-				currentDestination,
-				shader.uniforms(uniforms)
-			);
-			currentSource = currentDestination;
-		}
-
-		//average
+		var average_texture = null;
 		if (this.isOutputConnected(2)) {
-			var average_texture = this._average_texture;
+			average_texture = this._average_texture;
 			if (
 				!average_texture ||
 				average_texture.type != tex.type ||
@@ -21423,41 +21585,11 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 					}
 				);
 			}
-			texel_size[0] = 1 / currentSource.width;
-			texel_size[1] = 1 / currentSource.height;
-			uniforms.u_intensity = intensity;
-			uniforms.u_delta = 1;
-			currentSource.blit(average_texture, shader.uniforms(uniforms));
-			this.setOutputData(2, average_texture);
 		}
 
-		//upscale and blend
-		gl.enable(gl.BLEND);
-		gl.blendFunc(gl.ONE, gl.ONE);
-		uniforms.u_intensity = this.getInputOrProperty("persistence");
-		uniforms.u_delta = 0.5;
-
-		for (
-			i -= 2;
-			i >= 0;
-			i-- // i-=2 =>  -1 to point to last element in array, -1 to go to texture above
-		) {
-			currentDestination = textures[i];
-			textures[i] = null;
-			texel_size[0] = 1 / currentSource.width;
-			texel_size[1] = 1 / currentSource.height;
-			currentSource.blit(
-				currentDestination,
-				shader.uniforms(uniforms)
-			);
-			GL.Texture.releaseTemporary(currentSource);
-			currentSource = currentDestination;
-		}
-		gl.disable(gl.BLEND);
-
-		//glow
+		var glow_texture = null;
 		if (this.isOutputConnected(1)) {
-			var glow_texture = this._glow_texture;
+			glow_texture = this._glow_texture;
 			if (
 				!glow_texture ||
 				glow_texture.width != tex.width ||
@@ -21471,13 +21603,11 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 					{ type: type, format: tex.format, filter: gl.LINEAR }
 				);
 			}
-			currentSource.blit(glow_texture);
-			this.setOutputData(1, glow_texture);
 		}
 
-		//final composition
+		var final_texture = null;
 		if (this.isOutputConnected(0)) {
-			var final_texture = this._final_texture;
+			final_texture = this._final_texture;
 			if (
 				!final_texture ||
 				final_texture.width != tex.width ||
@@ -21492,98 +21622,20 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 				);
 			}
 
-			var dirt_texture = this.getInputData(1);
-			var dirt_factor = this.getInputOrProperty("dirt_factor");
-
-			uniforms.u_intensity = intensity;
-
-			shader = dirt_texture
-				? LGraphTextureGlow._dirt_final_shader
-				: LGraphTextureGlow._final_shader;
-			if (!shader) {
-				if (dirt_texture) {
-					shader = LGraphTextureGlow._dirt_final_shader = new GL.Shader(
-						GL.Shader.SCREEN_VERTEX_SHADER,
-						LGraphTextureGlow.final_pixel_shader,
-						{ USE_DIRT: "" }
-					);
-				} else {
-					shader = LGraphTextureGlow._final_shader = new GL.Shader(
-						GL.Shader.SCREEN_VERTEX_SHADER,
-						LGraphTextureGlow.final_pixel_shader
-					);
-				}
-			}
-
-			final_texture.drawTo(function() {
-				tex.bind(0);
-				currentSource.bind(1);
-				if (dirt_texture) {
-					shader.setUniform("u_dirt_factor", dirt_factor);
-					shader.setUniform(
-						"u_dirt_texture",
-						dirt_texture.bind(2)
-					);
-				}
-				shader.toViewport(uniforms);
-			});
-			this.setOutputData(0, final_texture);
 		}
 
-		GL.Texture.releaseTemporary(currentSource);
+		//apply FX
+		fx.applyFX(tex, final_texture, glow_texture, average_texture );
+
+		if (this.isOutputConnected(0))
+			this.setOutputData(0, final_texture);
+
+		if (this.isOutputConnected(1))
+			this.setOutputData(1, average_texture);
+
+		if (this.isOutputConnected(2))
+			this.setOutputData(2, glow_texture);
 	};
-
-	LGraphTextureGlow.cut_pixel_shader =
-		"precision highp float;\n\
-	varying vec2 v_coord;\n\
-	uniform sampler2D u_texture;\n\
-	uniform float u_threshold;\n\
-	void main() {\n\
-		gl_FragColor = max( texture2D( u_texture, v_coord ) - vec4( u_threshold ), vec4(0.0) );\n\
-	}";
-
-	LGraphTextureGlow.scale_pixel_shader =
-		"precision highp float;\n\
-	varying vec2 v_coord;\n\
-	uniform sampler2D u_texture;\n\
-	uniform vec2 u_texel_size;\n\
-	uniform float u_delta;\n\
-	uniform float u_intensity;\n\
-	\n\
-	vec4 sampleBox(vec2 uv) {\n\
-		vec4 o = u_texel_size.xyxy * vec2(-u_delta, u_delta).xxyy;\n\
-		vec4 s = texture2D( u_texture, uv + o.xy ) + texture2D( u_texture, uv + o.zy) + texture2D( u_texture, uv + o.xw) + texture2D( u_texture, uv + o.zw);\n\
-		return s * 0.25;\n\
-	}\n\
-	void main() {\n\
-		gl_FragColor = u_intensity * sampleBox( v_coord );\n\
-	}";
-
-	LGraphTextureGlow.final_pixel_shader =
-		"precision highp float;\n\
-	varying vec2 v_coord;\n\
-	uniform sampler2D u_texture;\n\
-	uniform sampler2D u_glow_texture;\n\
-	#ifdef USE_DIRT\n\
-		uniform sampler2D u_dirt_texture;\n\
-	#endif\n\
-	uniform vec2 u_texel_size;\n\
-	uniform float u_delta;\n\
-	uniform float u_intensity;\n\
-	uniform float u_dirt_factor;\n\
-	\n\
-	vec4 sampleBox(vec2 uv) {\n\
-		vec4 o = u_texel_size.xyxy * vec2(-u_delta, u_delta).xxyy;\n\
-		vec4 s = texture2D( u_glow_texture, uv + o.xy ) + texture2D( u_glow_texture, uv + o.zy) + texture2D( u_glow_texture, uv + o.xw) + texture2D( u_glow_texture, uv + o.zw);\n\
-		return s * 0.25;\n\
-	}\n\
-	void main() {\n\
-		vec4 glow = sampleBox( v_coord );\n\
-		#ifdef USE_DIRT\n\
-			glow = mix( glow, glow * texture2D( u_dirt_texture, v_coord ), u_dirt_factor );\n\
-		#endif\n\
-		gl_FragColor = texture2D( u_texture, v_coord ) + u_intensity * glow;\n\
-	}";
 
 	LiteGraph.registerNodeType("texture/glow", LGraphTextureGlow);
 
@@ -23238,6 +23290,7 @@ void main(void){\n\
 		"abs": "T abs(T x)",
 		"sign": "T sign(T x)",
 		"floor": "T floor(T x)",
+		"round": "T round(T x)",
 		"ceil": "T ceil(T x)",
 		"fract": "T fract(T x)",
 		"mod": "T mod(T x,T y)", //"T mod(T x,float y)"
@@ -23260,6 +23313,8 @@ void main(void){\n\
 	var GLSL_functions = {};
 	var GLSL_functions_name = [];
 	parseGLSLDescriptions();
+
+	LGShaders.ALL_TYPES = "float,vec2,vec3,vec4";
 
 	function parseGLSLDescriptions()
 	{
@@ -23309,7 +23364,8 @@ void main(void){\n\
 		if(!node_ctor.prototype.onPropertyChanged)
 			node_ctor.prototype.onPropertyChanged = function()
 			{
-				 this.graph._version++;
+				if(this.graph)
+					 this.graph._version++;
 			}
 
 		/*
@@ -23997,7 +24053,14 @@ gl_FragColor = fragcolor;\n\
 
 		var type = this.properties.type;
 		if( !type )
-			return;
+		{
+			if( !context.onGetPropertyInfo )
+				return;
+			var info = context.onGetPropertyInfo( this.property.name );
+			if(!info)
+				return;
+			type = info.type;
+		}
 		if(type == "number")
 			type = "float";
 		else if(type == "texture")
@@ -24216,7 +24279,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec2.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
+		if(this.graph)
+			 this.graph._version++;
 	}
 
 	LGraphShaderVec2.prototype.onGetCode = function( context )
@@ -24279,13 +24343,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec3.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
-	}
-
-
-	LGraphShaderVec3.prototype.onPropertyChanged = function()
-	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 	}
 
 	LGraphShaderVec3.prototype.onGetCode = function( context )
@@ -24352,7 +24411,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec4.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 	}
 
 	LGraphShaderVec4.prototype.onGetCode = function( context )
@@ -24394,7 +24454,7 @@ gl_FragColor = fragcolor;\n\
 	//*********************************
 
 	function LGraphShaderFragColor() {
-		this.addInput("color", "float,vec2,vec3,vec4");
+		this.addInput("color", LGShaders.ALL_TYPES );
 		this.block_delete = true;
 	}
 
@@ -24447,8 +24507,8 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderOperation()
 	{
-		this.addInput("A","float,vec2,vec3,vec4");
-		this.addInput("B","float,vec2,vec3,vec4");
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
 		this.addOutput("out","");
 		this.properties = {
 			operation: "*"
@@ -24520,8 +24580,8 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderFunc()
 	{
-		this.addInput("A","float,vec2,vec3,vec4");
-		this.addInput("B","float,vec2,vec3,vec4");
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
 		this.addOutput("out","");
 		this.properties = {
 			func: "floor"
@@ -24534,7 +24594,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderFunc.prototype.onPropertyChanged = function(name,value)
 	{
-		this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 
 		if(name == "func")
 		{
@@ -24553,7 +24614,7 @@ gl_FragColor = fragcolor;\n\
 				if( this.inputs[i] )
 					this.inputs[i].name = p.name + (p.value ? " (" + p.value + ")" : "");
 				else
-					this.addInput( p.name, "float,vec2,vec3,vec4" );
+					this.addInput( p.name, LGShaders.ALL_TYPES );
 			}
 		}
 	}
@@ -24608,6 +24669,7 @@ gl_FragColor = fragcolor;\n\
 			params.push( param_code );
 		}
 		
+		context.addFunction("round","float round(float v){ return floor(v+0.5); }\nvec2 round(vec2 v){ return floor(v+vec2(0.5));}\nvec3 round(vec3 v){ return floor(v+vec3(0.5));}\nvec4 round(vec4 v){ return floor(v+vec4(0.5)); }\n");
 		context.addCode("code", return_type + " " + outlink + " = "+func_desc.func+"("+params.join(",")+");", this.shader_destination );
 
 		this.setOutputData( 0, return_type );
@@ -24619,8 +24681,8 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderSnippet()
 	{
-		this.addInput("A","float,vec2,vec3,vec4");
-		this.addInput("B","float,vec2,vec3,vec4");
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
 		this.addOutput("C","vec4");
 		this.properties = {
 			code:"C = A+B",
@@ -24634,7 +24696,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderSnippet.prototype.onPropertyChanged = function(name,value)
 	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 
 		if(name == "type"&& this.outputs[0].type != value)
 		{
@@ -24714,9 +24777,188 @@ gl_FragColor = fragcolor;\n\
 
 	registerShaderNode( "input/rand", LGraphShaderRand );
 
-	//noise?
+	//noise
 	//https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+	function LGraphShaderNoise()
+	{
+		this.addInput("out", LGShaders.ALL_TYPES );
+		this.addInput("scale", "float" );
+		this.addOutput("out","float");
+		this.properties = {
+			type: "noise",
+			scale: 1
+		};
+		this.addWidget("combo","type", this.properties.type, { property: "type", values: LGraphShaderNoise.NOISE_TYPES });
+		this.addWidget("number","scale", this.properties.scale, { property: "scale" });
+	}
 
+	LGraphShaderNoise.NOISE_TYPES = ["noise","rand"];
+
+	LGraphShaderNoise.title = "noise";
+
+	LGraphShaderNoise.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var inlink = getInputLinkID(this,0);
+		var outlink = getOutputLinkID(this,0);
+
+		var intype = this.getInputData(0);
+		if(!inlink)
+		{
+			intype = "vec2";
+			inlink = context.buffer_names.uvs;
+		}
+
+		context.addFunction("noise",LGraphShaderNoise.shader_functions);
+		context.addUniform( "u_noise_scale" + this.id, "float", this.properties.scale );
+		if( intype == "float" )
+			context.addCode("code", "float " + outlink + " = snoise( vec2(" + inlink +") * u_noise_scale" + this.id +");", this.shader_destination );
+		else if( intype == "vec2" || intype == "vec3" )
+			context.addCode("code", "float " + outlink + " = snoise(" + inlink +" * u_noise_scale" + this.id +");", this.shader_destination );
+		else if( intype == "vec4" )
+			context.addCode("code", "float " + outlink + " = snoise(" + inlink +".xyz * u_noise_scale" + this.id +");", this.shader_destination );
+		this.setOutputData( 0, "float" );
+	}
+
+	registerShaderNode( "math/noise", LGraphShaderNoise );
+
+LGraphShaderNoise.shader_functions = "\n\
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }\n\
+\n\
+float snoise(vec2 v){\n\
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,-0.577350269189626, 0.024390243902439);\n\
+  vec2 i  = floor(v + dot(v, C.yy) );\n\
+  vec2 x0 = v -   i + dot(i, C.xx);\n\
+  vec2 i1;\n\
+  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);\n\
+  vec4 x12 = x0.xyxy + C.xxzz;\n\
+  x12.xy -= i1;\n\
+  i = mod(i, 289.0);\n\
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))\n\
+  + i.x + vec3(0.0, i1.x, 1.0 ));\n\
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)), 0.0);\n\
+  m = m*m ;\n\
+  m = m*m ;\n\
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;\n\
+  vec3 h = abs(x) - 0.5;\n\
+  vec3 ox = floor(x + 0.5);\n\
+  vec3 a0 = x - ox;\n\
+  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );\n\
+  vec3 g;\n\
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;\n\
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;\n\
+  return 130.0 * dot(m, g);\n\
+}\n\
+vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}\n\
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}\n\
+\n\
+float snoise(vec3 v){ \n\
+  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n\
+  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\
+\n\
+// First corner\n\
+  vec3 i  = floor(v + dot(v, C.yyy) );\n\
+  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\
+\n\
+// Other corners\n\
+  vec3 g = step(x0.yzx, x0.xyz);\n\
+  vec3 l = 1.0 - g;\n\
+  vec3 i1 = min( g.xyz, l.zxy );\n\
+  vec3 i2 = max( g.xyz, l.zxy );\n\
+\n\
+  //  x0 = x0 - 0. + 0.0 * C \n\
+  vec3 x1 = x0 - i1 + 1.0 * C.xxx;\n\
+  vec3 x2 = x0 - i2 + 2.0 * C.xxx;\n\
+  vec3 x3 = x0 - 1. + 3.0 * C.xxx;\n\
+\n\
+// Permutations\n\
+  i = mod(i, 289.0 ); \n\
+  vec4 p = permute( permute( permute( \n\
+             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n\
+           + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) \n\
+           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\
+\n\
+// Gradients\n\
+// ( N*N points uniformly over a square, mapped onto an octahedron.)\n\
+  float n_ = 1.0/7.0; // N=7\n\
+  vec3  ns = n_ * D.wyz - D.xzx;\n\
+\n\
+  vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)\n\
+\n\
+  vec4 x_ = floor(j * ns.z);\n\
+  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\
+\n\
+  vec4 x = x_ *ns.x + ns.yyyy;\n\
+  vec4 y = y_ *ns.x + ns.yyyy;\n\
+  vec4 h = 1.0 - abs(x) - abs(y);\n\
+\n\
+  vec4 b0 = vec4( x.xy, y.xy );\n\
+  vec4 b1 = vec4( x.zw, y.zw );\n\
+\n\
+  vec4 s0 = floor(b0)*2.0 + 1.0;\n\
+  vec4 s1 = floor(b1)*2.0 + 1.0;\n\
+  vec4 sh = -step(h, vec4(0.0));\n\
+\n\
+  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n\
+  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\
+\n\
+  vec3 p0 = vec3(a0.xy,h.x);\n\
+  vec3 p1 = vec3(a0.zw,h.y);\n\
+  vec3 p2 = vec3(a1.xy,h.z);\n\
+  vec3 p3 = vec3(a1.zw,h.w);\n\
+\n\
+//Normalise gradients\n\
+  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n\
+  p0 *= norm.x;\n\
+  p1 *= norm.y;\n\
+  p2 *= norm.z;\n\
+  p3 *= norm.w;\n\
+\n\
+// Mix final noise value\n\
+  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n\
+  m = m * m;\n\
+  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),dot(p2,x2), dot(p3,x3) ) );\n\
+}\n\
+\n\
+vec3 hash3( vec2 p ){\n\
+    vec3 q = vec3( dot(p,vec2(127.1,311.7)), \n\
+				   dot(p,vec2(269.5,183.3)), \n\
+				   dot(p,vec2(419.2,371.9)) );\n\
+	return fract(sin(q)*43758.5453);\n\
+}\n\
+vec4 hash4( vec3 p ){\n\
+    vec4 q = vec4( dot(p,vec3(127.1,311.7,257.3)), \n\
+				   dot(p,vec3(269.5,183.3,335.1)), \n\
+				   dot(p,vec3(314.5,235.1,467.3)), \n\
+				   dot(p,vec3(419.2,371.9,114.9)) );\n\
+	return fract(sin(q)*43758.5453);\n\
+}\n\
+\n\
+float iqnoise( in vec2 x, float u, float v ){\n\
+    vec2 p = floor(x);\n\
+    vec2 f = fract(x);\n\
+	\n\
+	float k = 1.0+63.0*pow(1.0-v,4.0);\n\
+	\n\
+	float va = 0.0;\n\
+	float wt = 0.0;\n\
+    for( int j=-2; j<=2; j++ )\n\
+    for( int i=-2; i<=2; i++ )\n\
+    {\n\
+        vec2 g = vec2( float(i),float(j) );\n\
+		vec3 o = hash3( p + g )*vec3(u,u,1.0);\n\
+		vec2 r = g - f + o.xy;\n\
+		float d = dot(r,r);\n\
+		float ww = pow( 1.0-smoothstep(0.0,1.414,sqrt(d)), k );\n\
+		va += o.z*ww;\n\
+		wt += ww;\n\
+    }\n\
+	\n\
+    return va/wt;\n\
+}\n\
+"
 
 	function LGraphShaderTime()
 	{
@@ -24786,7 +25028,7 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderRemap()
 	{
-		this.addInput("","float,vec2,vec3,vec4");
+		this.addInput("", LGShaders.ALL_TYPES );
 		this.addOutput("","");
 		this.properties = {
 			min_value: 0,
@@ -24804,7 +25046,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderRemap.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 	}
 
 	LGraphShaderRemap.prototype.onConnectionsChange = function()

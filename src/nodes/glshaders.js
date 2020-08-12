@@ -33,6 +33,7 @@
 		"abs": "T abs(T x)",
 		"sign": "T sign(T x)",
 		"floor": "T floor(T x)",
+		"round": "T round(T x)",
 		"ceil": "T ceil(T x)",
 		"fract": "T fract(T x)",
 		"mod": "T mod(T x,T y)", //"T mod(T x,float y)"
@@ -55,6 +56,8 @@
 	var GLSL_functions = {};
 	var GLSL_functions_name = [];
 	parseGLSLDescriptions();
+
+	LGShaders.ALL_TYPES = "float,vec2,vec3,vec4";
 
 	function parseGLSLDescriptions()
 	{
@@ -104,7 +107,8 @@
 		if(!node_ctor.prototype.onPropertyChanged)
 			node_ctor.prototype.onPropertyChanged = function()
 			{
-				 this.graph._version++;
+				if(this.graph)
+					 this.graph._version++;
 			}
 
 		/*
@@ -792,7 +796,14 @@ gl_FragColor = fragcolor;\n\
 
 		var type = this.properties.type;
 		if( !type )
-			return;
+		{
+			if( !context.onGetPropertyInfo )
+				return;
+			var info = context.onGetPropertyInfo( this.property.name );
+			if(!info)
+				return;
+			type = info.type;
+		}
 		if(type == "number")
 			type = "float";
 		else if(type == "texture")
@@ -1011,7 +1022,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec2.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
+		if(this.graph)
+			 this.graph._version++;
 	}
 
 	LGraphShaderVec2.prototype.onGetCode = function( context )
@@ -1074,13 +1086,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec3.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
-	}
-
-
-	LGraphShaderVec3.prototype.onPropertyChanged = function()
-	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 	}
 
 	LGraphShaderVec3.prototype.onGetCode = function( context )
@@ -1147,7 +1154,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderVec4.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 	}
 
 	LGraphShaderVec4.prototype.onGetCode = function( context )
@@ -1189,7 +1197,7 @@ gl_FragColor = fragcolor;\n\
 	//*********************************
 
 	function LGraphShaderFragColor() {
-		this.addInput("color", "float,vec2,vec3,vec4");
+		this.addInput("color", LGShaders.ALL_TYPES );
 		this.block_delete = true;
 	}
 
@@ -1242,8 +1250,8 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderOperation()
 	{
-		this.addInput("A","float,vec2,vec3,vec4");
-		this.addInput("B","float,vec2,vec3,vec4");
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
 		this.addOutput("out","");
 		this.properties = {
 			operation: "*"
@@ -1315,8 +1323,8 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderFunc()
 	{
-		this.addInput("A","float,vec2,vec3,vec4");
-		this.addInput("B","float,vec2,vec3,vec4");
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
 		this.addOutput("out","");
 		this.properties = {
 			func: "floor"
@@ -1329,7 +1337,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderFunc.prototype.onPropertyChanged = function(name,value)
 	{
-		this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 
 		if(name == "func")
 		{
@@ -1348,7 +1357,7 @@ gl_FragColor = fragcolor;\n\
 				if( this.inputs[i] )
 					this.inputs[i].name = p.name + (p.value ? " (" + p.value + ")" : "");
 				else
-					this.addInput( p.name, "float,vec2,vec3,vec4" );
+					this.addInput( p.name, LGShaders.ALL_TYPES );
 			}
 		}
 	}
@@ -1403,6 +1412,7 @@ gl_FragColor = fragcolor;\n\
 			params.push( param_code );
 		}
 		
+		context.addFunction("round","float round(float v){ return floor(v+0.5); }\nvec2 round(vec2 v){ return floor(v+vec2(0.5));}\nvec3 round(vec3 v){ return floor(v+vec3(0.5));}\nvec4 round(vec4 v){ return floor(v+vec4(0.5)); }\n");
 		context.addCode("code", return_type + " " + outlink + " = "+func_desc.func+"("+params.join(",")+");", this.shader_destination );
 
 		this.setOutputData( 0, return_type );
@@ -1414,8 +1424,8 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderSnippet()
 	{
-		this.addInput("A","float,vec2,vec3,vec4");
-		this.addInput("B","float,vec2,vec3,vec4");
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
 		this.addOutput("C","vec4");
 		this.properties = {
 			code:"C = A+B",
@@ -1429,7 +1439,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderSnippet.prototype.onPropertyChanged = function(name,value)
 	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 
 		if(name == "type"&& this.outputs[0].type != value)
 		{
@@ -1509,9 +1520,188 @@ gl_FragColor = fragcolor;\n\
 
 	registerShaderNode( "input/rand", LGraphShaderRand );
 
-	//noise?
+	//noise
 	//https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+	function LGraphShaderNoise()
+	{
+		this.addInput("out", LGShaders.ALL_TYPES );
+		this.addInput("scale", "float" );
+		this.addOutput("out","float");
+		this.properties = {
+			type: "noise",
+			scale: 1
+		};
+		this.addWidget("combo","type", this.properties.type, { property: "type", values: LGraphShaderNoise.NOISE_TYPES });
+		this.addWidget("number","scale", this.properties.scale, { property: "scale" });
+	}
 
+	LGraphShaderNoise.NOISE_TYPES = ["noise","rand"];
+
+	LGraphShaderNoise.title = "noise";
+
+	LGraphShaderNoise.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var inlink = getInputLinkID(this,0);
+		var outlink = getOutputLinkID(this,0);
+
+		var intype = this.getInputData(0);
+		if(!inlink)
+		{
+			intype = "vec2";
+			inlink = context.buffer_names.uvs;
+		}
+
+		context.addFunction("noise",LGraphShaderNoise.shader_functions);
+		context.addUniform( "u_noise_scale" + this.id, "float", this.properties.scale );
+		if( intype == "float" )
+			context.addCode("code", "float " + outlink + " = snoise( vec2(" + inlink +") * u_noise_scale" + this.id +");", this.shader_destination );
+		else if( intype == "vec2" || intype == "vec3" )
+			context.addCode("code", "float " + outlink + " = snoise(" + inlink +" * u_noise_scale" + this.id +");", this.shader_destination );
+		else if( intype == "vec4" )
+			context.addCode("code", "float " + outlink + " = snoise(" + inlink +".xyz * u_noise_scale" + this.id +");", this.shader_destination );
+		this.setOutputData( 0, "float" );
+	}
+
+	registerShaderNode( "math/noise", LGraphShaderNoise );
+
+LGraphShaderNoise.shader_functions = "\n\
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }\n\
+\n\
+float snoise(vec2 v){\n\
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,-0.577350269189626, 0.024390243902439);\n\
+  vec2 i  = floor(v + dot(v, C.yy) );\n\
+  vec2 x0 = v -   i + dot(i, C.xx);\n\
+  vec2 i1;\n\
+  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);\n\
+  vec4 x12 = x0.xyxy + C.xxzz;\n\
+  x12.xy -= i1;\n\
+  i = mod(i, 289.0);\n\
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))\n\
+  + i.x + vec3(0.0, i1.x, 1.0 ));\n\
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)), 0.0);\n\
+  m = m*m ;\n\
+  m = m*m ;\n\
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;\n\
+  vec3 h = abs(x) - 0.5;\n\
+  vec3 ox = floor(x + 0.5);\n\
+  vec3 a0 = x - ox;\n\
+  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );\n\
+  vec3 g;\n\
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;\n\
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;\n\
+  return 130.0 * dot(m, g);\n\
+}\n\
+vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}\n\
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}\n\
+\n\
+float snoise(vec3 v){ \n\
+  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n\
+  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\
+\n\
+// First corner\n\
+  vec3 i  = floor(v + dot(v, C.yyy) );\n\
+  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\
+\n\
+// Other corners\n\
+  vec3 g = step(x0.yzx, x0.xyz);\n\
+  vec3 l = 1.0 - g;\n\
+  vec3 i1 = min( g.xyz, l.zxy );\n\
+  vec3 i2 = max( g.xyz, l.zxy );\n\
+\n\
+  //  x0 = x0 - 0. + 0.0 * C \n\
+  vec3 x1 = x0 - i1 + 1.0 * C.xxx;\n\
+  vec3 x2 = x0 - i2 + 2.0 * C.xxx;\n\
+  vec3 x3 = x0 - 1. + 3.0 * C.xxx;\n\
+\n\
+// Permutations\n\
+  i = mod(i, 289.0 ); \n\
+  vec4 p = permute( permute( permute( \n\
+             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n\
+           + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) \n\
+           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\
+\n\
+// Gradients\n\
+// ( N*N points uniformly over a square, mapped onto an octahedron.)\n\
+  float n_ = 1.0/7.0; // N=7\n\
+  vec3  ns = n_ * D.wyz - D.xzx;\n\
+\n\
+  vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)\n\
+\n\
+  vec4 x_ = floor(j * ns.z);\n\
+  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\
+\n\
+  vec4 x = x_ *ns.x + ns.yyyy;\n\
+  vec4 y = y_ *ns.x + ns.yyyy;\n\
+  vec4 h = 1.0 - abs(x) - abs(y);\n\
+\n\
+  vec4 b0 = vec4( x.xy, y.xy );\n\
+  vec4 b1 = vec4( x.zw, y.zw );\n\
+\n\
+  vec4 s0 = floor(b0)*2.0 + 1.0;\n\
+  vec4 s1 = floor(b1)*2.0 + 1.0;\n\
+  vec4 sh = -step(h, vec4(0.0));\n\
+\n\
+  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n\
+  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\
+\n\
+  vec3 p0 = vec3(a0.xy,h.x);\n\
+  vec3 p1 = vec3(a0.zw,h.y);\n\
+  vec3 p2 = vec3(a1.xy,h.z);\n\
+  vec3 p3 = vec3(a1.zw,h.w);\n\
+\n\
+//Normalise gradients\n\
+  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n\
+  p0 *= norm.x;\n\
+  p1 *= norm.y;\n\
+  p2 *= norm.z;\n\
+  p3 *= norm.w;\n\
+\n\
+// Mix final noise value\n\
+  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n\
+  m = m * m;\n\
+  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),dot(p2,x2), dot(p3,x3) ) );\n\
+}\n\
+\n\
+vec3 hash3( vec2 p ){\n\
+    vec3 q = vec3( dot(p,vec2(127.1,311.7)), \n\
+				   dot(p,vec2(269.5,183.3)), \n\
+				   dot(p,vec2(419.2,371.9)) );\n\
+	return fract(sin(q)*43758.5453);\n\
+}\n\
+vec4 hash4( vec3 p ){\n\
+    vec4 q = vec4( dot(p,vec3(127.1,311.7,257.3)), \n\
+				   dot(p,vec3(269.5,183.3,335.1)), \n\
+				   dot(p,vec3(314.5,235.1,467.3)), \n\
+				   dot(p,vec3(419.2,371.9,114.9)) );\n\
+	return fract(sin(q)*43758.5453);\n\
+}\n\
+\n\
+float iqnoise( in vec2 x, float u, float v ){\n\
+    vec2 p = floor(x);\n\
+    vec2 f = fract(x);\n\
+	\n\
+	float k = 1.0+63.0*pow(1.0-v,4.0);\n\
+	\n\
+	float va = 0.0;\n\
+	float wt = 0.0;\n\
+    for( int j=-2; j<=2; j++ )\n\
+    for( int i=-2; i<=2; i++ )\n\
+    {\n\
+        vec2 g = vec2( float(i),float(j) );\n\
+		vec3 o = hash3( p + g )*vec3(u,u,1.0);\n\
+		vec2 r = g - f + o.xy;\n\
+		float d = dot(r,r);\n\
+		float ww = pow( 1.0-smoothstep(0.0,1.414,sqrt(d)), k );\n\
+		va += o.z*ww;\n\
+		wt += ww;\n\
+    }\n\
+	\n\
+    return va/wt;\n\
+}\n\
+"
 
 	function LGraphShaderTime()
 	{
@@ -1581,7 +1771,7 @@ gl_FragColor = fragcolor;\n\
 
 	function LGraphShaderRemap()
 	{
-		this.addInput("","float,vec2,vec3,vec4");
+		this.addInput("", LGShaders.ALL_TYPES );
 		this.addOutput("","");
 		this.properties = {
 			min_value: 0,
@@ -1599,7 +1789,8 @@ gl_FragColor = fragcolor;\n\
 
 	LGraphShaderRemap.prototype.onPropertyChanged = function()
 	{
-		 this.graph._version++;
+		if(this.graph)
+			this.graph._version++;
 	}
 
 	LGraphShaderRemap.prototype.onConnectionsChange = function()

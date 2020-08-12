@@ -3972,63 +3972,67 @@
         }
 
         var link_id = this.inputs[slot].link;
-        this.inputs[slot].link = null;
+		if(link_id != null)
+		{
+			this.inputs[slot].link = null;
 
-        //remove other side
-        var link_info = this.graph.links[link_id];
-        if (link_info) {
-            var target_node = this.graph.getNodeById(link_info.origin_id);
-            if (!target_node) {
-                return false;
-            }
+			//remove other side
+			var link_info = this.graph.links[link_id];
+			if (link_info) {
+				var target_node = this.graph.getNodeById(link_info.origin_id);
+				if (!target_node) {
+					return false;
+				}
 
-            var output = target_node.outputs[link_info.origin_slot];
-            if (!output || !output.links || output.links.length == 0) {
-                return false;
-            }
+				var output = target_node.outputs[link_info.origin_slot];
+				if (!output || !output.links || output.links.length == 0) {
+					return false;
+				}
 
-            //search in the inputs list for this link
-            for (var i = 0, l = output.links.length; i < l; i++) {
-                if (output.links[i] == link_id) {
-                    output.links.splice(i, 1);
-                    break;
-                }
-            }
+				//search in the inputs list for this link
+				for (var i = 0, l = output.links.length; i < l; i++) {
+					if (output.links[i] == link_id) {
+						output.links.splice(i, 1);
+						break;
+					}
+				}
 
-            delete this.graph.links[link_id]; //remove from the pool
-            if (this.graph) {
-                this.graph._version++;
-            }
-            if (this.onConnectionsChange) {
-                this.onConnectionsChange(
-                    LiteGraph.INPUT,
-                    slot,
-                    false,
-                    link_info,
-                    input
-                );
-            }
-            if (target_node.onConnectionsChange) {
-                target_node.onConnectionsChange(
-                    LiteGraph.OUTPUT,
-                    i,
-                    false,
-                    link_info,
-                    output
-                );
-            }
-            if (this.graph && this.graph.onNodeConnectionChange) {
-                this.graph.onNodeConnectionChange(
-                    LiteGraph.OUTPUT,
-                    target_node,
-                    i
-                );
-                this.graph.onNodeConnectionChange(LiteGraph.INPUT, this, slot);
-            }
-        }
+				delete this.graph.links[link_id]; //remove from the pool
+				if (this.graph) {
+					this.graph._version++;
+				}
+				if (this.onConnectionsChange) {
+					this.onConnectionsChange(
+						LiteGraph.INPUT,
+						slot,
+						false,
+						link_info,
+						input
+					);
+				}
+				if (target_node.onConnectionsChange) {
+					target_node.onConnectionsChange(
+						LiteGraph.OUTPUT,
+						i,
+						false,
+						link_info,
+						output
+					);
+				}
+				if (this.graph && this.graph.onNodeConnectionChange) {
+					this.graph.onNodeConnectionChange(
+						LiteGraph.OUTPUT,
+						target_node,
+						i
+					);
+					this.graph.onNodeConnectionChange(LiteGraph.INPUT, this, slot);
+				}
+			}
+		} //link != null
 
         this.setDirtyCanvas(false, true);
-        this.graph.connectionChange(this);
+		if(this.graph)
+	        this.graph.connectionChange(this);
         return true;
     };
 
@@ -9922,7 +9926,7 @@ LGraphNode.prototype.executeAction = function(action)
                         continue;
                     }
 					var ctor = LiteGraph.registered_node_types[ extra.type ];
-					if( ctor && ctor.filter && ctor.filter != filter )
+					if( ctor && ctor.filter != filter )
 						continue;
                     addResult( extra.desc, "searchbox_extra" );
                     if ( LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit ) {
