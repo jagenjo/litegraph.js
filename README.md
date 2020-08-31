@@ -167,7 +167,7 @@ $ npm install
 $ node utils/server.js
 Example app listening on port 80!
 ```
-Open your browser and point it to http://localhost. You can select demo from the dropdown at the top of the page.
+Open your browser and point it to http://localhost:8000/. You can select a demo from the dropdown at the top of the page.
 
 ## Feedback
 --------
