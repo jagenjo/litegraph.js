@@ -159,7 +159,7 @@ It includes several commands in the utils folder to generate doc, check errors a
 
 ## Demo
 -----
-The demo includes some examples of graphs. In order to try them you can visit [demo site](http://tamats.com/projects/litegraph/demo) or install it on your local computer, to do so you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
+The demo includes some examples of graphs. In order to try them you can visit [demo site](http://tamats.com/projects/litegraph/editor) or install it on your local computer, to do so you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
 ```sh
 $ git clone git@github.com:jagenjo/litegraph.js.git
 $ cd litegraph.js
@@ -167,7 +167,7 @@ $ npm install
 $ node utils/server.js
 Example app listening on port 80!
 ```
-Open your browser and point it to http://localhost. You can select demo from the dropdown at the top of the page.
+Open your browser and point it to http://localhost:8000/. You can select a demo from the dropdown at the top of the page.
 
 ## Feedback
 --------
