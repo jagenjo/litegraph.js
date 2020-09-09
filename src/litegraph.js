@@ -2975,12 +2975,14 @@
             //used to mark events in graph
             var target_connection = node.inputs[link_info.target_slot];
 
-            if (node.onAction) {
-                node.onAction(target_connection.name, param);
-            } else if (node.mode === LiteGraph.ON_TRIGGER) {
+			if (node.mode === LiteGraph.ON_TRIGGER)
+			{
                 if (node.onExecute) {
                     node.onExecute(param);
                 }
+			}
+			else if (node.onAction) {
+                node.onAction(target_connection.name, param);
             }
         }
     };

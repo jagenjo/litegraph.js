@@ -2977,12 +2977,14 @@
             //used to mark events in graph
             var target_connection = node.inputs[link_info.target_slot];
 
-            if (node.onAction) {
-                node.onAction(target_connection.name, param);
-            } else if (node.mode === LiteGraph.ON_TRIGGER) {
+			if (node.mode === LiteGraph.ON_TRIGGER)
+			{
                 if (node.onExecute) {
                     node.onExecute(param);
                 }
+			}
+			else if (node.onAction) {
+                node.onAction(target_connection.name, param);
             }
         }
     };
@@ -21251,10 +21253,10 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 	//based on https://catlikecoding.com/unity/tutorials/advanced-rendering/bloom/
 	function FXGlow()
 	{
-		this.intensity = 1;
-		this.persistence = 0.99;
-		this.iterations = 16;
-		this.threshold = 0;
+		this.intensity = 0.5;
+		this.persistence = 0.6;
+		this.iterations = 8;
+		this.threshold = 0.8;
 		this.scale = 1;
 
 		this.dirt_texture = null;
