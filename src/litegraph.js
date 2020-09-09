@@ -10772,7 +10772,12 @@ LGraphNode.prototype.executeAction = function(action)
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuNodeMode
                 },
-                { content: "Resize", callback: LGraphCanvas.onResizeNode },
+                {
+                    content: "Resize", callback: () => {
+                        if(node.resizable) 
+                            LGraphCanvas.onResizeNode
+                    }
+                },
                 {
                     content: "Collapse",
                     callback: LGraphCanvas.onMenuNodeCollapse
