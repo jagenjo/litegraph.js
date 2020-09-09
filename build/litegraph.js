@@ -2119,8 +2119,25 @@
         return error;
     };
 
-    LGraph.prototype.load = function(url) {
+    LGraph.prototype.load = function(url, callback) {
         var that = this;
+
+		//from file
+		if(url.constructor === File || url.constructor === Blob)
+		{
+			var reader = new FileReader();
+			reader.addEventListener('load', function(event) {
+				var data = JSON.parse(event.target.result);
+				that.configure(data);
+				if(callback)
+					callback();
+			});
+			
+			reader.readAsText(url);
+			return;
+		}
+
+		//is a string, then an URL
         var req = new XMLHttpRequest();
         req.open("GET", url, true);
         req.send(null);
@@ -2129,8 +2146,10 @@
                 console.error("Error loading graph:", req.status, req.response);
                 return;
             }
-            var data = JSON.parse(req.response);
+            var data = JSON.parse( req.response );
             that.configure(data);
+			if(callback)
+				callback();
         };
         req.onerror = function(err) {
             console.error("Error loading graph:", err);
@@ -10774,7 +10793,12 @@ LGraphNode.prototype.executeAction = function(action)
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuNodeMode
                 },
-                { content: "Resize", callback: LGraphCanvas.onResizeNode },
+                {
+                    content: "Resize", callback: function() {
+                        if(node.resizable) 
+                            return LGraphCanvas.onResizeNode;
+                    }
+                },
                 {
                     content: "Collapse",
                     callback: LGraphCanvas.onMenuNodeCollapse
