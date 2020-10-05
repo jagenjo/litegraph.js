@@ -10078,8 +10078,12 @@ LGraphNode.prototype.executeAction = function(action)
                 input.addEventListener("blur", function(e) {
                     this.focus();
                 });
+
 				var v = node.properties[property] !== undefined ? node.properties[property] : "";
-				v = JSON.stringify(v);
+				if (type !== 'string') {
+                    v = JSON.stringify(v);
+                }
+
                 input.value = v;
                 input.addEventListener("keydown", function(e) {
                     if (e.keyCode != 13) {
