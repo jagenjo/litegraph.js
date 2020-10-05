@@ -97,6 +97,27 @@
 
         searchbox_extras: {}, //used to add extra features to the search box
         auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
+        stylise_property_names: false, // If set to true, will display property names like "firstName" and "first_name" as "First Name"
+
+        /**
+         * Stylise a property name that uses camel casing or underscores
+         * @method stylisePropertyName
+         * @param {String} name the property name to stylise
+         * @return {String} the property name capitalised and separated by spaces
+         */
+
+        stylisePropertyName: function(name) {
+            var prettyName = name
+                .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+                .replace(/(.+?)_(.+?)/g, '$1 $2')
+                .split(' ');
+
+            for (var i = 0; i < prettyName.length; i++) {
+                prettyName[i] = prettyName[i][0].toUpperCase() + prettyName[i].substr(1);
+            }
+
+            return prettyName.join(' ');
+        },
 
         /**
          * Register a node class so it can be listed when the user wants to create a new one
@@ -9450,10 +9471,16 @@ LGraphNode.prototype.executeAction = function(action)
 
             //value could contain invalid html characters, clean that
             value = LGraphCanvas.decodeHTML(value);
+
+            var displayName = i;
+            if (LiteGraph.stylise_property_names) {
+                displayName = LiteGraph.stylisePropertyName(i);
+            }
+
             entries.push({
                 content:
                     "<span class='property_name'>" +
-                    i +
+                    displayName +
                     "</span>" +
                     "<span class='property_value'>" +
                     value +
@@ -10049,9 +10076,14 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
+        var displayName = property;
+        if (LiteGraph.stylise_property_names) {
+            displayName = LiteGraph.stylisePropertyName(property);
+        }
+
         var dialog = this.createDialog(
             "<span class='name'>" +
-                property +
+                displayName +
                 "</span>" +
                 input_html +
                 "<button>OK</button>",
