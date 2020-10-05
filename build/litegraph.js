@@ -96,6 +96,7 @@
 		Globals: {}, //used to store vars between graphs
 
         searchbox_extras: {}, //used to add extra features to the search box
+        auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
 
         /**
          * Register a node class so it can be listed when the user wants to create a new one
@@ -416,7 +417,7 @@
                 }
             }
 
-            return r;
+            return this.auto_sort_node_types ? r.sort() : r;
         },
 
         /**
@@ -440,7 +441,7 @@
             for (var i in categories) {
                 result.push(i);
             }
-            return result;
+            return this.auto_sort_node_types ? result.sort() : result;
         },
 
         //debug purposes: reloads all the js scripts that matches a wildcard
