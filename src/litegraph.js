@@ -9453,7 +9453,7 @@ LGraphNode.prototype.executeAction = function(action)
             entries.push({
                 content:
                     "<span class='property_name'>" +
-                    (info.descriptor ? info.descriptor : i) +
+                    (info.label ? info.label : i) +
                     "</span>" +
                     "<span class='property_value'>" +
                     value +
@@ -10051,7 +10051,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialog = this.createDialog(
             "<span class='name'>" +
-                (info.descriptor ? info.descriptor : property) +
+                (info.label ? info.label : property) +
                 "</span>" +
                 input_html +
                 "<button>OK</button>",
