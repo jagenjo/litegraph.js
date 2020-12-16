@@ -734,7 +734,7 @@
     // Texture Webcam *****************************************
     function ImageWebcam() {
         this.addOutput("Webcam", "image");
-        this.properties = { facingMode: "user" };
+        this.properties = { filterFacingMode: false, facingMode: "user" }; // atlasan edit
         this.boxcolor = "black";
         this.frame = 0;
     }
@@ -744,8 +744,8 @@
     ImageWebcam.is_webcam_open = false;
 
     ImageWebcam.prototype.openStream = function() {
-        if (!navigator.getUserMedia) {
-            //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
+        if (!navigator.mediaDevices.getUserMedia) {
+            console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
             return;
         }
 
@@ -754,7 +754,7 @@
         // Not showing vendor prefixes.
         var constraints = {
             audio: false,
-            video: { facingMode: this.properties.facingMode }
+            video: !this.properties.filterFacingMode ? true : { facingMode: this.properties.facingMode } // atlasan edit
         };
         navigator.mediaDevices
             .getUserMedia(constraints)
