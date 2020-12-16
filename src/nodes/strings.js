@@ -6,7 +6,7 @@
         return String(a);
     }
 
-    LiteGraph.wrapFunctionAsNode("string/toString", compare, [""], "String");
+    LiteGraph.wrapFunctionAsNode("string/toString", toString, [""], "string");
 
     function compare(a, b) {
         return a == b;

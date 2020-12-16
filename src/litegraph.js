@@ -3190,7 +3190,7 @@
                 o[i] = extra_info[i];
             }
         }
-
+        
         if (!this.inputs) {
             this.inputs = [];
         }
@@ -3745,10 +3745,12 @@
 		if(!changed)
 			this.graph.beforeChange();
 
+        // console.debug("new link :: "+output.type+" : "+input.type); // atlasan debug REMOVE
+        
 		//create link class
 		link_info = new LLink(
 			++this.graph.last_link_id,
-			input.type,
+			input.type || output.type, // atlasan edit :: check both output and input slot for type
 			this.id,
 			slot,
 			target_node.id,
@@ -4660,9 +4662,19 @@ LGraphNode.prototype.executeAction = function(action)
         this.default_link_color = LiteGraph.LINK_COLOR;
         this.default_connection_color = {
             input_off: "#778",
-            input_on: "#7F7",
+            input_on: "#BBD",
             output_off: "#778",
-            output_on: "#7F7"
+            output_on: "#BBD"
+        };
+        this.default_connection_color_byType = { // atlasan edit
+            number: "#7F7",
+            string: "#77F",
+            boolean: "#F77",
+        }
+        this.default_connection_color_byTypeOff = { // atlasan edit
+            number: "#474",
+            string: "#447",
+            boolean: "#744",
         };
 
         this.highquality_render = true;
@@ -4752,8 +4764,12 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.link_type_colors = {
         "-1": LiteGraph.EVENT_LINK_COLOR,
-        number: "#AAA",
-        node: "#DCA"
+        node: "#DCA",
+        
+        // atlasan edit
+        number: "#7F7",
+        string: "#77F",
+        boolean: "#F77",
     };
     LGraphCanvas.gradients = {}; //cache of gradients
 
@@ -5943,6 +5959,15 @@ LGraphNode.prototype.executeAction = function(action)
                             }
                         }
                     }
+                }else{
+                    
+                    console.debug(this.connecting_output);
+                    console.debug(this.connecting_pos);
+                    console.debug(this.connecting_node);
+                    console.debug(this.connecting_slot);
+                    
+                    this.showConnectionMenu(this.connecting_node, this.connecting_output,e);
+                    
                 }
 
                 this.connecting_output = null;
@@ -6183,6 +6208,8 @@ LGraphNode.prototype.executeAction = function(action)
             //collapse
             //...
 
+            console.debug("keydown "+e.keyCode);
+            
             //TODO
             if (this.selected_nodes) {
                 for (var i in this.selected_nodes) {
@@ -6191,6 +6218,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }
             }
+            
         } else if (e.type == "keyup") {
             if (e.keyCode == 32) {
                 this.dragging_canvas = false;
@@ -6279,14 +6307,35 @@ LGraphNode.prototype.executeAction = function(action)
 
         //create nodes
         var clipboard_info = JSON.parse(data);
+        // calculate top-left node, could work without this processing but using diff with last node pos :: clipboard_info.nodes[clipboard_info.nodes.length-1].pos
+        var posMin = false;
+        var posMinIndexes = false;
+        for (var i = 0; i < clipboard_info.nodes.length; ++i) {
+            if (posMin){
+                if(posMin[0]>clipboard_info.nodes[i].pos[0]){
+                    posMin[0] = clipboard_info.nodes[i].pos[0];
+                    posMinIndexes[0] = i;
+                }
+                if(posMin[1]>clipboard_info.nodes[i].pos[1]){
+                    posMin[1] = clipboard_info.nodes[i].pos[1];
+                    posMinIndexes[1] = i;
+                }
+            }
+            else{
+                posMin = [clipboard_info.nodes[i].pos[0], clipboard_info.nodes[i].pos[1]];
+                posMinIndexes = [i, i];
+            }
+        }
         var nodes = [];
         for (var i = 0; i < clipboard_info.nodes.length; ++i) {
             var node_data = clipboard_info.nodes[i];
             var node = LiteGraph.createNode(node_data.type);
             if (node) {
                 node.configure(node_data);
-                node.pos[0] += 5;
-                node.pos[1] += 5;
+        
+                node.pos[0] += this.graph_mouse[0] - posMin[0]; //+= 5; // atlasan edit :: paste in last known mouse position
+                node.pos[1] += this.graph_mouse[1] - posMin[1]; //+= 5;
+
                 this.graph.add(node);
                 nodes.push(node);
             }
@@ -7450,18 +7499,24 @@ LGraphNode.prototype.executeAction = function(action)
             if (node.inputs) {
                 for (var i = 0; i < node.inputs.length; i++) {
                     var slot = node.inputs[i];
-
+                    
+                    var slot_type = slot.type; // atlasan edit
+                    
                     ctx.globalAlpha = editor_alpha;
                     //change opacity of incompatible slots when dragging a connection
                     if ( this.connecting_node && !LiteGraph.isValidConnection( slot.type , out_slot.type) ) {
                         ctx.globalAlpha = 0.4 * editor_alpha;
                     }
-
+                    /*console.debug(slot); // atlasan debug REMOVE
+                    console.debug(slot_type+" "+this.default_connection_color_byType[slot_type]);*/
                     ctx.fillStyle =
                         slot.link != null
                             ? slot.color_on ||
+                              this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_on
                             : slot.color_off ||
+                              this.default_connection_color_byTypeOff[slot_type] ||
+                              this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.input_off;
 
                     var pos = node.getConnectionPos(true, i, slot_pos);
@@ -7530,7 +7585,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (node.outputs) {
                 for (var i = 0; i < node.outputs.length; i++) {
                     var slot = node.outputs[i];
-
+                    var slot_type = slot.type; // atlasan edit
                     var pos = node.getConnectionPos(false, i, slot_pos);
                     pos[0] -= node.pos[0];
                     pos[1] -= node.pos[1];
@@ -7541,8 +7596,11 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle =
                         slot.links && slot.links.length
                             ? slot.color_on ||
+                              this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.output_on
                             : slot.color_off ||
+                              this.default_connection_color_byTypeOff[slot_type] ||
+                              this.default_connection_color_byType[slot_type] ||
                               this.default_connection_color.output_off;
                     ctx.beginPath();
                     //ctx.rect( node.size[0] - 14,i*14,10,10);
@@ -8240,6 +8298,8 @@ LGraphNode.prototype.executeAction = function(action)
         //choose color
         if (!color && link) {
             color = link.color || LGraphCanvas.link_type_colors[link.type];
+            /*console.debug("Render LINK which color? "+color+" "+link.type); // atlasan debug REMOVE
+            console.debug(link);*/
         }
         if (!color) {
             color = this.default_link_color;
@@ -9508,7 +9568,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.prototype.showLinkMenu = function(link, e) {
         var that = this;
-		console.log(link);
+		// console.log(link);
 		var options = ["Add Node",null,"Delete"];
         var menu = new LiteGraph.ContextMenu(options, {
             event: e,
@@ -9520,22 +9580,61 @@ LGraphNode.prototype.executeAction = function(action)
             switch (v) {
                 case "Add Node":
 					LGraphCanvas.onMenuAdd(null, null, e, menu, function(node){
-						console.log("node autoconnect");
+						// console.debug("node autoconnect");
 						var node_left = that.graph.getNodeById( link.origin_id );
 						var node_right = that.graph.getNodeById( link.target_id );
 						if(!node.inputs || !node.inputs.length || !node.outputs || !node.outputs.length)
 							return;
-						if( node_left.outputs[ link.origin_slot ].type == node.inputs[0].type && node.outputs[0].type == node_right.inputs[0].type )
-						{
-							node_left.connect( link.origin_slot, node, 0 );
-							node.connect( 0, node_right, link.target_slot );
-							node.pos[0] -= node.size[0] * 0.5;
-						}
+						//if( node_left.outputs[ link.origin_slot ].type == node.inputs[0].type && node.outputs[0].type == node_right.inputs[0].type ){
+							if (node_left.connect( link.origin_slot, node, 0 )){
+                                node.connect( 0, node_right, link.target_slot );
+                                node.pos[0] -= node.size[0] * 0.5;
+                            }
+						//}
 					});
 					break;
                 case "Delete":
                     that.graph.removeLink(link.id);
                     break;
+                default:
+            }
+        }
+
+        return false;
+    };
+    
+    LGraphCanvas.prototype.showConnectionMenu = function(nodeFrom, slot, e) { // atlasan :: addNodeMenu for connection
+        var that = this;
+		console.log(slot);
+		var options = ["Add Node",null];
+        var menu = new LiteGraph.ContextMenu(options, {
+            event: e,
+			title: slot.name != null ? slot.name : null,
+            callback: inner_clicked
+        });
+
+        function inner_clicked(v,options,e) {
+            switch (v) {
+                case "Add Node":
+					LGraphCanvas.onMenuAdd(null, null, e, menu, function(node){
+						/*console.log("node add by connection ?!");
+                        console.debug(node);
+                        console.debug(nodeFrom);
+                        console.debug(slot);
+                        console.debug(nodeFrom.findOutputSlot(slot.name));*/
+                        var iS = false;
+                        if (slot.name){
+                            iS = nodeFrom.findOutputSlot(slot.name);
+                            if (iS!==false && iS>-1){
+                                // console.debug("try to "+iS+" "+node+" "+0);
+                                nodeFrom.connect( iS, node, 0 );
+                            }
+                        }
+					});
+					break;
+                /*case "Delete":
+                    that.graph.removeLink(link.id);
+                    break;*/
                 default:
             }
         }
