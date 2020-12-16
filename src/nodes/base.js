@@ -656,7 +656,7 @@
     LiteGraph.registerNodeType("basic/const", ConstantNumber);
 
     function ConstantBoolean() {
-        this.addOutput("", "boolean");
+        this.addOutput("bool", "boolean");
         this.addProperty("value", true);
         this.widget = this.addWidget("toggle","value",true,"value");
         this.serialize_widgets = true;
@@ -686,7 +686,7 @@
     LiteGraph.registerNodeType("basic/boolean", ConstantBoolean);
 
     function ConstantString() {
-        this.addOutput("", "string");
+        this.addOutput("string", "string");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","value","","value");  //link to property value
         this.widgets_up = true;
@@ -719,7 +719,7 @@
 
     function ConstantFile() {
         this.addInput("url", "");
-        this.addOutput("", "");
+        this.addOutput("file", "");
         this.addProperty("url", "");
         this.addProperty("type", "text");
         this.widget = this.addWidget("text","url","","url");
@@ -817,7 +817,7 @@
 
 	//to store json objects
     function ConstantData() {
-        this.addOutput("", "");
+        this.addOutput("data", "");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","json","","value");
         this.widgets_up = true;
@@ -852,8 +852,8 @@
 
 	//to store json objects
     function ConstantArray() {
-        this.addInput("", "");
-        this.addOutput("", "array");
+        this.addInput("json", "");
+        this.addOutput("array", "array");
         this.addOutput("length", "number");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","array","","value");

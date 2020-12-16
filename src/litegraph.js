@@ -9606,7 +9606,7 @@ LGraphNode.prototype.executeAction = function(action)
     
     LGraphCanvas.prototype.showConnectionMenu = function(nodeFrom, slot, e) { // atlasan :: addNodeMenu for connection
         var that = this;
-		console.log(slot);
+		// console.log(slot); // atlasan debug REMOVE
 		var options = ["Add Node",null];
         var menu = new LiteGraph.ContextMenu(options, {
             event: e,
@@ -9618,18 +9618,20 @@ LGraphNode.prototype.executeAction = function(action)
             switch (v) {
                 case "Add Node":
 					LGraphCanvas.onMenuAdd(null, null, e, menu, function(node){
-						/*console.log("node add by connection ?!");
+						/*console.log("node add by connection ?!"); // atlasan debug REMOVE
                         console.debug(node);
                         console.debug(nodeFrom);
                         console.debug(slot);
-                        console.debug(nodeFrom.findOutputSlot(slot.name));*/
+                        console.debug(nodeFrom.findOutputSlot(slot.name));/**/
                         var iS = false;
                         if (slot.name){
                             iS = nodeFrom.findOutputSlot(slot.name);
-                            if (iS!==false && iS>-1){
-                                // console.debug("try to "+iS+" "+node+" "+0);
-                                nodeFrom.connect( iS, node, 0 );
-                            }
+                        }else{
+                            iS = 0; // try with first if no name set
+                        }
+                        if (iS!==false && iS>-1){
+                            //console.debug("try to "+iS+" "+node+" "+0);
+                            nodeFrom.connect( iS, node, 0 );
                         }
 					});
 					break;

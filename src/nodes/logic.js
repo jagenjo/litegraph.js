@@ -90,16 +90,42 @@
         this.addInput("b", "boolean");
         this.addOutput("out", "boolean");
     }
-    
-    logicAnd.title = "If";
+    logicAnd.title = "AND";
     logicAnd.desc = "Return true if both inputs are true";
-
-
     logicAnd.prototype.onExecute = function() {
         var ret = this.getInputData(0) && this.getInputData(1);
         this.setOutputData(0, ret);
     };
-
-    LiteGraph.registerNodeType("logic/And", logicAnd);
+    LiteGraph.registerNodeType("logic/AND", logicAnd);
+    
+    
+    function logicOr(){
+        this.properties = { };
+        this.addInput("a", "boolean");
+        this.addInput("b", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    logicOr.title = "OR";
+    logicOr.desc = "Return true if at least one input is true";
+    logicOr.prototype.onExecute = function() {
+        var ret = this.getInputData(0) || this.getInputData(1);
+        this.setOutputData(0, ret);
+    };
+    LiteGraph.registerNodeType("logic/OR", logicOr);
+    
+    
+    function logicNot(){
+        this.properties = { };
+        this.addInput("in", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    logicNot.title = "NOT";
+    logicNot.desc = "Return the boolean inverse";
+    logicNot.prototype.onExecute = function() {
+        var ret = !this.getInputData(0);
+        this.setOutputData(0, ret);
+    };
+    LiteGraph.registerNodeType("logic/NOT", logicNot);
+    
     
 })(this);
