@@ -5961,10 +5961,11 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }else{
                     
-                    console.debug(this.connecting_output);
+                    // atlasan edit: add menu when releasing link in empty space
+                    /*console.debug(this.connecting_output);
                     console.debug(this.connecting_pos);
                     console.debug(this.connecting_node);
-                    console.debug(this.connecting_slot);
+                    console.debug(this.connecting_slot);*/
                     
                     this.showConnectionMenu(this.connecting_node, this.connecting_output,e);
                     

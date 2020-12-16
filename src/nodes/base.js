@@ -659,6 +659,7 @@
         this.addOutput("", "boolean");
         this.addProperty("value", true);
         this.widget = this.addWidget("toggle","value",true,"value");
+        this.serialize_widgets = true;
         this.widgets_up = true;
         this.size = [140, 30];
     }

@@ -82,4 +82,24 @@
     };
 
     LiteGraph.registerNodeType("logic/sequence", Sequence);
+    
+    
+    function logicAnd(){
+        this.properties = { };
+        this.addInput("a", "boolean");
+        this.addInput("b", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    
+    logicAnd.title = "If";
+    logicAnd.desc = "Return true if both inputs are true";
+
+
+    logicAnd.prototype.onExecute = function() {
+        var ret = this.getInputData(0) && this.getInputData(1);
+        this.setOutputData(0, ret);
+    };
+
+    LiteGraph.registerNodeType("logic/And", logicAnd);
+    
 })(this);
