@@ -9685,16 +9685,16 @@ LGraphNode.prototype.executeAction = function(action)
         return false;
     };
 
+    // atlasan refactor :: this is used fot title but nt for properties!
     LGraphCanvas.onShowPropertyEditor = function(item, options, e, menu, node) {
         var input_html = "";
         var property = item.property || "title";
         var value = node[property];
 
-        var modified = false;
-        
         // atlasan refactor :: use create dialog ?
         
         var dialog = document.createElement("div");
+        dialog.is_modified = false;
         dialog.className = "graphdialog";
         dialog.innerHTML =
             "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
@@ -9712,11 +9712,15 @@ LGraphNode.prototype.executeAction = function(action)
                 this.focus();
             });
             input.addEventListener("keydown", function(e) {
-                modified = true;
-                if (e.keyCode != 13) {
+                dialog.is_modified = true;
+                if (e.keyCode == 27) {
+                    //ESC
+                    dialog.close();
+                } else if (e.keyCode == 13) {
+                    inner(); // save
+                } else if (e.keyCode != 13) {
                     return;
                 }
-                inner();
                 e.preventDefault();
                 e.stopPropagation();
             });
@@ -9745,12 +9749,14 @@ LGraphNode.prototype.executeAction = function(action)
         button.addEventListener("click", inner);
         canvas.parentNode.appendChild(dialog);
 
+        if(input) input.focus();
+        
         dialog.addEventListener("mouseleave", function(e) {
-            dialog.close();
+            if (!dialog.is_modified) dialog.close();
         });
         
         function inner() {
-            setValue(input.value);
+            if(input) setValue(input.value);
         }
 
         function setValue(value) {
@@ -10214,22 +10220,26 @@ LGraphNode.prototype.executeAction = function(action)
             options
         );
 
+        var input = false;
         if ((type == "enum" || type == "combo") && info.values) {
-            var input = dialog.querySelector("select");
+            input = dialog.querySelector("select");
             input.addEventListener("change", function(e) {
+                dialog.modified();
                 setValue(e.target.value);
                 //var index = e.target.value;
                 //setValue( e.options[e.selectedIndex].value );
             });
         } else if (type == "boolean") {
-            var input = dialog.querySelector("input");
+            input = dialog.querySelector("input");
             if (input) {
                 input.addEventListener("click", function(e) {
+                    dialog.modified();
                     setValue(!!input.checked);
                 });
+                
             }
         } else {
-            var input = dialog.querySelector("input");
+            input = dialog.querySelector("input");
             if (input) {
                 input.addEventListener("blur", function(e) {
                     this.focus();
@@ -10242,15 +10252,22 @@ LGraphNode.prototype.executeAction = function(action)
 
                 input.value = v;
                 input.addEventListener("keydown", function(e) {
-                    if (e.keyCode != 13) {
+                    if (e.keyCode == 27) {
+                        //ESC
+                        dialog.close();
+                    } else if (e.keyCode == 13) {
+                        // ENTER
+                        inner(); // save
+                    } else if (e.keyCode != 13) {
+                        dialog.modified();
                         return;
                     }
-                    inner();
                     e.preventDefault();
                     e.stopPropagation();
                 });
             }
         }
+        if (input) input.focus();
 
         var button = dialog.querySelector("button");
         button.addEventListener("click", inner);
@@ -10287,11 +10304,13 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LGraphCanvas.prototype.createDialog = function(html, options) {
-        options = options || {};
+        def_options = { checkForInput: false, closeOnLeave: true, closeOnLeave_checkModified: true }; // atlasan proposed options defaults method
+        options = Object.assign(def_options, options || {});
 
         var dialog = document.createElement("div");
         dialog.className = "graphdialog";
         dialog.innerHTML = html;
+        dialog.is_modified = false;
 
         var rect = this.canvas.getBoundingClientRect();
         var offsetx = -20;
@@ -10312,20 +10331,44 @@ LGraphNode.prototype.executeAction = function(action)
             offsetx += this.canvas.width * 0.5;
             offsety += this.canvas.height * 0.5;
         }
-
+        
         dialog.style.left = offsetx + "px";
         dialog.style.top = offsety + "px";
 
         this.canvas.parentNode.appendChild(dialog);
-
         
+        // atlasan check for input and use default behaviour: save on enter, close on esc
+        if (options.checkForInput){
+            var aI = [];
+            var focused = false;
+            if (aI = dialog.querySelectorAll("input")){
+                aI.forEach(function(iX) {
+                    iX.addEventListener("keydown",function(e){
+                        dialog.modified();
+                        if (e.keyCode == 27) {
+                            dialog.close();
+                        } else if (e.keyCode != 13) {
+                            return;
+                        }
+                        // set value ?
+                        e.preventDefault();
+                        e.stopPropagation();
+                    });
+                    if (!focused) iX.focus();
+                });
+            }
+        }
+        
+        dialog.modified = function(){
+            dialog.is_modified = true;
+        }
         dialog.close = function() {
             if (this.parentNode) {
                 this.parentNode.removeChild(this);
             }
         };
-        dialog.addEventListener("mouseleave", function(e) {
-            dialog.close();
+        if (options.closeOnLeave) dialog.addEventListener("mouseleave", function(e) {
+            if (!dialog.is_modified || !options.closeOnLeave_checkModified) dialog.close();
         });
 
         return dialog;
