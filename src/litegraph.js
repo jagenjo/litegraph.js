@@ -5292,7 +5292,7 @@ LGraphNode.prototype.executeAction = function(action)
             // atlasan implement: clone node ALT dragging
             if (e.altKey && node && this.allow_interaction && !skip_action && !this.read_only)
             {
-                console.debug("ALT_CLONING");
+                // console.debug("ALT_CLONING"); // atlasan debug REMOVE
                 if (cloned = node.clone()){
                     //cloned.configure(node);
                     cloned.pos[0] += 5;
@@ -5990,7 +5990,11 @@ LGraphNode.prototype.executeAction = function(action)
                     
                     // atlasan edit: add menu when releasing link in empty space
                     
-                    this.showConnectionMenu(this.connecting_node, this.connecting_output,e);
+                    if (e.shiftKey){
+                        this.showSearchBox(e,{node_from: this.connecting_node, slot_from: this.connecting_output});
+                    }else{
+                        this.showConnectionMenu(this.connecting_node, this.connecting_output,e);
+                    }
                     
                 }
 
@@ -9690,7 +9694,7 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                         if (iS!==false && iS>-1){
                             //console.debug("try to "+iS+" "+node+" "+0);
-                            nodeFrom.connect( iS, node, 0 );
+                            nodeFrom.connect( iS, node, 0 );  // atlasan implement :: look for right slot by type
                         }
 					});
 					break;
@@ -9889,7 +9893,10 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LGraphCanvas.search_limit = -1;
-    LGraphCanvas.prototype.showSearchBox = function(event) {
+    LGraphCanvas.prototype.showSearchBox = function(event, options) {
+        def_options = { slot_from: null, node_from:null }; // atlasan proposed options defaults method
+        options = Object.assign(def_options, options || {});
+        
         var that = this;
         var input_html = "";
         var graphcanvas = LGraphCanvas.active_canvas;
@@ -10072,6 +10079,28 @@ LGraphNode.prototype.executeAction = function(action)
                         }
 
 						graphcanvas.graph.afterChange();
+                    }
+                    
+                    // atlasan :: join node after inserting
+                    if (options.node_from){
+                        var iS = false;
+                        switch (typeof options.slot_from){
+                            case "string":
+                                iS = options.node_from.findOutputSlot(options.slot_from);    
+                            break;
+                            case "object":
+                                iS = options.node_from.findOutputSlot(options.slot_from.name);    
+                            break;
+                            case "number":
+                                iS = options.node_from
+                            break;
+                            default:
+                                iS = 0; // try with first if no name set
+                        }
+                        if (iS!==false && iS>-1){
+                            //console.debug("search_conn ! try to "+iS+" "+node+" "+0); // atlasan debug REMOVE
+                            options.node_from.connect( iS, node, 0 ); // atlasan implement :: look for right slot by type
+                        }
                     }
                 }
             }
