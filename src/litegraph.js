@@ -10419,7 +10419,7 @@ LGraphNode.prototype.executeAction = function(action)
 			{
 				value_element.setAttribute("contenteditable",true);
 				value_element.addEventListener("keydown", function(e){ 
-					if(e.code == "Enter")
+					if(e.code == "Enter" && (type != "string" || !e.shiftKey)) // atlasan edit: allow for multiline
 					{
 						e.preventDefault();
 						this.blur();
