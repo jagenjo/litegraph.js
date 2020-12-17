@@ -5289,6 +5289,29 @@ LGraphNode.prototype.executeAction = function(action)
                 skip_action = true;
             }
 
+            // atlasan implement: clone node ALT dragging
+            if (e.altKey && node && this.allow_interaction && !skip_action && !this.read_only)
+            {
+                console.debug("ALT_CLONING");
+                if (cloned = node.clone()){
+                    //cloned.configure(node);
+                    cloned.pos[0] += 5;
+                    cloned.pos[1] += 5;
+                    this.graph.add(cloned);
+                    node = cloned;
+                    skip_action = true;
+                    if (!block_drag_node) {
+                        if (this.allow_dragnodes) {
+							this.graph.beforeChange();
+                            this.node_dragged = node;
+                        }
+                        if (!this.selected_nodes[node.id]) {
+                            this.processNodeSelected(node, e);
+                        }
+                    }
+                }
+            }
+            
             var clicking_canvas_bg = false;
 
             //when clicked on top of a node
@@ -5966,10 +5989,6 @@ LGraphNode.prototype.executeAction = function(action)
                 }else{
                     
                     // atlasan edit: add menu when releasing link in empty space
-                    /*console.debug(this.connecting_output);
-                    console.debug(this.connecting_pos);
-                    console.debug(this.connecting_node);
-                    console.debug(this.connecting_slot);*/
                     
                     this.showConnectionMenu(this.connecting_node, this.connecting_output,e);
                     
