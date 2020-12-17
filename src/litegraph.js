@@ -6213,7 +6213,7 @@ LGraphNode.prototype.executeAction = function(action)
             //collapse
             //...
 
-            console.debug("keydown "+e.keyCode);
+            // console.debug("keydown "+e.keyCode); // atlasan debug REMOVE
             
             //TODO
             if (this.selected_nodes) {
@@ -7535,7 +7535,7 @@ LGraphNode.prototype.executeAction = function(action)
 
                     if (slot.type == "array"){
                         slot.shape = LiteGraph.GRID_SHAPE; // atlasan edit :: this is dirty, should place somewhere else.. in addInput? addOutput instead?
-                        console.debug("ARRAY SLOT");
+                        // console.debug("ARRAY SLOT"); atlasan debug REMOVE
                     }
                     
                     var doStroke = true;
@@ -10586,7 +10586,7 @@ LGraphNode.prototype.executeAction = function(action)
 					//console.log(e);
 					if(e.code == "Enter" && e.ctrlKey )
 					{
-						console.log("Assigned");
+						// console.log("Assigned");
 						node.setProperty(propname, textarea.value);
 					}
 				});
