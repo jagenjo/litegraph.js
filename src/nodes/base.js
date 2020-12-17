@@ -853,7 +853,7 @@
 	//to store json objects
     function ConstantArray() {
         this.addInput("json", "");
-        this.addOutput("array", "array");
+        this.addOutput("arrayOut", "array");
         this.addOutput("length", "number");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","array","","value");
@@ -891,6 +891,7 @@
 			this._value.length = v.length;
 			for(var i = 0; i < v.length; ++i)
 				this._value[i] = v[i];
+            this.changeOutputType("arrayOut", "array");
 		}
 		this.setOutputData(0, this._value);
 		this.setOutputData(1, this._value ? ( this._value.length || 0) : 0 );
