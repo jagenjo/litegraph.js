@@ -5519,6 +5519,9 @@ LGraphNode.prototype.executeAction = function(action)
 
                 if (is_double_click && !this.read_only && this.allow_searchbox) {
                     this.showSearchBox(e);
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
                 }
 
                 clicking_canvas_bg = true;
