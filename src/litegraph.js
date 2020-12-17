@@ -7630,7 +7630,7 @@ LGraphNode.prototype.executeAction = function(action)
 
                     if (slot.type == "array"){
                         slot.shape = LiteGraph.GRID_SHAPE; // atlasan edit :: this is dirty, should place somewhere else.. in addInput? addOutput instead?
-                        console.debug("ARRAY SLOT");
+                        // console.debug("ARRAY SLOT"); // atlasan debug REMOVE
                     }
                     
                     var doStroke = true;
@@ -9690,10 +9690,19 @@ LGraphNode.prototype.executeAction = function(action)
         var property = item.property || "title";
         var value = node[property];
 
+        var modified = false;
+        
+        // atlasan refactor :: use create dialog ?
+        
         var dialog = document.createElement("div");
         dialog.className = "graphdialog";
         dialog.innerHTML =
             "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
+        dialog.close = function() {
+            if (dialog.parentNode) {
+                dialog.parentNode.removeChild(dialog);
+            }
+        };
         var title = dialog.querySelector(".name");
         title.innerText = property;
         var input = dialog.querySelector("input");
@@ -9703,6 +9712,7 @@ LGraphNode.prototype.executeAction = function(action)
                 this.focus();
             });
             input.addEventListener("keydown", function(e) {
+                modified = true;
                 if (e.keyCode != 13) {
                     return;
                 }
@@ -9735,6 +9745,10 @@ LGraphNode.prototype.executeAction = function(action)
         button.addEventListener("click", inner);
         canvas.parentNode.appendChild(dialog);
 
+        dialog.addEventListener("mouseleave", function(e) {
+            dialog.close();
+        });
+        
         function inner() {
             setValue(input.value);
         }
@@ -10304,11 +10318,15 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.canvas.parentNode.appendChild(dialog);
 
+        
         dialog.close = function() {
             if (this.parentNode) {
                 this.parentNode.removeChild(this);
             }
         };
+        dialog.addEventListener("mouseleave", function(e) {
+            dialog.close();
+        });
 
         return dialog;
     };
