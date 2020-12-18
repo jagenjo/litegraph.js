@@ -288,7 +288,7 @@
                 var sT = aTypes[i].toLowerCase();
                 if (sT==""){
                     sT = "*";
-                    // console.debug("FIXING for "+sCN); // atlasan debug :: used to verify is some nodes didnt declared the slot type 
+                    // console.debug("FIXING for "+sCN); // atlasan debug :: used to verify is some nodes didnt declared the slot type ( using empty string instead of 0 or "*" for general types )
                 }
                 var registerTo = out ? "registered_slot_out_types" : "registered_slot_in_types";
                 if (typeof this[registerTo][sT] == "undefined") this[registerTo][sT] = {nodes: []};

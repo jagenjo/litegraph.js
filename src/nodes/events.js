@@ -321,9 +321,9 @@
     LiteGraph.registerNodeType("events/timer", TimerEvent);
 
     function DataStore() {
-        this.addInput("data", "");
+        this.addInput("data", 0);
         this.addInput("assign", LiteGraph.ACTION);
-        this.addOutput("data", "");
+        this.addOutput("data", 0);
 		this._last_value = null;
 		this.properties = { data: null, serialize: true };
 		var that = this;

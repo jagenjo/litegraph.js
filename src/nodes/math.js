@@ -924,10 +924,10 @@
 
 
     function MathBranch() {
-        this.addInput("in", "");
+        this.addInput("in", 0);
         this.addInput("cond", "boolean");
-        this.addOutput("true", "");
-        this.addOutput("false", "");
+        this.addOutput("true", 0);
+        this.addOutput("false", 0);
         this.size = [80, 60];
     }
 

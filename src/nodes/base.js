@@ -718,8 +718,8 @@
     LiteGraph.registerNodeType("basic/string", ConstantString);
 
     function ConstantFile() {
-        this.addInput("url", "");
-        this.addOutput("file", "");
+        this.addInput("url", "string");
+        this.addOutput("file", "string");
         this.addProperty("url", "");
         this.addProperty("type", "text");
         this.widget = this.addWidget("text","url","","url");
@@ -817,7 +817,7 @@
 
 	//to store json objects
     function ConstantData() {
-        this.addOutput("data", "");
+        this.addOutput("data", "object");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","json","","value");
         this.widgets_up = true;
@@ -904,7 +904,7 @@
     function ArrayElement() {
         this.addInput("array", "array,table,string");
         this.addInput("index", "number");
-        this.addOutput("value", "");
+        this.addOutput("value", 0);
 		this.addProperty("index",0);
     }
 
@@ -929,7 +929,7 @@
         this.addInput("table", "table");
         this.addInput("row", "number");
         this.addInput("col", "number");
-        this.addOutput("value", "");
+        this.addOutput("value", 0);
 		this.addProperty("row",0);
 		this.addProperty("column",0);
     }
@@ -957,9 +957,9 @@
     LiteGraph.registerNodeType("basic/table[][]", TableElement);
 
     function ObjectProperty() {
-        this.addInput("obj", "");
-        this.addOutput("", "");
-        this.addProperty("value", "");
+        this.addInput("obj", "object");
+        this.addOutput("property", 0);
+        this.addProperty("value", 0);
         this.widget = this.addWidget("text","prop.","",this.setValue.bind(this) );
         this.widgets_up = true;
         this.size = [140, 30];
@@ -1311,9 +1311,9 @@
     function NodeScript() {
         this.size = [60, 30];
         this.addProperty("onExecute", "return A;");
-        this.addInput("A", "");
-        this.addInput("B", "");
-        this.addOutput("out", "");
+        this.addInput("A", 0);
+        this.addInput("B", 0);
+        this.addOutput("out", 0);
 
         this._func = null;
         this.data = {};
