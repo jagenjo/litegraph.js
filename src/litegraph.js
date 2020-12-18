@@ -98,7 +98,22 @@
 
         searchbox_extras: {}, //used to add extra features to the search box
         auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
-
+        
+        auto_load_slot_types: true, // atlasan: make this default false for retrocompatibility, eg. some special nodes may have strange behaviour on construct?
+        
+        registered_slot_in_types: {}, // atlasan :: keep track of slot types for which nodeclass
+        registered_slot_out_types: {}, // atlasan :: keep track of slot types for which nodeclass
+        
+        // these slot types array are derived from calling registerNodeAndSlotType
+        // these has been calculated with :: if(!Object.values){Object.values=obj=>Object.keys(obj).map(key=>obj[key])}
+        // and than Object.values(LiteGraph.slot_types_in), Object.values(LiteGraph.slot_types_out)
+        // or better to array :: var X = ""; Object.values(LiteGraph.slot_types_out).map(function(a){ X+= (X!=""?",":"")+"'"+(a!=undefined?a:"")+"'"; });
+        
+        /*slot_types_in: {0: "*", 1: "[mat4]", 2: "array", 3: "audio", 4: "bool", 5: "boolean", 6: "canvas", 7: "event/action", 8: "geometry", 9: "image", 10: "mat4", 11: "number", 12: "object", 13: "quat", 14: "string", 15: "table", 16: "vec2", 17: "vec3", 18: "vec4"},      
+        slot_types_out: {0: "", 1: "*", 2: "[mat4]", 3: "[vec3]", 4: "array", 5: "audio", 6: "boolean", 7: "canvas", 8: "color", 9: "event/action", 10: "geometry", 11: "image", 12: "mat4", 13: "midi", 14: "number", 15: "object", 16: "quat", 17: "string", 18: "table", 19: "vec2", 20: "vec3", 21: "vec4"},*/
+        slot_types_in: ['*','[mat4]','array','audio','bool','boolean','canvas','event/action','geometry','image','mat4','number','object','quat','string','table','vec2','vec3','vec4'],
+        slot_types_out: ['*','[mat4]','[vec3]','array','audio','boolean','canvas','color','event/action','geometry','image','mat4','midi','number','object','quat','string','table','vec2','vec3','vec4'],
+                
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -219,6 +234,10 @@
 	                    this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
                 }
             }
+            
+            // atlasan : one would want to know input and ouput :: this would allow trought registerNodeAndSlotType to get all the slots types
+            //console.debug("Registering "+type);
+            if (this.auto_load_slot_types) nodeTmp = new base_class(base_class.title || "tmpnode");
         },
 
         /**
@@ -235,6 +254,48 @@
 				delete this.Nodes[base_class.constructor.name];
 		},
 
+        /**
+        * Save a slot type and his node
+        * @method registerSlotType
+        * @param {String|Object} type name of the node or the node constructor itself
+        * @param {String} slot_type name of the slot type (variable type), eg. string, number, array, boolean, ..
+        */
+        registerNodeAndSlotType: function(type,slot_type,out){
+            out = out || false;
+            /*console.debug("registerNodeAndSlotType");
+            console.debug(type.getTitle());*/
+            var base_class = type.constructor === String && this.registered_node_types[type] !== "anonymous" ? this.registered_node_types[type] : type;
+            
+            /*if (base_class.constructor.name == "anonymous"){
+                var sCN = type.getTitle(); //console.debug(type);
+            }
+            else{
+                var sCN = base_class.constructor.name;
+            }*/
+            var sCN = base_class.constructor.type;
+            //console.debug(sCN);
+            //console.debug(type);
+            
+            if (typeof slot_type == "string"){
+                var aTypes = slot_type.split(",");
+            }else if (slot_type == this.EVENT || slot_type == this.ACTION){
+                var aTypes = ["EVENT/ACTION"];
+            }else{
+                var aTypes = ["*"];
+            }
+
+            for (var i = 0; i < aTypes.length; ++i) {
+                var sT = aTypes[i].toLowerCase();
+                if (sT==""){
+                    sT = "*";
+                    // console.debug("FIXING for "+sCN); // atlasan debug :: used to verify is some nodes didnt declared the slot type 
+                }
+                var registerTo = out ? "registered_slot_out_types" : "registered_slot_in_types";
+                if (typeof this[registerTo][sT] == "undefined") this[registerTo][sT] = {nodes: []};
+                this[registerTo][sT].nodes.push(sCN); //base_class.constructor.name);
+            }
+        },
+        
         /**
          * Create a new nodetype by passing a function, it wraps it with a proper class and generates inputs according to the parameters of the function.
          * Useful to wrap simple methods that do not require properties, and that only process some input to generate an output.
@@ -1615,7 +1676,7 @@
         this.inputs[name] = { name: name, type: type, value: value };
         this._version++;
 		this.afterChange();
-
+        
         if (this.onInputAdded) {
             this.onInputAdded(name, type);
         }
@@ -3106,7 +3167,7 @@
                 o[i] = extra_info[i];
             }
         }
-
+        //registered_slot_types
         if (!this.outputs) {
             this.outputs = [];
         }
@@ -3114,6 +3175,9 @@
         if (this.onOutputAdded) {
             this.onOutputAdded(o);
         }
+        
+        if (LiteGraph.auto_load_slot_types) LiteGraph.registerNodeAndSlotType(this,type,true);
+        
         this.setSize( this.computeSize() );
         this.setDirtyCanvas(true, true);
         return o;
@@ -3141,6 +3205,9 @@
             if (this.onOutputAdded) {
                 this.onOutputAdded(o);
             }
+            
+            if (LiteGraph.auto_load_slot_types) LiteGraph.registerNodeAndSlotType(this,info[1],true);
+            
         }
 
         this.setSize( this.computeSize() );
@@ -3202,6 +3269,8 @@
         if (this.onInputAdded) {
             this.onInputAdded(o);
         }
+        
+        LiteGraph.registerNodeAndSlotType(this,type);
 
         this.setDirtyCanvas(true, true);
         return o;
@@ -3229,6 +3298,8 @@
             if (this.onInputAdded) {
                 this.onInputAdded(o);
             }
+            
+            LiteGraph.registerNodeAndSlotType(this,info[1]);
         }
 
         this.setSize( this.computeSize() );
@@ -5991,7 +6062,9 @@ LGraphNode.prototype.executeAction = function(action)
                     // atlasan edit: add menu when releasing link in empty space
                     
                     if (e.shiftKey){
-                        this.showSearchBox(e,{node_from: this.connecting_node, slot_from: this.connecting_output});
+                        console.debug("ShowSearchBox :: ")
+                        console.debug(this.connecting_output);
+                        this.showSearchBox(e,{node_from: this.connecting_node, slot_from: this.connecting_output, type_filter_in: this.connecting_output.type});
                     }else{
                         this.showConnectionMenu(this.connecting_node, this.connecting_output,e);
                     }
@@ -7306,7 +7379,7 @@ LGraphNode.prototype.executeAction = function(action)
                 } else {
                     ctx.globalAlpha = this.editor_alpha;
                 }
-                ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = false;
+                ctx.imageSmoothingEnabled = ctx.imageSmoothingEnabled = false; // ctx.mozImageSmoothingEnabled = 
                 if (
                     !this._bg_img ||
                     this._bg_img.name != this.background_image
@@ -7340,7 +7413,7 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 
                 ctx.globalAlpha = 1.0;
-                ctx.imageSmoothingEnabled = ctx.mozImageSmoothingEnabled = ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingEnabled = ctx.imageSmoothingEnabled = true; //= ctx.mozImageSmoothingEnabled
             }
 
             //groups
@@ -9894,7 +9967,15 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.search_limit = -1;
     LGraphCanvas.prototype.showSearchBox = function(event, options) {
-        def_options = { slot_from: null, node_from:null }; // atlasan proposed options defaults method
+        // atlasan proposed options defaults method
+        def_options = { slot_from: null
+                        ,node_from: null
+                        ,type_filter: LiteGraph.auto_load_slot_types    // this will be checked for functionality enabled : filter on slot type, in and out
+                        ,type_filter_in: false                          // these are default: pass to set initially set values
+                        ,type_filter_out: false
+                        ,hide_on_mouse_leave: false
+                        ,show_all_if_empty: true
+                    };
         options = Object.assign(def_options, options || {});
         
         var that = this;
@@ -9905,8 +9986,13 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialog = document.createElement("div");
         dialog.className = "litegraph litesearchbox graphdialog rounded";
-        dialog.innerHTML =
-            "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/><div class='helper'></div>";
+        dialog.innerHTML = "<span class='name'>Search</span> <input autofocus type='text' class='value rounded'/>";
+        if (options.type_filter){
+            dialog.innerHTML += "<select class='slot_in_type_filter'><option value=''></option></select>";
+            dialog.innerHTML += "<select class='slot_out_type_filter'><option value=''></option></select>";
+        }
+        dialog.innerHTML += "<div class='helper'></div>";
+        
         dialog.close = function() {
             that.search_box = null;
             root_document.body.focus();
@@ -9920,25 +10006,26 @@ LGraphNode.prototype.executeAction = function(action)
             }
         };
 
-        var timeout_close = null;
-
         if (this.ds.scale > 1) {
             dialog.style.transform = "scale(" + this.ds.scale + ")";
         }
 
-        dialog.addEventListener("mouseenter", function(e) {
-            if (timeout_close) {
-                clearTimeout(timeout_close);
-                timeout_close = null;
-            }
-        });
-
-        dialog.addEventListener("mouseleave", function(e) {
-            //dialog.close();
-            timeout_close = setTimeout(function() {
-                dialog.close();
-            }, 500);
-        });
+        // hide on mouse leave
+        if(options.hide_on_mouse_leave){
+            var timeout_close = null;
+            dialog.addEventListener("mouseenter", function(e) {
+                if (timeout_close) {
+                    clearTimeout(timeout_close);
+                    timeout_close = null;
+                }
+            });
+            dialog.addEventListener("mouseleave", function(e) {
+                //dialog.close();
+                timeout_close = setTimeout(function() {
+                    dialog.close();
+                }, 500);
+            });
+        }
 
         if (that.search_box) {
             that.search_box.close();
@@ -9978,7 +10065,7 @@ LGraphNode.prototype.executeAction = function(action)
                     if (timeout) {
                         clearInterval(timeout);
                     }
-                    timeout = setTimeout(refreshHelper, 10);
+                    timeout = setTimeout(refreshHelper, 250); // 250 is small enough
                     return;
                 }
                 e.preventDefault();
@@ -9995,7 +10082,51 @@ LGraphNode.prototype.executeAction = function(action)
 		    root_document.body.appendChild(dialog);
 			root_document.body.style.overflow = "hidden";
 		}
-
+        // dialog element has been appended
+        
+        // if should filter on type, load and fill selected and choose elements if passed
+        if (options.type_filter){
+            var selIn = dialog.querySelector(".slot_in_type_filter");
+            var selOut = dialog.querySelector(".slot_out_type_filter");
+            if (selIn){
+                /*console.debug(selIn);
+                console.debug(LiteGraph.slot_types_in);*/
+                var aSlots = LiteGraph.slot_types_in;
+                var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length; 
+                for (var iK=0; iK<nSlots; iK++){
+                    var opt = document.createElement('option');
+                    opt.value = aSlots[iK];
+                    opt.innerHTML = aSlots[iK];
+                    selIn.appendChild(opt);
+                    //console.debug("append "+opt.value);
+                    if(options.type_filter_in && options.type_filter_in == aSlots[iK]){
+                        //selIn.slectedIndex ..
+                        opt.selected = true;
+                    }
+                }
+                selIn.addEventListener("change",function(){
+                    refreshHelper();
+                });
+            }
+            if (selOut){
+                var aSlots = LiteGraph.slot_types_out;
+                var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length; 
+                for (var iK=0; iK<nSlots; iK++){
+                    var opt = document.createElement('option');
+                    opt.value = aSlots[iK];
+                    opt.innerHTML = aSlots[iK];
+                    selOut.appendChild(opt);
+                    if(options.type_filter_out && options.type_filter_out == aSlots[iK]){
+                        //selOut.slectedIndex ..
+                        opt.selected = true;
+                    }
+                }
+                selOut.addEventListener("change",function(){
+                    refreshHelper();
+                });
+            }
+        }
+        
         //compute best position
         var rect = canvas.getBoundingClientRect();
 
@@ -10137,7 +10268,7 @@ LGraphNode.prototype.executeAction = function(action)
             var str = input.value;
             first = null;
             helper.innerHTML = "";
-            if (!str) {
+            if (!str && !options.show_all_if_empty) {
                 return;
             }
 
@@ -10156,12 +10287,14 @@ LGraphNode.prototype.executeAction = function(action)
                 //extras
                 for (var i in LiteGraph.searchbox_extras) {
                     var extra = LiteGraph.searchbox_extras[i];
-                    if (extra.desc.toLowerCase().indexOf(str) === -1) {
+                    if ((!options.show_all_if_empty || str) && extra.desc.toLowerCase().indexOf(str) === -1) {
                         continue;
                     }
 					var ctor = LiteGraph.registered_node_types[ extra.type ];
 					if( ctor && ctor.filter != filter )
 						continue;
+                    if( ! inner_test_filter(extra.type) )
+                        continue;
                     addResult( extra.desc, "searchbox_extra" );
                     if ( LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit ) {
                         break;
@@ -10192,7 +10325,48 @@ LGraphNode.prototype.executeAction = function(action)
 					var ctor = LiteGraph.registered_node_types[ type ];
 					if(filter && ctor.filter != filter )
 						return false;
-					return type.toLowerCase().indexOf(str) !== -1;
+                    if ((!options.show_all_if_empty || str) && type.toLowerCase().indexOf(str) === -1)
+                        return false;
+                    
+                    if(options.type_filter){
+                        /*var aTypeP = type.split("/");
+                        var sType = aTypeP.length?aTypeP[aTypeP.length-1]:type;*/
+                        var sType = type;
+                        
+                        var sIn = that.search_box.querySelector(".slot_in_type_filter");
+                        
+                        if(sIn && sIn.value){
+                            //console.log("will check filter against "+sIn.value);
+                            if (LiteGraph.registered_slot_in_types[sIn.value] && LiteGraph.registered_slot_in_types[sIn.value].nodes){ // type is stored
+                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_in_types[sIn.value].nodes);
+                                var doesInc = LiteGraph.registered_slot_in_types[sIn.value].nodes.includes(sType);
+                                if (doesInc!==false){
+                                    //console.log(sType+" HAS "+sIn.value);
+                                }else{
+                                    /*console.debug(LiteGraph.registered_slot_in_types[sIn.value]);
+                                    console.log(+" DONT includes "+type);*/
+                                    return false;
+                                }
+                            }
+                        }
+                        
+                        var sOut = that.search_box.querySelector(".slot_out_type_filter");
+                        if(sOut && sOut.value){
+                            //console.log("will check filter against "+sOut.value);
+                            if (LiteGraph.registered_slot_out_types[sOut.value] && LiteGraph.registered_slot_out_types[sOut.value].nodes){ // type is stored
+                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_out_types[sOut.value].nodes);
+                                var doesInc = LiteGraph.registered_slot_out_types[sOut.value].nodes.includes(sType);
+                                if (doesInc!==false){
+                                    //console.log(sType+" HAS "+sOut.value);
+                                }else{
+                                    /*console.debug(LiteGraph.registered_slot_out_types[sOut.value]);
+                                    console.log(+" DONT includes "+type);*/
+                                    return false;
+                                }
+                            }
+                        }
+                    }
+                    return true;
 				}
             }
 
