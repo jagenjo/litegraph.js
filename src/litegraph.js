@@ -111,7 +111,7 @@
         
         /*slot_types_in: {0: "*", 1: "[mat4]", 2: "array", 3: "audio", 4: "bool", 5: "boolean", 6: "canvas", 7: "event/action", 8: "geometry", 9: "image", 10: "mat4", 11: "number", 12: "object", 13: "quat", 14: "string", 15: "table", 16: "vec2", 17: "vec3", 18: "vec4"},      
         slot_types_out: {0: "", 1: "*", 2: "[mat4]", 3: "[vec3]", 4: "array", 5: "audio", 6: "boolean", 7: "canvas", 8: "color", 9: "event/action", 10: "geometry", 11: "image", 12: "mat4", 13: "midi", 14: "number", 15: "object", 16: "quat", 17: "string", 18: "table", 19: "vec2", 20: "vec3", 21: "vec4"},*/
-        slot_types_in: ['*','[mat4]','array','audio','bool','boolean','canvas','event/action','geometry','image','mat4','number','object','quat','string','table','vec2','vec3','vec4'],
+        slot_types_in: ['*','[mat4]','array','audio','boolean','canvas','event/action','geometry','image','mat4','number','object','quat','string','table','vec2','vec3','vec4'],
         slot_types_out: ['*','[mat4]','[vec3]','array','audio','boolean','canvas','color','event/action','geometry','image','mat4','midi','number','object','quat','string','table','vec2','vec3','vec4'],
                 
         /**
