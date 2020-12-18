@@ -5089,6 +5089,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         var canvas = this.canvas;
 
+        canvas.lgraphcanvas = this; // place a pointer in the dom element to get the LGraphCanvas related
+        
         var ref_window = this.getCanvasWindow();
         var document = ref_window.document; //hack used when moving canvas between windows
 
@@ -9337,7 +9339,13 @@ LGraphNode.prototype.executeAction = function(action)
         //           screenX, screenY, clientX, clientY, ctrlKey,
         //           altKey, shiftKey, metaKey, button, relatedTarget);
 
-        var window = this.getCanvasWindow();
+        // this is eventually a Dom object, get the LGraphCanvas back
+        if(typeof this.getCanvasWindow == "undefined"){
+            var window = this.lgraphcanvas.getCanvasWindow();
+        }else{
+            var window = this.getCanvasWindow();
+        }
+        
         var document = window.document;
 
         var simulatedEvent = document.createEvent("MouseEvent");
