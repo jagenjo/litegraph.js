@@ -114,6 +114,7 @@
         // these has been calculated with :: if(!Object.values){Object.values=obj=>Object.keys(obj).map(key=>obj[key])}
         // and than Object.values(LiteGraph.slot_types_in), Object.values(LiteGraph.slot_types_out)
         // or better to array :: var X = ""; Object.values(LiteGraph.slot_types_out).map(function(a){ X+= (X!=""?",":"")+"'"+(a!=undefined?a:"")+"'"; });
+        // XXX TODO just calculate these array too, very easy.. or just make everything static :: al the nodes and types to config without the auto_load_slot_types .. 
         
         /*slot_types_in: {0: "*", 1: "[mat4]", 2: "array", 3: "audio", 4: "bool", 5: "boolean", 6: "canvas", 7: "event/action", 8: "geometry", 9: "image", 10: "mat4", 11: "number", 12: "object", 13: "quat", 14: "string", 15: "table", 16: "vec2", 17: "vec3", 18: "vec4"},      
         slot_types_out: {0: "", 1: "*", 2: "[mat4]", 3: "[vec3]", 4: "array", 5: "audio", 6: "boolean", 7: "canvas", 8: "color", 9: "event/action", 10: "geometry", 11: "image", 12: "mat4", 13: "midi", 14: "number", 15: "object", 16: "quat", 17: "string", 18: "table", 19: "vec2", 20: "vec3", 21: "vec4"},*/
@@ -3723,13 +3724,15 @@
      * @param {boolean} returnObj if the obj itself wanted
      * @return {number_or_object} the slot (-1 if not found)
      */
-    LGraphNode.prototype.findInputSlotByType = function(type, returnObj) {
+    LGraphNode.prototype.findInputSlotByType = function(type, returnObj, checkFree) {
         returnObj = returnObj || false;
+        checkFree = checkFree || false;
         if (!this.inputs) {
             return -1;
         }
         for (var i = 0, l = this.inputs.length; i < l; ++i) {
             if (type == this.inputs[i].type) {
+                if (checkFree && this.inputs[i].link != null) continue;
                 return !returnObj ? i : this.inputs[i];
             }
         }
@@ -3743,13 +3746,16 @@
      * @param {boolean} returnObj if the obj itself wanted
      * @return {number_or_object} the slot (-1 if not found)
      */
-    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj) {
+    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj, checkFree) {
+        returnObj = returnObj || false;
+        checkFree = checkFree || false;
         if (!this.outputs) {
             return -1;
         }
         for (var i = 0, l = this.outputs.length; i < l; ++i) {
             if (type == this.outputs[i].type) {
-                return !returnObj ? i : this.inputs[i];
+                if (checkFree && this.outputs[i].link != null) continue;
+                return !returnObj ? i : this.outputs[i];
             }
         }
         return -1;
@@ -3767,7 +3773,7 @@
         if (target_node && target_node.constructor === Number) {
             target_node = this.graph.getNodeById(target_node);
         }
-        target_slot = target_node.findInputSlotByType(target_slotType);
+        target_slot = target_node.findInputSlotByType(target_slotType, false, true);
         if (target_slot !== null){
             //console.debug("CONNbyTYPE type "+target_slotType+" for "+target_slot) // atlasan debug REMOVE
             return this.connect(slot, target_node, target_slot);
@@ -3789,7 +3795,7 @@
         if (source_node && source_node.constructor === Number) {
             source_node = this.graph.getNodeById(source_node);
         }
-        source_slot = source_node.findOutputSlotByType(source_slotType);
+        source_slot = source_node.findOutputSlotByType(source_slotType, false, true);
         if (source_slot !== null){
             //console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
             return source_node.connect(source_slot, this, slot);
@@ -10595,7 +10601,7 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                         if (typeof options.node_to.inputs[iS] !== undefined){
                             if (iS!==false && iS>-1){
-                                console.debug("search_conn_nodeTO ! try to "+iS+" "+node+" "+0); // atlasan debug REMOVE
+                                console.debug("search_conn_nodeTO ! try to "+iS+" "+node+" "+options.node_to.inputs[iS].type); // atlasan debug REMOVE
                                 //options.node_to.connectByType( iS, node, options.node_from.outputs[iS].type ); // atlasan implement :: look for right slot by type
                                 options.node_to.connectByTypeOutput(iS,node,options.node_to.inputs[iS].type);
                             }
