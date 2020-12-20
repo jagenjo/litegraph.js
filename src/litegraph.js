@@ -99,10 +99,13 @@
         searchbox_extras: {}, //used to add extra features to the search box
         auto_sort_node_types: true, // If set to true, will automatically sort node types / categories in the context menus
         
-        shift_click_do_break_link_from: false, // atlasan :: I really don't like this.. too easy to break links.. maybe with Alt? Or aother less used modifiers? To me contextual menu with righet click - disconnect is more than enought
+        shift_click_do_break_link_from: false, // atlasan :: I really don't like this.. too easy to break links.. maybe with Alt? Or aother less used modifiers? To me contextual menu with right click - disconnect is more than enought
         click_do_break_link_to: false, // neither, or worst
         
         auto_load_slot_types: true, // atlasan: make this default false for retrocompatibility, eg. some special nodes may have strange behaviour on construct?
+        search_hide_on_mouse_leave: true,
+        search_filter_bydefault: true,
+        search_show_all_on_open: true,
         
         registered_slot_in_types: {}, // atlasan :: keep track of slot types for which nodeclass
         registered_slot_out_types: {}, // atlasan :: keep track of slot types for which nodeclass
@@ -10277,11 +10280,12 @@ LGraphNode.prototype.executeAction = function(action)
         def_options = { slot_from: null
                         ,node_from: null
                         ,node_to: null
-                        ,type_filter: LiteGraph.auto_load_slot_types    // this will be checked for functionality enabled : filter on slot type, in and out
+                        ,type_filter: LiteGraph.auto_load_slot_types && LiteGraph.search_filter_bydefault // this will be checked for functionality enabled : filter on slot type, in and out
                         ,type_filter_in: false                          // these are default: pass to set initially set values
                         ,type_filter_out: false
-                        ,hide_on_mouse_leave: false
+                        ,hide_on_mouse_leave: LiteGraph.search_hide_on_mouse_leave
                         ,show_all_if_empty: true
+                        ,show_all_on_open: LiteGraph.search_show_all_on_open
                     };
         options = Object.assign(def_options, options || {});
         
@@ -10299,6 +10303,20 @@ LGraphNode.prototype.executeAction = function(action)
             dialog.innerHTML += "<select class='slot_out_type_filter'><option value=''></option></select>";
         }
         dialog.innerHTML += "<div class='helper'></div>";
+        
+        if( root_document.fullscreenElement )
+	        root_document.fullscreenElement.appendChild(dialog);
+		else
+		{
+		    root_document.body.appendChild(dialog);
+			root_document.body.style.overflow = "hidden";
+		}
+        // dialog element has been appended
+        
+        if (options.type_filter){
+            var selIn = dialog.querySelector(".slot_in_type_filter");
+            var selOut = dialog.querySelector(".slot_out_type_filter");
+        }
         
         dialog.close = function() {
             that.search_box = null;
@@ -10319,6 +10337,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         // hide on mouse leave
         if(options.hide_on_mouse_leave){
+            var prevent_timeout = false;
             var timeout_close = null;
             dialog.addEventListener("mouseenter", function(e) {
                 if (timeout_close) {
@@ -10327,11 +10346,34 @@ LGraphNode.prototype.executeAction = function(action)
                 }
             });
             dialog.addEventListener("mouseleave", function(e) {
-                //dialog.close();
+                if (prevent_timeout){
+                    return;
+                }
                 timeout_close = setTimeout(function() {
                     dialog.close();
                 }, 500);
             });
+            // if filtering, check focus changed to comboboxes and prevent closing
+            if (options.type_filter){
+                selIn.addEventListener("click", function(e) {
+                    prevent_timeout++;
+                });
+                selIn.addEventListener("blur", function(e) {
+                   prevent_timeout = 0;
+                });
+                selIn.addEventListener("change", function(e) {
+                    prevent_timeout = -1;
+                });
+                selOut.addEventListener("click", function(e) {
+                    prevent_timeout++;
+                });
+                selOut.addEventListener("blur", function(e) {
+                   prevent_timeout = 0;
+                });
+                selOut.addEventListener("change", function(e) {
+                    prevent_timeout = -1;
+                });
+            }
         }
 
         if (that.search_box) {
@@ -10381,20 +10423,9 @@ LGraphNode.prototype.executeAction = function(action)
 				return true;
             });
         }
-
-		if( root_document.fullscreenElement )
-	        root_document.fullscreenElement.appendChild(dialog);
-		else
-		{
-		    root_document.body.appendChild(dialog);
-			root_document.body.style.overflow = "hidden";
-		}
-        // dialog element has been appended
         
         // if should filter on type, load and fill selected and choose elements if passed
         if (options.type_filter){
-            var selIn = dialog.querySelector(".slot_in_type_filter");
-            var selOut = dialog.querySelector(".slot_out_type_filter");
             if (selIn){
                 /*console.debug(selIn);
                 console.debug(LiteGraph.slot_types_in);*/
@@ -10467,6 +10498,7 @@ LGraphNode.prototype.executeAction = function(action)
 		*/
 
         input.focus();
+        if (options.show_all_on_open) refreshHelper();
 
         function select(name) {
             if (name) {
