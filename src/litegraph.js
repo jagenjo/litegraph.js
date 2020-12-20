@@ -97,7 +97,7 @@
 		Globals: {}, //used to store vars between graphs
 
         searchbox_extras: {}, //used to add extra features to the search box
-        auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
+        auto_sort_node_types: true, // If set to true, will automatically sort node types / categories in the context menus
         
         shift_click_do_break_link_from: false, // atlasan :: I really don't like this.. too easy to break links.. maybe with Alt? Or aother less used modifiers? To me contextual menu with righet click - disconnect is more than enought
         click_do_break_link_to: false, // neither, or worst
@@ -481,8 +481,12 @@
                     r.push(type);
                 }
             }
-
-            return this.auto_sort_node_types ? r.sort() : r;
+            console.debug(r);
+            return this.auto_sort_node_types ? r.sort(function(a, b){
+                var aN = (a.title)?a.title:(a.name && a.name!=="anonymous")?a.name:(a.type.split("/").length ? a.type.split("/")[1] : a.type);
+                var bN = (b.title)?b.title:(b.name && b.name!=="anonymous")?b.name:(b.type.split("/").length ? b.type.split("/")[1] : b.type);
+                return aN > bN;
+            }) : r;
         },
 
         /**
@@ -9283,16 +9287,15 @@ LGraphNode.prototype.executeAction = function(action)
 			//inside widget
 			switch (w.type) {
 				case "button":
-					if (event.type === "mousemove") {
-						break;
-					}
-					if (w.callback) {
-						setTimeout(function() {
-							w.callback(w, that, node, pos, event);
-						}, 20);
-					}
-					w.clicked = true;
-					this.dirty_canvas = true;
+					if (event.type == "mousedown") {
+                        if (w.callback) {
+                            setTimeout(function() {
+                                w.callback(w, that, node, pos, event);
+                            }, 20);
+                        }
+                        w.clicked = true;
+                        this.dirty_canvas = true;
+                    }
 					break;
 				case "slider":
 					var range = w.options.max - w.options.min;
