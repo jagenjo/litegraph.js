@@ -3732,8 +3732,15 @@
         }
         for (var i = 0, l = this.inputs.length; i < l; ++i) {
             if (type == this.inputs[i].type) {
-                if (checkFree && this.inputs[i].link != null) continue;
+                if (checkFree && this.inputs[i].link && this.inputs[i].link != null) continue;
                 return !returnObj ? i : this.inputs[i];
+            }
+        }
+        // if didnt find some, stop checking for free slots
+        if (checkFree){
+            for (var i = 0, l = this.inputs.length; i < l; ++i) {
+                if (type == this.inputs[i].type)
+                    return !returnObj ? i : this.inputs[i];
             }
         }
         return -1;
@@ -3753,9 +3760,17 @@
             return -1;
         }
         for (var i = 0, l = this.outputs.length; i < l; ++i) {
+            // console.debug(type+" "+this.outputs[i].type+" "+this.outputs[i].links); // atlasan debug REMOVE
             if (type == this.outputs[i].type) {
-                if (checkFree && this.outputs[i].link != null) continue;
+                if (checkFree && this.outputs[i].links && this.outputs[i].links !== null) continue;
                 return !returnObj ? i : this.outputs[i];
+            }
+        }
+        // if didnt find some, stop checking for free slots
+        if (checkFree){
+            for (var i = 0, l = this.outputs.length; i < l; ++i) {
+                if (type == this.outputs[i].type)
+                    return !returnObj ? i : this.outputs[i];
             }
         }
         return -1;
@@ -3774,11 +3789,11 @@
             target_node = this.graph.getNodeById(target_node);
         }
         target_slot = target_node.findInputSlotByType(target_slotType, false, true);
-        if (target_slot !== null){
+        if (target_slot >= 0 && target_slot !== null){
             //console.debug("CONNbyTYPE type "+target_slotType+" for "+target_slot) // atlasan debug REMOVE
             return this.connect(slot, target_node, target_slot);
         }else{
-            //console.log("type "+target_slotType+" not found in "+target_node) // atlasan debug REMOVE
+            // console.log("type "+target_slotType+" not found or not free?") // atlasan debug REMOVE
             return null;
         }
     }
@@ -3796,11 +3811,11 @@
             source_node = this.graph.getNodeById(source_node);
         }
         source_slot = source_node.findOutputSlotByType(source_slotType, false, true);
-        if (source_slot !== null){
-            //console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
+        if (source_slot >= 0 && source_slot !== null){
+            // console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
             return source_node.connect(source_slot, this, slot);
         }else{
-            //console.log("type OUT! "+source_slotType+" not found in "+source_node) // atlasan debug REMOVE
+            // console.log("type OUT! "+source_slotType+" not found or not free?") // atlasan debug REMOVE
             return null;
         }
     }
@@ -3897,6 +3912,7 @@
 
         var output = this.outputs[slot];
         if (!this.outputs[slot]){
+            asjdb;
             console.debug("Invalid slot passed: "+slot); // atlasan debug REMOVE
             console.debug(this.outputs);
             return null;
@@ -6214,11 +6230,19 @@ LGraphNode.prototype.executeAction = function(action)
                                 e.canvasY
                             );
                             //console.debug("ConnTO_OUT : slotTo: "+slot+", slotFrom: "+this.connecting_slot); // atlasan debug REMOVE
-                            if (this.connecting_slot != -1) {
+                            if (slot != -1) {
+                                /*console.debug("conn by slot");
+                                console.debug(slot);
+                                console.debug(this.connecting_node);
+                                console.debug(this.connecting_slot);*/
                                 node.connect(slot, this.connecting_node, this.connecting_slot); // this is inverted has output-input nature like
                             } else {
                                 //not on top of an input
                                 // look for a good slot
+                                /*console.debug("conn by type");
+                                console.debug(this.connecting_node);
+                                console.debug(this.connecting_slot);
+                                console.debug(connType);*/
                                 this.connecting_node.connectByTypeOutput(this.connecting_slot,node,connType);
                             }
                             
