@@ -344,11 +344,17 @@
             var classobj = Function(code);
             classobj.title = name.split("/").pop();
             classobj.desc = "Generated from " + func.name;
+            
+            /*console.debug("wrapped "+func.name+" ::  // atlasan debug REMOVE
+            console.debug(classobj);
+            console.debug(code);*/
+                
             classobj.prototype.onExecute = function onExecute() {
                 for (var i = 0; i < params.length; ++i) {
                     params[i] = this.getInputData(i);
                 }
                 var r = func.apply(this, params);
+                //console.debug("wrapped res "+r);
                 this.setOutputData(0, r);
             };
             this.registerNodeType(name, classobj);

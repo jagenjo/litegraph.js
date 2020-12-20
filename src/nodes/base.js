@@ -1250,12 +1250,15 @@
     Console.desc = "Show value inside the console";
 
     Console.prototype.onAction = function(action, param) {
+        // param is the action
+        var msg = this.getInputData(1);
+        if (typeof msg == "undefined") msg = "Event: "+param; // msg is undefined if the slot is lost?
         if (action == "log") {
-            console.log(param);
+            console.log(msg);
         } else if (action == "warn") {
-            console.warn(param);
+            console.warn(msg);
         } else if (action == "error") {
-            console.error(param);
+            console.error(msg);
         }
     };
 
