@@ -74,8 +74,10 @@
 		else if( str.constructor === Array )
 		{
 			var r = [];
-			for(var i = 0; i < str.length; ++i)
-				r[i] = str[i].split(separator || " ");
+			for(var i = 0; i < str.length; ++i){
+                if (typeof str[i] == "string")
+				    r[i] = str[i].split(separator || " ");
+            }
 			return r;
 		}
         return null;

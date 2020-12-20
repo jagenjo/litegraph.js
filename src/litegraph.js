@@ -3702,7 +3702,65 @@
         }
         return -1;
     };
+    
+    /**
+     * returns the input slot with a given type, -1 if not found
+     * @method findInputSlotByType
+     * @param {string} type the type of the slot
+     * @return {number} the slot (-1 if not found)
+     */
+    LGraphNode.prototype.findInputSlotByType = function(type) {
+        if (!this.inputs) {
+            return -1;
+        }
+        for (var i = 0, l = this.inputs.length; i < l; ++i) {
+            if (type == this.inputs[i].type) {
+                return i;
+            }
+        }
+        return -1;
+    };
 
+    /**
+     * returns the output slot with a given type, -1 if not found
+     * @method findOutputSlotByType
+     * @param {string} type the type of the slot
+     * @return {number} the slot (-1 if not found)
+     */
+    LGraphNode.prototype.findOutputSlotByType = function(type) {
+        if (!this.outputs) {
+            return -1;
+        }
+        for (var i = 0, l = this.outputs.length; i < l; ++i) {
+            if (type == this.outputs[i].type) {
+                return i;
+            }
+        }
+        return -1;
+    };
+
+    /**
+     * connect this node output to the input of another node BY TYPE
+     * @method connectByTtype
+     * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
+     * @param {LGraphNode} node the target node
+     * @param {string} target_type the input slot type of the target node
+     * @return {Object} the link_info is created, otherwise null
+     */
+    LGraphNode.prototype.connectByType = function(slot, target_node, target_slotType) {
+        if (target_node && target_node.constructor === Number) {
+            target_node = this.graph.getNodeById(target_node);
+        }
+        target_slot = target_node.findInputSlotByType(target_slotType);
+        if (target_slot !== null){
+            console.debug("CONNbyTYPE type "+target_slotType+" for "+target_slot)
+            return this.connect(slot, target_node, target_slot);
+        }else{
+            console.log("type "+target_slotType+" not found in "+target_node)
+            return null;
+        }
+    }
+    
     /**
      * connect this node output to the input of another node
      * @method connect
@@ -3783,7 +3841,7 @@
 		var changed = false;
 
         //if there is something already plugged there, disconnect
-        if (target_node.inputs[target_slot].link != null) {
+        if (target_node.inputs[target_slot] && target_node.inputs[target_slot].link != null) {
 			this.graph.beforeChange();
             target_node.disconnectInput(target_slot);
 			changed = true;
@@ -9731,8 +9789,8 @@ LGraphNode.prototype.executeAction = function(action)
 						if(!node.inputs || !node.inputs.length || !node.outputs || !node.outputs.length)
 							return;
 						//if( node_left.outputs[ link.origin_slot ].type == node.inputs[0].type && node.outputs[0].type == node_right.inputs[0].type ){
-							if (node_left.connect( link.origin_slot, node, 0 )){
-                                node.connect( 0, node_right, link.target_slot );
+							if (node_left.connectByType( link.origin_slot, node, link.origin_slot.type )){
+                                node.connectByType( link.target_slot, node_right, link.target_slot.type );
                                 node.pos[0] -= node.size[0] * 0.5;
                             }
 						//}
@@ -10100,7 +10158,8 @@ LGraphNode.prototype.executeAction = function(action)
                 /*console.debug(selIn);
                 console.debug(LiteGraph.slot_types_in);*/
                 var aSlots = LiteGraph.slot_types_in;
-                var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length; 
+                var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length;
+                if (options.type_filter_in == LiteGraph.EVENT || options.type_filter_in == LiteGraph.ACTION) options.type_filter_in = "event/action";
                 for (var iK=0; iK<nSlots; iK++){
                     var opt = document.createElement('option');
                     opt.value = aSlots[iK];
@@ -10119,6 +10178,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (selOut){
                 var aSlots = LiteGraph.slot_types_out;
                 var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length; 
+                if (options.type_filter_out == LiteGraph.EVENT || options.type_filter_out == LiteGraph.ACTION) options.type_filter_out = "event/action";
                 for (var iK=0; iK<nSlots; iK++){
                     var opt = document.createElement('option');
                     opt.value = aSlots[iK];
@@ -10231,14 +10291,18 @@ LGraphNode.prototype.executeAction = function(action)
                                 iS = options.node_from.findOutputSlot(options.slot_from.name);    
                             break;
                             case "number":
-                                iS = options.node_from
+                                iS = options.slot_from
                             break;
                             default:
                                 iS = 0; // try with first if no name set
                         }
-                        if (iS!==false && iS>-1){
-                            //console.debug("search_conn ! try to "+iS+" "+node+" "+0); // atlasan debug REMOVE
-                            options.node_from.connect( iS, node, 0 ); // atlasan implement :: look for right slot by type
+                        if (typeof options.node_from.outputs[iS] !== undefined){
+                            if (iS!==false && iS>-1){
+                                //console.debug("search_conn ! try to "+iS+" "+node+" "+0); // atlasan debug REMOVE
+                                options.node_from.connectByType( iS, node, options.node_from.outputs[iS].type ); // atlasan implement :: look for right slot by type
+                            }
+                        }else{
+                            console.warn("cant fin slot " + options.slot_from)
                         }
                     }
                 }
@@ -10336,6 +10400,7 @@ LGraphNode.prototype.executeAction = function(action)
                     if ((!options.show_all_if_empty || str) && type.toLowerCase().indexOf(str) === -1)
                         return false;
                     
+                    // filter by slot IN, OUT types
                     if(options.type_filter){
                         /*var aTypeP = type.split("/");
                         var sType = aTypeP.length?aTypeP[aTypeP.length-1]:type;*/
@@ -10343,15 +10408,18 @@ LGraphNode.prototype.executeAction = function(action)
                         
                         var sIn = that.search_box.querySelector(".slot_in_type_filter");
                         
-                        if(sIn && sIn.value){
-                            //console.log("will check filter against "+sIn.value);
-                            if (LiteGraph.registered_slot_in_types[sIn.value] && LiteGraph.registered_slot_in_types[sIn.value].nodes){ // type is stored
-                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_in_types[sIn.value].nodes);
-                                var doesInc = LiteGraph.registered_slot_in_types[sIn.value].nodes.includes(sType);
+                        var sV = sIn.value;
+                        //if (sV.toLowerCase() == "event/action") sV = LiteGraph.EVENT; // -1
+                        
+                        if(sIn && sV){
+                            //console.log("will check filter against "+sV);
+                            if (LiteGraph.registered_slot_in_types[sV] && LiteGraph.registered_slot_in_types[sV].nodes){ // type is stored
+                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_in_types[sV].nodes);
+                                var doesInc = LiteGraph.registered_slot_in_types[sV].nodes.includes(sType);
                                 if (doesInc!==false){
-                                    //console.log(sType+" HAS "+sIn.value);
+                                    //console.log(sType+" HAS "+sV);
                                 }else{
-                                    /*console.debug(LiteGraph.registered_slot_in_types[sIn.value]);
+                                    /*console.debug(LiteGraph.registered_slot_in_types[sV]);
                                     console.log(+" DONT includes "+type);*/
                                     return false;
                                 }
@@ -10359,15 +10427,19 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                         
                         var sOut = that.search_box.querySelector(".slot_out_type_filter");
-                        if(sOut && sOut.value){
-                            //console.log("will check filter against "+sOut.value);
-                            if (LiteGraph.registered_slot_out_types[sOut.value] && LiteGraph.registered_slot_out_types[sOut.value].nodes){ // type is stored
-                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_out_types[sOut.value].nodes);
-                                var doesInc = LiteGraph.registered_slot_out_types[sOut.value].nodes.includes(sType);
+                        
+                        var sV = sOut.value;
+                        //if (sV.toLowerCase() == "event/action") sV = LiteGraph.EVENT; // -1
+                        
+                        if(sOut && sV){
+                            //console.log("will check filter against "+sV);
+                            if (LiteGraph.registered_slot_out_types[sV] && LiteGraph.registered_slot_out_types[sV].nodes){ // type is stored
+                                //console.debug("check "+sType+" in "+LiteGraph.registered_slot_out_types[sV].nodes);
+                                var doesInc = LiteGraph.registered_slot_out_types[sV].nodes.includes(sType);
                                 if (doesInc!==false){
-                                    //console.log(sType+" HAS "+sOut.value);
+                                    //console.log(sType+" HAS "+sV);
                                 }else{
-                                    /*console.debug(LiteGraph.registered_slot_out_types[sOut.value]);
+                                    /*console.debug(LiteGraph.registered_slot_out_types[sV]);
                                     console.log(+" DONT includes "+type);*/
                                     return false;
                                 }
