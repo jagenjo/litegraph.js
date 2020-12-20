@@ -99,6 +99,9 @@
         searchbox_extras: {}, //used to add extra features to the search box
         auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
         
+        shift_click_do_break_link_from: false, // atlasan :: I really don't like this.. too easy to break links.. maybe with Alt? Or aother less used modifiers? To me contextual menu with righet click - disconnect is more than enought
+        click_do_break_link_to: false, // neither, or worst
+        
         auto_load_slot_types: true, // atlasan: make this default false for retrocompatibility, eg. some special nodes may have strange behaviour on construct?
         
         registered_slot_in_types: {}, // atlasan :: keep track of slot types for which nodeclass
@@ -3741,7 +3744,7 @@
 
     /**
      * connect this node output to the input of another node BY TYPE
-     * @method connectByTtype
+     * @method connectByType
      * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
      * @param {LGraphNode} node the target node
      * @param {string} target_type the input slot type of the target node
@@ -3757,6 +3760,28 @@
             return this.connect(slot, target_node, target_slot);
         }else{
             console.log("type "+target_slotType+" not found in "+target_node)
+            return null;
+        }
+    }
+    
+    /**
+     * connect this node input to the output of another node BY TYPE
+     * @method connectByType
+     * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
+     * @param {LGraphNode} node the target node
+     * @param {string} target_type the output slot type of the target node
+     * @return {Object} the link_info is created, otherwise null
+     */
+    LGraphNode.prototype.connectByTypeOutput = function(slot, source_node, source_slotType) {
+        if (source_node && source_node.constructor === Number) {
+            source_node = this.graph.getNodeById(source_node);
+        }
+        source_slot = source_node.findOutputSlotByType(source_slotType);
+        if (source_slot !== null){
+            console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot)
+            return source_node.connect(source_slot, this, slot);
+        }else{
+            console.log("type OUT! "+source_slotType+" not found in "+source_node)
             return null;
         }
     }
@@ -5500,8 +5525,10 @@ LGraphNode.prototype.executeAction = function(action)
                                     this.connecting_pos = node.getConnectionPos( false, i );
                                     this.connecting_slot = i;
 
-                                    if (e.shiftKey) {
-                                        node.disconnectOutput(i);
+                                    if (LiteGraph.shift_click_do_break_link_from){
+                                        if (e.shiftKey) {
+                                            node.disconnectOutput(i);
+                                        }
                                     }
 
                                     if (is_double_click) {
@@ -5553,12 +5580,19 @@ LGraphNode.prototype.executeAction = function(action)
                                         var link_info = this.graph.links[
                                             input.link
                                         ]; //before disconnecting
-                                        node.disconnectInput(i);
+                                        if (LiteGraph.click_do_break_link_to){
+                                            node.disconnectInput(i);
+                                            this.dirty_bgcanvas = true;
+                                            skip_action = true;
+                                        }else{
+                                            // do same action as has not node ?
+                                        }
 
                                         if (
                                             this.allow_reconnect_links ||
                                             e.shiftKey
                                         ) {
+                                            if (!LiteGraph.click_do_break_link_to) node.disconnectInput(i);
                                             this.connecting_node = this.graph._nodes_by_id[
                                                 link_info.origin_id
                                             ];
@@ -5568,8 +5602,23 @@ LGraphNode.prototype.executeAction = function(action)
                                                 this.connecting_slot
                                             ];
                                             this.connecting_pos = this.connecting_node.getConnectionPos( false, this.connecting_slot );
+                                            
+                                            this.dirty_bgcanvas = true;
+                                            skip_action = true;
                                         }
 
+                                        
+                                    }else{
+                                        // has not node
+                                    }
+                                    
+                                    if (!skip_action){
+                                        // atlasan: implement: connect from in to out, from to to from
+                                        this.connecting_node = node;
+                                        this.connecting_input = input;
+                                        this.connecting_pos = node.getConnectionPos( true, i );
+                                        this.connecting_slot = i;
+                                        
                                         this.dirty_bgcanvas = true;
                                         skip_action = true;
                                     }
@@ -5848,23 +5897,48 @@ LGraphNode.prototype.executeAction = function(action)
 
                 //if dragging a link
                 if (this.connecting_node) {
-                    var pos = this._highlight_input || [0, 0]; //to store the output of isOverNodeInput
+                    
+                    if (this.connecting_output){
+                        
+                        var pos = this._highlight_input || [0, 0]; //to store the output of isOverNodeInput
 
-                    //on top of input
-                    if (this.isOverNodeBox(node, e.canvasX, e.canvasY)) {
-                        //mouse on top of the corner box, don't know what to do
-                    } else {
-                        //check if I have a slot below de mouse
-                        var slot = this.isOverNodeInput( node, e.canvasX, e.canvasY, pos );
-                        if (slot != -1 && node.inputs[slot]) {
-                            var slot_type = node.inputs[slot].type;
-                            if ( LiteGraph.isValidConnection( this.connecting_output.type, slot_type ) ) {
-                                this._highlight_input = pos;
-                            }
+                        //on top of input
+                        if (this.isOverNodeBox(node, e.canvasX, e.canvasY)) {
+                            //mouse on top of the corner box, don't know what to do
                         } else {
-                            this._highlight_input = null;
+                            //check if I have a slot below de mouse
+                            var slot = this.isOverNodeInput( node, e.canvasX, e.canvasY, pos );
+                            if (slot != -1 && node.inputs[slot]) {
+                                var slot_type = node.inputs[slot].type;
+                                if ( LiteGraph.isValidConnection( this.connecting_output.type, slot_type ) ) {
+                                    this._highlight_input = pos;
+                                }
+                            } else {
+                                this._highlight_input = null;
+                            }
                         }
+                        
+                    }else if(this.connecting_input){
+                        
+                        var pos = this._highlight_output || [0, 0]; //to store the output of isOverNodeOutput
+
+                        //on top of output
+                        if (this.isOverNodeBox(node, e.canvasX, e.canvasY)) {
+                            //mouse on top of the corner box, don't know what to do
+                        } else {
+                            //check if I have a slot below de mouse
+                            var slot = this.isOverNodeOutput( node, e.canvasX, e.canvasY, pos );
+                            if (slot != -1 && node.outputs[slot]) {
+                                var slot_type = node.outputs[slot].type;
+                                if ( LiteGraph.isValidConnection( this.connecting_input.type, slot_type ) ) {
+                                    this._highlight_output = pos;
+                                }
+                            } else {
+                                this._highlight_output = null;
+                            }
+                        }     
                     }
+                    
                 }
 
                 //Search for corner
@@ -6055,11 +6129,16 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }
                 this.dragging_rectangle = null;
+                
             } else if (this.connecting_node) {
+                
                 //dragging a connection
                 this.dirty_canvas = true;
                 this.dirty_bgcanvas = true;
 
+                var connInOrOut = this.connecting_output || this.connecting_input;
+                var connType = connInOrOut.type;
+                
                 var node = this.graph.getNodeOnPos(
                     e.canvasX,
                     e.canvasY,
@@ -6068,55 +6147,58 @@ LGraphNode.prototype.executeAction = function(action)
 
                 //node below mouse
                 if (node) {
+                    
+                    /* atlasan: no need to conditioin on event type.. jsut another type
                     if (
-                        this.connecting_output.type == LiteGraph.EVENT &&
+                        connType == LiteGraph.EVENT &&
                         this.isOverNodeBox(node, e.canvasX, e.canvasY)
                     ) {
+                        
                         this.connecting_node.connect(
                             this.connecting_slot,
                             node,
                             LiteGraph.EVENT
                         );
-                    } else {
+                        
+                    } else {*/
+                        
                         //slot below mouse? connect
-                        var slot = this.isOverNodeInput(
-                            node,
-                            e.canvasX,
-                            e.canvasY
-                        );
-                        if (slot != -1) {
-                            this.connecting_node.connect(
-                                this.connecting_slot,
+                        
+                        if (this.connecting_output){
+                            
+                            var slot = this.isOverNodeInput(
                                 node,
-                                slot
+                                e.canvasX,
+                                e.canvasY
                             );
-                        } else {
-                            //not on top of an input
-                            var input = node.getInputInfo(0);
-                            //auto connect
-                            if (
-                                this.connecting_output.type == LiteGraph.EVENT
-                            ) {
-                                this.connecting_node.connect(
-                                    this.connecting_slot,
-                                    node,
-                                    LiteGraph.EVENT
-                                );
-                            } else if (
-                                input &&
-                                !input.link &&
-                                LiteGraph.isValidConnection(
-                                    input.type && this.connecting_output.type
-                                )
-                            ) {
-                                this.connecting_node.connect(
-                                    this.connecting_slot,
-                                    node,
-                                    0
-                                );
+                            if (slot != -1) {
+                                this.connecting_node.connect(this.connecting_slot, node, slot);
+                            } else {
+                                //not on top of an input
+                                // look for a good slot
+                                this.connecting_node.connectByType(this.connecting_slot,node,connType);
                             }
+                            
+                        }else if (this.connecting_input){
+                            
+                            var slot = this.isOverNodeOutput(
+                                node,
+                                e.canvasX,
+                                e.canvasY
+                            );
+                            if (slot != -1) {
+                                node.connect(slot, this.connecting_node, this.connecting_slot); // this is inverted has output-input nature like
+                            } else {
+                                //not on top of an input
+                                // look for a good slot
+                                this.connecting_node.connectByTypeOutput(this.connecting_slot,node,connType);
+                            }
+                            
                         }
-                    }
+                        
+                        
+                    //}
+                    
                 }else{
                     
                     // atlasan edit: add menu when releasing link in empty space
@@ -6132,6 +6214,7 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 
                 this.connecting_output = null;
+                this.connecting_input = null;
                 this.connecting_pos = null;
                 this.connecting_node = null;
                 this.connecting_slot = -1;
@@ -6268,7 +6351,7 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     /**
-     * returns true if a position (in graph space) is on top of a node input slot
+     * returns the INDEX if a position (in graph space) is on top of a node input slot
      * @method isOverNodeInput
      **/
     LGraphCanvas.prototype.isOverNodeInput = function(
@@ -6280,6 +6363,52 @@ LGraphNode.prototype.executeAction = function(action)
         if (node.inputs) {
             for (var i = 0, l = node.inputs.length; i < l; ++i) {
                 var input = node.inputs[i];
+                var link_pos = node.getConnectionPos(true, i);
+                var is_inside = false;
+                if (node.horizontal) {
+                    is_inside = isInsideRectangle(
+                        canvasx,
+                        canvasy,
+                        link_pos[0] - 5,
+                        link_pos[1] - 10,
+                        10,
+                        20
+                    );
+                } else {
+                    is_inside = isInsideRectangle(
+                        canvasx,
+                        canvasy,
+                        link_pos[0] - 10,
+                        link_pos[1] - 5,
+                        40,
+                        10
+                    );
+                }
+                if (is_inside) {
+                    if (slot_pos) {
+                        slot_pos[0] = link_pos[0];
+                        slot_pos[1] = link_pos[1];
+                    }
+                    return i;
+                }
+            }
+        }
+        return -1;
+    };
+    
+    /**
+     * returns the INDEX if a position (in graph space) is on top of a node output slot
+     * @method isOverNodeOuput
+     **/
+    LGraphCanvas.prototype.isOverNodeOutput = function(
+        node,
+        canvasx,
+        canvasy,
+        slot_pos
+    ) {
+        if (node.output) {
+            for (var i = 0, l = node.output.length; i < l; ++i) {
+                var input = node.output[i];
                 var link_pos = node.getConnectionPos(true, i);
                 var is_inside = false;
                 if (node.horizontal) {
@@ -7088,8 +7217,21 @@ LGraphNode.prototype.executeAction = function(action)
             if (this.connecting_pos != null) {
                 ctx.lineWidth = this.connections_width;
                 var link_color = null;
-
-                switch (this.connecting_output.type) {
+                
+                var connInOrOut = this.connecting_output || this.connecting_input;
+                /*if(connecting_output){
+                    
+                }else if(connecting_input){
+                    
+                }
+                var connType = this.connecting_output.type || this.connecting_input.type;
+                var connDir = this.connecting_output.dir || this.connecting_input.dir;
+                var connShape = this.connecting_output.shape || this.connecting_input.shape;*/
+                var connType = connInOrOut.type;
+                var connDir = connInOrOut.dir;
+                var connShape = connInOrOut.shape;
+                
+                switch (connType) {
                     case LiteGraph.EVENT:
                         link_color = LiteGraph.EVENT_LINK_COLOR;
                         break;
@@ -7106,7 +7248,7 @@ LGraphNode.prototype.executeAction = function(action)
                     false,
                     null,
                     link_color,
-                    this.connecting_output.dir ||
+                    connDir ||
                         (this.connecting_node.horizontal
                             ? LiteGraph.DOWN
                             : LiteGraph.RIGHT),
@@ -7115,8 +7257,8 @@ LGraphNode.prototype.executeAction = function(action)
 
                 ctx.beginPath();
                 if (
-                    this.connecting_output.type === LiteGraph.EVENT ||
-                    this.connecting_output.shape === LiteGraph.BOX_SHAPE
+                    connType === LiteGraph.EVENT ||
+                    connShape === LiteGraph.BOX_SHAPE
                 ) {
                     ctx.rect(
                         this.connecting_pos[0] - 6 + 0.5,
@@ -7141,6 +7283,17 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.arc(
                         this._highlight_input[0],
                         this._highlight_input[1],
+                        6,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                }
+                if (this._highlight_output) {
+                    ctx.beginPath();
+                    ctx.arc(
+                        this._highlight_output[0],
+                        this._highlight_output[1],
                         6,
                         0,
                         Math.PI * 2
@@ -7649,6 +7802,7 @@ LGraphNode.prototype.executeAction = function(action)
         var render_text = !low_quality;
 
         var out_slot = this.connecting_output;
+        var in_slot = this.connecting_input;
         ctx.lineWidth = 1;
 
         var max_y = 0;
@@ -7656,6 +7810,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         //render inputs and outputs
         if (!node.flags.collapsed) {
+            
             //input connection slots
             if (node.inputs) {
                 for (var i = 0; i < node.inputs.length; i++) {
@@ -7665,7 +7820,7 @@ LGraphNode.prototype.executeAction = function(action)
                     
                     ctx.globalAlpha = editor_alpha;
                     //change opacity of incompatible slots when dragging a connection
-                    if ( this.connecting_node && !LiteGraph.isValidConnection( slot.type , out_slot.type) ) {
+                    if ( this.connecting_output && !LiteGraph.isValidConnection( slot.type , out_slot.type) ) {
                         ctx.globalAlpha = 0.4 * editor_alpha;
                     }
                     /*console.debug(slot); // atlasan debug REMOVE
@@ -7755,16 +7910,20 @@ LGraphNode.prototype.executeAction = function(action)
             }
 
             //output connection slots
-            if (this.connecting_node) {
-                ctx.globalAlpha = 0.4 * editor_alpha;
-            }
 
             ctx.textAlign = horizontal ? "center" : "right";
             ctx.strokeStyle = "black";
             if (node.outputs) {
                 for (var i = 0; i < node.outputs.length; i++) {
                     var slot = node.outputs[i];
+                    
                     var slot_type = slot.type; // atlasan edit
+                    
+                    //change opacity of incompatible slots when dragging a connection
+                    if (this.connecting_input && !LiteGraph.isValidConnection( slot_type , in_slot.type) ) {
+                        ctx.globalAlpha = 0.4 * editor_alpha;
+                    }
+                    
                     var pos = node.getConnectionPos(false, i, slot_pos);
                     pos[0] -= node.pos[0];
                     pos[1] -= node.pos[1];
