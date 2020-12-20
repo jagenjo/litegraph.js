@@ -3877,6 +3877,11 @@
         //this.graph.connectionChange( this );
 
         var output = this.outputs[slot];
+        if (!this.outputs[slot]){
+            console.debug("Invalid slot passed: "+slot); // atlasan debug REMOVE
+            console.debug(this.outputs);
+            return null;
+        }
 
         //allows nodes to block connection
         if (target_node.onConnectInput) {
@@ -5928,15 +5933,18 @@ LGraphNode.prototype.executeAction = function(action)
                         } else {
                             //check if I have a slot below de mouse
                             var slot = this.isOverNodeOutput( node, e.canvasX, e.canvasY, pos );
+                            console.debug("check slot "+slot);
                             if (slot != -1 && node.outputs[slot]) {
                                 var slot_type = node.outputs[slot].type;
+                                console.debug("check slotType "+slot_type);
                                 if ( LiteGraph.isValidConnection( this.connecting_input.type, slot_type ) ) {
                                     this._highlight_output = pos;
                                 }
                             } else {
                                 this._highlight_output = null;
                             }
-                        }     
+                        }
+                        
                     }
                     
                 }
@@ -6186,7 +6194,8 @@ LGraphNode.prototype.executeAction = function(action)
                                 e.canvasX,
                                 e.canvasY
                             );
-                            if (slot != -1) {
+                            console.debug("ConnTO_OUT : slotTo: "+slot+", slotFrom: "+this.connecting_slot);
+                            if (this.connecting_slot != -1) {
                                 node.connect(slot, this.connecting_node, this.connecting_slot); // this is inverted has output-input nature like
                             } else {
                                 //not on top of an input
@@ -6406,10 +6415,10 @@ LGraphNode.prototype.executeAction = function(action)
         canvasy,
         slot_pos
     ) {
-        if (node.output) {
-            for (var i = 0, l = node.output.length; i < l; ++i) {
-                var input = node.output[i];
-                var link_pos = node.getConnectionPos(true, i);
+        if (node.outputs) {
+            for (var i = 0, l = node.outputs.length; i < l; ++i) {
+                var output = node.outputs[i];
+                var link_pos = node.getConnectionPos(false, i);
                 var is_inside = false;
                 if (node.horizontal) {
                     is_inside = isInsideRectangle(
@@ -9971,7 +9980,7 @@ LGraphNode.prototype.executeAction = function(action)
 		var options = ["Add Node",null];
         var menu = new LiteGraph.ContextMenu(options, {
             event: e,
-			title: slot.name != null ? slot.name : null,
+			title: slot && slot.name ? slot.name : null,
             callback: inner_clicked
         });
 
