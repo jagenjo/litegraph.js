@@ -93,9 +93,30 @@
     logicAnd.title = "AND";
     logicAnd.desc = "Return true if both inputs are true";
     logicAnd.prototype.onExecute = function() {
-        var ret = this.getInputData(0) && this.getInputData(1);
+        ret = true;
+        for (inX in this.inputs){
+            if (!this.getInputData(inX)){
+                ret = false;
+                break;
+            }
+        }
         this.setOutputData(0, ret);
     };
+    logicAnd.prototype.onGetInputs = function() {
+        return [
+            ["and", "boolean"]
+        ];
+    };
+    /* atlasan: tried events implementation on input operation
+    // onMenuNodeOutputs and onNodeOutputAdd too
+    logicAnd.prototype.onMenuNodeInputs = function(entries){
+        console.debug("onMenuNodeInputs: ");
+        console.debug(entries);
+    }
+    logicAnd.prototype.onNodeInputAdd = function(value){
+        console.debug("onNodeInputAdd: ");
+        console.debug(value);
+    }*/
     LiteGraph.registerNodeType("logic/AND", logicAnd);
     
     
@@ -108,8 +129,19 @@
     logicOr.title = "OR";
     logicOr.desc = "Return true if at least one input is true";
     logicOr.prototype.onExecute = function() {
-        var ret = this.getInputData(0) || this.getInputData(1);
+        ret = false;
+        for (inX in this.inputs){
+            if (this.getInputData(inX)){
+                ret = true;
+                break;
+            }
+        }
         this.setOutputData(0, ret);
+    };
+    logicOr.prototype.onGetInputs = function() {
+        return [
+            ["or", "boolean"]
+        ];
     };
     LiteGraph.registerNodeType("logic/OR", logicOr);
     

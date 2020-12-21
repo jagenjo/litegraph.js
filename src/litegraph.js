@@ -99,6 +99,9 @@
         searchbox_extras: {}, //used to add extra features to the search box
         auto_sort_node_types: true, // If set to true, will automatically sort node types / categories in the context menus
         
+        dialog_close_on_mouse_leave: true,
+        dialog_close_on_mouse_leave_delay: 500,
+        
         shift_click_do_break_link_from: false, // atlasan :: I really don't like this.. too easy to break links.. maybe with Alt? Or aother less used modifiers? To me contextual menu with right click - disconnect is more than enought
         click_do_break_link_to: false, // neither, or worst
         
@@ -5659,7 +5662,7 @@ LGraphNode.prototype.executeAction = function(action)
                                     }
                                     
                                     if (!skip_action){
-                                        // atlasan: implement: connect from in to out, from to to from
+                                        // connect from in to out, from to to from // atlasan implemented
                                         this.connecting_node = node;
                                         this.connecting_input = input;
                                         this.connecting_pos = node.getConnectionPos( true, i );
@@ -9771,6 +9774,11 @@ LGraphNode.prototype.executeAction = function(action)
         if (this.onMenuNodeInputs) {
             entries = this.onMenuNodeInputs(entries);
         }
+        // atlasan refactor: never used code, make a meaning
+        if (node.onMenuNodeInputs) {
+            var retEntries = node.onMenuNodeInputs(entries);
+            if(retEntries) entries = retEntries;
+        }
 
         if (!entries.length) {
 			console.log("no input entries");
@@ -9800,6 +9808,9 @@ LGraphNode.prototype.executeAction = function(action)
             if (v.value) {
 				node.graph.beforeChange();
                 node.addInput(v.value[0], v.value[1], v.value[2]);
+                if (node.onNodeInputAdd) { // atlasan: implement a callback to the node when adding a slot
+                    node.onNodeInputAdd(v.value);
+                }
                 node.setDirtyCanvas(true, true);
 				node.graph.afterChange();
             }
@@ -9860,6 +9871,11 @@ LGraphNode.prototype.executeAction = function(action)
         if (this.onMenuNodeOutputs) {
             entries = this.onMenuNodeOutputs(entries);
         }
+        // atlasan refactor: never used code, make a meaning
+        if (node.onMenuNodeOutputs) {
+            var retEntries = node.onMenuNodeOutputs(entries);
+            if(retEntries) entries = retEntries;
+        }
 
         if (!entries.length) {
             return;
@@ -9910,6 +9926,9 @@ LGraphNode.prototype.executeAction = function(action)
             } else {
 				node.graph.beforeChange();
                 node.addOutput(v.value[0], v.value[1], v.value[2]);
+                if (node.onNodeOutputAdd) { // atlasan: implement a callback to the node when adding a slot
+                    node.onNodeOutputAdd(v.value);
+                }
                 node.setDirtyCanvas(true, true);
 				node.graph.afterChange();
             }
@@ -10126,13 +10145,13 @@ LGraphNode.prototype.executeAction = function(action)
         return false;
     };
 
-    // atlasan refactor :: this is used fot title but nt for properties!
+    // atlasan refactor :: this is used fot title but not for properties!
     LGraphCanvas.onShowPropertyEditor = function(item, options, e, menu, node) {
         var input_html = "";
         var property = item.property || "title";
         var value = node[property];
 
-        // atlasan refactor :: use create dialog ?
+        // atlasan refactor :: use createDialog ?
         
         var dialog = document.createElement("div");
         dialog.is_modified = false;
@@ -10192,8 +10211,15 @@ LGraphNode.prototype.executeAction = function(action)
 
         if(input) input.focus();
         
+        var dialogCloseTimer = null;
         dialog.addEventListener("mouseleave", function(e) {
-            if (!dialog.is_modified) dialog.close();
+            if(LiteGraph.dialog_close_on_mouse_leave)
+                if (!dialog.is_modified && LiteGraph.dialog_close_on_mouse_leave)
+                    dialogCloseTimer = setTimeout(dialog.close, LiteGraph.dialog_close_on_mouse_leave_delay); //dialog.close();
+        });
+        dialog.addEventListener("mouseenter", function(e) {
+            if(LiteGraph.dialog_close_on_mouse_leave)
+                if(dialogCloseTimer) clearTimeout(dialogCloseTimer);
         });
         
         function inner() {
@@ -10214,14 +10240,14 @@ LGraphNode.prototype.executeAction = function(action)
         }
     };
 
+    // refactor: there are different dialogs, some uses createDialog some dont
     LGraphCanvas.prototype.prompt = function(title, value, callback, event) {
         var that = this;
         var input_html = "";
         title = title || "";
 
-        var modified = false;
-
         var dialog = document.createElement("div");
+        dialog.is_modified = false;
         dialog.className = "graphdialog rounded";
         dialog.innerHTML =
             "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
@@ -10232,15 +10258,42 @@ LGraphNode.prototype.executeAction = function(action)
             }
         };
 
+        var graphcanvas = LGraphCanvas.active_canvas;
+        var canvas = graphcanvas.canvas;
+        canvas.parentNode.appendChild(dialog);
+        
         if (this.ds.scale > 1) {
             dialog.style.transform = "scale(" + this.ds.scale + ")";
         }
 
+        var dialogCloseTimer = null;
+        var prevent_timeout = false;
         dialog.addEventListener("mouseleave", function(e) {
-            if (!modified) {
-                dialog.close();
-            }
+            if (prevent_timeout)
+                return;
+            if(LiteGraph.dialog_close_on_mouse_leave)
+                if (!dialog.is_modified && LiteGraph.dialog_close_on_mouse_leave)
+                    dialogCloseTimer = setTimeout(dialog.close, LiteGraph.dialog_close_on_mouse_leave_delay); //dialog.close();
         });
+        dialog.addEventListener("mouseenter", function(e) {
+            if(LiteGraph.dialog_close_on_mouse_leave)
+                if(dialogCloseTimer) clearTimeout(dialogCloseTimer);
+        });
+        var selInDia = dialog.querySelectorAll("select");
+        if (selInDia){
+            // if filtering, check focus changed to comboboxes and prevent closing
+            selInDia.forEach(function(selIn) {
+                selIn.addEventListener("click", function(e) {
+                    prevent_timeout++;
+                });
+                selIn.addEventListener("blur", function(e) {
+                   prevent_timeout = 0;
+                });
+                selIn.addEventListener("change", function(e) {
+                    prevent_timeout = -1;
+                });
+            });
+        }
 
         if (that.prompt_box) {
             that.prompt_box.close();
@@ -10258,7 +10311,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var input = dialog.querySelector("input");
         input.addEventListener("keydown", function(e) {
-            modified = true;
+            dialog.is_modified = true;
             if (e.keyCode == 27) {
                 //ESC
                 dialog.close();
@@ -10283,9 +10336,6 @@ LGraphNode.prototype.executeAction = function(action)
             dialog.close();
         });
 
-        var graphcanvas = LGraphCanvas.active_canvas;
-        var canvas = graphcanvas.canvas;
-
         var rect = canvas.getBoundingClientRect();
         var offsetx = -20;
         var offsety = -20;
@@ -10302,7 +10352,6 @@ LGraphNode.prototype.executeAction = function(action)
             dialog.style.top = canvas.height * 0.5 + offsety + "px";
         }
 
-        canvas.parentNode.appendChild(dialog);
         setTimeout(function() {
             input.focus();
         }, 10);
@@ -10467,7 +10516,8 @@ LGraphNode.prototype.executeAction = function(action)
                 console.debug(LiteGraph.slot_types_in);*/
                 var aSlots = LiteGraph.slot_types_in;
                 var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length;
-                if (options.type_filter_in == LiteGraph.EVENT || options.type_filter_in == LiteGraph.ACTION) options.type_filter_in = "event/action";
+                if (options.type_filter_in == LiteGraph.EVENT || options.type_filter_in == LiteGraph.ACTION)
+                    options.type_filter_in = "event/action";
                 for (var iK=0; iK<nSlots; iK++){
                     var opt = document.createElement('option');
                     opt.value = aSlots[iK];
@@ -10486,7 +10536,8 @@ LGraphNode.prototype.executeAction = function(action)
             if (selOut){
                 var aSlots = LiteGraph.slot_types_out;
                 var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length; 
-                if (options.type_filter_out == LiteGraph.EVENT || options.type_filter_out == LiteGraph.ACTION) options.type_filter_out = "event/action";
+                if (options.type_filter_out == LiteGraph.EVENT || options.type_filter_out == LiteGraph.ACTION)
+                    options.type_filter_out = "event/action";
                 for (var iK=0; iK<nSlots; iK++){
                     var opt = document.createElement('option');
                     opt.value = aSlots[iK];
@@ -10939,6 +10990,7 @@ LGraphNode.prototype.executeAction = function(action)
 		return dialog;
     };
 
+    // refactor, theer are different dialog, some uses createDialog, some dont
     LGraphCanvas.prototype.createDialog = function(html, options) {
         def_options = { checkForInput: false, closeOnLeave: true, closeOnLeave_checkModified: true }; // atlasan proposed options defaults method
         options = Object.assign(def_options, options || {});
@@ -10999,13 +11051,39 @@ LGraphNode.prototype.executeAction = function(action)
             dialog.is_modified = true;
         }
         dialog.close = function() {
-            if (this.parentNode) {
-                this.parentNode.removeChild(this);
+            if (dialog.parentNode) {
+                dialog.parentNode.removeChild(dialog);
             }
         };
-        if (options.closeOnLeave) dialog.addEventListener("mouseleave", function(e) {
-            if (!dialog.is_modified || !options.closeOnLeave_checkModified) dialog.close();
+        
+        var dialogCloseTimer = null;
+        var prevent_timeout = false;
+        dialog.addEventListener("mouseleave", function(e) {
+            if (prevent_timeout)
+                return;
+            if(options.closeOnLeave || LiteGraph.dialog_close_on_mouse_leave)
+                if (!dialog.is_modified && LiteGraph.dialog_close_on_mouse_leave)
+                    dialogCloseTimer = setTimeout(dialog.close, LiteGraph.dialog_close_on_mouse_leave_delay); //dialog.close();
         });
+        dialog.addEventListener("mouseenter", function(e) {
+            if(options.closeOnLeave || LiteGraph.dialog_close_on_mouse_leave)
+                if(dialogCloseTimer) clearTimeout(dialogCloseTimer);
+        });
+        var selInDia = dialog.querySelectorAll("select");
+        if (selInDia){
+            // if filtering, check focus changed to comboboxes and prevent closing
+            selInDia.forEach(function(selIn) {
+                selIn.addEventListener("click", function(e) {
+                    prevent_timeout++;
+                });
+                selIn.addEventListener("blur", function(e) {
+                   prevent_timeout = 0;
+                });
+                selIn.addEventListener("change", function(e) {
+                    prevent_timeout = -1;
+                });
+            });
+        }
 
         return dialog;
     };
@@ -11161,7 +11239,7 @@ LGraphNode.prototype.executeAction = function(action)
 
 			function innerChange(name, value)
 			{
-				console.log("change",name,value);
+				console.log("widget change: ",name,value);
 				//that.dirty_canvas = true;
 				if(options.callback)
 					options.callback(name,value);
@@ -12385,6 +12463,9 @@ LGraphNode.prototype.executeAction = function(action)
         if (this.root.closing_timer) {
             clearTimeout(this.root.closing_timer);
         }
+        
+        // atlasan : implement : LiteGraph.contextMenuClosed(); :: keep track of opened / closed / current ContextMenu
+        // on key press, allow filtering/selecting the context menu elements
     };
 
     //this code is used to trigger events easily (used in the context menu mouseleave
