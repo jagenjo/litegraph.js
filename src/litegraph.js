@@ -978,7 +978,8 @@
                 for (var j = 0; j < limit; ++j) {
                     var node = nodes[j];
                     if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
-                        node.onExecute(); //hard to send elapsed time
+                        //node.onExecute(); //hard to send elapsed time
+                        node.execute();
                     }
                 }
 
@@ -998,7 +999,8 @@
                     for (var j = 0; j < limit; ++j) {
                         var node = nodes[j];
                         if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
-                            node.onExecute();
+                            //node.onExecute();
+                            node.execute();
                         }
                     }
 
@@ -1667,7 +1669,8 @@
             if (node.properties.name != action) {
                 continue;
             }
-            node.onAction(action, param);
+            //node.onAction(action, param);
+            node.actionDo(action, param);
             break;
         }
     };
@@ -2759,7 +2762,8 @@
         if (node.updateOutputData) {
             node.updateOutputData(link.origin_slot);
         } else if (node.onExecute) {
-            node.onExecute();
+            //node.onExecute();
+            node.execute();
         }
 
         return link.data;
@@ -3009,6 +3013,55 @@
         return r;
     };
 
+    LGraphNode.prototype.changeMode = function(modeTo){
+        switch(modeTo){
+            case LiteGraph.ON_EVENT:
+                break;
+                
+            case LiteGraph.ON_TRIGGER:
+                var trigS = this.findInputSlot("onTrigger");
+                if (!trigS || trigS == -1){
+                    var input = this.addInput("onTrigger", LiteGraph.EVENT );
+                }
+                this.mode = LiteGraph.ON_TRIGGER;
+                break;
+                
+            case LiteGraph.NEVER:
+                break;
+                
+            case LiteGraph.ALWAYS:
+                break;
+                
+            default:
+                return false;
+                break;
+        }
+        this.mode = modeTo;
+        return true;
+    };
+    
+    /**
+     * Triggers the node code execution, place a boolean/counter to mark the node as being executed
+     * @method execute
+     * @param {String} action name
+     * @param {*} param
+     */
+    LGraphNode.prototype.execute = function(param, options) {
+        if (this.onExecute) this.onExecute(param);
+        this.execute_triggered = 2; // this is the nFrames it will be used (-- each step)
+    };
+    
+    /**
+     * Triggers an action, place a boolean/counter to mark the node as being actioned
+     * @method actionDo
+     * @param {String} action name
+     * @param {*} param
+     */
+    LGraphNode.prototype.actionDo = function(action, param, options) {
+        if (this.onAction) this.onAction(action, param);
+        this.action_triggered = 2; // this is the nFrames it will be used (-- each step) 
+    };
+    
     /**
      * Triggers an event in this node, this will trigger any output with the same name
      * @method trigger
@@ -3082,11 +3135,13 @@
 			if (node.mode === LiteGraph.ON_TRIGGER)
 			{
                 if (node.onExecute) {
-                    node.onExecute(param);
+                    //node.onExecute(param);
+                    node.execute(param);
                 }
 			}
 			else if (node.onAction) {
-                node.onAction(target_connection.name, param);
+                //node.onAction(target_connection.name, param);
+                node.actionDo(target_connection.name, param);
             }
         }
     };
@@ -3803,6 +3858,9 @@
             return this.connect(slot, target_node, target_slot);
         }else{
             // console.log("type "+target_slotType+" not found or not free?") // atlasan debug REMOVE
+            if (target_slotType == LiteGraph.EVENT){
+                return this.connect(slot, target_node, -1);
+            }
             return null;
         }
     }
@@ -3888,14 +3946,16 @@
                 return null;
             }
         } else if (target_slot === LiteGraph.EVENT) {
+            
             //search for first slot with event?
-            /*
-		//create input for trigger
-		var input = target_node.addInput("onTrigger", LiteGraph.EVENT );
-		target_slot = target_node.inputs.length - 1; //last one is the one created
-		target_node.mode = LiteGraph.ON_TRIGGER;
-		*/
-            return null;
+            
+            //console.log("Connect: Creating triggerEvent");
+            // force mode
+            target_node.changeMode(LiteGraph.ON_TRIGGER);
+            target_slot = target_node.findInputSlot("onTrigger");
+            
+            //return null;
+            
         } else if (
             !target_node.inputs ||
             target_slot >= target_node.inputs.length
@@ -8384,6 +8444,11 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.shadowColor = "transparent";
             }
 
+            var colState = node.action_triggered ? "#FAA" : node.execute_triggered ? "#AAA" : false;
+            if (node.execute_triggered>0) node.execute_triggered--;
+            if (node.action_triggered>0) node.action_triggered--;
+            
+            
             //title box
             var box_size = 10;
             if (node.onDrawTitleBox) {
@@ -8405,8 +8470,8 @@ LGraphNode.prototype.executeAction = function(action)
                     );
                     ctx.fill();
                 }
-
-                ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
+                
+                ctx.fillStyle = node.boxcolor || colState || LiteGraph.NODE_DEFAULT_BOXCOLOR;
 				if(low_quality)
 					ctx.fillRect( title_height * 0.5 - box_size *0.5, title_height * -0.5 - box_size *0.5, box_size , box_size  );
 				else
@@ -8431,7 +8496,7 @@ LGraphNode.prototype.executeAction = function(action)
                         box_size + 2
                     );
                 }
-                ctx.fillStyle = node.boxcolor || LiteGraph.NODE_DEFAULT_BOXCOLOR;
+                ctx.fillStyle = node.boxcolor || colState || LiteGraph.NODE_DEFAULT_BOXCOLOR;
                 ctx.fillRect(
                     (title_height - box_size) * 0.5,
                     (title_height + box_size) * -0.5,
@@ -8510,7 +8575,7 @@ LGraphNode.prototype.executeAction = function(action)
                 node.onDrawTitle(ctx);
             }
         }
-
+        
         //render selection marker
         if (selected) {
             if (node.onBounding) {
@@ -11477,17 +11542,17 @@ LGraphNode.prototype.executeAction = function(action)
             }
             switch (v) {
                 case "On Event":
-                    node.mode = LiteGraph.ON_EVENT;
+                    node.changeMode(LiteGraph.ON_EVENT);
                     break;
                 case "On Trigger":
-                    node.mode = LiteGraph.ON_TRIGGER;
+                    node.changeMode(LiteGraph.ON_TRIGGER);
                     break;
                 case "Never":
-                    node.mode = LiteGraph.NEVER;
+                    node.changeMode(LiteGraph.NEVER);
                     break;
                 case "Always":
                 default:
-                    node.mode = LiteGraph.ALWAYS;
+                    node.changeMode(LiteGraph.ALWAYS);
                     break;
             }
         }

@@ -152,12 +152,43 @@
         this.addOutput("out", "boolean");
     }
     logicNot.title = "NOT";
-    logicNot.desc = "Return the boolean inverse";
+    logicNot.desc = "Return the logical negation";
     logicNot.prototype.onExecute = function() {
         var ret = !this.getInputData(0);
         this.setOutputData(0, ret);
     };
     LiteGraph.registerNodeType("logic/NOT", logicNot);
+    
+    
+    function logicCompare(){
+        this.properties = { };
+        this.addInput("a", "boolean");
+        this.addInput("b", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    logicCompare.title = "bool == bool";
+    logicCompare.desc = "Compare for logical equality";
+    logicCompare.prototype.onExecute = function() {
+        last = null;
+        ret = true;
+        for (inX in this.inputs){
+            if (last === null) last = this.getInputData(inX);
+            else
+                if (last != this.getInputData(inX)){
+                    ret = false;
+                    break;
+                }
+        }
+        this.setOutputData(0, ret);
+    };
+    logicCompare.prototype.onGetInputs = function() {
+        return [
+            ["bool", "boolean"]
+        ];
+    };
+    LiteGraph.registerNodeType("logic/CompareBool", logicCompare);
+    
+    
     
     
 })(this);
