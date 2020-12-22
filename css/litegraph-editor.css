@@ -202,6 +202,7 @@
 	overflow: auto;
 	resize: none;
 	outline: none;
+    color: #DDD;
 }
 
 .litegraph-editor .codeflask {

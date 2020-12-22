@@ -232,6 +232,17 @@
 	margin: auto;
 }
 
+.litegraph .dialog.centered {
+    top: 50px;
+    left: 50%;
+    position: absolute;
+    transform: translateX(-50%);
+    min-width: 600px;
+    min-height: 300px;
+    height: calc( 100% - 100px );
+	margin: auto;
+}
+
 .litegraph .dialog .close {
     float: right;
 	margin: 4px;
@@ -259,7 +270,7 @@
     display: inline-block;
 }
 
-.litegraph .dialog .dialog-content {
+.litegraph .dialog .dialog-content, .litegraph .dialog .dialog-alt-content {
     height: calc(100% - 90px);
     width: 100%;
 	min-height: 100px;
