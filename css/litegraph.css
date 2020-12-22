@@ -338,6 +338,7 @@
 	background-color: #1A1A1A;
     width: calc( 100% - 122px );
 	max-height: 300px;
+    min-height: 18px;
     padding: 4px;
 	padding-right: 12px;
 	overflow: hidden;

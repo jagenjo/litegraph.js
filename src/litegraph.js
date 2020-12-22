@@ -49,6 +49,7 @@
         DEFAULT_POSITION: [100, 100], //default node position
         VALID_SHAPES: ["default", "box", "round", "card"], //,"circle"
 
+        
         //shapes are used for nodes but also for slots
         BOX_SHAPE: 1,
         ROUND_SHAPE: 2,
@@ -64,6 +65,7 @@
         EVENT: -1, //for outputs
         ACTION: -1, //for inputs
 
+        NODE_MODES: ["Always", "On Event", "On Trigger", "Never"],
         ALWAYS: 0,
         ON_EVENT: 1,
         NEVER: 2,
@@ -11441,41 +11443,66 @@ LGraphNode.prototype.executeAction = function(action)
 			panel.content.innerHTML = ""; //clear
 			panel.addHTML("<span class='node_type'>"+node.type+"</span><span class='node_desc'>"+(node.constructor.desc || "")+"</span><span class='separator'></span>");
 
-            //panel.addHTML("<div class='node_panel_detail'>");
-            
 			panel.addHTML("<h3>Properties</h3>");
 
-            //panel.addHTML("<div class='node_properties'>");
-			for(var i in node.properties)
+            var fUpdate = function(name,value){
+                            graphcanvas.graph.beforeChange(node);
+                            switch(name){
+                                case "Title":
+                                    node.title = value;
+                                    break;
+                                case "Mode":
+                                    var kV = Object.values(LiteGraph.NODE_MODES).indexOf(value);
+                                    if (kV>=0 && LiteGraph.NODE_MODES[kV])
+                                        node.changeMode(kV);
+                                    else{
+                                        console.warn("unexpected mode: "+value);
+                                    }
+                                    break;
+                                case "Color":
+                                    if (LGraphCanvas.node_colors[value]){
+                                        node.color = LGraphCanvas.node_colors[value].color;
+                                        node.bgcolor = LGraphCanvas.node_colors[value].bgcolor;
+                                    }else{
+                                        console.warn("unexpected color: "+value);
+                                    }
+                                    break;
+                                default:
+                                    node.setProperty(name,value);
+                                    break;
+                            }
+                            graphcanvas.graph.afterChange();
+                            graphcanvas.dirty_canvas = true;
+                        };
+            
+            panel.addWidget( "string", "Title", node.title, {}, fUpdate);
+            
+            panel.addWidget( "combo", "Mode", LiteGraph.NODE_MODES[node.mode], {values: LiteGraph.NODE_MODES}, fUpdate);
+            
+            var nodeCol = "";
+            if (node.color !== undefined){
+                nodeCol = Object.keys(LGraphCanvas.node_colors).filter(function(nK){ return LGraphCanvas.node_colors[nK].color == node.color; });
+            }
+            
+            panel.addWidget( "combo", "Color", nodeCol, {values: Object.keys(LGraphCanvas.node_colors)}, fUpdate);
+            
+            for(var pName in node.properties)
 			{
-				var value = node.properties[i];
-				var info = node.getPropertyInfo(i);
+				var value = node.properties[pName];
+				var info = node.getPropertyInfo(pName);
 				var type = info.type || "string";
 
 				//in case the user wants control over the side panel widget
-				if( node.onAddPropertyToPanel && node.onAddPropertyToPanel(i,panel) )
+				if( node.onAddPropertyToPanel && node.onAddPropertyToPanel(pName,panel) )
 					continue;
 
-				panel.addWidget( info.widget || info.type, i, value, info, function(name,value){
-					graphcanvas.graph.beforeChange(node);
-					node.setProperty(name,value);
-					graphcanvas.graph.afterChange();
-					graphcanvas.dirty_canvas = true;
-				});
+				panel.addWidget( info.widget || info.type, pName, value, info, fUpdate);
 			}
-            //panel.addHTML("</div>"); // node_properties end
 
 			panel.addSeparator();
 
 			if(node.onShowCustomPanelInfo)
 				node.onShowCustomPanelInfo(panel);
-
-			/*
-			panel.addHTML("<h3>Connections</h3>");
-			var connection_containers = panel.addHTML("<div class='inputs connections_side'></div><div class='outputs connections_side'></div>","connections");
-			var inputs = connection_containers.querySelector(".inputs");
-			var outputs = connection_containers.querySelector(".outputs");
-			*/
 
             panel.footer.innerHTML = ""; // clear
 			panel.addButton("Delete",function(){
@@ -11484,16 +11511,11 @@ LGraphNode.prototype.executeAction = function(action)
 				node.graph.remove(node);
 				panel.close();
 			}).classList.add("delete");
-            
-            //panel.addHTML("</div>"); // node_panel_details end
+
 		}
 
 		panel.inner_showCodePad = function( propname )
 		{
-			/*panel.style.top = "calc( 50% - 250px)";
-			panel.style.left = "calc( 50% - 400px)";
-			panel.style.width = "800px";
-			panel.style.height = "500px";*/
             panel.classList.remove("settings");
             panel.classList.add("centered");
 
@@ -11629,7 +11651,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.onMenuNodeMode = function(value, options, e, menu, node) {
         new LiteGraph.ContextMenu(
-            ["Always", "On Event", "On Trigger", "Never"],
+            LiteGraph.NODE_MODES,
             { event: e, callback: inner_clicked, parentMenu: menu, node: node }
         );
 
@@ -11637,20 +11659,12 @@ LGraphNode.prototype.executeAction = function(action)
             if (!node) {
                 return;
             }
-            switch (v) {
-                case "On Event":
-                    node.changeMode(LiteGraph.ON_EVENT);
-                    break;
-                case "On Trigger":
-                    node.changeMode(LiteGraph.ON_TRIGGER);
-                    break;
-                case "Never":
-                    node.changeMode(LiteGraph.NEVER);
-                    break;
-                case "Always":
-                default:
-                    node.changeMode(LiteGraph.ALWAYS);
-                    break;
+            var kV = Object.values(LiteGraph.NODE_MODES).indexOf(v);
+            if (kV>=0 && LiteGraph.NODE_MODES[kV])
+                node.changeMode(kV);
+            else{
+                console.warn("unexpected mode: "+v);
+                node.changeMode(LiteGraph.ALWAYS);
             }
         }
 
