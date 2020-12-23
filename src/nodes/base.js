@@ -1251,8 +1251,10 @@
 
     Console.prototype.onAction = function(action, param) {
         // param is the action
-        var msg = this.getInputData(1);
-        if (typeof msg == "undefined") msg = "Event: "+param; // msg is undefined if the slot is lost?
+        var msg = this.getInputDataByName("msg"); //getInputData(1);
+        //if (msg == null || typeof msg == "undefined") return;
+        if (!msg) msg = this.properties.msg;
+        if (!msg) msg = "Event: "+param; // msg is undefined if the slot is lost?
         if (action == "log") {
             console.log(msg);
         } else if (action == "warn") {
@@ -1263,11 +1265,12 @@
     };
 
     Console.prototype.onExecute = function() {
-        var msg = this.getInputData(1);
-        if (msg !== null) {
+        var msg = this.getInputDataByName("msg"); //getInputData(1);
+        if (!msg) msg = this.properties.msg;
+        if (msg != null && typeof msg != "undefined") {
             this.properties.msg = msg;
+            console.log(msg);
         }
-        console.log(msg);
     };
 
     Console.prototype.onGetInputs = function() {

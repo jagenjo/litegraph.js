@@ -57,6 +57,7 @@
         CARD_SHAPE: 4,
         ARROW_SHAPE: 5,
         GRID_SHAPE: 6, // atlasan edit .. this is intended to be for slot arrays .. but not for nodes ?
+        THUNDER_SHAPE: 7,
 
         //enums
         INPUT: 1,
@@ -66,11 +67,12 @@
         ACTION: -1, //for inputs
 
         NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
+        NODE_MODES_COLORS:["#666","#422","#333","#224"], // use with node_box_coloured_by_mode
         ALWAYS: 0,
         ON_EVENT: 1,
         NEVER: 2,
         ON_TRIGGER: 3,
-
+        
         UP: 1,
         DOWN: 2,
         LEFT: 3,
@@ -102,6 +104,7 @@
         auto_sort_node_types: true, // If set to true, will automatically sort node types / categories in the context menus
         
         node_box_coloured_when_on: true, // this make the nodes box (top left circle) coloured when triggered (execute/action)
+        node_box_coloured_by_mode: true, // nodebox based on node mode
         
         dialog_close_on_mouse_leave: true,
         dialog_close_on_mouse_leave_delay: 500,
@@ -8506,8 +8509,13 @@ LGraphNode.prototype.executeAction = function(action)
             }
 
             var colState = false;
+            if (LiteGraph.node_box_coloured_by_mode){
+                if(LiteGraph.NODE_MODES_COLORS[node.mode]){
+                    colState = LiteGraph.NODE_MODES_COLORS[node.mode];
+                }
+            }
             if (LiteGraph.node_box_coloured_when_on){
-                colState = node.action_triggered ? "#FFF" : node.execute_triggered ? "#AAA" : false;
+                colState = node.action_triggered ? "#FFF" : node.execute_triggered ? "#AAA" : colState;
             }
             
             //title box
