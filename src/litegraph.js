@@ -65,7 +65,7 @@
         EVENT: -1, //for outputs
         ACTION: -1, //for inputs
 
-        NODE_MODES: ["Always", "On Event", "On Trigger", "Never"],
+        NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
         ALWAYS: 0,
         ON_EVENT: 1,
         NEVER: 2,
@@ -121,18 +121,11 @@
         slot_types_in: [], // slot types IN
         slot_types_out: [], // slot types OUT
         
-        // these slot types array are derived from calling registerNodeAndSlotType
-        // these has been calculated with :: if(!Object.values){Object.values=obj=>Object.keys(obj).map(key=>obj[key])}
-        // and than Object.values(LiteGraph.slot_types_in), Object.values(LiteGraph.slot_types_out)
-        // or better to array :: var X = ""; Object.values(LiteGraph.slot_types_out).map(function(a){ X+= (X!=""?",":"")+"'"+(a!=undefined?a:"")+"'"; });
-        // XXX TODO just calculate these array too, very easy.. or just make everything static :: all the nodes and types to config without the auto_load_slot_types .. 
+        graphDefaultConfig: {
+            align_to_grid: true,
+            links_ontop: false,
+        },
         
-        /*slot_types_in: {0: "*", 1: "[mat4]", 2: "array", 3: "audio", 4: "bool", 5: "boolean", 6: "canvas", 7: "event/action", 8: "geometry", 9: "image", 10: "mat4", 11: "number", 12: "object", 13: "quat", 14: "string", 15: "table", 16: "vec2", 17: "vec3", 18: "vec4"},      
-        slot_types_out: {0: "", 1: "*", 2: "[mat4]", 3: "[vec3]", 4: "array", 5: "audio", 6: "boolean", 7: "canvas", 8: "color", 9: "event/action", 10: "geometry", 11: "image", 12: "mat4", 13: "midi", 14: "number", 15: "object", 16: "quat", 17: "string", 18: "table", 19: "vec2", 20: "vec3", 21: "vec4"},*/
-        
-        /*slot_types_in: ['*','[mat4]','array','audio','boolean','canvas','event/action','geometry','image','mat4','number','object','quat','string','table','vec2','vec3','vec4'],
-        slot_types_out: ['*','[mat4]','[vec3]','array','audio','boolean','canvas','color','event/action','geometry','image','mat4','midi','number','object','quat','string','table','vec2','vec3','vec4'],*/
-                
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -782,6 +775,7 @@
     LGraph.supported_types = ["number", "string", "boolean"];
 
     //used to know which types of connections support this graph (some graphs do not allow certain types)
+    // atlasan refactort: this is never used uh ?
     LGraph.prototype.getSupportedTypes = function() {
         return this.supported_types || LGraph.supported_types;
     };
@@ -833,6 +827,9 @@
 		this.vars = {};
 		this.extra = {}; //to store custom data
 
+        // apply default config
+        this.configApplyDefaults();
+        
         //timing
         this.globaltime = 0;
         this.runningtime = 0;
@@ -854,6 +851,29 @@
         this.sendActionToCanvas("clear");
     };
 
+    /**
+    * Apply config values to LGraph config object
+    * @method configApply
+     * @param {object} opts options to merge
+    */
+    LGraph.prototype.configApply = function(opts) {
+        /*
+        align_to_grid
+        links_ontop
+        */
+        this.config = Object.assign(this.config,opts);
+    }
+    
+    /**
+    * Apply config values to LGraph config object
+    * @method configApply
+     * @param {object} opts options to merge
+    */
+    LGraph.prototype.configApplyDefaults = function() {
+        var opts = LiteGraph.graphDefaultConfig;
+        this.configApply(opts);
+    }
+    
     /**
      * Attach Canvas to this graph
      * @method attachCanvas
@@ -3107,7 +3127,7 @@
     };
 
     /**
-     * Triggers an slot event in this node
+     * Triggers a slot event in this node: cycle output slots and launch execute/action on connected nodes
      * @method triggerSlot
      * @param {Number} slot the index of the output slot
      * @param {*} param
@@ -3161,6 +3181,10 @@
                     node.execute(param);
                 }
 			}
+            /*else if (node.mode === LiteGraph.ON_EVENT)
+			{
+                // this probably expect to have onAction be SET
+			}*/
 			else if (node.onAction) {
                 //node.onAction(target_connection.name, param);
                 node.actionDo(target_connection.name, param);
@@ -3882,6 +3906,13 @@
             // console.log("type "+target_slotType+" not found or not free?") // atlasan debug REMOVE
             if (target_slotType == LiteGraph.EVENT){
                 return this.connect(slot, target_node, -1);
+            }
+            if (target_slotType !== 0 && target_slotType !== "" && target_slotType !== "*"){
+                // connect to a general type (*, 0), if not found the specific type
+                target_slot = target_node.findInputSlotByType(0, false, true);
+                if (target_slot >= 0 && target_slot !== null){
+                    return this.connect(slot, target_node, target_slot);
+                }
             }
             return null;
         }
@@ -11453,9 +11484,9 @@ LGraphNode.prototype.executeAction = function(action)
                                     break;
                                 case "Mode":
                                     var kV = Object.values(LiteGraph.NODE_MODES).indexOf(value);
-                                    if (kV>=0 && LiteGraph.NODE_MODES[kV])
+                                    if (kV>=0 && LiteGraph.NODE_MODES[kV]){
                                         node.changeMode(kV);
-                                    else{
+                                    }else{
                                         console.warn("unexpected mode: "+value);
                                     }
                                     break;
