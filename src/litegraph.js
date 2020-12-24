@@ -130,6 +130,35 @@
             links_ontop: false,
         },
         
+        showCanvasOptions: true,
+        availableCanvasOptions: [  "highquality_render"
+                                    ,"use_gradients" //set to true to render titlebar with gradients
+                                    ,"pause_rendering"
+                                    ,"clear_background"
+                                    ,"read_only" //if set to true users cannot modify the graph
+                                    ,"render_only_selected"
+                                    ,"live_mode"
+                                    ,"show_info"
+                                    ,"allow_dragcanvas"
+                                    ,"allow_dragnodes"
+                                    ,"allow_interaction" //allow to control widgets, buttons, collapse, etc
+                                    ,"allow_searchbox"
+                                    ,"move_destination_link_without_shift" //old: allow_reconnect_links //allows to change a connection, no need to hold shift
+                                    ,"set_canvas_dirty_on_mouse_event" //forces to redraw the canvas if the mouse does anything
+                                    ,"always_render_background"
+                                    ,"render_shadows"
+                                    ,"render_canvas_border"
+                                    ,"render_connections_shadows" //too much cpu
+                                    ,"render_connections_border"
+                                    // ,"render_curved_connections" // always on
+                                    ,"render_connection_arrows"
+                                    ,"render_collapsed_slots"
+                                    ,"render_execution_order"
+                                    ,"render_title_colored"
+                                    ,"render_link_tooltip"
+                                  ],
+                                  //,"editor_alpha" //= 1; //used for transition
+        
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -5029,10 +5058,10 @@ LGraphNode.prototype.executeAction = function(action)
      * @constructor
      * @param {HTMLCanvas} canvas the canvas where you want to render (it accepts a selector in string format or the canvas element itself)
      * @param {LGraph} graph [optional]
-     * @param {Object} options [optional] { skip_rendering, autoresize }
+     * @param {Object} options [optional] { skip_render, autoresize }
      */
     function LGraphCanvas(canvas, graph, options) {
-        options = options || {};
+        options = options || {skip_render: false, autoresize: false};
 
         //if(graph === undefined)
         //	throw ("No graph assigned");
@@ -5067,12 +5096,17 @@ LGraphNode.prototype.executeAction = function(action)
             boolean: "#744",
         };
 
+        this.drag_mode = false; // never used ?
+        this.dragging_rectangle = null;
+        
+        this.filter = null; //allows to filter to only accept some type of nodes in a graph
+
+        // options
         this.highquality_render = true;
         this.use_gradients = false; //set to true to render titlebar with gradients
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
-
 		this.read_only = false; //if set to true users cannot modify the graph
         this.render_only_selected = true;
         this.live_mode = false;
@@ -5081,13 +5115,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_dragnodes = true;
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
         this.allow_searchbox = true;
-        this.allow_reconnect_links = false; //allows to change a connection with having to redo it again
-
-        this.drag_mode = false;
-        this.dragging_rectangle = null;
-
-        this.filter = null; //allows to filter to only accept some type of nodes in a graph
-
+        this.move_destination_link_without_shift = false;  //old: allow_reconnect_links //allows to change a connection, no need to hold shift
 		this.set_canvas_dirty_on_mouse_event = true; //forces to redraw the canvas if the mouse does anything
         this.always_render_background = false;
         this.render_shadows = true;
@@ -5100,9 +5128,11 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_execution_order = false;
         this.render_title_colored = true;
 		this.render_link_tooltip = true;
-
         this.links_render_mode = LiteGraph.SPLINE_LINK;
-
+        
+        this.autoresize = options.autoresize;
+        
+        
         this.mouse = [0, 0]; //mouse in canvas coordinates, where 0,0 is the top-left corner of the blue rectangle
         this.graph_mouse = [0, 0]; //mouse in graph coordinates, where 0,0 is the top-left corner of the blue rectangle
 		this.canvas_mouse = this.graph_mouse; //LEGACY: REMOVE THIS, USE GRAPH_MOUSE INSTEAD
@@ -5145,7 +5175,6 @@ LGraphNode.prototype.executeAction = function(action)
             this.startRendering();
         }
 
-        this.autoresize = options.autoresize;
     }
 
     global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
@@ -5824,7 +5853,7 @@ LGraphNode.prototype.executeAction = function(action)
                                         }
 
                                         if (
-                                            this.allow_reconnect_links ||
+                                            this.move_destination_link_without_shift ||
                                             e.shiftKey
                                         ) {
                                             if (!LiteGraph.click_do_break_link_to) node.disconnectInput(i);
@@ -6450,7 +6479,7 @@ LGraphNode.prototype.executeAction = function(action)
                     
                     // atlasan edit: add menu when releasing link in empty space
                     
-                    if (e.shiftKey){
+                    if (e.shiftKey && this.allow_searchbox){
                         /*console.debug("ShowSearchBox :: ") // atlasan debug REMOVE
                         console.debug(this.connecting_output);
                         console.debug(this.connecting_input);*/
@@ -10577,6 +10606,8 @@ LGraphNode.prototype.executeAction = function(action)
                         ,type_filter: LiteGraph.auto_load_slot_types && LiteGraph.search_filter_bydefault // this will be checked for functionality enabled : filter on slot type, in and out
                         ,type_filter_in: false                          // these are default: pass to set initially set values
                         ,type_filter_out: false
+                        ,show_general_if_none_on_typefilter: true
+                        ,show_general_after_typefiltered: true
                         ,hide_on_mouse_leave: LiteGraph.search_hide_on_mouse_leave
                         ,show_all_if_empty: true
                         ,show_all_on_open: LiteGraph.search_show_all_on_open
@@ -10960,6 +10991,15 @@ LGraphNode.prototype.executeAction = function(action)
                 str = str.toLowerCase();
 				var filter = graphcanvas.filter || graphcanvas.graph.filter;
 
+                // filter by type preprocess
+                if(options.type_filter && that.search_box){
+                    var sIn = that.search_box.querySelector(".slot_in_type_filter");
+                    var sOut = that.search_box.querySelector(".slot_out_type_filter");
+                }else{
+                    var sIn = false;
+                    var sOut = false;
+                }
+                
                 //extras
                 for (var i in LiteGraph.searchbox_extras) {
                     var extra = LiteGraph.searchbox_extras[i];
@@ -10995,9 +11035,49 @@ LGraphNode.prototype.executeAction = function(action)
 						break;
 					}
 				}
-
-				function inner_test_filter( type )
+                
+                // add general type if filtering
+                if (options.show_general_after_typefiltered
+                    && (sIn.value || sOut.value) 
+                ){
+                    filtered_extra = [];
+                    for (var i in LiteGraph.registered_node_types) {
+						if( inner_test_filter(i, {inTypeOverride: sIn&&sIn.value?"*":false, outTypeOverride: sOut&&sOut.value?"*":false}) )
+							filtered_extra.push(i);
+                    }
+                    for (var i = 0; i < filtered_extra.length; i++) {
+                        addResult(filtered_extra[i], "generic_type");
+                        if ( LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit ) {
+                            break;
+                        }
+                    }
+                }
+                
+                // check il filtering gave no results
+                if ((sIn.value || sOut.value) && 
+                    ( (helper.childNodes.length == 0 && options.show_general_if_none_on_typefilter) )
+                ){
+                    filtered_extra = [];
+                    for (var i in LiteGraph.registered_node_types) {
+						if( inner_test_filter(i, {skipFilter: true}) )
+							filtered_extra.push(i);
+                    }
+                    for (var i = 0; i < filtered_extra.length; i++) {
+                        addResult(filtered_extra[i], "not_in_filter");
+                        if ( LGraphCanvas.search_limit !== -1 && c++ > LGraphCanvas.search_limit ) {
+                            break;
+                        }
+                    }
+                }
+                
+				function inner_test_filter( type, optsIn )
 				{
+                    var optsIn = optsIn || {};
+                    var optsDef = { skipFilter: false
+                                    ,inTypeOverride: false
+                                    ,outTypeOverride: false
+                                  };
+                    var opts = Object.assign(optsDef,optsIn);
 					var ctor = LiteGraph.registered_node_types[ type ];
 					if(filter && ctor.filter != filter )
 						return false;
@@ -11005,14 +11085,13 @@ LGraphNode.prototype.executeAction = function(action)
                         return false;
                     
                     // filter by slot IN, OUT types
-                    if(options.type_filter){
+                    if(options.type_filter && !opts.skipFilter){
                         /*var aTypeP = type.split("/");
                         var sType = aTypeP.length?aTypeP[aTypeP.length-1]:type;*/
                         var sType = type;
                         
-                        var sIn = that.search_box.querySelector(".slot_in_type_filter");
-                        
                         var sV = sIn.value;
+                        if (opts.inTypeOverride!==false) sV = opts.inTypeOverride;
                         //if (sV.toLowerCase() == "event/action") sV = LiteGraph.EVENT; // -1
                         
                         if(sIn && sV){
@@ -11030,9 +11109,8 @@ LGraphNode.prototype.executeAction = function(action)
                             }
                         }
                         
-                        var sOut = that.search_box.querySelector(".slot_out_type_filter");
-                        
                         var sV = sOut.value;
+                        if (opts.outTypeOverride!==false) sV = opts.outTypeOverride;
                         //if (sV.toLowerCase() == "event/action") sV = LiteGraph.EVENT; // -1
                         
                         if(sOut && sV){
@@ -11568,27 +11646,31 @@ LGraphNode.prototype.executeAction = function(action)
             //panel.addHTML("<h3>Graph options to rule them all</h3>");
 
             var fUpdate = function(name, value, options){
-                console.debug("whant to update graph options: "+name+": "+value);
+                //console.debug("whant to update graph options: "+name+": "+value);
                 switch(name){
-                    case "Render mode":
+                    /*case "Render mode":
                         // Case "".. 
                         if (options.values && options.key){
                             var kV = Object.values(options.values).indexOf(value);
                             if (kV>=0 && options.values[kV]){
                                 console.debug("update graph options: "+options.key+": "+kV);
                                 graphcanvas[options.key] = kV;
-                                console.debug(graphcanvas);
+                                //console.debug(graphcanvas);
                                 break;
                             }
                         }
                         console.warn("unexpected options");
                         console.debug(options);
-                        break;
+                        break;*/
                     default:
+                        //console.debug("want to update graph options: "+name+": "+value);
                         if (options && options.key){
                             name = options.key;
                         }
-                        console.debug("update graph option: "+name+": "+value);
+                        if (options.values){
+                            value = Object.values(options.values).indexOf(value);
+                        }
+                        //console.debug("update graph option: "+name+": "+value);
                         graphcanvas[name] = value;
                         break;
                 }
@@ -11597,36 +11679,7 @@ LGraphNode.prototype.executeAction = function(action)
             // panel.addWidget( "string", "Graph name", "", {}, fUpdate); // atlasan: implement: why not?
             
             panel.addWidget( "boolean", "Render link arrows", graphcanvas.render_connection_arrows, {on: "True", off: "False"}, fUpdate);
-            var aProps = [  "highquality_render"
-                            ,"use_gradients" //set to true to render titlebar with gradients
-                            //,"editor_alpha" //= 1; //used for transition
-                            ,"pause_rendering"
-                            ,"clear_background"
-                            ,"read_only" //if set to true users cannot modify the graph
-                            ,"render_only_selected"
-                            ,"live_mode"
-                            ,"show_info"
-                            ,"allow_dragcanvas"
-                            ,"allow_dragnodes"
-                            ,"allow_interaction" //allow to control widgets, buttons, collapse, etc
-                            ,"allow_searchbox"
-                            ,"allow_reconnect_links" //allows to change a connection with having to redo it again
-                            ,"drag_mode"
-                            //,"dragging_rectangle" // = null;
-                            //,"filter"// = null; //allows to filter to only accept some type of nodes in a graph
-                            ,"set_canvas_dirty_on_mouse_event" //forces to redraw the canvas if the mouse does anything
-                            ,"always_render_background"
-                            ,"render_shadows"
-                            ,"render_canvas_border"
-                            ,"render_connections_shadows" //too much cpu
-                            ,"render_connections_border"
-                            ,"render_curved_connections"
-                            ,"render_connection_arrows"
-                            ,"render_collapsed_slots"
-                            ,"render_execution_order"
-                            ,"render_title_colored"
-                            ,"render_link_tooltip"
-                          ];
+            var aProps = LiteGraph.availableCanvasOptions;
             for(pI in aProps){
                 var pX = aProps[pI];
                 panel.addWidget( "boolean", pX, graphcanvas[pX], {key: pX, on: "True", off: "False"}, fUpdate);
@@ -12064,10 +12117,12 @@ LGraphNode.prototype.executeAction = function(action)
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuAdd
                 },
-                { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
-                { content: "Options", callback: thisGCanvas.showShowGraphOptionsPanel }
+                { content: "Add Group", callback: LGraphCanvas.onGroupAdd }
                 //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
             ];
+            if (LiteGraph.showCanvasOptions){
+                options.push({ content: "Options", callback: thisGCanvas.showShowGraphOptionsPanel });
+            }
 
             if (this._graph_stack && this._graph_stack.length > 0) {
                 options.push(null, {

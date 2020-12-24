@@ -201,6 +201,20 @@
     padding-top: 2px;
 }
 
+.litegraph.lite-search-item.not_in_filter{
+    /*background-color: rgba(50, 50, 50, 0.5);*/
+    /*color: #999;*/
+    color: #B99;
+    font-style: italic;
+}
+
+.litegraph.lite-search-item.generic_type{
+    /*background-color: rgba(50, 50, 50, 0.5);*/
+    /*color: #DD9;*/
+    color: #999;
+    font-style: italic;
+}
+
 .litegraph.lite-search-item:hover,
 .litegraph.lite-search-item.selected {
     cursor: pointer;
