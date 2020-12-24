@@ -79,6 +79,7 @@
         RIGHT: 4,
         CENTER: 5,
 
+        RENDER_MODES: ["Straight", "Linear", "Spline"],
         STRAIGHT_LINK: 0,
         LINEAR_LINK: 1,
         SPLINE_LINK: 2,
@@ -3804,7 +3805,7 @@
         }
         for (var i = 0, l = this.inputs.length; i < l; ++i) {
             if (name == this.inputs[i].name) {
-                return !returnObj ? i : this.outputs[i];
+                return !returnObj ? i : this.inputs[i];
             }
         }
         return -1;
@@ -3830,27 +3831,84 @@
         return -1;
     };
     
+    // atlasan: refactor: USE SINGLE findInput/findOutput functions! :: merge options
+    
+    /**
+     * returns the first free input slot
+     * @method findInputSlotFree
+     * @param {object} options
+     * @return {number_or_object} the slot (-1 if not found)
+     */
+    LGraphNode.prototype.findInputSlotFree = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = {returnObj: false
+                        ,typesNotAccepted: []
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        if (!this.inputs) {
+            return -1;
+        }
+        for (var i = 0, l = this.inputs.length; i < l; ++i) {
+            if (this.inputs[i].link && this.inputs[i].link != null) {
+                continue;
+            }
+            if (opts.typesNotAccepted && opts.typesNotAccepted.includes && opts.typesNotAccepted.includes(this.inputs[i].type)){
+                continue;
+            }
+            return !opts.returnObj ? i : this.inputs[i];
+        }
+        return -1;
+    };
+
+    /**
+     * returns the first output slot free
+     * @method findOutputSlotFree
+     * @param {object} options
+     * @return {number_or_object} the slot (-1 if not found)
+     */
+    LGraphNode.prototype.findOutputSlotFree = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { returnObj: false
+                        ,typesNotAccepted: []
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        if (!this.outputs) {
+            return -1;
+        }
+        for (var i = 0, l = this.outputs.length; i < l; ++i) {
+            if (this.outputs[i].links && this.outputs[i].links != null) {
+                continue;
+            }
+            if (opts.typesNotAccepted && opts.typesNotAccepted.includes && opts.typesNotAccepted.includes(this.outputs[i].type)){
+                continue;
+            }
+            return !opts.returnObj ? i : this.outputs[i];
+        }
+        return -1;
+    };
+    
     /**
      * returns the input slot with a given type, -1 if not found
      * @method findInputSlotByType
      * @param {string} type the type of the slot
      * @param {boolean} returnObj if the obj itself wanted
+     * @param {boolean} preferFreeSlot if we want a free slot (if not found, will return the first of the type anyway)
      * @return {number_or_object} the slot (-1 if not found)
      */
-    LGraphNode.prototype.findInputSlotByType = function(type, returnObj, checkFree) {
+    LGraphNode.prototype.findInputSlotByType = function(type, returnObj, preferFreeSlot) {
         returnObj = returnObj || false;
-        checkFree = checkFree || false;
+        preferFreeSlot = preferFreeSlot || false;
         if (!this.inputs) {
             return -1;
         }
         for (var i = 0, l = this.inputs.length; i < l; ++i) {
             if (type == this.inputs[i].type) {
-                if (checkFree && this.inputs[i].link && this.inputs[i].link != null) continue;
+                if (preferFreeSlot && this.inputs[i].link && this.inputs[i].link != null) continue;
                 return !returnObj ? i : this.inputs[i];
             }
         }
         // if didnt find some, stop checking for free slots
-        if (checkFree){
+        if (preferFreeSlot){
             for (var i = 0, l = this.inputs.length; i < l; ++i) {
                 if (type == this.inputs[i].type)
                     return !returnObj ? i : this.inputs[i];
@@ -3864,23 +3922,24 @@
      * @method findOutputSlotByType
      * @param {string} type the type of the slot
      * @param {boolean} returnObj if the obj itself wanted
+     * @param {boolean} preferFreeSlot if we want a free slot (if not found, will return the first of the type anyway)
      * @return {number_or_object} the slot (-1 if not found)
      */
-    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj, checkFree) {
+    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj, preferFreeSlot) {
         returnObj = returnObj || false;
-        checkFree = checkFree || false;
+        preferFreeSlot = preferFreeSlot || false;
         if (!this.outputs) {
             return -1;
         }
         for (var i = 0, l = this.outputs.length; i < l; ++i) {
             // console.debug(type+" "+this.outputs[i].type+" "+this.outputs[i].links); // atlasan debug REMOVE
             if (type == this.outputs[i].type) {
-                if (checkFree && this.outputs[i].links && this.outputs[i].links !== null) continue;
+                if (preferFreeSlot && this.outputs[i].links && this.outputs[i].links !== null) continue;
                 return !returnObj ? i : this.outputs[i];
             }
         }
         // if didnt find some, stop checking for free slots
-        if (checkFree){
+        if (preferFreeSlot){
             for (var i = 0, l = this.outputs.length; i < l; ++i) {
                 if (type == this.outputs[i].type)
                     return !returnObj ? i : this.outputs[i];
@@ -3911,11 +3970,13 @@
                 return this.connect(slot, target_node, -1);
             }
             if (target_slotType !== 0 && target_slotType !== "" && target_slotType !== "*"){
-                // connect to a general type (*, 0), if not found the specific type
+                // connect TO a general type (*, 0), if not found the specific type
                 target_slot = target_node.findInputSlotByType(0, false, true);
                 if (target_slot >= 0 && target_slot !== null){
                     return this.connect(slot, target_node, target_slot);
                 }
+            }else{
+                // console.debug("this is the case");
             }
             return null;
         }
@@ -3935,10 +3996,19 @@
         }
         source_slot = source_node.findOutputSlotByType(source_slotType, false, true);
         if (source_slot >= 0 && source_slot !== null){
-            // console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
+            console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
             return source_node.connect(source_slot, this, slot);
         }else{
-            // console.log("type OUT! "+source_slotType+" not found or not free?") // atlasan debug REMOVE
+            
+            // connecto to the first free output slot if not found a specific type and this input is general
+            if (source_slotType == 0 || source_slotType == "*" || source_slotType == ""){
+                var target_slot = source_node.findOutputSlotFree({typesNotAccepted: [LiteGraph.EVENT] });
+                if (target_slot >= 0){
+                    return source_node.connect(0, this, target_slot);
+                }
+            }
+            
+            //console.log("type OUT! "+source_slotType+" not found or not free?") // atlasan debug REMOVE
             return null;
         }
     }
@@ -6661,6 +6731,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (e.keyCode == 27) {
                 //esc
                 if(this.node_panel) this.node_panel.close();
+                if(this.options_panel) this.options_panel.close();
                 block_default = true;
             }
 
@@ -10808,7 +10879,7 @@ LGraphNode.prototype.executeAction = function(action)
                         if (typeof options.node_from.outputs[iS] !== undefined){
                             if (iS!==false && iS>-1){
                                 //console.debug("search_conn ! try to "+iS+" "+node+" "+0); // atlasan debug REMOVE
-                                options.node_from.connectByType( iS, node, options.node_from.outputs[iS].type ); // atlasan implement :: look for right slot by type
+                                options.node_from.connectByType( iS, node, options.node_from.outputs[iS].type );
                             }
                         }else{
                             console.warn("cant find slot " + options.slot_from); // atlasan debug REMOVE
@@ -10831,8 +10902,7 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                         if (typeof options.node_to.inputs[iS] !== undefined){
                             if (iS!==false && iS>-1){
-                                console.debug("search_conn_nodeTO ! try to "+iS+" "+node+" "+options.node_to.inputs[iS].type); // atlasan debug REMOVE
-                                //options.node_to.connectByType( iS, node, options.node_from.outputs[iS].type ); // atlasan implement :: look for right slot by type
+                                //console.debug("search_conn_nodeTO ! try to "+iS+" "+options.node_to.inputs[iS].type); // atlasan debug REMOVE
                                 options.node_to.connectByTypeOutput(iS,node,options.node_to.inputs[iS].type);
                             }
                         }else{
@@ -11037,7 +11107,7 @@ LGraphNode.prototype.executeAction = function(action)
                     "</option>";
             }
             input_html += "</select>";
-        } else if (type == "boolean") {
+        } else if (type == "boolean" || type == "toggle") {
             input_html =
                 "<input autofocus type='checkbox' class='value' " +
                 (node.properties[property] ? "checked" : "") +
@@ -11065,7 +11135,7 @@ LGraphNode.prototype.executeAction = function(action)
                 //var index = e.target.value;
                 //setValue( e.options[e.selectedIndex].value );
             });
-        } else if (type == "boolean") {
+        } else if (type == "boolean" || type == "toggle") {
             input = dialog.querySelector("input");
             if (input) {
                 input.addEventListener("click", function(e) {
@@ -11415,9 +11485,9 @@ LGraphNode.prototype.executeAction = function(action)
 				console.log("widget change: ",name,value);
 				//that.dirty_canvas = true;
 				if(options.callback)
-					options.callback(name,value);
+					options.callback(name,value,options);
 				if(callback)
-					callback(name,value);
+					callback(name,value,options);
 			}
 
 			return elem;
@@ -11452,12 +11522,133 @@ LGraphNode.prototype.executeAction = function(action)
 		}
 	}
 
-	LGraphCanvas.prototype.showShowNodePanel = function( node )
-	{
-		this.SELECTED_NODE = node;
-		var panel = document.querySelector("#node-panel");
+    LGraphCanvas.prototype.closePanels = function(){
+        var panel = document.querySelector("#node-panel");
 		if(panel)
 			panel.close();
+        var panel = document.querySelector("#option-panel");
+		if(panel)
+			panel.close();
+    }
+    
+    LGraphCanvas.prototype.showShowGraphOptionsPanel = function(refOpts, obEv, refMenu, refMenu2){
+        if(this.constructor && this.constructor.name == "HTMLDivElement"){
+            // assume coming from the menu event click
+            if (!obEv || !obEv.event || !obEv.event.target || !obEv.event.target.lgraphcanvas){
+                console.warn("Canvas not found"); // need a ref to canvas obj
+                console.debug(event);
+                console.debug(event.target);
+                return;
+            }
+            var graphcanvas = obEv.event.target.lgraphcanvas;
+        }else{
+            // assume called internally
+            var graphcanvas = this;
+        }
+        graphcanvas.closePanels();
+        var ref_window = graphcanvas.getCanvasWindow();
+        panel = graphcanvas.createPanel("Options",{
+                                            closable: true
+                                            ,window: ref_window
+                                            ,onOpen: function(){
+                                                graphcanvas.OPTIONPANEL_IS_OPEN = true;
+                                            }
+                                            ,onClose: function(){
+                                                graphcanvas.OPTIONPANEL_IS_OPEN = false;
+                                                graphcanvas.options_panel = null;
+                                            }
+                                        });
+        graphcanvas.options_panel = panel;
+        panel.id = "option-panel";
+		panel.classList.add("settings");
+        
+        function inner_refresh(){
+            
+            panel.content.innerHTML = ""; //clear
+            //panel.addHTML("<h3>Graph options to rule them all</h3>");
+
+            var fUpdate = function(name, value, options){
+                console.debug("whant to update graph options: "+name+": "+value);
+                switch(name){
+                    case "Render mode":
+                        // Case "".. 
+                        if (options.values && options.key){
+                            var kV = Object.values(options.values).indexOf(value);
+                            if (kV>=0 && options.values[kV]){
+                                console.debug("update graph options: "+options.key+": "+kV);
+                                graphcanvas[options.key] = kV;
+                                console.debug(graphcanvas);
+                                break;
+                            }
+                        }
+                        console.warn("unexpected options");
+                        console.debug(options);
+                        break;
+                    default:
+                        if (options && options.key){
+                            name = options.key;
+                        }
+                        console.debug("update graph option: "+name+": "+value);
+                        graphcanvas[name] = value;
+                        break;
+                }
+            };
+            
+            // panel.addWidget( "string", "Graph name", "", {}, fUpdate); // atlasan: implement: why not?
+            
+            panel.addWidget( "boolean", "Render link arrows", graphcanvas.render_connection_arrows, {on: "True", off: "False"}, fUpdate);
+            var aProps = [  "highquality_render"
+                            ,"use_gradients" //set to true to render titlebar with gradients
+                            //,"editor_alpha" //= 1; //used for transition
+                            ,"pause_rendering"
+                            ,"clear_background"
+                            ,"read_only" //if set to true users cannot modify the graph
+                            ,"render_only_selected"
+                            ,"live_mode"
+                            ,"show_info"
+                            ,"allow_dragcanvas"
+                            ,"allow_dragnodes"
+                            ,"allow_interaction" //allow to control widgets, buttons, collapse, etc
+                            ,"allow_searchbox"
+                            ,"allow_reconnect_links" //allows to change a connection with having to redo it again
+                            ,"drag_mode"
+                            //,"dragging_rectangle" // = null;
+                            //,"filter"// = null; //allows to filter to only accept some type of nodes in a graph
+                            ,"set_canvas_dirty_on_mouse_event" //forces to redraw the canvas if the mouse does anything
+                            ,"always_render_background"
+                            ,"render_shadows"
+                            ,"render_canvas_border"
+                            ,"render_connections_shadows" //too much cpu
+                            ,"render_connections_border"
+                            ,"render_curved_connections"
+                            ,"render_connection_arrows"
+                            ,"render_collapsed_slots"
+                            ,"render_execution_order"
+                            ,"render_title_colored"
+                            ,"render_link_tooltip"
+                          ];
+            for(pI in aProps){
+                var pX = aProps[pI];
+                panel.addWidget( "boolean", pX, graphcanvas[pX], {key: pX, on: "True", off: "False"}, fUpdate);
+            }
+            
+            var aLinks = [ graphcanvas.links_render_mode ];
+            panel.addWidget( "combo", "Render mode", LiteGraph.RENDER_MODES[graphcanvas.links_render_mode], {key: "links_render_mode", values: LiteGraph.RENDER_MODES}, fUpdate);
+            
+            panel.addSeparator();
+            
+            panel.footer.innerHTML = ""; // clear
+
+		}
+        inner_refresh();
+
+		graphcanvas.canvas.parentNode.appendChild( panel );
+    }
+    
+    LGraphCanvas.prototype.showShowNodePanel = function( node )
+	{
+		this.SELECTED_NODE = node;
+		this.closePanels();
 		var ref_window = this.getCanvasWindow();
         var that = this;
 		var graphcanvas = this;
@@ -11863,6 +12054,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.prototype.getCanvasMenuOptions = function() {
         var options = null;
+        var thisGCanvas = this;
         if (this.getMenuOptions) {
             options = this.getMenuOptions();
         } else {
@@ -11872,7 +12064,8 @@ LGraphNode.prototype.executeAction = function(action)
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuAdd
                 },
-                { content: "Add Group", callback: LGraphCanvas.onGroupAdd }
+                { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
+                { content: "Options", callback: thisGCanvas.showShowGraphOptionsPanel }
                 //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
             ];
 

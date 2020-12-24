@@ -230,6 +230,7 @@
 	top: 10px;
 	height: calc( 100% - 20px );
 	margin: auto;
+    max-width: 50%;
 }
 
 .litegraph .dialog.centered {
@@ -277,6 +278,7 @@
     display: inline-block;
 	color: #AAA;
     /*background-color: black;*/
+    overflow: auto;
 }
 
 .litegraph .dialog .dialog-content h3 {
@@ -321,14 +323,23 @@
 	padding: 4px;
 }
 
+.litegraph .dialog .property:hover {
+	background: #545454;
+}
+
 .litegraph .dialog .property_name {
 	color: #737373;
     display: inline-block;
     text-align: left;
     vertical-align: top;
-    width: 120px;
+    width: 160px;
 	padding-left: 4px;
 	overflow: hidden;
+    margin-right: 6px;
+}
+
+.litegraph .dialog .property:hover .property_name {
+    color: white;
 }
 
 .litegraph .dialog .property_value {
@@ -336,9 +347,11 @@
     text-align: right;
 	color: #AAA;
 	background-color: #1A1A1A;
-    width: calc( 100% - 122px );
+    /*width: calc( 100% - 122px );*/
+    max-width: calc( 100% - 162px );
+    min-width: 200px;
 	max-height: 300px;
-    min-height: 18px;
+    min-height: 20px;
     padding: 4px;
 	padding-right: 12px;
 	overflow: hidden;
@@ -352,6 +365,16 @@
 
 .litegraph .dialog .property.boolean .property_value {
 	padding-right: 30px;
+    color: #A88;
+    /*width: auto;
+    float: right;*/
+}
+
+.litegraph .dialog .property.boolean.bool-on .property_name{
+    color: #8A8;
+}
+.litegraph .dialog .property.boolean.bool-on .property_value{
+    color: #8A8;
 }
 
 .litegraph .dialog .btn {
