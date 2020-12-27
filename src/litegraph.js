@@ -4108,63 +4108,62 @@
     };
     
     /**
-     * returns the input slot with a given type, -1 if not found
-     * @method findInputSlotByType
-     * @param {string} type the type of the slot
-     * @param {boolean} returnObj if the obj itself wanted
-     * @param {boolean} preferFreeSlot if we want a free slot (if not found, will return the first of the type anyway)
-     * @return {number_or_object} the slot (-1 if not found)
+     * findSlotByType for INPUTS
      */
     LGraphNode.prototype.findInputSlotByType = function(type, returnObj, preferFreeSlot, doNotUseOccupied) {
-        returnObj = returnObj || false;
-        preferFreeSlot = preferFreeSlot || false;
-        doNotUseOccupied = doNotUseOccupied || false;
-        if (!this.inputs) {
-            return -1;
-        }
-        for (var i = 0, l = this.inputs.length; i < l; ++i) {
-            if (type == this.inputs[i].type) {
-                if (preferFreeSlot && this.inputs[i].link && this.inputs[i].link != null) continue;
-                return !returnObj ? i : this.inputs[i];
-            }
-        }
-        // if didnt find some, stop checking for free slots
-        if (preferFreeSlot && !doNotUseOccupied){
-            for (var i = 0, l = this.inputs.length; i < l; ++i) {
-                if (type == this.inputs[i].type)
-                    return !returnObj ? i : this.inputs[i];
-            }
-        }
-        return -1;
+        return this.findSlotByType(true, type, returnObj, preferFreeSlot, doNotUseOccupied);
     };
 
     /**
-     * returns the output slot with a given type, -1 if not found
-     * @method findOutputSlotByType
+     * findSlotByType for OUTPUTS
+     */
+    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj, preferFreeSlot, doNotUseOccupied) {
+        return this.findSlotByType(false, type, returnObj, preferFreeSlot, doNotUseOccupied);
+    };
+    
+    /**
+     * returns the output (or input) slot with a given type, -1 if not found
+     * @method findSlotByType
+     * @param {boolean} input uise inputs instead of outputs
      * @param {string} type the type of the slot
      * @param {boolean} returnObj if the obj itself wanted
      * @param {boolean} preferFreeSlot if we want a free slot (if not found, will return the first of the type anyway)
      * @return {number_or_object} the slot (-1 if not found)
      */
-    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj, preferFreeSlot, doNotUseOccupied) {
+    LGraphNode.prototype.findSlotByType = function(input, type, returnObj, preferFreeSlot, doNotUseOccupied) {
+        input = input || false;
         returnObj = returnObj || false;
         preferFreeSlot = preferFreeSlot || false;
         doNotUseOccupied = doNotUseOccupied || false;
-        if (!this.outputs) {
+        var aSlots = input ? this.inputs : this.outputs;
+        if (!aSlots) {
             return -1;
         }
-        for (var i = 0, l = this.outputs.length; i < l; ++i) {
-            // console.debug(type+" "+this.outputs[i].type+" "+this.outputs[i].links); // atlasan debug REMOVE
-            if (type == this.outputs[i].type) {
-                if (preferFreeSlot && this.outputs[i].links && this.outputs[i].links !== null) continue;
-                return !returnObj ? i : this.outputs[i];
+        for (var i = 0, l = aSlots.length; i < l; ++i) {
+            // console.debug(type+" "+aSlots[i].type+" "+aSlots[i].links); // atlasan debug REMOVE
+            var tFound = false;
+            var aSource = (type+"").split(",");
+            var aDest = (aSlots[i].type+"").split(",");
+            for(sI=0;sI<aSource.length;sI++){
+                for(dI=0;dI<aDest.length;dI++){
+                    if (aSource[sI] == aDest[dI]) {
+                        if (preferFreeSlot && aSlots[i].links && aSlots[i].links !== null) continue;
+                        return !returnObj ? i : aSlots[i];
+                    }
+                }
             }
         }
         // if didnt find some, stop checking for free slots
         if (preferFreeSlot && !doNotUseOccupied){
-            for (var i = 0, l = this.outputs.length; i < l; ++i) {
-                if (type == this.outputs[i].type)
-                    return !returnObj ? i : this.outputs[i];
+            var tFound = false;
+            var aSource = (type+"").split(",");
+            var aDest = (aSlots[i].type+"").split(",");
+            for(sI=0;sI<aSource.length;sI++){
+                for(dI=0;dI<aDest.length;dI++){
+                    if (aSource[sI] == aDest[dI]) {
+                        return !returnObj ? i : aSlots[i];
+                    }
+                }
             }
         }
         return -1;
