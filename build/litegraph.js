@@ -12584,6 +12584,21 @@ if (typeof exports != "undefined") {
 
     LiteGraph.registerNodeType("basic/string", ConstantString);
 
+    function ConstantObject() {
+        this.addOutput("obj", "object");
+        this.size = [120, 30];
+		this._object = {};
+    }
+
+    ConstantObject.title = "Const Object";
+    ConstantObject.desc = "Constant Object";
+
+    ConstantObject.prototype.onExecute = function() {
+        this.setOutputData(0, this._object);
+    };
+
+    LiteGraph.registerNodeType( "basic/object", ConstantObject );
+
     function ConstantFile() {
         this.addInput("url", "");
         this.addOutput("", "");
@@ -12719,14 +12734,14 @@ if (typeof exports != "undefined") {
 
 	//to store json objects
     function ConstantArray() {
+        this._value = [];
         this.addInput("", "");
         this.addOutput("", "array");
         this.addOutput("length", "number");
-        this.addProperty("value", "");
-        this.widget = this.addWidget("text","array","","value");
+        this.addProperty("value", "[]");
+        this.widget = this.addWidget("text","array",this.properties.value,"value");
         this.widgets_up = true;
         this.size = [140, 50];
-        this._value = null;
     }
 
     ConstantArray.title = "Const Array";
@@ -12759,13 +12774,39 @@ if (typeof exports != "undefined") {
 			for(var i = 0; i < v.length; ++i)
 				this._value[i] = v[i];
 		}
-		this.setOutputData(0, this._value);
+		this.setOutputData(0, this._value );
 		this.setOutputData(1, this._value ? ( this._value.length || 0) : 0 );
     };
 
 	ConstantArray.prototype.setValue = ConstantNumber.prototype.setValue;
 
     LiteGraph.registerNodeType("basic/array", ConstantArray);
+
+	function SetArray()
+	{
+        this.addInput("arr", "array");
+        this.addInput("value", "");
+        this.addOutput("arr", "array");
+		this.properties = { index: 0 };
+        this.widget = this.addWidget("number","i",this.properties.index,"index");
+	}
+
+    SetArray.title = "Set Array";
+    SetArray.desc = "Sets index of array";
+
+    SetArray.prototype.onExecute = function() {
+        var arr = this.getInputData(0);
+		if(!arr)
+			return;
+        var v = this.getInputData(1);
+		if(v === undefined )
+			return;
+		if(this.properties.index)
+			arr[ Math.floor(this.properties.index) ] = v;
+		this.setOutputData(0,arr);
+    };
+
+    LiteGraph.registerNodeType("basic/set_array", SetArray );
 
     function ArrayElement() {
         this.addInput("array", "array,table,string");
@@ -12788,8 +12829,6 @@ if (typeof exports != "undefined") {
     };
 
     LiteGraph.registerNodeType("basic/array[]", ArrayElement);
-
-
 
     function TableElement() {
         this.addInput("table", "table");
@@ -12878,10 +12917,38 @@ if (typeof exports != "undefined") {
 
     LiteGraph.registerNodeType("basic/object_keys", ObjectKeys);
 
+
+	function SetObject()
+	{
+        this.addInput("obj", "");
+        this.addInput("value", "");
+        this.addOutput("obj", "");
+		this.properties = { property: "" };
+        this.name_widget = this.addWidget("text","prop.",this.properties.property,"property");
+	}
+
+    SetObject.title = "Set Object";
+    SetObject.desc = "Adds propertiesrty to object";
+
+    SetObject.prototype.onExecute = function() {
+        var obj = this.getInputData(0);
+		if(!obj)
+			return;
+        var v = this.getInputData(1);
+		if(v === undefined )
+			return;
+		if(this.properties.property)
+			obj[ this.properties.property ] = v;
+		this.setOutputData(0,obj);
+    };
+
+    LiteGraph.registerNodeType("basic/set_object", SetObject );
+
+
     function MergeObjects() {
-        this.addInput("A", "object");
-        this.addInput("B", "object");
-        this.addOutput("", "object");
+        this.addInput("A", "");
+        this.addInput("B", "");
+        this.addOutput("", "");
 		this._result = {};
 		var that = this;
 		this.addWidget("button","clear","",function(){
@@ -13149,9 +13216,7 @@ if (typeof exports != "undefined") {
         this.addProperty("msg", "");
         this.addInput("", LiteGraph.EVENT);
         var that = this;
-        this.widget = this.addWidget("text", "Text", "", function(v) {
-            that.properties.msg = v;
-        });
+        this.widget = this.addWidget("text", "Text", "", "msg");
         this.widgets_up = true;
         this.size = [200, 30];
     }
@@ -16676,10 +16741,21 @@ if (typeof exports != "undefined") {
     var LiteGraph = global.LiteGraph;
 
     function toString(a) {
+		if(a && a.constructor === Object)
+		{
+			try
+			{
+				return JSON.stringify(a);
+			}
+			catch (err)
+			{
+				return String(a);
+			}
+		}
         return String(a);
     }
 
-    LiteGraph.wrapFunctionAsNode("string/toString", compare, [""], "String");
+    LiteGraph.wrapFunctionAsNode("string/toString", toString, [""], "String");
 
     function compare(a, b) {
         return a == b;
