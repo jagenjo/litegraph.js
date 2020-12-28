@@ -26,6 +26,7 @@
         NODE_COLLAPSED_RADIUS: 10,
         NODE_COLLAPSED_WIDTH: 80,
         NODE_TITLE_COLOR: "#999",
+        NODE_SELECTED_TITLE_COLOR: "#FFF",
         NODE_TEXT_SIZE: 14,
         NODE_TEXT_COLOR: "#AAA",
         NODE_SUBTEXT_SIZE: 12,
@@ -33,13 +34,14 @@
         NODE_DEFAULT_BGCOLOR: "#353535",
         NODE_DEFAULT_BOXCOLOR: "#666",
         NODE_DEFAULT_SHAPE: "box",
+        NODE_BOX_OUTLINE_COLOR: "#FFF",
         DEFAULT_SHADOW_COLOR: "rgba(0,0,0,0.5)",
         DEFAULT_GROUP_FONT: 24,
 
-		WIDGET_BGCOLOR: "#222",
-		WIDGET_OUTLINE_COLOR: "#666",
-		WIDGET_TEXT_COLOR: "#DDD",
-		WIDGET_SECONDARY_TEXT_COLOR: "#999",
+        WIDGET_BGCOLOR: "#222",
+        WIDGET_OUTLINE_COLOR: "#666",
+        WIDGET_TEXT_COLOR: "#DDD",
+        WIDGET_SECONDARY_TEXT_COLOR: "#999",
 
         LINK_COLOR: "#9A9",
         EVENT_LINK_COLOR: "#A86",
@@ -96,6 +98,7 @@
 		Globals: {}, //used to store vars between graphs
 
         searchbox_extras: {}, //used to add extra features to the search box
+        auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
 
         /**
          * Register a node class so it can be listed when the user wants to create a new one
@@ -416,7 +419,7 @@
                 }
             }
 
-            return r;
+            return this.auto_sort_node_types ? r.sort() : r;
         },
 
         /**
@@ -440,7 +443,7 @@
             for (var i in categories) {
                 result.push(i);
             }
-            return result;
+            return this.auto_sort_node_types ? result.sort() : result;
         },
 
         //debug purposes: reloads all the js scripts that matches a wildcard
@@ -7966,7 +7969,7 @@ LGraphNode.prototype.executeAction = function(action)
                 var title = String(node.getTitle());
                 if (title) {
                     if (selected) {
-                        ctx.fillStyle = "white";
+                        ctx.fillStyle = LiteGraph.NODE_SELECTED_TITLE_COLOR;
                     } else {
                         ctx.fillStyle =
                             node.constructor.title_text_color ||
@@ -8069,7 +8072,7 @@ LGraphNode.prototype.executeAction = function(action)
                     Math.PI * 2
                 );
             }
-            ctx.strokeStyle = "#FFF";
+            ctx.strokeStyle = LiteGraph.NODE_BOX_OUTLINE_COLOR;
             ctx.stroke();
             ctx.strokeStyle = fgcolor;
             ctx.globalAlpha = 1;
@@ -9452,7 +9455,7 @@ LGraphNode.prototype.executeAction = function(action)
             entries.push({
                 content:
                     "<span class='property_name'>" +
-                    i +
+                    (info.label ? info.label : i) +
                     "</span>" +
                     "<span class='property_value'>" +
                     value +
@@ -10050,7 +10053,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialog = this.createDialog(
             "<span class='name'>" +
-                property +
+                (info.label ? info.label : property) +
                 "</span>" +
                 input_html +
                 "<button>OK</button>",
@@ -10077,8 +10080,12 @@ LGraphNode.prototype.executeAction = function(action)
                 input.addEventListener("blur", function(e) {
                     this.focus();
                 });
+
 				var v = node.properties[property] !== undefined ? node.properties[property] : "";
-				v = JSON.stringify(v);
+				if (type !== 'string') {
+                    v = JSON.stringify(v);
+                }
+
                 input.value = v;
                 input.addEventListener("keydown", function(e) {
                     if (e.keyCode != 13) {

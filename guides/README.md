@@ -298,7 +298,24 @@ MyNode.prototype.onAction = function(action, data)
 There are some nodes already available to handle events, like delaying, counting, etc.
 
 
+### Customising Link Tooltips
 
+When hovering over a link that connects two nodes together, a tooltip will be shown allowing the user to see the data that is being output from one node to the other.
+
+Sometimes, you may have a node that outputs an object, rather than a primitive value that can be easily represented (like a string). In these instances, the tooltip will default to showing `[Object]`.
+
+If you need a more descriptive tooltip, you can achieve this by adding a `toToolTip` function to your object which returns the text you wish to display in the tooltip.
+
+For example, to ensure the link from output slot 0 shows `A useful description`, the output object would look like this:
+
+```javascript
+this.setOutputData(0, {
+  complexObject: {
+    yes: true,
+  },
+  toToolTip: () => 'A useful description',
+});
+```
 
 
 
