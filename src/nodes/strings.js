@@ -3,6 +3,17 @@
     var LiteGraph = global.LiteGraph;
 
     function toString(a) {
+		if(a && a.constructor === Object)
+		{
+			try
+			{
+				return JSON.stringify(a);
+			}
+			catch (err)
+			{
+				return String(a);
+			}
+		}
         return String(a);
     }
 
