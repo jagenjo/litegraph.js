@@ -66,12 +66,13 @@
         EVENT: -1, //for outputs
         ACTION: -1, //for inputs
 
-        NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
-        NODE_MODES_COLORS:["#666","#422","#333","#224"], // use with node_box_coloured_by_mode
+        NODE_MODES: ["Always", "On Event", "Never", "On Trigger", "On Request"],
+        NODE_MODES_COLORS:["#666","#422","#333","#224","#626"], // use with node_box_coloured_by_mode
         ALWAYS: 0,
         ON_EVENT: 1,
         NEVER: 2,
         ON_TRIGGER: 3,
+        ON_REQUEST: 4, // used from event-based nodes, where ancestors are recursively executed on needed
         
         UP: 1,
         DOWN: 2,
@@ -127,9 +128,11 @@
         
         graphDefaultConfig: {
             align_to_grid: true,
-            links_ontop: false
+            links_ontop: false,
         },
         
+        refreshAncestorsOnTriggers: true,
+      
         showCanvasOptions: true,
         availableCanvasOptions: [   "allow_addOutSlot_onExecuted"
                                     ,"highquality_render"
@@ -1289,23 +1292,47 @@
      */
     LGraph.prototype.getAncestors = function(node) {
         var ancestors = [];
+        var ancestorsIds = [];
         var pending = [node];
         var visited = {};
 
+        //console.log("---getAncestors--- for "+node.id+":"+node.order);
+      
         while (pending.length) {
             var current = pending.shift();
-            if (!current.inputs) {
+            if (!current) {
                 continue;
             }
-            if (!visited[current.id] && current != node) {
-                visited[current.id] = true;
-                ancestors.push(current);
+            //console.log("checking ancestor for "+current.id+":"+current.order);
+            if (visited[current.id]){
+              //console.log("already "+current.id+":"+current.order);
+              continue;
             }
-
+            visited[current.id] = true;
+            //if (current != node) {
+                if (ancestorsIds.indexOf(current.id) == -1) {
+                  ancestors.push(current);
+                  ancestorsIds.push(current.id);
+                  //console.log("push current "+current.id+":"+current.order);
+                }else{
+                  //console.log("already push "+current.id+":"+current.order);
+                }
+            /*}else{
+              console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
+            }*/
+            if (!current.inputs){
+              continue;
+            }
             for (var i = 0; i < current.inputs.length; ++i) {
                 var input = current.getInputNode(i);
-                if (input && ancestors.indexOf(input) == -1) {
-                    pending.push(input);
+                //console.log("input "+i+" "+input.id+":"+input.order);
+                if (input && ancestorsIds.indexOf(input.id) == -1) {
+                    if(!visited[input.id]){
+                      pending.push(input);
+                      //console.log("push input "+input.id+":"+input.order);
+                    }else{
+                      //console.log("already input "+input.id+":"+input.order);
+                    }
                 }
             }
         }
@@ -2993,6 +3020,17 @@
         }
     };
 
+    LGraphNode.prototype.refreshAncestors = function(){
+      if (!this.inputs) {
+        return;
+      }
+      for(iI in this.inputs){
+        // console.debug("refreshing ancestors for slot "+iI); // atlasan DEBUG REMOVE
+        this.getInputData(iI,true,true);
+      }
+      return true;
+    }
+  
     /**
      * Retrieves the input data (data traveling through the connection) from one slot
      * @method getInputData
@@ -3000,7 +3038,7 @@
      * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
      * @return {*} data or if it is not connected returns undefined
      */
-    LGraphNode.prototype.getInputData = function(slot, force_update) {
+    LGraphNode.prototype.getInputData = function(slot, force_update, refresh_tree) {
         if (!this.inputs) {
             return;
         } //undefined;
@@ -3026,9 +3064,32 @@
             return link.data;
         }
 
+        /* atlasan: refactor: This is a basic, but seems working, version. Consider moving this out of here and use a single ancestorsCalculation (for each event?)
+         * */
+        if (refresh_tree){
+          //console.log("refresh tree!"); // atlasan debug REMOVE
+          var aAncestors = node.graph.getAncestors(node);
+          for(iN in aAncestors){
+            //console.log(aAncestors[iN].order + " node in ancestors"); // atlasan debug REMOVE
+            if(aAncestors[iN].execute){
+              //aAncestors[iN].execute();
+              switch(aAncestors[iN].mode){
+                case LiteGraph.ALWAYS:
+                case LiteGraph.ON_REQUEST:
+                  aAncestors[iN].execute();
+                break;
+                default:
+                  // skip otherwise?
+                break;
+              }
+            }
+          }
+        }
+      
         if (node.updateOutputData) {
             node.updateOutputData(link.origin_slot);
         } else if (node.onExecute) {
+        //} else if (node.onExecute && node.mode == LiteGraph.ALWAYS) {
             //node.onExecute();
             node.execute();
         }
@@ -3321,6 +3382,9 @@
             case LiteGraph.ALWAYS:
                 break;
                 
+            case LiteGraph.ON_REQUEST:
+                break;
+            
             default:
                 return false;
                 break;
@@ -3424,6 +3488,7 @@
 
 			if (node.mode === LiteGraph.ON_TRIGGER)
 			{
+                if (LiteGraph.refreshAncestorsOnTriggers) node.refreshAncestors();
                 if (node.onExecute) {
                     //node.onExecute(param);
                     node.execute(param);
