@@ -127,11 +127,12 @@
         
         graphDefaultConfig: {
             align_to_grid: true,
-            links_ontop: false,
+            links_ontop: false
         },
         
         showCanvasOptions: true,
-        availableCanvasOptions: [  "highquality_render"
+        availableCanvasOptions: [   "allow_addOutSlot_onExecuted"
+                                    ,"highquality_render"
                                     ,"use_gradients" //set to true to render titlebar with gradients
                                     ,"pause_rendering"
                                     ,"clear_background"
@@ -3277,16 +3278,40 @@
         return r;
     };
 
+    LGraphNode.prototype.addOnTriggerInput = function(){
+        var trigS = this.findInputSlot("onTrigger");
+        if (!trigS || trigS == -1){
+            var input = this.addInput("onTrigger", LiteGraph.EVENT);
+            return this.findInputSlot("onTrigger");
+        }
+        return trigS;
+    }
+    
+    LGraphNode.prototype.addOnExecutedOutput = function(){
+        var trigS = this.findOutputSlot("onExecuted");
+        if (!trigS || trigS == -1){
+            var output = this.addOutput("onExecuted", LiteGraph.ACTION);
+            return this.findOutputSlot("onExecuted");
+        }
+        return trigS;
+    }
+    
+    LGraphNode.prototype.onAfterExecuteNode = function(){
+        var trigS = this.findOutputSlot("onExecuted");
+        if (trigS != -1){
+            this.triggerSlot(trigS);
+        }
+    }    
+    
     LGraphNode.prototype.changeMode = function(modeTo){
         switch(modeTo){
             case LiteGraph.ON_EVENT:
+                // this.addOnExecutedOutput();
                 break;
                 
             case LiteGraph.ON_TRIGGER:
-                var trigS = this.findInputSlot("onTrigger");
-                if (!trigS || trigS == -1){
-                    var input = this.addInput("onTrigger", LiteGraph.EVENT );
-                }
+                this.addOnTriggerInput();
+                // this.addOnExecutedOutput();
                 this.mode = LiteGraph.ON_TRIGGER;
                 break;
                 
@@ -3313,6 +3338,7 @@
     LGraphNode.prototype.execute = function(param, options) {
         if (this.onExecute) this.onExecute(param);
         this.execute_triggered = 2; // this is the nFrames it will be used (-- each step)
+        if(this.onAfterExecuteNode) this.onAfterExecuteNode(param);
     };
     
     /**
@@ -3323,7 +3349,7 @@
      */
     LGraphNode.prototype.actionDo = function(action, param, options) {
         if (this.onAction) this.onAction(action, param);
-        this.action_triggered = 2; // this is the nFrames it will be used (-- each step) 
+        this.action_triggered = 2; // just for visual feedback : this is the nFrames it will be used (-- each step) 
     };
     
     /**
@@ -4193,6 +4219,7 @@
         }else{
             //console.log("type "+target_slotType+" not found or not free?") // atlasan debug REMOVE
             if (opts.createEventInCase && target_slotType == LiteGraph.EVENT){
+                // WILL CREATE THE onTrigger IN SLOT
                 return this.connect(slot, target_node, -1);
             }
             if (opts.generalTypeInCase && (target_slotType !== 0 && target_slotType !== "" && target_slotType !== "*")){
@@ -4218,8 +4245,8 @@
      */
     LGraphNode.prototype.connectByTypeOutput = function(slot, source_node, source_slotType, optsIn) {
         var optsIn = optsIn || {};
-        var optsDef = { /* createEventInCase: true, // atlasan: implement: maybe.. nice, onNodeExecuted  */
-                        firstFreeIfInputGeneralInCase: true
+        var optsDef = { createEventInCase: true
+                        ,firstFreeIfInputGeneralInCase: true
                         ,generalTypeInCase: true
                       };
         var opts = Object.assign(optsDef,optsIn);
@@ -4228,7 +4255,7 @@
         }
         source_slot = source_node.findOutputSlotByType(source_slotType, false, true);
         if (source_slot >= 0 && source_slot !== null){
-            console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
+            //console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
             return source_node.connect(source_slot, this, slot);
         }else{
             
@@ -4240,6 +4267,11 @@
                 }
             }
             
+            if (opts.createEventInCase && source_slotType == LiteGraph.EVENT){
+                // WILL CREATE THE onExecuted OUT SLOT
+                var source_slot = source_node.addOnExecutedOutput();
+                return source_node.connect(source_slot, this, slot);
+            }
             // connect to the first free output slot if not found a specific type and this input is general
             if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "")){
                 var source_slot = source_node.findOutputSlotFree({typesNotAccepted: [LiteGraph.EVENT] });
@@ -4313,7 +4345,7 @@
             }
         } else if (target_slot === LiteGraph.EVENT) {
             
-            //search for first slot with event?
+            //search for first slot with event? :: NO this is done outside
             
             //console.log("Connect: Creating triggerEvent");
             // force mode
@@ -5313,6 +5345,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.filter = null; //allows to filter to only accept some type of nodes in a graph
 
         // options
+        this.allow_addOutSlot_onExecuted = true;
         this.highquality_render = true;
         this.use_gradients = false; //set to true to render titlebar with gradients
         this.editor_alpha = 1; //used for transition
@@ -10339,6 +10372,9 @@ LGraphNode.prototype.executeAction = function(action)
         if (this.onMenuNodeOutputs) {
             entries = this.onMenuNodeOutputs(entries);
         }
+        if (canvas.allow_addOutSlot_onExecuted){
+            entries.push({content: "On Executed", value: ["onExecuted", LiteGraph.EVENT], className: "event"});
+        }
         // atlasan refactor: never used code, make a meaning
         if (node.onMenuNodeOutputs) {
             var retEntries = node.onMenuNodeOutputs(entries);
@@ -12458,6 +12494,7 @@ LGraphNode.prototype.executeAction = function(action)
                 options[1].disabled = false;
             }
         }
+        if (this.allow_addOutSlot_onExecuted) options[1].disabled = false;
 
         if (node.getExtraMenuOptions) {
             var extra = node.getExtraMenuOptions(this, options);

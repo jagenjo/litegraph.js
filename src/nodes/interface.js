@@ -71,6 +71,7 @@
             local_pos[1] < this.size[1] - 2
         ) {
             this.clicked = true;
+            this.setOutputData(1, this.clicked);
             this.triggerSlot(0, this.properties.message);
             return true;
         }

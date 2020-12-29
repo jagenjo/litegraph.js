@@ -144,6 +144,7 @@
 	}
 
     EventBranch.prototype.onAction = function(action, param) {
+        this._value = this.getInputData(1);
 		this.triggerSlot(this._value ? 0 : 1);
 	}
 
