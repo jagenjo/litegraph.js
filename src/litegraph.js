@@ -3311,7 +3311,7 @@
                 
             case LiteGraph.ON_TRIGGER:
                 this.addOnTriggerInput();
-                // this.addOnExecutedOutput();
+                this.addOnExecutedOutput();
                 this.mode = LiteGraph.ON_TRIGGER;
                 break;
                 
