@@ -921,7 +921,7 @@
         this.addInput("value", "");
         this.addOutput("arr", "array");
 		this.properties = { index: 0 };
-        this.widget = this.addWidget("number","i",this.properties.index,"index");
+        this.widget = this.addWidget("number","i",this.properties.index,"index",{precision: 0, step: 10, min: 0});
 	}
 
     SetArray.title = "Set Array";

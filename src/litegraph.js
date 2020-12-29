@@ -332,7 +332,7 @@
             }
 
             for (var i = 0; i < aTypes.length; ++i) {
-                var sT = aTypes[i].toLowerCase();
+                var sT = aTypes[i]; //.toLowerCase();
                 if (sT === ""){
                     sT = "*";
                     // console.debug("FIXING for "+sCN); // atlasan debug :: used to verify if some nodes didnt declared the slot type ( using empty string instead of 0 or "*" for general types )
@@ -3161,20 +3161,18 @@
      * @return {*} value
      */
     LGraphNode.prototype.getInputOrProperty = function(name) {
-        if (!this.inputs || !this.inputs.length) {
-            return this.properties ? this.properties[name] : null;
-        }
-
-        for (var i = 0, l = this.inputs.length; i < l; ++i) {
-            var input_info = this.inputs[i];
-            if (name == input_info.name && input_info.link != null) {
-                var link = this.graph.links[input_info.link];
-                if (link) {
-                    return link.data;
+        if (this.inputs){
+            for (var i = 0, l = this.inputs.length; i < l; ++i) {
+                var input_info = this.inputs[i];
+                if (name == input_info.name && input_info.link != null) {
+                    var link = this.graph.links[input_info.link];
+                    if (link) {
+                        return link.data;
+                    }
                 }
             }
         }
-        return this.properties[name];
+        return this.properties ? this.properties[name] : null;
     };
 
     /**
@@ -4142,8 +4140,8 @@
         for (var i = 0, l = aSlots.length; i < l; ++i) {
             // console.debug(type+" "+aSlots[i].type+" "+aSlots[i].links); // atlasan debug REMOVE
             var tFound = false;
-            var aSource = (type+"").split(",");
-            var aDest = (aSlots[i].type+"").split(",");
+            var aSource = (type+"").toLowerCase().split(",");
+            var aDest = (aSlots[i].type+"").toLowerCase().split(",");
             for(sI=0;sI<aSource.length;sI++){
                 for(dI=0;dI<aDest.length;dI++){
                     if (aSource[sI] == aDest[dI]) {
@@ -4155,13 +4153,15 @@
         }
         // if didnt find some, stop checking for free slots
         if (preferFreeSlot && !doNotUseOccupied){
-            var tFound = false;
-            var aSource = (type+"").split(",");
-            var aDest = (aSlots[i].type+"").split(",");
-            for(sI=0;sI<aSource.length;sI++){
-                for(dI=0;dI<aDest.length;dI++){
-                    if (aSource[sI] == aDest[dI]) {
-                        return !returnObj ? i : aSlots[i];
+            for (var i = 0, l = aSlots.length; i < l; ++i) {
+                var tFound = false;
+                var aSource = (type+"").toLowerCase().split(",");
+                var aDest = (aSlots[i].type+"").toLowerCase().split(",");
+                for(sI=0;sI<aSource.length;sI++){
+                    for(dI=0;dI<aDest.length;dI++){
+                        if (aSource[sI] == aDest[dI]) {
+                            return !returnObj ? i : aSlots[i];
+                        }
                     }
                 }
             }
@@ -5997,6 +5997,7 @@ LGraphNode.prototype.executeAction = function(action)
                                 ) {
                                     this.connecting_node = node;
                                     this.connecting_output = output;
+                                    this.connecting_output.slot_index = i;
                                     this.connecting_pos = node.getConnectionPos( false, i );
                                     this.connecting_slot = i;
 
@@ -6091,6 +6092,7 @@ LGraphNode.prototype.executeAction = function(action)
                                         // connect from in to out, from to to from // atlasan implemented
                                         this.connecting_node = node;
                                         this.connecting_input = input;
+                                        this.connecting_input.slot_index = i;
                                         this.connecting_pos = node.getConnectionPos( true, i );
                                         this.connecting_slot = i;
                                         
@@ -11000,7 +11002,7 @@ LGraphNode.prototype.executeAction = function(action)
                     selIn.appendChild(opt);
                     //console.debug("append "+opt.value); // atlasan debug REMOVE
                     //console.debug("check "+options.type_filter_in+" with "+aSlots[iK]); // atlasan debug REMOVE
-                    if(options.type_filter_in !==false && options.type_filter_in == aSlots[iK]){
+                    if(options.type_filter_in !==false && (options.type_filter_in+"").toLowerCase() == (aSlots[iK]+"").toLowerCase()){
                         //selIn.selectedIndex ..
                         opt.selected = true;
                     }
@@ -11024,7 +11026,7 @@ LGraphNode.prototype.executeAction = function(action)
                     opt.value = aSlots[iK];
                     opt.innerHTML = aSlots[iK];
                     selOut.appendChild(opt);
-                    if(options.type_filter_out !==false && options.type_filter_out == aSlots[iK]){
+                    if(options.type_filter_out !==false && (options.type_filter_out+"").toLowerCase() == (aSlots[iK]+"").toLowerCase()){
                         //selOut.selectedIndex ..
                         opt.selected = true;
                     }
@@ -11129,17 +11131,22 @@ LGraphNode.prototype.executeAction = function(action)
                                 iS = options.node_from.findOutputSlot(options.slot_from);    
                             break;
                             case "object":
-                                iS = options.node_from.findOutputSlot(options.slot_from.name);    
+                                if (options.slot_from.name){
+                                    iS = options.node_from.findOutputSlot(options.slot_from.name);
+                                }else{
+                                    iS = -1;
+                                }
+                                if (iS==-1 && typeof options.slot_from.slot_index !== "undefined") iS = options.slot_from.slot_index;
                             break;
                             case "number":
-                                iS = options.slot_from
+                                iS = options.slot_from;
                             break;
                             default:
                                 iS = 0; // try with first if no name set
                         }
                         if (typeof options.node_from.outputs[iS] !== undefined){
                             if (iS!==false && iS>-1){
-                                //console.debug("search_conn ! try to "+iS+" "+node+" "+0); // atlasan debug REMOVE
+                                // console.debug("search_conn ! try to "+iS+" ("+(typeof options.slot_from)+") "+node+" "+options.node_from.outputs[iS].type); // atlasan debug REMOVE
                                 options.node_from.connectByType( iS, node, options.node_from.outputs[iS].type );
                             }
                         }else{
@@ -11153,17 +11160,22 @@ LGraphNode.prototype.executeAction = function(action)
                                 iS = options.node_to.findInputSlot(options.slot_from);    
                             break;
                             case "object":
-                                iS = options.node_to.findInputSlot(options.slot_from.name);    
+                                if (options.slot_from.name){
+                                    iS = options.node_to.findInputSlot(options.slot_from.name);
+                                }else{
+                                    iS = -1;
+                                }
+                                if (iS==-1 && typeof options.slot_from.slot_index !== "undefined") iS = options.slot_from.slot_index;
                             break;
                             case "number":
-                                iS = options.slot_from
+                                iS = options.slot_from;
                             break;
                             default:
                                 iS = 0; // try with first if no name set
                         }
                         if (typeof options.node_to.inputs[iS] !== undefined){
                             if (iS!==false && iS>-1){
-                                //console.debug("search_conn_nodeTO ! try to "+iS+" "+options.node_to.inputs[iS].type); // atlasan debug REMOVE
+                                // console.debug("search_conn_nodeTO ! try to "+iS+" "+options.node_to.inputs[iS].type); // atlasan debug REMOVE
                                 options.node_to.connectByTypeOutput(iS,node,options.node_to.inputs[iS].type);
                             }
                         }else{
