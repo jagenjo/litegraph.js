@@ -198,13 +198,12 @@
         var iI = this.getInputData(0);
         var num = this.getInputData(1);
         for (k=iI;k<iI+num;k++){            
+            console.debug("for cycle "+k);
+            this.triggerSlot(0, param);
             if (this.stopped){
                 console.debug("for cycle stopped on index "+k);
                 break;
-            }else{
-                console.debug("for cycle "+k);
             }
-            this.triggerSlot(0, param);
             this.setOutputData(1, k);
         }
         this.started = false;
@@ -232,7 +231,7 @@
     
     
     function logicWhile(){
-        this.properties = { cycleLimit: 999 };
+        this.properties = { cycleLimit: 999, checkOnStart: true };
         this.addInput("do", LiteGraph.ACTION);
         this.addInput("condition", "boolean");
         this.addInput("break", LiteGraph.ACTION);
@@ -240,23 +239,25 @@
         this.addOutput("index", "number");
         this.started = false;
         this.stopped = false;
+        this.addWidget("toggle","checkOnStart",this.properties.checkOnStart,"checkOnStart");
     }
     logicWhile.title = "WHILE";
     logicWhile.desc = "Cycle WHILE";
     logicWhile.prototype.onExecute = function(param) {
         if (!this.started) return;
-        var cond = this.getInputData(1);
+        var checkOnStart = this.getInputOrProperty("enabled");
+        var cond = !checkOnStart || this.getInputData(1);
         var k = 0;
         cycleLimit = this.properties.cycleLimit || 999;
         while (cond && k<cycleLimit){
+            console.debug("while cycle "+k);
+            this.setOutputData(1, k);
+            this.triggerSlot(0, param);
+            // done
             if (this.stopped){
                 console.debug("while cycle stopped on index "+k);
                 break;
-            }else{
-                console.debug("while cycle "+k);
             }
-            this.triggerSlot(0, param);
-            this.setOutputData(1, k);
             k++;
             cond = this.getInputData(1);
         }
