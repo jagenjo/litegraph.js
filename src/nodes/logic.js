@@ -239,30 +239,15 @@
         this.addOutput("index", "number");
         this.started = false;
         this.stopped = false;
+        this.k = 0;
+        this.cond = false;
         this.addWidget("toggle","checkOnStart",this.properties.checkOnStart,"checkOnStart");
     }
     logicWhile.title = "WHILE";
     logicWhile.desc = "Cycle WHILE";
     logicWhile.prototype.onExecute = function(param) {
-        if (!this.started) return;
-        var checkOnStart = this.getInputOrProperty("enabled");
-        var cond = !checkOnStart || this.getInputData(1);
-        var k = 0;
-        cycleLimit = this.properties.cycleLimit || 999;
-        while (cond && k<cycleLimit){
-            console.debug("while cycle "+k);
-            this.setOutputData(1, k);
-            this.triggerSlot(0, param);
-            // done
-            if (this.stopped){
-                console.debug("while cycle stopped on index "+k);
-                break;
-            }
-            k++;
-            cond = this.getInputData(1);
-        }
-        this.started = false;
-        this.stopped = true;
+        this.setOutputData(1, this.k);
+        this.cond = this.getInputData(1);
     };
     logicWhile.prototype.onAction = function(action, param){
         switch(action){
@@ -270,9 +255,32 @@
                 this.stopped = true;
             break;
             case "do":
+                /*this.started = true;
+                this.stopped = false;
+                this.execute();*/
                 this.started = true;
                 this.stopped = false;
-                this.execute();
+                var checkOnStart = this.getInputOrProperty("checkOnStart");
+                this.cond = !checkOnStart || this.getInputData(1);
+                this.k = 0;
+                cycleLimit = this.properties.cycleLimit || 999;
+                while (this.cond && this.k<cycleLimit){
+                    console.debug("while cycle "+this.k);
+                    this.setOutputData(1, this.k);
+                    this.triggerSlot(0, param);
+                    // done
+                    if (this.stopped){
+                        console.debug("while cycle stopped on index "+k);
+                        break;
+                    }
+                    this.k++;
+                    this.cond = this.getInputData(1,true,true);
+                }
+                this.k = 0;
+                this.setOutputData(1, this.k);
+                this.cond = this.getInputData(1);
+                this.started = false;
+                this.stopped = true;
             break;
         }
     }

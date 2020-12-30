@@ -891,6 +891,7 @@
         this.actionHistoryPtr = 0;*/
         
         this.nodes_executing = [];
+        this.nodes_actioning = [];
         
         //subgraph_data
         this.inputs = {};
@@ -1130,6 +1131,7 @@
         this.elapsed_time = (now - this.last_update_time) * 0.001;
         this.last_update_time = now;
         this.nodes_executing = [];
+        this.nodes_actioning = [];
     };
 
     /**
@@ -1324,22 +1326,23 @@
             // mark as visited
             visited[current.id] = true;
             
-            // mode check
-            if (opts.modesSkip && opts.modesSkip.length){
-                if (opts.modesSkip.indexOf(current.mode) != -1){
-                    console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
-                    continue;
-                }
-            }
-            if (opts.modesOnly && opts.modesOnly.length){
-                if (opts.modesOnly.indexOf(current.mode) == -1){
-                    console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
-                    continue;
-                }
-            }
-            
             // add to ancestors
             if (current.id != node.id) {
+                
+                // mode check
+                if (opts.modesSkip && opts.modesSkip.length){
+                    if (opts.modesSkip.indexOf(current.mode) != -1){
+                        //console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
+                        continue;
+                    }
+                }
+                if (opts.modesOnly && opts.modesOnly.length){
+                    if (opts.modesOnly.indexOf(current.mode) == -1){
+                        //console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
+                        continue;
+                    }
+                }
+                
                 if (ancestorsIds.indexOf(current.id) == -1) {
                   ancestors.push(current);
                   ancestorsIds.push(current.id);
@@ -1347,6 +1350,7 @@
                 }else{
                   //console.log("already push "+current.id+":"+current.order);
                 }
+                
             }else{
               //console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
             }
@@ -1362,13 +1366,13 @@
                 // type check
                 if (opts.typesSkip && opts.typesSkip.length){
                     if (opts.typesSkip.indexOf(input.type) != -1){
-                        console.log("type skip "+input.id+":"+input.order+" :: "+input.type);
+                        //console.log("type skip "+input.id+":"+input.order+" :: "+input.type);
                         continue;
                     }
                 }
                 if (opts.typesOnly && opts.typesOnly.length){
                     if (opts.typesOnly.indexOf(input.mode) == -1){
-                        console.log("type only "+input.id+":"+input.order+" :: "+input.type);
+                        //console.log("type only "+input.id+":"+input.order+" :: "+input.type);
                         continue;
                     }
                 }
@@ -3073,32 +3077,27 @@
       if (!this.inputs) {
         return;
       }
-      for(iI in this.inputs){
-        //console.debug("refreshing ancestors for slot "+iI); // atlasan DEBUG REMOVE
-        //this.getInputData(iI,true,true);
         
         this.graph.ancestorsCall = true; // prevent triggering slots
-          
-        var aAncestors = this.graph.getAncestors(this);
+        
+        var optsAncestors = {   modesSkip: [LiteGraph.NEVER, LiteGraph.ON_EVENT, LiteGraph.ON_TRIGGER]
+                                ,modesOnly: [LiteGraph.ALWAYS, LiteGraph.ON_REQUEST]
+                                ,typesSkip: [LiteGraph.ACTION]
+                                ,typesOnly: []
+                             };
+        var aAncestors = this.graph.getAncestors(this,optsAncestors);
+        //console.log(aAncestors.length + " ancestors for "+this.id+":"+this.order); // atlasan debug REMOVE
         for(iN in aAncestors){
             //console.log(aAncestors[iN].order + " node in ancestors"); // atlasan debug REMOVE
-            if(aAncestors[iN].execute){
-              //aAncestors[iN].execute();
-              switch(aAncestors[iN].mode){
-                case LiteGraph.ALWAYS:
-                case LiteGraph.ON_REQUEST:
-                  aAncestors[iN].execute();
-                break;
-                default:
-                  // skip otherwise?
-                break;
-              }
-            }
+            aAncestors[iN].execute();
         }
           
         this.graph.ancestorsCall = false; // restore triggering slots
-          
-      }
+        
+      /*for(iI in this.inputs){
+        console.debug("refreshing ancestors for slot "+iI); // atlasan DEBUG REMOVE
+        this.getInputData(iI,true,true);  
+      }*/
       return true;
     }
   
@@ -3471,8 +3470,9 @@
                 return;
             }
             this.graph.nodes_executing[this.id] = true; //.push(this.id);
-            //console.debug(this.id+" >> push");
+            
             this.onExecute(param);
+            
             //console.debug(this.graph.nodes_executing.pop()+" << pop");
             this.graph.nodes_executing[this.id] = false; //.pop();
         }
@@ -3487,7 +3487,20 @@
      * @param {*} param
      */
     LGraphNode.prototype.actionDo = function(action, param, options) {
-        if (this.onAction) this.onAction(action, param);
+        if (this.onAction){
+            
+            if (this.graph.nodes_actioning && this.graph.nodes_actioning[this.id] == action){
+                console.debug("NODE already actioning! Prevent! "+this.id+":"+this.order+" :: "+action);
+                return;
+            }
+            this.graph.nodes_actioning[this.id] = action; //.push(this.id);
+            
+            this.onAction(action, param);
+            
+            //console.debug(this.graph.nodes_actioning.pop()+" << pop");
+            this.graph.nodes_actioning[this.id] = false; //.pop();
+            
+        }
         this.action_triggered = 2; // atlasan: refactor name: just for visual feedback : this is the nFrames it will be used (-- each step) 
     };
     
@@ -11840,8 +11853,10 @@ LGraphNode.prototype.executeAction = function(action)
 
 		root.close = function()
 		{
-			this.parentNode.removeChild(this);
-            if (root.onClose && typeof root.onClose == "function") root.onClose();
+            if (root.onClose && typeof root.onClose == "function"){
+                root.onClose();
+            }
+            root.parentNode.removeChild(root);
 		}
 
         // function to swap panel content
