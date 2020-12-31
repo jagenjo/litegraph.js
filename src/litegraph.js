@@ -141,7 +141,7 @@
                                     ,"pause_rendering"
                                     ,"clear_background"
                                     ,"read_only" //if set to true users cannot modify the graph
-                                    ,"render_only_selected"
+                                    //,"render_only_selected" // not implemented
                                     ,"live_mode"
                                     ,"show_info"
                                     ,"allow_dragcanvas"
@@ -155,7 +155,7 @@
                                     ,"render_canvas_border"
                                     ,"render_connections_shadows" //too much cpu
                                     ,"render_connections_border"
-                                    // ,"render_curved_connections" // always on
+                                    // ,"render_curved_connections" // always on, or specific fixed graph
                                     ,"render_connection_arrows"
                                     ,"render_collapsed_slots"
                                     ,"render_execution_order"
@@ -165,6 +165,11 @@
                                   //,"editor_alpha" //= 1; //used for transition
         
         actionHistoryMaxSave: 10,
+        
+        canRemoveSlots: true,
+        canRemoveSlots_onlyOptional: true,
+        canRenameSlots: true,
+        canRenameSlots_onlyOptional: true,
         
         /**
          * Register a node class so it can be listed when the user wants to create a new one
@@ -3776,7 +3781,7 @@
      * @method addInput
      * @param {string} name
      * @param {string} type string defining the input type ("vec3","number",...), it its a generic one use 0
-     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, etc)
+     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, optional, etc)
      */
     LGraphNode.prototype.addInput = function(name, type, extra_info) {
         type = type || 0;
@@ -5511,7 +5516,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.pause_rendering = false;
         this.clear_background = true;
 		this.read_only = false; //if set to true users cannot modify the graph
-        this.render_only_selected = true;
+        //this.render_only_selected = true; // refactor: not implemented
         this.live_mode = false;
         this.show_info = true;
         this.allow_dragcanvas = true;
@@ -5525,7 +5530,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_canvas_border = true;
         this.render_connections_shadows = false; //too much cpu
         this.render_connections_border = true;
-        this.render_curved_connections = false;
+        this.render_curved_connections = true;
         this.render_connection_arrows = false;
         this.render_collapsed_slots = true;
         this.render_execution_order = false;
@@ -5533,8 +5538,9 @@ LGraphNode.prototype.executeAction = function(action)
 		this.render_link_tooltip = true;
         this.links_render_mode = LiteGraph.SPLINE_LINK;
         
+        // atlasan: refactor: options object do need refactoring .. all the options are actually outside of it
         this.autoresize = options.autoresize;
-        
+        this.skip_render = options.skip_render;
         
         this.mouse = [0, 0]; //mouse in canvas coordinates, where 0,0 is the top-left corner of the blue rectangle
         this.graph_mouse = [0, 0]; //mouse in graph coordinates, where 0,0 is the top-left corner of the blue rectangle
@@ -5574,7 +5580,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.setCanvas(canvas);
         this.clear();
 
-        if (!options.skip_render) {
+        if (!this.skip_render) {
             this.startRendering();
         }
 
@@ -10431,10 +10437,6 @@ LGraphNode.prototype.executeAction = function(action)
             }
         }
 
-        if (this.onMenuNodeInputs) {
-            entries = this.onMenuNodeInputs(entries);
-        }
-        // atlasan refactor: never used code, make a meaning
         if (node.onMenuNodeInputs) {
             var retEntries = node.onMenuNodeInputs(entries);
             if(retEntries) entries = retEntries;
@@ -10467,7 +10469,11 @@ LGraphNode.prototype.executeAction = function(action)
 
             if (v.value) {
 				node.graph.beforeChange();
-                node.addInput(v.value[0], v.value[1], v.value[2]);
+                
+                var slotOpts = {optional: true};
+                if (v.value[2]) slotOpts = Object.assign(slotOpts, v.value[2]);
+                
+                node.addInput(v.value[0], v.value[1], slotOpts);
                 if (node.onNodeInputAdd) { // atlasan: implement a callback to the node when adding a slot
                     node.onNodeInputAdd(v.value);
                 }
@@ -10588,7 +10594,11 @@ LGraphNode.prototype.executeAction = function(action)
                 return false;
             } else {
 				node.graph.beforeChange();
-                node.addOutput(v.value[0], v.value[1], v.value[2]);
+                
+                var slotOpts = {optional: true};
+                if (v.value[2]) slotOpts = Object.assign(slotOpts, v.value[2]);
+                
+                node.addOutput(v.value[0], v.value[1], slotOpts);
                 if (node.onNodeOutputAdd) { // atlasan: implement a callback to the node when adding a slot
                     node.onNodeOutputAdd(v.value);
                 }
@@ -12749,26 +12759,36 @@ LGraphNode.prototype.executeAction = function(action)
                     menu_info.push({ content: "Disconnect Links", slot: slot });
                 }
                 var _slot = slot.input || slot.output;
-                menu_info.push(
-                    _slot.locked
-                        ? "Cannot remove"
-                        : { content: "Remove Slot", slot: slot }
-                );
-                menu_info.push(
-                    _slot.nameLocked
-                        ? "Cannot rename"
-                        : { content: "Rename Slot", slot: slot }
-                );
+                if (LiteGraph.canRemoveSlots){
+                    if (_slot.optional || !LiteGraph.canRemoveSlots_onlyOptional){
+                        menu_info.push(
+                            _slot.locked
+                                ? "Cannot remove"
+                                : { content: "Remove Slot", slot: slot }
+                        );
+                    }
+                }
+                if (LiteGraph.canRenameSlots){
+                    if (_slot.optional || !LiteGraph.canRenameSlots_onlyOptional){
+                        menu_info.push(
+                            _slot.nameLocked
+                                ? "Cannot rename"
+                                : { content: "Rename Slot", slot: slot }
+                        );
+                    }
+                }
     
             }
-            options.title =
-                (slot.input ? slot.input.type : slot.output.type) || "*";
-            if (slot.input && slot.input.type == LiteGraph.ACTION) {
+            
+            var slotOb = slot.input || slot.output;
+            options.title = slotOb.type || "*";
+            if (slotOb.type == LiteGraph.ACTION) {
                 options.title = "Action";
-            }
-            if (slot.output && slot.output.type == LiteGraph.EVENT) {
+            }else if (slotOb.type == LiteGraph.EVENT) {
                 options.title = "Event";
             }
+            // if(slotOb.name) options.title = slotOb.name + ": " + options.title;
+            
         } else {
             if (node) {
                 //on node

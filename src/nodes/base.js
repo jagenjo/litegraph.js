@@ -1317,7 +1317,7 @@
 
     Console.prototype.onAction = function(action, param) {
         // param is the action
-        var msg = this.getInputDataByName("msg"); //getInputData(1);
+        var msg = this.getInputData(1); //getInputDataByName("msg");
         //if (msg == null || typeof msg == "undefined") return;
         if (!msg) msg = this.properties.msg;
         if (!msg) msg = "Event: "+param; // msg is undefined if the slot is lost?
@@ -1331,7 +1331,7 @@
     };
 
     Console.prototype.onExecute = function() {
-        var msg = this.getInputDataByName("msg"); //getInputData(1);
+        var msg = this.getInputData(1); //getInputDataByName("msg");
         if (!msg) msg = this.properties.msg;
         if (msg != null && typeof msg != "undefined") {
             this.properties.msg = msg;
