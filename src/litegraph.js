@@ -171,6 +171,8 @@
         canRenameSlots: true,
         canRenameSlots_onlyOptional: true,
         
+        ensureNodeSingleExecution: true, // this will prevent nodes to be executed more than once for step (comparing graph.iteration)
+        
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -3471,13 +3473,19 @@
     LGraphNode.prototype.execute = function(param, options) {
         if (this.onExecute){
             if (this.graph.nodes_executing && this.graph.nodes_executing[this.id]){
-                console.debug("NODE already executing! Prevent! "+this.id+":"+this.order);
+                //console.debug("NODE already executing! Prevent! "+this.id+":"+this.order);
                 return;
             }
+            if (LiteGraph.ensureNodeSingleExecution && this.exec_version && this.exec_version >= this.graph.iteration){
+                //console.debug("!! NODE already UP TO DATE !! "+this.exec_version);
+                return;
+            }
+            
             this.graph.nodes_executing[this.id] = true; //.push(this.id);
             
             this.onExecute(param);
             
+            this.exec_version = this.graph.iteration;
             //console.debug(this.graph.nodes_executing.pop()+" << pop");
             this.graph.nodes_executing[this.id] = false; //.pop();
         }
