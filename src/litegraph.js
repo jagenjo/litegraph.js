@@ -3411,7 +3411,7 @@
     LGraphNode.prototype.addOnTriggerInput = function(){
         var trigS = this.findInputSlot("onTrigger");
         if (!trigS || trigS == -1){
-            var input = this.addInput("onTrigger", LiteGraph.EVENT);
+            var input = this.addInput("onTrigger", LiteGraph.EVENT, {optional: true, nameLocked: true});
             return this.findInputSlot("onTrigger");
         }
         return trigS;
@@ -10538,7 +10538,9 @@ LGraphNode.prototype.executeAction = function(action)
             entries = this.onMenuNodeOutputs(entries);
         }
         if (canvas.allow_addOutSlot_onExecuted){
-            entries.push({content: "On Executed", value: ["onExecuted", LiteGraph.EVENT], className: "event"});
+            if (node.findOutputSlot("onExecuted") == -1){
+                entries.push({content: "On Executed", value: ["onExecuted", LiteGraph.EVENT, {nameLocked: true}], className: "event"}); //, opts: {}
+            }
         }
         // atlasan refactor: never used code, make a meaning
         if (node.onMenuNodeOutputs) {
@@ -10597,6 +10599,7 @@ LGraphNode.prototype.executeAction = function(action)
                 
                 var slotOpts = {optional: true};
                 if (v.value[2]) slotOpts = Object.assign(slotOpts, v.value[2]);
+                //if(v.opts) slotOpts = Object.assign(slotOpts, v.opts);
                 
                 node.addOutput(v.value[0], v.value[1], slotOpts);
                 if (node.onNodeOutputAdd) { // atlasan: implement a callback to the node when adding a slot
