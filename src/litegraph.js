@@ -1325,9 +1325,9 @@
             if (!current) {
                 continue;
             }
-            //console.log("checking ancestor for "+current.id+":"+current.order);
+            console.log("checking ancestor for "+current.id+":"+current.order);
             if (visited[current.id]){
-              //console.log("already "+current.id+":"+current.order);
+              console.log("already "+current.id+":"+current.order);
               continue;
             }
             // mark as visited
@@ -1339,13 +1339,13 @@
                 // mode check
                 if (opts.modesSkip && opts.modesSkip.length){
                     if (opts.modesSkip.indexOf(current.mode) != -1){
-                        //console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
+                        console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
                         continue;
                     }
                 }
                 if (opts.modesOnly && opts.modesOnly.length){
                     if (opts.modesOnly.indexOf(current.mode) == -1){
-                        //console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
+                        console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
                         continue;
                     }
                 }
@@ -1353,13 +1353,13 @@
                 if (ancestorsIds.indexOf(current.id) == -1) {
                   ancestors.push(current);
                   ancestorsIds.push(current.id);
-                  //console.log("push current "+current.id+":"+current.order);
+                  console.log("push current "+current.id+":"+current.order);
                 }else{
-                  //console.log("already push "+current.id+":"+current.order);
+                  console.log("already push "+current.id+":"+current.order);
                 }
                 
             }else{
-              //console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
+              console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
             }
             
             // get its inputs
@@ -1369,17 +1369,20 @@
             for (var i = 0; i < current.inputs.length; ++i) {
                 var input = current.getInputNode(i);
                 if (!input) continue;
+                var inputType = current.inputs[i].type;
                 
                 // type check
                 if (opts.typesSkip && opts.typesSkip.length){
-                    if (opts.typesSkip.indexOf(input.type) != -1){
-                        //console.log("type skip "+input.id+":"+input.order+" :: "+input.type);
+                    if (opts.typesSkip.indexOf(inputType) != -1){
+                        console.log("type skip "+input.id+":"+input.order+" :: "+inputType);
                         continue;
+                    }else{
+                        console.log("type ok? "+input.id+":"+input.order+" :: "+inputType+" : "+opts.typesSkip.indexOf(inputType));
                     }
                 }
                 if (opts.typesOnly && opts.typesOnly.length){
                     if (opts.typesOnly.indexOf(input.mode) == -1){
-                        //console.log("type only "+input.id+":"+input.order+" :: "+input.type);
+                        console.log("type only "+input.id+":"+input.order+" :: "+inputType);
                         continue;
                     }
                 }
@@ -1389,9 +1392,9 @@
                 if (ancestorsIds.indexOf(input.id) == -1) {
                     if(!visited[input.id]){
                       pending.push(input);
-                      //console.log("push input "+input.id+":"+input.order);
+                      console.log("push input "+input.id+":"+input.order);
                     }else{
-                      //console.log("already input "+input.id+":"+input.order);
+                      console.log("already input "+input.id+":"+input.order);
                     }
                 }
             }
@@ -3081,9 +3084,9 @@
     };
 
     LGraphNode.prototype.refreshAncestors = function(){
-      if (!this.inputs) {
-        return;
-      }
+        if (!this.inputs) {
+            return;
+        }
         
         this.graph.ancestorsCall = true; // prevent triggering slots
         
@@ -3101,11 +3104,11 @@
           
         this.graph.ancestorsCall = false; // restore triggering slots
         
-      /*for(iI in this.inputs){
-        console.debug("refreshing ancestors for slot "+iI); // atlasan DEBUG REMOVE
-        this.getInputData(iI,true,true);  
-      }*/
-      return true;
+        /*for(iI in this.inputs){
+            console.debug("refreshing ancestors for slot "+iI); // atlasan DEBUG REMOVE
+            this.getInputData(iI,true,true);  
+        }*/
+        return true;
     }
   
     /**
@@ -3476,7 +3479,7 @@
                 //console.debug("NODE already executing! Prevent! "+this.id+":"+this.order);
                 return;
             }
-            if (LiteGraph.ensureNodeSingleExecution && this.exec_version && this.exec_version >= this.graph.iteration){
+            if (LiteGraph.ensureNodeSingleExecution && this.exec_version && this.exec_version >= this.graph.iteration && this.exec_version !== undefined){
                 //console.debug("!! NODE already UP TO DATE !! "+this.exec_version);
                 return;
             }
