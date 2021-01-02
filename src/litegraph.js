@@ -3435,7 +3435,7 @@
     LGraphNode.prototype.addOnExecutedOutput = function(){
         var trigS = this.findOutputSlot("onExecuted");
         if (!trigS || trigS == -1){
-            var output = this.addOutput("onExecuted", LiteGraph.ACTION);
+            var output = this.addOutput("onExecuted", LiteGraph.ACTION, {optional: true, nameLocked: true});
             return this.findOutputSlot("onExecuted");
         }
         return trigS;
@@ -12800,9 +12800,10 @@ LGraphNode.prototype.executeAction = function(action)
             } else {
                 if (
                     slot &&
-                    slot.output &&
-                    slot.output.links &&
-                    slot.output.links.length
+                    (
+                        (slot.output && slot.output.links && slot.output.links.length)
+                        || (slot.input && slot.input.link)
+                    )
                 ) {
                     menu_info.push({ content: "Disconnect Links", slot: slot });
                 }
@@ -12876,23 +12877,23 @@ LGraphNode.prototype.executeAction = function(action)
 
             if (v.content == "Remove Slot") {
                 var info = v.slot;
-                node.graph.onBeforeChange();
+                node.graph.beforeChange();
                 if (info.input) {
                     node.removeInput(info.slot);
                 } else if (info.output) {
                     node.removeOutput(info.slot);
                 }
-                node.graph.onAfterChange();
+                node.graph.afterChange();
                 return;
             } else if (v.content == "Disconnect Links") {
                 var info = v.slot;
-                node.graph.onBeforeChange();
+                node.graph.beforeChange();
                 if (info.output) {
                     node.disconnectOutput(info.slot);
                 } else if (info.input) {
                     node.disconnectInput(info.slot);
                 }
-                node.graph.onAfterChange();
+                node.graph.afterChange();
                 return;
             } else if (v.content == "Rename Slot") {
                 var info = v.slot;
@@ -12910,7 +12911,7 @@ LGraphNode.prototype.executeAction = function(action)
                 dialog
                     .querySelector("button")
                     .addEventListener("click", function(e) {
-                        node.graph.onBeforeChange();
+                        node.graph.beforeChange();
                         if (input.value) {
                             if (slot_info) {
                                 slot_info.label = input.value;
@@ -12918,7 +12919,7 @@ LGraphNode.prototype.executeAction = function(action)
                             that.setDirty(true);
                         }
                         dialog.close();
-                        node.graph.onAfterChange();
+                        node.graph.afterChange();
                     });
             }
 
