@@ -1327,9 +1327,9 @@
             if (!current) {
                 continue;
             }
-            console.log("checking ancestor for "+current.id+":"+current.order);
+            //console.log("checking ancestor for "+current.id+":"+current.order);
             if (visited[current.id]){
-              console.log("already "+current.id+":"+current.order);
+              //console.log("already "+current.id+":"+current.order);
               continue;
             }
             // mark as visited
@@ -1341,13 +1341,13 @@
                 // mode check
                 if (opts.modesSkip && opts.modesSkip.length){
                     if (opts.modesSkip.indexOf(current.mode) != -1){
-                        console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
+                        //console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
                         continue;
                     }
                 }
                 if (opts.modesOnly && opts.modesOnly.length){
                     if (opts.modesOnly.indexOf(current.mode) == -1){
-                        console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
+                        //console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
                         continue;
                     }
                 }
@@ -1355,13 +1355,13 @@
                 if (ancestorsIds.indexOf(current.id) == -1) {
                   ancestors.push(current);
                   ancestorsIds.push(current.id);
-                  console.log("push current "+current.id+":"+current.order);
+                  //console.log("push current "+current.id+":"+current.order);
                 }else{
-                  console.log("already push "+current.id+":"+current.order);
+                  //console.log("already push "+current.id+":"+current.order);
                 }
                 
             }else{
-              console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
+              //console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
             }
             
             // get its inputs
@@ -1376,15 +1376,15 @@
                 // type check
                 if (opts.typesSkip && opts.typesSkip.length){
                     if (opts.typesSkip.indexOf(inputType) != -1){
-                        console.log("type skip "+input.id+":"+input.order+" :: "+inputType);
+                        //console.log("type skip "+input.id+":"+input.order+" :: "+inputType);
                         continue;
                     }else{
-                        console.log("type ok? "+input.id+":"+input.order+" :: "+inputType+" : "+opts.typesSkip.indexOf(inputType));
+                        //console.log("type ok? "+input.id+":"+input.order+" :: "+inputType+" : "+opts.typesSkip.indexOf(inputType));
                     }
                 }
                 if (opts.typesOnly && opts.typesOnly.length){
                     if (opts.typesOnly.indexOf(input.mode) == -1){
-                        console.log("type only "+input.id+":"+input.order+" :: "+inputType);
+                        //console.log("type only "+input.id+":"+input.order+" :: "+inputType);
                         continue;
                     }
                 }
@@ -1394,9 +1394,9 @@
                 if (ancestorsIds.indexOf(input.id) == -1) {
                     if(!visited[input.id]){
                       pending.push(input);
-                      console.log("push input "+input.id+":"+input.order);
+                      //console.log("push input "+input.id+":"+input.order);
                     }else{
-                      console.log("already input "+input.id+":"+input.order);
+                      //console.log("already input "+input.id+":"+input.order);
                     }
                 }
             }
@@ -4617,9 +4617,7 @@
 		output.links.push(link_info.id);
 		//connect in input
 		target_node.inputs[target_slot].link = link_info.id;
-		if (this.graph) {
-			this.graph.onGraphChanged({action: "connect"}); //this.graph._version++;
-		}
+		
 		if (this.onConnectionsChange) {
 			this.onConnectionsChange(
 				LiteGraph.OUTPUT,
@@ -4655,6 +4653,8 @@
 			);
 		}
 
+        this.graph.onGraphChanged({action: "connect"}); //this.graph._version++;
+        
         this.setDirtyCanvas(false, true);
 		this.graph.afterChange();
 		this.graph.connectionChange(this, link_info);
