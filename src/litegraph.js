@@ -173,6 +173,8 @@
         
         ensureNodeSingleExecution: true, // this will prevent nodes to be executed more than once for step (comparing graph.iteration)
         
+        allowMultiOutputForEvents: false, // being events, it is strongly reccomanded to use them sequentually, one by one
+        
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -4549,20 +4551,8 @@
 
 		var changed = false;
 
-        //if there is something already plugged there, disconnect
-        if (target_node.inputs[target_slot] && target_node.inputs[target_slot].link != null) {
-			this.graph.beforeChange();
-            target_node.disconnectInput(target_slot, {doProcessChange: false});
-			changed = true;
-        }
-
-        //why here??
-        //this.setDirtyCanvas(false,true);
-        //this.graph.connectionChange( this );
-
         var output = this.outputs[slot];
         if (!this.outputs[slot]){
-            asjdb;
             console.debug("Invalid slot passed: "+slot); // atlasan debug REMOVE
             console.debug(this.outputs);
             return null;
@@ -4587,15 +4577,30 @@
 			return null;
 		}
 
-		if(!changed)
+        //if there is something already plugged there, disconnect
+        if (target_node.inputs[target_slot] && target_node.inputs[target_slot].link != null) {
 			this.graph.beforeChange();
-
-        // console.debug("new link :: "+output.type+" : "+input.type); // atlasan debug REMOVE
+            target_node.disconnectInput(target_slot, {doProcessChange: false});
+			changed = true;
+        }
+        if (output.links !== null && output.links.length){
+            switch(output.type){
+                case LiteGraph.EVENT:
+                    if (!LiteGraph.allowMultiOutputForEvents){
+                        this.graph.beforeChange();
+                        this.disconnectOutput(slot, false, {doProcessChange: false}); // Input(target_slot, {doProcessChange: false});
+                        changed = true;
+                    }
+                break;
+                default:
+                break;
+            }
+        }
         
 		//create link class
 		link_info = new LLink(
 			++this.graph.last_link_id,
-			input.type || output.type, // atlasan edit :: check both output and input slot for type
+			input.type || output.type,
 			this.id,
 			slot,
 			target_node.id,
@@ -6762,14 +6767,15 @@ LGraphNode.prototype.executeAction = function(action)
 			this.block_click = false; //used to avoid sending twice a click in a immediate button
 		}
 
+        // switch on button
         if (e.which == 1) {
+            //left button
 
 			if( this.node_widget )
 			{
 				this.processNodeWidgets( this.node_widget[0], this.graph_mouse, e );
 			}
 
-            //left button
             this.node_widget = null;
 
             if (this.selected_group) {
@@ -12051,7 +12057,7 @@ LGraphNode.prototype.executeAction = function(action)
 
 			function innerChange(name, value)
 			{
-				console.log("widget change: ",name,value);
+				// console.log("widget change: ",name,value);
 				//that.dirty_canvas = true;
 				if(options.callback)
 					options.callback(name,value,options);
