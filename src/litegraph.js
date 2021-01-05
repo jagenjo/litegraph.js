@@ -1365,6 +1365,8 @@
             return;
         } //cannot be removed
 
+		this.beforeChange(); //sure?
+
         //disconnect inputs
         if (node.inputs) {
             for (var i = 0; i < node.inputs.length; i++) {
@@ -1423,6 +1425,7 @@
 		this.sendActionToCanvas("checkPanels");
 
         this.setDirtyCanvas(true, true);
+		this.afterChange(); //sure?
         this.change();
 
         this.updateExecutionOrder();
@@ -3709,94 +3712,99 @@
         }
 
 		var changed = false;
-        var input = target_node.inputs[target_slot];
+
+        //if there is something already plugged there, disconnect
+        if (target_node.inputs[target_slot].link != null) {
+			this.graph.beforeChange();
+            target_node.disconnectInput(target_slot);
+			changed = true;
+        }
+
+        //why here??
+        //this.setDirtyCanvas(false,true);
+        //this.graph.connectionChange( this );
+
         var output = this.outputs[slot];
-        var link_info = null;
 
-        if (LiteGraph.isValidConnection(output.type, input.type)) {
-            if (target_node.onBeforeConnectInput) {
-                // This way node can choose another slot (if selected is occupied)
-                target_slot = target_node.onBeforeConnectInput(target_slot);
-            }
-
-            //if there is something already plugged there, disconnect
-            if (target_node.inputs[target_slot].link != null) {
-                target_node.disconnectInput(target_slot);
-            }
-
-            //why here??
-            //this.setDirtyCanvas(false,true);
-            //this.graph.connectionChange( this );
-
-            //allows nodes to block connection
-            if (target_node.onConnectInput) {
-                if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
-                    return null;
-                }
-            }
-            if (this.onConnectOutput) {
-                if ( this.onConnectOutput(slot, input.type, input, target_node, target_slot) === false ) {
-                    return null;
-                }
-            }
-
-            link_info = new LLink(
-                ++this.graph.last_link_id,
-                input.type,
-                this.id,
-                slot,
-                target_node.id,
-                target_slot
-            );
-
-            //add to graph links list
-            this.graph.links[link_info.id] = link_info;
-
-            //connect in output
-            if (output.links == null) {
-                output.links = [];
-            }
-            output.links.push(link_info.id);
-            //connect in input
-            target_node.inputs[target_slot].link = link_info.id;
-            if (this.graph) {
-                this.graph._version++;
-            }
-            if (this.onConnectionsChange) {
-                this.onConnectionsChange(
-                    LiteGraph.OUTPUT,
-                    slot,
-                    true,
-                    link_info,
-                    output
-                );
-            } //link_info has been created now, so its updated
-            if (target_node.onConnectionsChange) {
-                target_node.onConnectionsChange(
-                    LiteGraph.INPUT,
-                    target_slot,
-                    true,
-                    link_info,
-                    input
-                );
-            }
-            if (this.graph && this.graph.onNodeConnectionChange) {
-                this.graph.onNodeConnectionChange(
-                    LiteGraph.INPUT,
-                    target_node,
-                    target_slot,
-                    this,
-                    slot
-                );
-                this.graph.onNodeConnectionChange(
-                    LiteGraph.OUTPUT,
-                    this,
-                    slot,
-                    target_node,
-                    target_slot
-                );
+        //allows nodes to block connection
+        if (target_node.onConnectInput) {
+            if ( target_node.onConnectInput(target_slot, output.type, output, this, slot) === false ) {
+                return null;
             }
         }
+
+        var input = target_node.inputs[target_slot];
+        var link_info = null;
+
+		//this slots cannot be connected (different types)
+        if (!LiteGraph.isValidConnection(output.type, input.type))
+		{
+	        this.setDirtyCanvas(false, true);
+			if(changed)
+		        this.graph.connectionChange(this, link_info);
+			return null;
+		}
+
+		if(!changed)
+			this.graph.beforeChange();
+
+		//create link class
+		link_info = new LLink(
+			++this.graph.last_link_id,
+			input.type,
+			this.id,
+			slot,
+			target_node.id,
+			target_slot
+		);
+
+		//add to graph links list
+		this.graph.links[link_info.id] = link_info;
+
+		//connect in output
+		if (output.links == null) {
+			output.links = [];
+		}
+		output.links.push(link_info.id);
+		//connect in input
+		target_node.inputs[target_slot].link = link_info.id;
+		if (this.graph) {
+			this.graph._version++;
+		}
+		if (this.onConnectionsChange) {
+			this.onConnectionsChange(
+				LiteGraph.OUTPUT,
+				slot,
+				true,
+				link_info,
+				output
+			);
+		} //link_info has been created now, so its updated
+		if (target_node.onConnectionsChange) {
+			target_node.onConnectionsChange(
+				LiteGraph.INPUT,
+				target_slot,
+				true,
+				link_info,
+				input
+			);
+		}
+		if (this.graph && this.graph.onNodeConnectionChange) {
+			this.graph.onNodeConnectionChange(
+				LiteGraph.INPUT,
+				target_node,
+				target_slot,
+				this,
+				slot
+			);
+			this.graph.onNodeConnectionChange(
+				LiteGraph.OUTPUT,
+				this,
+				slot,
+				target_node,
+				target_slot
+			);
+		}
 
         this.setDirtyCanvas(false, true);
 		this.graph.afterChange();
