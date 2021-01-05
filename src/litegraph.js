@@ -8622,6 +8622,7 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.strokeStyle = outline_color;
             ctx.fillStyle = "#222";
             ctx.textAlign = "left";
+			//ctx.lineWidth = 2;
 			if(w.disabled)
 				ctx.globalAlpha *= 0.5;
 			var widget_width = w.width || width;
@@ -8769,13 +8770,15 @@ LGraphNode.prototype.executeAction = function(action)
 					else
 	                    ctx.rect( margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
-                    if (show_text) {
-						ctx.save();
+	                if (show_text) {
+						if(!w.disabled)
+							ctx.stroke();
+    					ctx.save();
 						ctx.beginPath();
 						ctx.rect(margin, posY, widget_width - margin * 2, H);
 						ctx.clip();
 
-	                    ctx.stroke();
+	                    //ctx.stroke();
                         ctx.fillStyle = secondary_text_color;
                         if (w.name != null) {
                             ctx.fillText(w.name, margin * 2, y + H * 0.7);
@@ -8850,10 +8853,8 @@ LGraphNode.prototype.executeAction = function(action)
 					break;
 				case "slider":
 					var range = w.options.max - w.options.min;
-					var nvalue = Math.clamp((x - 10) / (widget_width - 20), 0, 1);
-					w.value =
-						w.options.min +
-						(w.options.max - w.options.min) * nvalue;
+					var nvalue = Math.clamp((x - 15) / (widget_width - 30), 0, 1);
+					w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
 					if (w.callback) {
 						setTimeout(function() {
 							inner_value_change(w, w.value);
@@ -8963,7 +8964,7 @@ LGraphNode.prototype.executeAction = function(action)
 								this.value = v;
 								inner_value_change(this, v);
 							}.bind(w),
-							event);
+							event,w.options ? w.options.multiline : false );
 					}
 					break;
 				default:
@@ -9550,18 +9551,18 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialog = document.createElement("div");
         dialog.className = "graphdialog";
-        dialog.innerHTML =
-            "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
+        dialog.innerHTML = "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
+		//dialog.innerHTML = "<span class='name'></span><textarea autofocus class='value'></textarea><button>OK</button>";
         var title = dialog.querySelector(".name");
         title.innerText = property;
-        var input = dialog.querySelector("input");
+        var input = dialog.querySelector(".value");
         if (input) {
             input.value = value;
             input.addEventListener("blur", function(e) {
                 this.focus();
             });
             input.addEventListener("keydown", function(e) {
-                if (e.keyCode != 13) {
+                if (e.keyCode != 13 && e.target.localName != "textarea") {
                     return;
                 }
                 inner();
@@ -9611,7 +9612,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
     };
 
-    LGraphCanvas.prototype.prompt = function(title, value, callback, event) {
+    LGraphCanvas.prototype.prompt = function(title, value, callback, event, multiline) {
         var that = this;
         var input_html = "";
         title = title || "";
@@ -9620,8 +9621,10 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialog = document.createElement("div");
         dialog.className = "graphdialog rounded";
-        dialog.innerHTML =
-            "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
+		if(multiline)
+	        dialog.innerHTML = "<span class='name'></span> <textarea autofocus class='value'></textarea><button class='rounded'>OK</button>";
+		else
+	        dialog.innerHTML = "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
         dialog.close = function() {
             that.prompt_box = null;
             if (dialog.parentNode) {
@@ -9653,13 +9656,13 @@ LGraphNode.prototype.executeAction = function(action)
         var value_element = dialog.querySelector(".value");
         value_element.value = value;
 
-        var input = dialog.querySelector("input");
+        var input = value_element;
         input.addEventListener("keydown", function(e) {
             modified = true;
             if (e.keyCode == 27) {
                 //ESC
                 dialog.close();
-            } else if (e.keyCode == 13) {
+            } else if (e.keyCode == 13 && e.target.localName != "textarea") {
                 if (callback) {
                     callback(this.value);
                 }
