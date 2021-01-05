@@ -734,7 +734,7 @@
     // Texture Webcam *****************************************
     function ImageWebcam() {
         this.addOutput("Webcam", "image");
-        this.properties = { filterFacingMode: false, facingMode: "user" }; // atlasan edit
+        this.properties = { filterFacingMode: false, facingMode: "user" };
         this.boxcolor = "black";
         this.frame = 0;
     }
@@ -754,7 +754,7 @@
         // Not showing vendor prefixes.
         var constraints = {
             audio: false,
-            video: !this.properties.filterFacingMode ? true : { facingMode: this.properties.facingMode } // atlasan edit
+            video: !this.properties.filterFacingMode ? true : { facingMode: this.properties.facingMode }
         };
         navigator.mediaDevices
             .getUserMedia(constraints)
