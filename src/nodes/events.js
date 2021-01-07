@@ -11,7 +11,7 @@
     LogEvent.title = "Log Event";
     LogEvent.desc = "Log event in console";
 
-    LogEvent.prototype.onAction = function(action, param) {
+    LogEvent.prototype.onAction = function(action, param, options) {
         console.log(action, param);
     };
 
@@ -31,18 +31,18 @@
     TriggerEvent.title = "TriggerEvent";
     TriggerEvent.desc = "Triggers event if input evaluates to true";
 
-    TriggerEvent.prototype.onExecute = function(action, param) {
+    TriggerEvent.prototype.onExecute = function(action, param, options) {
 		var v = this.getInputData(0);
 		var changed = (v != this.prev);
 		if(this.prev === 0)
 			changed = false;
 		var must_resend = (changed && this.properties.only_on_change) || (!changed && !this.properties.only_on_change);
 		if(v && must_resend )
-	        this.triggerSlot(0, param);
+	        this.triggerSlot(0, param, null, options);
 		if(!v && must_resend)
-	        this.triggerSlot(2, param);
+	        this.triggerSlot(2, param, null, options);
 		if(changed)
-	        this.triggerSlot(1, param);
+	        this.triggerSlot(1, param, null, options);
 		this.prev = v;
     };
 
@@ -53,12 +53,6 @@
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
-        this.addInput("", LiteGraph.ACTION);
-        this.addInput("", LiteGraph.ACTION);
-        this.addInput("", LiteGraph.ACTION);
-        this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
@@ -73,10 +67,10 @@
         return "";
     };
 
-    Sequencer.prototype.onAction = function(action, param) {
+    Sequencer.prototype.onAction = function(action, param, options) {
         if (this.outputs) {
             for (var i = 0; i < this.outputs.length; ++i) {
-                this.triggerSlot(i, param);
+                this.triggerSlot(i, param, null, options);
             }
         }
     };
@@ -98,7 +92,7 @@
     FilterEvent.title = "Filter Event";
     FilterEvent.desc = "Blocks events that do not match the filter";
 
-    FilterEvent.prototype.onAction = function(action, param) {
+    FilterEvent.prototype.onAction = function(action, param, options) {
         if (param == null) {
             return;
         }
@@ -121,7 +115,7 @@
             }
         }
 
-        this.triggerSlot(0, param);
+        this.triggerSlot(0, param, null, options);
     };
 
     LiteGraph.registerNodeType("events/filter", FilterEvent);
@@ -143,9 +137,9 @@
 		this._value = this.getInputData(1);
 	}
 
-    EventBranch.prototype.onAction = function(action, param) {
+    EventBranch.prototype.onAction = function(action, param, options) {
         this._value = this.getInputData(1);
-		this.triggerSlot(this._value ? 0 : 1);
+		this.triggerSlot(this._value ? 0 : 1, param, null, options);
 	}
 
     LiteGraph.registerNodeType("events/branch", EventBranch);
@@ -172,7 +166,7 @@
         return this.title;
     };
 
-    EventCounter.prototype.onAction = function(action, param) {
+    EventCounter.prototype.onAction = function(action, param, options) {
         var v = this.num;
         if (action == "inc") {
             this.num += 1;
@@ -218,16 +212,16 @@
     DelayEvent.title = "Delay";
     DelayEvent.desc = "Delays one event";
 
-    DelayEvent.prototype.onAction = function(action, param) {
+    DelayEvent.prototype.onAction = function(action, param, options) {
         var time = this.properties.time_in_ms;
         if (time <= 0) {
-            this.trigger(null, param);
+            this.trigger(null, param, options);
         } else {
             this._pending.push([time, param]);
         }
     };
 
-    DelayEvent.prototype.onExecute = function() {
+    DelayEvent.prototype.onExecute = function(action, param, options) {
         var dt = this.graph.elapsed_time * 1000; //in ms
 
         if (this.isInputConnected(1)) {
@@ -235,9 +229,9 @@
         }
 
         for (var i = 0; i < this._pending.length; ++i) {
-            var action = this._pending[i];
-            action[0] -= dt;
-            if (action[0] > 0) {
+            var actionPass = this._pending[i];
+            actionPass[0] -= dt;
+            if (actionPass[0] > 0) {
                 continue;
             }
 
@@ -246,7 +240,7 @@
             --i;
 
             //trigger
-            this.trigger(null, action[1]);
+            this.trigger(null, actionPass[1], options);
         }
     };
 
@@ -347,7 +341,7 @@
 		this.setOutputData(0, this.properties.data );
 	}
 
-    DataStore.prototype.onAction = function(action, param) {
+    DataStore.prototype.onAction = function(action, param, options) {
 		this.properties.data = this._last_value;
     };
 
