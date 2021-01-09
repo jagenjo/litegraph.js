@@ -189,6 +189,26 @@
     LiteGraph.registerNodeType("logic/CompareBool", logicCompare);
     
     
+    function logicBranch(){
+        this.properties = { };
+        this.addInput("onTrigger", LiteGraph.ACTION);
+        this.addInput("condition", "boolean");
+        this.addOutput("true", LiteGraph.EVENT);
+        this.addOutput("false", LiteGraph.EVENT);
+        this.mode = LiteGraph.ON_TRIGGER;
+    }
+    logicBranch.title = "Branch";
+    logicBranch.desc = "Branch execution on condition";
+    logicBranch.prototype.onExecute = function(action, param, options) {
+        var condtition = this.getInputData(1);
+        if (condtition){
+            this.triggerSlot(0);
+        }else{
+            this.triggerSlot(1);
+        }
+    };
+    LiteGraph.registerNodeType("logic/IF", logicBranch);
+    
     
     
 })(this);
