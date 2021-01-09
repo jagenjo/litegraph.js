@@ -1,4 +1,15 @@
-# litegraph.js
+# EXPERIMENTS WITH litegraph.js
+
+A fork of the ecceptional litegraph.js library. This is unofficial and unsupported.
+
+Here there are pushed a couple experiments, nothing serious, take it for what is it. Don't use it at others risk.
+
+
+-----------------------------------------
+Original README.md
+-----------------------------------------
+
+# [litegraph.js](https://github.com/jagenjo/litegraph.js)
 
 A library in Javascript to create graphs in the browser similar to Unreal Blueprints. Nodes can be programmed easily and it includes an editor to construct and tests the graphs.
 

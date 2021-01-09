@@ -35,12 +35,15 @@ select.addEventListener("change", function(e){
 elem.querySelector("#save").addEventListener("click",function(){
 	console.log("saved");
 	localStorage.setItem( "graphdemo_save", JSON.stringify( graph.serialize() ) );
+    graph.onGraphSaved();
 });
 
 elem.querySelector("#load").addEventListener("click",function(){
 	var data = localStorage.getItem( "graphdemo_save" );
-	if(data)
+	if(data){
 		graph.configure( JSON.parse( data ) );
+        graph.onGraphLoaded();
+    }
 	console.log("loaded");
 });
 

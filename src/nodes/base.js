@@ -717,6 +717,21 @@
 
     LiteGraph.registerNodeType("basic/string", ConstantString);
 
+    function ConstantObject() {
+        this.addOutput("obj", "object");
+        this.size = [120, 30];
+		this._object = {};
+    }
+
+    ConstantObject.title = "Const Object";
+    ConstantObject.desc = "Constant Object";
+
+    ConstantObject.prototype.onExecute = function() {
+        this.setOutputData(0, this._object);
+    };
+
+    LiteGraph.registerNodeType( "basic/object", ConstantObject );
+
     function ConstantFile() {
         this.addInput("url", "string");
         this.addOutput("file", "string");
@@ -852,14 +867,14 @@
 
 	//to store json objects
     function ConstantArray() {
+		this._value = [];
         this.addInput("json", "");
         this.addOutput("arrayOut", "array");
-        this.addOutput("length", "number");
-        this.addProperty("value", "");
-        this.widget = this.addWidget("text","array","","value");
+		this.addOutput("length", "number");
+        this.addProperty("value", "[]");
+        this.widget = this.addWidget("text","array",this.properties.value,"value");
         this.widgets_up = true;
         this.size = [140, 50];
-        this._value = null;
     }
 
     ConstantArray.title = "Const Array";
@@ -891,7 +906,6 @@
 			this._value.length = v.length;
 			for(var i = 0; i < v.length; ++i)
 				this._value[i] = v[i];
-            this.changeOutputType("arrayOut", "array");
 		}
 		this.setOutputData(0, this._value);
 		this.setOutputData(1, this._value ? ( this._value.length || 0) : 0 );
@@ -901,10 +915,36 @@
 
     LiteGraph.registerNodeType("basic/array", ConstantArray);
 
+	function SetArray()
+	{
+        this.addInput("arr", "array");
+        this.addInput("value", "");
+        this.addOutput("arr", "array");
+		this.properties = { index: 0 };
+        this.widget = this.addWidget("number","i",this.properties.index,"index",{precision: 0, step: 10, min: 0});
+	}
+
+    SetArray.title = "Set Array";
+    SetArray.desc = "Sets index of array";
+
+    SetArray.prototype.onExecute = function() {
+        var arr = this.getInputData(0);
+		if(!arr)
+			return;
+        var v = this.getInputData(1);
+		if(v === undefined )
+			return;
+		if(this.properties.index)
+			arr[ Math.floor(this.properties.index) ] = v;
+		this.setOutputData(0,arr);
+    };
+
+    LiteGraph.registerNodeType("basic/set_array", SetArray );
+
     function ArrayElement() {
         this.addInput("array", "array,table,string");
         this.addInput("index", "number");
-        this.addOutput("value", 0);
+        this.addOutput("value", "");
 		this.addProperty("index",0);
     }
 
@@ -923,13 +963,11 @@
 
     LiteGraph.registerNodeType("basic/array[]", ArrayElement);
 
-
-
     function TableElement() {
         this.addInput("table", "table");
         this.addInput("row", "number");
         this.addInput("col", "number");
-        this.addOutput("value", 0);
+        this.addOutput("value", "");
 		this.addProperty("row",0);
 		this.addProperty("column",0);
     }
@@ -1012,10 +1050,38 @@
 
     LiteGraph.registerNodeType("basic/object_keys", ObjectKeys);
 
+
+	function SetObject()
+	{
+        this.addInput("obj", "");
+        this.addInput("value", "");
+        this.addOutput("obj", "");
+		this.properties = { property: "" };
+        this.name_widget = this.addWidget("text","prop.",this.properties.property,"property");
+	}
+
+    SetObject.title = "Set Object";
+    SetObject.desc = "Adds propertiesrty to object";
+
+    SetObject.prototype.onExecute = function() {
+        var obj = this.getInputData(0);
+		if(!obj)
+			return;
+        var v = this.getInputData(1);
+		if(v === undefined )
+			return;
+		if(this.properties.property)
+			obj[ this.properties.property ] = v;
+		this.setOutputData(0,obj);
+    };
+
+    LiteGraph.registerNodeType("basic/set_object", SetObject );
+
+
     function MergeObjects() {
         this.addInput("A", "object");
         this.addInput("B", "object");
-        this.addOutput("", "object");
+        this.addOutput("out", "object");
 		this._result = {};
 		var that = this;
 		this.addWidget("button","clear","",function(){
@@ -1251,7 +1317,7 @@
 
     Console.prototype.onAction = function(action, param) {
         // param is the action
-        var msg = this.getInputDataByName("msg"); //getInputData(1);
+        var msg = this.getInputData(1); //getInputDataByName("msg");
         //if (msg == null || typeof msg == "undefined") return;
         if (!msg) msg = this.properties.msg;
         if (!msg) msg = "Event: "+param; // msg is undefined if the slot is lost?
@@ -1265,7 +1331,7 @@
     };
 
     Console.prototype.onExecute = function() {
-        var msg = this.getInputDataByName("msg"); //getInputData(1);
+        var msg = this.getInputData(1); //getInputDataByName("msg");
         if (!msg) msg = this.properties.msg;
         if (msg != null && typeof msg != "undefined") {
             this.properties.msg = msg;
@@ -1289,9 +1355,7 @@
         this.addProperty("msg", "");
         this.addInput("", LiteGraph.EVENT);
         var that = this;
-        this.widget = this.addWidget("text", "Text", "", function(v) {
-            that.properties.msg = v;
-        });
+        this.widget = this.addWidget("text", "Text", "", "msg");
         this.widgets_up = true;
         this.size = [200, 30];
     }

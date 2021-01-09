@@ -541,7 +541,7 @@
 		var v = this.getInputData(0);
 		this.setOutputData(0, this.getInputData( v ? 1 : 2 ));
 	};
-
+    
 	LiteGraph.registerNodeType("math/gate", Gate);
 
 

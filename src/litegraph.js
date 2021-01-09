@@ -66,12 +66,13 @@
         EVENT: -1, //for outputs
         ACTION: -1, //for inputs
 
-        NODE_MODES: ["Always", "On Event", "Never", "On Trigger"],
-        NODE_MODES_COLORS:["#666","#422","#333","#224"], // use with node_box_coloured_by_mode
+        NODE_MODES: ["Always", "On Event", "Never", "On Trigger", "On Request"],
+        NODE_MODES_COLORS:["#666","#422","#333","#224","#626"], // use with node_box_coloured_by_mode
         ALWAYS: 0,
         ON_EVENT: 1,
         NEVER: 2,
         ON_TRIGGER: 3,
+        ON_REQUEST: 4, // used from event-based nodes, where ancestors are recursively executed on needed
         
         UP: 1,
         DOWN: 2,
@@ -130,13 +131,17 @@
             links_ontop: false,
         },
         
+        refreshAncestorsOnTriggers: true,
+        refreshAncestorsOnActions: true,
+      
         showCanvasOptions: true,
-        availableCanvasOptions: [  "highquality_render"
+        availableCanvasOptions: [   "allow_addOutSlot_onExecuted"
+                                    ,"highquality_render"
                                     ,"use_gradients" //set to true to render titlebar with gradients
                                     ,"pause_rendering"
                                     ,"clear_background"
                                     ,"read_only" //if set to true users cannot modify the graph
-                                    ,"render_only_selected"
+                                    //,"render_only_selected" // not implemented
                                     ,"live_mode"
                                     ,"show_info"
                                     ,"allow_dragcanvas"
@@ -150,7 +155,7 @@
                                     ,"render_canvas_border"
                                     ,"render_connections_shadows" //too much cpu
                                     ,"render_connections_border"
-                                    // ,"render_curved_connections" // always on
+                                    // ,"render_curved_connections" // always on, or specific fixed graph
                                     ,"render_connection_arrows"
                                     ,"render_collapsed_slots"
                                     ,"render_execution_order"
@@ -158,6 +163,23 @@
                                     ,"render_link_tooltip"
                                   ],
                                   //,"editor_alpha" //= 1; //used for transition
+        
+        actionHistoryMaxSave: 40,
+        
+        canRemoveSlots: true,
+        canRemoveSlots_onlyOptional: true,
+        canRenameSlots: true,
+        canRenameSlots_onlyOptional: true,
+        
+        ensureNodeSingleExecution: false/*MMMM*/, // this will prevent nodes to be executed more than once for step (comparing graph.iteration)
+        
+        ensureNodeSingleAction: false,/*MMMM*/ // this will prevent nodes to be executed more than once for action call!
+        
+        ensureUniqueExecutionAndActionCall: true, // the new tecnique.. let's make it working best of
+        
+        preventAncestorRecalculation: false/*MMMM*/, // when calculating the ancestors, set a flag to prevent recalculate the subtree
+        
+        allowMultiOutputForEvents: false, // being events, it is strongly reccomended to use them sequentually, one by one
         
         /**
          * Register a node class so it can be listed when the user wants to create a new one
@@ -330,7 +352,7 @@
             }
 
             for (var i = 0; i < aTypes.length; ++i) {
-                var sT = aTypes[i].toLowerCase();
+                var sT = aTypes[i]; //.toLowerCase();
                 if (sT === ""){
                     sT = "*";
                     // console.debug("FIXING for "+sCN); // atlasan debug :: used to verify if some nodes didnt declared the slot type ( using empty string instead of 0 or "*" for general types )
@@ -874,6 +896,20 @@
 
         this.catch_errors = true;
 
+        // savings
+        this.history = {    actionHistory: []
+                            ,actionHistoryVersions: []
+                            ,actionHistoryPtr: 0
+                    };
+        /*this.actionHistory = [];
+        this.actionHistoryVersions = [];
+        this.actionHistoryPtr = 0;*/
+        
+        this.nodes_executing = [];
+        this.nodes_actioning = [];
+        this.node_ancestorsCalculated = [];
+        this.nodes_executedAction = [];
+        
         //subgraph_data
         this.inputs = {};
         this.outputs = {};
@@ -1111,6 +1147,10 @@
         this.iteration += 1;
         this.elapsed_time = (now - this.last_update_time) * 0.001;
         this.last_update_time = now;
+        this.nodes_executing = [];
+        this.nodes_actioning = [];
+        this.node_ancestorsCalculated = [];
+        this.nodes_executedAction = [];
     };
 
     /**
@@ -1275,25 +1315,99 @@
      * @method getAncestors
      * @return {Array} an array with all the LGraphNodes that affect this node, in order of execution
      */
-    LGraph.prototype.getAncestors = function(node) {
+    LGraph.prototype.getAncestors = function(node, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { modesSkip: []
+                        ,modesOnly: []
+                        ,typesSkip: []
+                        ,typesOnly: []
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
         var ancestors = [];
+        var ancestorsIds = [];
         var pending = [node];
         var visited = {};
 
+        //console.log("---getAncestors--- for "+node.id+":"+node.order);
+      
         while (pending.length) {
+            // get next
             var current = pending.shift();
-            if (!current.inputs) {
+            if (!current) {
                 continue;
             }
-            if (!visited[current.id] && current != node) {
-                visited[current.id] = true;
-                ancestors.push(current);
+            //console.log("checking ancestor for "+current.id+":"+current.order);
+            if (visited[current.id]){
+              //console.log("already "+current.id+":"+current.order);
+              continue;
             }
-
+            // mark as visited
+            visited[current.id] = true;
+            
+            // add to ancestors
+            if (current.id != node.id) {
+                
+                // mode check
+                if (opts.modesSkip && opts.modesSkip.length){
+                    if (opts.modesSkip.indexOf(current.mode) != -1){
+                        //console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
+                        continue;
+                    }
+                }
+                if (opts.modesOnly && opts.modesOnly.length){
+                    if (opts.modesOnly.indexOf(current.mode) == -1){
+                        //console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
+                        continue;
+                    }
+                }
+                
+                if (ancestorsIds.indexOf(current.id) == -1) {
+                  ancestors.push(current);
+                  ancestorsIds.push(current.id);
+                  //console.log("push current "+current.id+":"+current.order);
+                }else{
+                  //console.log("already push "+current.id+":"+current.order);
+                }
+                
+            }else{
+              //console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
+            }
+            
+            // get its inputs
+            if (!current.inputs){
+              continue;
+            }
             for (var i = 0; i < current.inputs.length; ++i) {
                 var input = current.getInputNode(i);
-                if (input && ancestors.indexOf(input) == -1) {
-                    pending.push(input);
+                if (!input) continue;
+                var inputType = current.inputs[i].type;
+                
+                // type check
+                if (opts.typesSkip && opts.typesSkip.length){
+                    if (opts.typesSkip.indexOf(inputType) != -1){
+                        //console.log("type skip "+input.id+":"+input.order+" :: "+inputType);
+                        continue;
+                    }else{
+                        //console.log("type ok? "+input.id+":"+input.order+" :: "+inputType+" : "+opts.typesSkip.indexOf(inputType));
+                    }
+                }
+                if (opts.typesOnly && opts.typesOnly.length){
+                    if (opts.typesOnly.indexOf(input.mode) == -1){
+                        //console.log("type only "+input.id+":"+input.order+" :: "+inputType);
+                        continue;
+                    }
+                }
+                
+                //console.log("input "+i+" "+input.id+":"+input.order);
+                // push em in
+                if (ancestorsIds.indexOf(input.id) == -1) {
+                    if(!visited[input.id]){
+                      pending.push(input);
+                      //console.log("push input "+input.id+":"+input.order);
+                    }else{
+                      //console.log("already input "+input.id+":"+input.order);
+                    }
                 }
             }
         }
@@ -1435,7 +1549,11 @@
      * @param {LGraphNode} node the instance of the node
      */
 
-    LGraph.prototype.add = function(node, skip_compute_order) {
+    LGraph.prototype.add = function(node, skip_compute_order, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { doProcessChange: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
         if (!node) {
             return;
         }
@@ -1446,15 +1564,13 @@
             this.setDirtyCanvas(true);
             this.change();
             node.graph = this;
-            this._version++;
+            this.onGraphChanged({action: "groupAdd", doSave: opts.doProcessChange}); // this._version++;
             return;
         }
 
         //nodes
         if (node.id != -1 && this._nodes_by_id[node.id] != null) {
-            console.warn(
-                "LiteGraph: there is already a node with this ID, changing it"
-            );
+            console.warn("LiteGraph: there is already a node with this ID, changing it");
             node.id = ++this.last_node_id;
         }
 
@@ -1470,7 +1586,8 @@
         }
 
         node.graph = this;
-        this._version++;
+        
+        this.onGraphChanged({action: "nodeAdd", doSave: opts.doProcessChange}); // this._version++;
 
         this._nodes.push(node);
         this._nodes_by_id[node.id] = node;
@@ -1504,13 +1621,15 @@
      */
 
     LGraph.prototype.remove = function(node) {
+        
+        // group ?
         if (node.constructor === LiteGraph.LGraphGroup) {
             var index = this._groups.indexOf(node);
             if (index != -1) {
                 this._groups.splice(index, 1);
             }
             node.graph = null;
-            this._version++;
+            this.onGraphChanged({action: "groupRemove"}); // this._version++;
             this.setDirtyCanvas(true, true);
             this.change();
             return;
@@ -1529,7 +1648,7 @@
             for (var i = 0; i < node.inputs.length; i++) {
                 var slot = node.inputs[i];
                 if (slot.link != null) {
-                    node.disconnectInput(i);
+                    node.disconnectInput(i, {doProcessChange: false});
                 }
             }
         }
@@ -1539,7 +1658,7 @@
             for (var i = 0; i < node.outputs.length; i++) {
                 var slot = node.outputs[i];
                 if (slot.links != null && slot.links.length) {
-                    node.disconnectOutput(i);
+                    node.disconnectOutput(i, false, {doProcessChange: false});
                 }
             }
         }
@@ -1552,7 +1671,7 @@
         }
 
         node.graph = null;
-        this._version++;
+        this.onGraphChanged({action: "nodeRemove"}); // this._version++;
 
         //remove from canvas render
         if (this.list_of_graphcanvas) {
@@ -1734,7 +1853,7 @@
 
     // ********** GLOBALS *****************
 
-    LGraph.prototype.onAction = function(action, param) {
+    LGraph.prototype.onAction = function(action, param, options) {
         this._input_nodes = this.findNodesByClass(
             LiteGraph.GraphInput,
             this._input_nodes
@@ -1745,7 +1864,7 @@
                 continue;
             }
             //node.onAction(action, param);
-            node.actionDo(action, param);
+            node.actionDo(action, param, options);
             break;
         }
     };
@@ -1772,7 +1891,7 @@
 
 		this.beforeChange();
         this.inputs[name] = { name: name, type: type, value: value };
-        this._version++;
+        this.onGraphChanged({action: "addInput"}); // this._version++;
 		this.afterChange();
         
         if (this.onInputAdded) {
@@ -1834,7 +1953,7 @@
 
         this.inputs[name] = this.inputs[old_name];
         delete this.inputs[old_name];
-        this._version++;
+        this.onGraphChanged({action: "renameInput"}); // this._version++;
 
         if (this.onInputRenamed) {
             this.onInputRenamed(old_name, name);
@@ -1865,7 +1984,7 @@
         }
 
         this.inputs[name].type = type;
-        this._version++;
+        this.onGraphChanged({action: "changeInputType"}); // this._version++;
         if (this.onInputTypeChanged) {
             this.onInputTypeChanged(name, type);
         }
@@ -1883,7 +2002,7 @@
         }
 
         delete this.inputs[name];
-        this._version++;
+        this.onGraphChanged({action: "graphRemoveInput"}); // this._version++;
 
         if (this.onInputRemoved) {
             this.onInputRemoved(name);
@@ -1904,7 +2023,7 @@
      */
     LGraph.prototype.addOutput = function(name, type, value) {
         this.outputs[name] = { name: name, type: type, value: value };
-        this._version++;
+        this.onGraphChanged({action: "addOutput"}); // this._version++;
 
         if (this.onOutputAdded) {
             this.onOutputAdded(name, type);
@@ -1961,7 +2080,7 @@
 
         this.outputs[name] = this.outputs[old_name];
         delete this.outputs[old_name];
-        this._version++;
+        this.onGraphChanged({action: "renameOutput"}); // this._version++;
 
         if (this.onOutputRenamed) {
             this.onOutputRenamed(old_name, name);
@@ -1992,7 +2111,7 @@
         }
 
         this.outputs[name].type = type;
-        this._version++;
+        this.onGraphChanged({action: "changeOutputType"}); // this._version++;
         if (this.onOutputTypeChanged) {
             this.onOutputTypeChanged(name, type);
         }
@@ -2008,7 +2127,7 @@
             return false;
         }
         delete this.outputs[name];
-        this._version++;
+        this.onGraphChanged({action: "removeOutput"}); // this._version++;
 
         if (this.onOutputRemoved) {
             this.onOutputRemoved(name);
@@ -2055,7 +2174,7 @@
         if (this.onConnectionChange) {
             this.onConnectionChange(node);
         }
-        this._version++;
+        this.onGraphChanged({action: "connectionChange", doSave: false}); // this._version++;
         this.sendActionToCanvas("onConnectionChange");
     };
 
@@ -2110,18 +2229,195 @@
     };
 
     /**
+    * Ment to serve the history-saving mechanism
+    * @method onGraphSaved
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.onGraphSaved = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        this.savedVersion = this._version;
+    };
+    
+    /**
+    * Ment to serve the history-saving mechanism
+    * @method onGraphSaved
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.onGraphLoaded = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        this.savedVersion = this._version;
+    };
+    
+    /**
+    * Ment to be the history and prevent-exit mechanism, call to change _version
+    * @method onGraphChanged
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.onGraphChanged = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { action: ""
+                        ,doSave: true
+                        ,doSaveGraph: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        this._version++;
+        
+        /*if(opts.action){ // atlasan DEBUG REMOVE
+            console.debug("ACT: "+opts.action);
+        }else{
+            console.debug("ACT_noAction: "+opts);
+        }
+        if(opts.doSave){ // atlasan DEBUG REMOVE
+            console.debug("onGraphChanged SAVE :: "+opts.action);
+        }*/
+        
+        if(opts.doSave){
+
+            var oHistory = {   actionName: opts.action };
+            if(opts.doSaveGraph){
+                 oHistory  = Object.assign(oHistory
+                                           ,{   graphSave: this.serialize()  // this is a heavy method, but the alternative is way more complex: every action has to have its contrary
+                            });
+            }
+
+            var obH = this.history;
+
+            // check if pointer has gone back: remove newest
+            while(obH.actionHistoryPtr < obH.actionHistoryVersions.length-1){
+                //console.debug("popping: gone back? "+(obH.actionHistoryPtr+" < "+(obH.actionHistoryVersions.length-1))); // atlasan DEBUG REMOVE
+                obH.actionHistoryVersions.pop();
+            }
+            // check if maximum saves
+            if(obH.actionHistoryVersions.length>=LiteGraph.actionHistoryMaxSave){
+                var olderSave = obH.actionHistoryVersions.shift();
+                //console.debug("maximum saves reached: "+obH.actionHistoryVersions.length+", remove older: "+olderSave); // atlasan DEBUG REMOVE
+                obH.actionHistory[olderSave] = false; // unset
+            }
+
+            // update pointer
+            obH.actionHistoryPtr = obH.actionHistoryVersions.length;
+            obH.actionHistoryVersions.push(obH.actionHistoryPtr);
+
+            // save to pointer
+            obH.actionHistory[obH.actionHistoryPtr] = oHistory;
+            
+        }else{
+            // console.debug("action dont save"); // atlasan DEBUG REMOVE
+        }
+        
+    };
+    
+    /**
+    * Go back in action history
+    * @method actionHistoryBack
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.actionHistoryBack = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        var obH = this.history;
+        
+        if (obH.actionHistoryPtr != undefined && obH.actionHistoryPtr >= 0){
+            obH.actionHistoryPtr--;
+            if (!this.actionHistoryLoad({iVersion: obH.actionHistoryPtr})){
+                //console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr);
+                // history not found?
+                obH.actionHistoryPtr++;
+                return false;
+            }else{
+                //console.debug("history step back: "+obH.actionHistoryPtr); // atlasan DEBUG REMOVE
+                //console.debug(this.history);
+                return true;
+            }
+        }else{
+            console.debug("history is already at older state");
+            return false;
+        }
+    };
+    
+    /**
+    * Go forward in action history
+    * @method actionHistoryForward
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.actionHistoryForward = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        var obH = this.history;
+        
+        if (obH.actionHistoryPtr<obH.actionHistoryVersions.length){
+            obH.actionHistoryPtr++;
+            if (!this.actionHistoryLoad({iVersion: obH.actionHistoryPtr})){
+                //console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr);
+                // history not found?
+                obH.actionHistoryPtr--;
+                return false;
+            }else{
+                //console.debug("history step forward: "+obH.actionHistoryPtr); // atlasan DEBUG REMOVE
+                //console.debug(this.history);
+                return true;
+            }
+        }else{
+            console.debug("history is already at newer state");
+            return false;
+        }
+    };
+    
+    /**
+    * Load from action history
+    * @method actionHistoryLoad
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.actionHistoryLoad = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { iVersion: false
+                        ,backStep: false
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        var obH = this.history;
+        
+        if(obH.actionHistory[opts.iVersion] && obH.actionHistory[opts.iVersion].graphSave){
+            var tmpHistory = JSON.stringify(this.history);
+            this.configure( obH.actionHistory[opts.iVersion].graphSave );
+            this.history = JSON.parse(tmpHistory);
+            // no: this.onGraphLoaded();
+            return true;
+        }else{
+            return false;
+        }
+    };
+    
+    /**
      * Destroys a link
      * @method removeLink
      * @param {Number} link_id
      */
-    LGraph.prototype.removeLink = function(link_id) {
+    LGraph.prototype.removeLink = function(link_id) { /* ,optsIn */
         var link = this.links[link_id];
         if (!link) {
             return;
         }
         var node = this.getNodeById(link.target_id);
         if (node) {
-            node.disconnectInput(link.target_slot);
+            this.beforeChange();
+            node.disconnectInput(link.target_slot); /* , optsIn */
+            this.afterChange();
         }
     };
 
@@ -2245,7 +2541,7 @@
                 }
 
                 node.id = n_info.id; //id it or it will create a new id
-                this.add(node, true); //add before configure, otherwise configure cannot create links
+                this.add(node, true, {doProcessChange: false}); //add before configure, otherwise configure cannot create links
             }
 
             //configure nodes afterwards so they can reach each other
@@ -2264,7 +2560,7 @@
             for (var i = 0; i < data.groups.length; ++i) {
                 var group = new LiteGraph.LGraphGroup();
                 group.configure(data.groups[i]);
-                this.add(group);
+                this.add(group, true, {doProcessChange: false});
             }
         }
 
@@ -2275,7 +2571,13 @@
 		if(this.onConfigure)
 			this.onConfigure(data);
 
-        this._version++;
+        // atlasan: implement: when loading (configuring) a whole graph, skip calling graphChanged on every single configure
+        if (!data._version){
+            this.onGraphChanged({action: "configure", doSave: false}); // this._version++;
+        }else{
+            // skip
+            console.debug("skip onGraphChanged when configure passing version too!"); // atlasan DEBUG REMOVE
+        }
         this.setDirtyCanvas(true, true);
         return error;
     };
@@ -2474,7 +2776,7 @@
      */
     LGraphNode.prototype.configure = function(info) {
         if (this.graph) {
-            this.graph._version++;
+            this.graph.onGraphChanged({action: "nodeConfigure", doSave: false}); //this.graph._version++;
         }
         for (var j in info) {
             if (j == "properties") {
@@ -2801,6 +3103,59 @@
         }
     };
 
+    LGraphNode.prototype.refreshAncestors = function(optsIn){
+        var optsIn = optsIn || {};
+        var optsDef = { action: ""
+                        ,param: null
+                        ,options: null
+                        ,passParam: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        if (!this.inputs) {
+            return;
+        }
+        if (LiteGraph.preventAncestorRecalculation){
+            if (this.graph.node_ancestorsCalculated && this.graph.node_ancestorsCalculated[this.id]){
+                console.debug("NODE already calculated subtree! Prevent! "+this.id+":"+this.order);
+                return;
+            }
+        }
+        
+        if (!opts.action || opts.action == "") opts.action = this.id+"_ancestors";
+        if (!opts.param || opts.param == "") opts.param = this.id+"_ancestors";
+        if (!opts.options) opts.options = {};
+        opts.options = Object.assign({action_call: opts.action},opts.options);
+        
+        //console.debug("ancestors processing");
+        console.debug(this.id+":"+this.order+" "+opts.options.action_call);
+        
+        this.graph.ancestorsCall = true; // prevent triggering slots
+        
+        var optsAncestors = {   modesSkip: [LiteGraph.NEVER, LiteGraph.ON_EVENT, LiteGraph.ON_TRIGGER]
+                                ,modesOnly: [LiteGraph.ALWAYS, LiteGraph.ON_REQUEST]
+                                ,typesSkip: [LiteGraph.ACTION]
+                                ,typesOnly: []
+                             };
+        var aAncestors = this.graph.getAncestors(this,optsAncestors);
+        //console.log(aAncestors.length + " ancestors for "+this.id+":"+this.order); // atlasan debug REMOVE
+        for(iN in aAncestors){
+            //console.log(aAncestors[iN].order + " node in ancestors"); // atlasan debug REMOVE
+            aAncestors[iN].execute(opts.param, opts.options);
+            this.graph.node_ancestorsCalculated[aAncestors[iN].id] = true;
+        }
+          
+        this.graph.ancestorsCall = false; // restore triggering slots
+        
+        this.graph.node_ancestorsCalculated[this.id] = true;
+        
+        /*for(iI in this.inputs){
+            console.debug("refreshing ancestors for slot "+iI); // atlasan DEBUG REMOVE
+            this.getInputData(iI,true,true);  
+        }*/
+        return true;
+    }
+  
     /**
      * Retrieves the input data (data traveling through the connection) from one slot
      * @method getInputData
@@ -2808,7 +3163,7 @@
      * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
      * @return {*} data or if it is not connected returns undefined
      */
-    LGraphNode.prototype.getInputData = function(slot, force_update) {
+    LGraphNode.prototype.getInputData = function(slot, force_update, refresh_tree) {
         if (!this.inputs) {
             return;
         } //undefined;
@@ -2834,9 +3189,29 @@
             return link.data;
         }
 
+        /* atlasan: refactor: This is a basic, but seems working, version. Consider moving this out of here and use a single ancestorsCalculation (for each event?)
+         * */
+        if (refresh_tree){
+          //console.log("refresh tree!"); // atlasan debug REMOVE
+            /*var optsAncestors = {  modesSkip: [LiteGraph.NEVER, LiteGraph.ON_EVENT, LiteGraph.ON_TRIGGER]
+                                    ,modesOnly: [LiteGraph.ALWAYS, LiteGraph.ON_REQUEST]
+                                    ,typesSkip: [LiteGraph.ACTION]
+                                    ,typesOnly: []
+                                 };
+          var aAncestors = node.graph.getAncestors(node,optsAncestors);
+          for(iN in aAncestors){
+            //console.log(aAncestors[iN].order + " node in ancestors"); // atlasan debug REMOVE
+            aAncestors[iN].execute();
+          }*/
+            var uIdRand = this.id+"_getInputData_forced_"+Math.floor(Math.random()*9999);
+            var optsAncestors = {action: uIdRand, options:{action_call: uIdRand}};
+            this.refreshAncestors(optsAncestors);
+        }
+      
         if (node.updateOutputData) {
             node.updateOutputData(link.origin_slot);
         } else if (node.onExecute) {
+        //} else if (node.onExecute && node.mode == LiteGraph.ALWAYS) {
             //node.onExecute();
             node.execute();
         }
@@ -2970,20 +3345,18 @@
      * @return {*} value
      */
     LGraphNode.prototype.getInputOrProperty = function(name) {
-        if (!this.inputs || !this.inputs.length) {
-            return this.properties ? this.properties[name] : null;
-        }
-
-        for (var i = 0, l = this.inputs.length; i < l; ++i) {
-            var input_info = this.inputs[i];
-            if (name == input_info.name && input_info.link != null) {
-                var link = this.graph.links[input_info.link];
-                if (link) {
-                    return link.data;
+        if (this.inputs){
+            for (var i = 0, l = this.inputs.length; i < l; ++i) {
+                var input_info = this.inputs[i];
+                if (name == input_info.name && input_info.link != null) {
+                    var link = this.graph.links[input_info.link];
+                    if (link) {
+                        return link.data;
+                    }
                 }
             }
         }
-        return this.properties[name];
+        return this.properties ? this.properties[name] : null;
     };
 
     /**
@@ -3088,16 +3461,45 @@
         return r;
     };
 
+    LGraphNode.prototype.addOnTriggerInput = function(){
+        var trigS = this.findInputSlot("onTrigger");
+        if (!trigS || trigS == -1){
+            var input = this.addInput("onTrigger", LiteGraph.EVENT, {optional: true, nameLocked: true});
+            return this.findInputSlot("onTrigger");
+        }
+        return trigS;
+    }
+    
+    LGraphNode.prototype.addOnExecutedOutput = function(){
+        var trigS = this.findOutputSlot("onExecuted");
+        if (!trigS || trigS == -1){
+            var output = this.addOutput("onExecuted", LiteGraph.ACTION, {optional: true, nameLocked: true});
+            return this.findOutputSlot("onExecuted");
+        }
+        return trigS;
+    }
+    
+    LGraphNode.prototype.onAfterExecuteNode = function(param, options){
+        var trigS = this.findOutputSlot("onExecuted");
+        if (trigS != -1){
+            
+            console.debug(this.id+":"+this.order+" triggering slot onAfterExecute");
+            //console.debug(param);
+            console.debug(options);
+            this.triggerSlot(trigS, param, null, options);
+            
+        }
+    }    
+    
     LGraphNode.prototype.changeMode = function(modeTo){
         switch(modeTo){
             case LiteGraph.ON_EVENT:
+                // this.addOnExecutedOutput();
                 break;
                 
             case LiteGraph.ON_TRIGGER:
-                var trigS = this.findInputSlot("onTrigger");
-                if (!trigS || trigS == -1){
-                    var input = this.addInput("onTrigger", LiteGraph.EVENT );
-                }
+                this.addOnTriggerInput();
+                this.addOnExecutedOutput();
                 this.mode = LiteGraph.ON_TRIGGER;
                 break;
                 
@@ -3107,6 +3509,9 @@
             case LiteGraph.ALWAYS:
                 break;
                 
+            case LiteGraph.ON_REQUEST:
+                break;
+            
             default:
                 return false;
                 break;
@@ -3118,23 +3523,89 @@
     /**
      * Triggers the node code execution, place a boolean/counter to mark the node as being executed
      * @method execute
-     * @param {String} action name
      * @param {*} param
+     * @param {*} options
      */
     LGraphNode.prototype.execute = function(param, options) {
-        if (this.onExecute) this.onExecute(param);
-        this.execute_triggered = 2; // this is the nFrames it will be used (-- each step)
+        options = options || {};
+        if (this.onExecute){
+            
+            if (!options.action_call) options.action_call = this.id+"_exec_"+Math.floor(Math.random()*9999);
+            
+            if (this.graph.nodes_executing && this.graph.nodes_executing[this.id]){
+                console.debug("NODE already executing! Prevent! "+this.id+":"+this.order);
+                return;
+            }
+            if (LiteGraph.ensureNodeSingleExecution && this.exec_version && this.exec_version >= this.graph.iteration && this.exec_version !== undefined){
+                console.debug("!! NODE already EXECUTED THIS STEP !! "+this.exec_version);
+                return;
+            }
+            //console.debug("Actioned ? "+this.id+":"+this.order+" :: "+this.action_call);
+            if (LiteGraph.ensureUniqueExecutionAndActionCall){
+                //if(this.action_call && options && options.action_call && this.action_call == options.action_call){
+                if(this.graph.nodes_executedAction[this.id] && options && options.action_call && this.graph.nodes_executedAction[this.id] == options.action_call){
+                    console.debug("!! NODE already ACTION THIS STEP !! "+options.action_call);
+                    return;
+                }
+            }
+            
+            this.graph.nodes_executing[this.id] = true; //.push(this.id);
+            
+            this.onExecute(param);
+            
+            //console.debug(this.graph.nodes_executing.pop()+" << pop");
+            this.graph.nodes_executing[this.id] = false; //.pop();
+            
+            // save execution/action ref
+            this.exec_version = this.graph.iteration;
+            if(options && options.action_call){
+                this.action_call = options.action_call; // if (param)
+                this.graph.nodes_executedAction[this.id] = options.action_call;
+            }
+        }
+        this.execute_triggered = 2; // atlasan: refactor name: this is the nFrames it will be used (-- each step)
+        if(this.onAfterExecuteNode) this.onAfterExecuteNode(param, options);
     };
     
     /**
-     * Triggers an action, place a boolean/counter to mark the node as being actioned
+     * Triggers an action, wrapped by logics to control execution flow
      * @method actionDo
      * @param {String} action name
      * @param {*} param
      */
     LGraphNode.prototype.actionDo = function(action, param, options) {
-        if (this.onAction) this.onAction(action, param);
-        this.action_triggered = 2; // this is the nFrames it will be used (-- each step) 
+        options = options || {};
+        if (this.onAction){
+            
+            if (!options.action_call) options.action_call = this.id+"_"+(action?action:"action")+"_"+Math.floor(Math.random()*9999);
+            
+            if (LiteGraph.ensureNodeSingleAction){
+                if (this.graph.nodes_actioning && this.graph.nodes_actioning[this.id] == options.action_call){ // == action){
+                    console.debug("NODE already actioning! Prevent! "+this.id+":"+this.order+" :: "+options.action_call);
+                    return;
+                }
+            }
+            //console.debug("Actioned ? "+this.id+":"+this.order+" :: "+this.action_call);
+            if (LiteGraph.ensureUniqueExecutionAndActionCall){
+                //if(this.action_call && options && options.action_call && this.action_call == options.action_call){
+                if(this.graph.nodes_executedAction[this.id] && options && options.action_call && this.graph.nodes_executedAction[this.id] == options.action_call){
+                    console.debug("!! NODE already ACTION THIS STEP !! "+options.action_call);
+                    return;
+                }
+            }
+            this.graph.nodes_actioning[this.id] = (action?action:"actioning"); //.push(this.id);
+            
+            this.onAction(action, param, options);
+            
+            //console.debug(this.graph.nodes_actioning.pop()+" << pop");
+            this.graph.nodes_actioning[this.id] = false; //.pop();
+            
+            if(options && options.action_call){
+                this.action_call = options.action_call; // if (param)
+                this.graph.nodes_executedAction[this.id] = options.action_call;
+            }
+        }
+        this.action_triggered = 2; // atlasan: refactor name: just for visual feedback : this is the nFrames it will be used (-- each step) 
     };
     
     /**
@@ -3143,7 +3614,7 @@
      * @param {String} event name ( "on_play", ... ) if action is equivalent to false then the event is send to all
      * @param {*} param
      */
-    LGraphNode.prototype.trigger = function(action, param) {
+    LGraphNode.prototype.trigger = function(action, param, options) {
         if (!this.outputs || !this.outputs.length) {
             return;
         }
@@ -3155,7 +3626,7 @@
             var output = this.outputs[i];
             if ( !output || output.type !== LiteGraph.EVENT || (action && output.name != action) )
                 continue;
-            this.triggerSlot(i, param);
+            this.triggerSlot(i, param, null, options);
         }
     };
 
@@ -3166,11 +3637,12 @@
      * @param {*} param
      * @param {Number} link_id [optional] in case you want to trigger and specific output link in a slot
      */
-    LGraphNode.prototype.triggerSlot = function(slot, param, link_id) {
+    LGraphNode.prototype.triggerSlot = function(slot, param, link_id, options) {
+        options = options || {};
         if (!this.outputs) {
             return;
         }
-
+        
         var output = this.outputs[slot];
         if (!output) {
             return;
@@ -3180,7 +3652,13 @@
         if (!links || !links.length) {
             return;
         }
-
+        
+        // atlasan: some magic check (ancestors calls)
+        if (this.graph && this.graph.ancestorsCall){
+            console.debug("ancestors call, prevent triggering slot "+slot+" on "+this.id+":"+this.order);
+            return;
+        }
+        
         if (this.graph) {
             this.graph._last_trigger_time = LiteGraph.getTime();
         }
@@ -3204,14 +3682,13 @@
                 continue;
             }
 
-            //used to mark events in graph
-            var target_connection = node.inputs[link_info.target_slot];
-
-			if (node.mode === LiteGraph.ON_TRIGGER)
+            if (node.mode === LiteGraph.ON_TRIGGER)
 			{
+                if (!options.action_call) options.action_call = this.id+"_trigg_"+Math.floor(Math.random()*9999);
+                if (LiteGraph.refreshAncestorsOnTriggers) node.refreshAncestors({action: "trigger", param: param, options: options});
                 if (node.onExecute) {
                     //node.onExecute(param);
-                    node.execute(param);
+                    node.execute(param, options);
                 }
 			}
             /*else if (node.mode === LiteGraph.ON_EVENT)
@@ -3219,8 +3696,13 @@
                 // this probably expect to have onAction be SET
 			}*/
 			else if (node.onAction) {
+                if (!options.action_call) options.action_call = this.id+"_act_"+Math.floor(Math.random()*9999);
+                //pass the action name
+                var target_connection = node.inputs[link_info.target_slot];
+                console.debug("ACTION: "+this.id+":"+this.order+" :: "+target_connection.name);
+                if (LiteGraph.refreshAncestorsOnActions) node.refreshAncestors({action: target_connection.name, param: param, options:options});
                 //node.onAction(target_connection.name, param);
-                node.actionDo(target_connection.name, param);
+                node.actionDo(target_connection.name, param, options);
             }
         }
     };
@@ -3402,7 +3884,7 @@
      * @method addInput
      * @param {string} name
      * @param {string} type string defining the input type ("vec3","number",...), it its a generic one use 0
-     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, etc)
+     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, optional, etc)
      */
     LGraphNode.prototype.addInput = function(name, type, extra_info) {
         type = type || 0;
@@ -3465,8 +3947,8 @@
      * @method removeInput
      * @param {number} slot
      */
-    LGraphNode.prototype.removeInput = function(slot) {
-        this.disconnectInput(slot);
+    LGraphNode.prototype.removeInput = function(slot) { /* , optsIn */
+        this.disconnectInput(slot); /* , optsIn */
         var slot_info = this.inputs.splice(slot, 1);
         for (var i = slot; i < this.inputs.length; ++i) {
             if (!this.inputs[i]) {
@@ -3917,61 +4399,64 @@
     };
     
     /**
-     * returns the input slot with a given type, -1 if not found
-     * @method findInputSlotByType
-     * @param {string} type the type of the slot
-     * @param {boolean} returnObj if the obj itself wanted
-     * @param {boolean} preferFreeSlot if we want a free slot (if not found, will return the first of the type anyway)
-     * @return {number_or_object} the slot (-1 if not found)
+     * findSlotByType for INPUTS
      */
-    LGraphNode.prototype.findInputSlotByType = function(type, returnObj, preferFreeSlot) {
-        returnObj = returnObj || false;
-        preferFreeSlot = preferFreeSlot || false;
-        if (!this.inputs) {
-            return -1;
-        }
-        for (var i = 0, l = this.inputs.length; i < l; ++i) {
-            if (type == this.inputs[i].type) {
-                if (preferFreeSlot && this.inputs[i].link && this.inputs[i].link != null) continue;
-                return !returnObj ? i : this.inputs[i];
-            }
-        }
-        // if didnt find some, stop checking for free slots
-        if (preferFreeSlot){
-            for (var i = 0, l = this.inputs.length; i < l; ++i) {
-                if (type == this.inputs[i].type)
-                    return !returnObj ? i : this.inputs[i];
-            }
-        }
-        return -1;
+    LGraphNode.prototype.findInputSlotByType = function(type, returnObj, preferFreeSlot, doNotUseOccupied) {
+        return this.findSlotByType(true, type, returnObj, preferFreeSlot, doNotUseOccupied);
     };
 
     /**
-     * returns the output slot with a given type, -1 if not found
-     * @method findOutputSlotByType
+     * findSlotByType for OUTPUTS
+     */
+    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj, preferFreeSlot, doNotUseOccupied) {
+        return this.findSlotByType(false, type, returnObj, preferFreeSlot, doNotUseOccupied);
+    };
+    
+    /**
+     * returns the output (or input) slot with a given type, -1 if not found
+     * @method findSlotByType
+     * @param {boolean} input uise inputs instead of outputs
      * @param {string} type the type of the slot
      * @param {boolean} returnObj if the obj itself wanted
      * @param {boolean} preferFreeSlot if we want a free slot (if not found, will return the first of the type anyway)
      * @return {number_or_object} the slot (-1 if not found)
      */
-    LGraphNode.prototype.findOutputSlotByType = function(type, returnObj, preferFreeSlot) {
+    LGraphNode.prototype.findSlotByType = function(input, type, returnObj, preferFreeSlot, doNotUseOccupied) {
+        input = input || false;
         returnObj = returnObj || false;
         preferFreeSlot = preferFreeSlot || false;
-        if (!this.outputs) {
+        doNotUseOccupied = doNotUseOccupied || false;
+        var aSlots = input ? this.inputs : this.outputs;
+        if (!aSlots) {
             return -1;
         }
-        for (var i = 0, l = this.outputs.length; i < l; ++i) {
-            // console.debug(type+" "+this.outputs[i].type+" "+this.outputs[i].links); // atlasan debug REMOVE
-            if (type == this.outputs[i].type) {
-                if (preferFreeSlot && this.outputs[i].links && this.outputs[i].links !== null) continue;
-                return !returnObj ? i : this.outputs[i];
+        for (var i = 0, l = aSlots.length; i < l; ++i) {
+            // console.debug(type+" "+aSlots[i].type+" "+aSlots[i].links); // atlasan debug REMOVE
+            var tFound = false;
+            var aSource = (type+"").toLowerCase().split(",");
+            var aDest = (aSlots[i].type+"").toLowerCase().split(",");
+            for(sI=0;sI<aSource.length;sI++){
+                for(dI=0;dI<aDest.length;dI++){
+                    if (aSource[sI] == aDest[dI]) {
+                        if (preferFreeSlot && aSlots[i].links && aSlots[i].links !== null) continue;
+                        return !returnObj ? i : aSlots[i];
+                    }
+                }
             }
         }
         // if didnt find some, stop checking for free slots
-        if (preferFreeSlot){
-            for (var i = 0, l = this.outputs.length; i < l; ++i) {
-                if (type == this.outputs[i].type)
-                    return !returnObj ? i : this.outputs[i];
+        if (preferFreeSlot && !doNotUseOccupied){
+            for (var i = 0, l = aSlots.length; i < l; ++i) {
+                var tFound = false;
+                var aSource = (type+"").toLowerCase().split(",");
+                var aDest = (aSlots[i].type+"").toLowerCase().split(",");
+                for(sI=0;sI<aSource.length;sI++){
+                    for(dI=0;dI<aDest.length;dI++){
+                        if (aSource[sI] == aDest[dI]) {
+                            return !returnObj ? i : aSlots[i];
+                        }
+                    }
+                }
             }
         }
         return -1;
@@ -3985,7 +4470,12 @@
      * @param {string} target_type the input slot type of the target node
      * @return {Object} the link_info is created, otherwise null
      */
-    LGraphNode.prototype.connectByType = function(slot, target_node, target_slotType) {
+    LGraphNode.prototype.connectByType = function(slot, target_node, target_slotType, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { createEventInCase: true
+                        ,generalTypeInCase: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
         if (target_node && target_node.constructor === Number) {
             target_node = this.graph.getNodeById(target_node);
         }
@@ -3994,18 +4484,19 @@
             //console.debug("CONNbyTYPE type "+target_slotType+" for "+target_slot) // atlasan debug REMOVE
             return this.connect(slot, target_node, target_slot);
         }else{
-            // console.log("type "+target_slotType+" not found or not free?") // atlasan debug REMOVE
-            if (target_slotType == LiteGraph.EVENT){
+            //console.log("type "+target_slotType+" not found or not free?") // atlasan debug REMOVE
+            if (opts.createEventInCase && target_slotType == LiteGraph.EVENT){
+                // WILL CREATE THE onTrigger IN SLOT
                 return this.connect(slot, target_node, -1);
             }
-            if (target_slotType !== 0 && target_slotType !== "" && target_slotType !== "*"){
+            if (opts.generalTypeInCase && (target_slotType !== 0 && target_slotType !== "" && target_slotType !== "*")){
                 // connect TO a general type (*, 0), if not found the specific type
                 target_slot = target_node.findInputSlotByType(0, false, true);
                 if (target_slot >= 0 && target_slot !== null){
                     return this.connect(slot, target_node, target_slot);
                 }
             }else{
-                // console.debug("this is the case");
+                //console.debug("no way to connect "+target_slotType+" to "+target_node); // atlasan debug REMOVE
             }
             return null;
         }
@@ -4019,21 +4510,40 @@
      * @param {string} target_type the output slot type of the target node
      * @return {Object} the link_info is created, otherwise null
      */
-    LGraphNode.prototype.connectByTypeOutput = function(slot, source_node, source_slotType) {
+    LGraphNode.prototype.connectByTypeOutput = function(slot, source_node, source_slotType, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { createEventInCase: true
+                        ,firstFreeIfInputGeneralInCase: true
+                        ,generalTypeInCase: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
         if (source_node && source_node.constructor === Number) {
             source_node = this.graph.getNodeById(source_node);
         }
         source_slot = source_node.findOutputSlotByType(source_slotType, false, true);
         if (source_slot >= 0 && source_slot !== null){
-            console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
+            //console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot) // atlasan debug REMOVE
             return source_node.connect(source_slot, this, slot);
         }else{
             
-            // connecto to the first free output slot if not found a specific type and this input is general
-            if (source_slotType == 0 || source_slotType == "*" || source_slotType == ""){
-                var target_slot = source_node.findOutputSlotFree({typesNotAccepted: [LiteGraph.EVENT] });
-                if (target_slot >= 0){
-                    return source_node.connect(0, this, target_slot);
+            // connect to the first general output slot if not found a specific type and 
+            if (opts.generalTypeInCase){
+                var source_slot = source_node.findOutputSlotByType(0, false, true, true);
+                if (source_slot >= 0){
+                    return source_node.connect(source_slot, this, slot);
+                }
+            }
+            
+            if (opts.createEventInCase && source_slotType == LiteGraph.EVENT){
+                // WILL CREATE THE onExecuted OUT SLOT
+                var source_slot = source_node.addOnExecutedOutput();
+                return source_node.connect(source_slot, this, slot);
+            }
+            // connect to the first free output slot if not found a specific type and this input is general
+            if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "")){
+                var source_slot = source_node.findOutputSlotFree({typesNotAccepted: [LiteGraph.EVENT] });
+                if (source_slot >= 0){
+                    return source_node.connect(source_slot, this, slot);
                 }
             }
             
@@ -4102,7 +4612,7 @@
             }
         } else if (target_slot === LiteGraph.EVENT) {
             
-            //search for first slot with event?
+            //search for first slot with event? :: NO this is done outside
             
             //console.log("Connect: Creating triggerEvent");
             // force mode
@@ -4123,20 +4633,11 @@
 
 		var changed = false;
 
-        //if there is something already plugged there, disconnect
-        if (target_node.inputs[target_slot] && target_node.inputs[target_slot].link != null) {
-			this.graph.beforeChange();
-            target_node.disconnectInput(target_slot);
-			changed = true;
-        }
-
-        //why here??
-        //this.setDirtyCanvas(false,true);
-        //this.graph.connectionChange( this );
-
+        var input = target_node.inputs[target_slot];
+        var link_info = null;
         var output = this.outputs[slot];
+        
         if (!this.outputs[slot]){
-            asjdb;
             console.debug("Invalid slot passed: "+slot); // atlasan debug REMOVE
             console.debug(this.outputs);
             return null;
@@ -4148,9 +4649,12 @@
                 return null;
             }
         }
+        if (this.onConnectOutput) {
+            if ( this.onConnectOutput(slot, input.type, input, target_node, target_slot) === false ) {
+                return null;
+            }
+        }
 
-        var input = target_node.inputs[target_slot];
-        var link_info = null;
 
 		//this slots cannot be connected (different types)
         if (!LiteGraph.isValidConnection(output.type, input.type))
@@ -4161,15 +4665,30 @@
 			return null;
 		}
 
-		if(!changed)
+        //if there is something already plugged there, disconnect
+        if (target_node.inputs[target_slot] && target_node.inputs[target_slot].link != null) {
 			this.graph.beforeChange();
-
-        // console.debug("new link :: "+output.type+" : "+input.type); // atlasan debug REMOVE
+            target_node.disconnectInput(target_slot, {doProcessChange: false});
+			changed = true;
+        }
+        if (output.links !== null && output.links.length){
+            switch(output.type){
+                case LiteGraph.EVENT:
+                    if (!LiteGraph.allowMultiOutputForEvents){
+                        this.graph.beforeChange();
+                        this.disconnectOutput(slot, false, {doProcessChange: false}); // Input(target_slot, {doProcessChange: false});
+                        changed = true;
+                    }
+                break;
+                default:
+                break;
+            }
+        }
         
 		//create link class
 		link_info = new LLink(
 			++this.graph.last_link_id,
-			input.type || output.type, // atlasan edit :: check both output and input slot for type
+			input.type || output.type,
 			this.id,
 			slot,
 			target_node.id,
@@ -4186,9 +4705,7 @@
 		output.links.push(link_info.id);
 		//connect in input
 		target_node.inputs[target_slot].link = link_info.id;
-		if (this.graph) {
-			this.graph._version++;
-		}
+		
 		if (this.onConnectionsChange) {
 			this.onConnectionsChange(
 				LiteGraph.OUTPUT,
@@ -4224,6 +4741,8 @@
 			);
 		}
 
+        this.graph.onGraphChanged({action: "connect"}); //this.graph._version++;
+        
         this.setDirtyCanvas(false, true);
 		this.graph.afterChange();
 		this.graph.connectionChange(this, link_info);
@@ -4238,7 +4757,10 @@
      * @param {LGraphNode} target_node the target node to which this slot is connected [Optional, if not target_node is specified all nodes will be disconnected]
      * @return {boolean} if it was disconnected successfully
      */
-    LGraphNode.prototype.disconnectOutput = function(slot, target_node) {
+    LGraphNode.prototype.disconnectOutput = function(slot, target_node, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { doProcessChange: true };
+        var opts = Object.assign(optsDef,optsIn);
         if (slot.constructor === String) {
             slot = this.findOutputSlot(slot);
             if (slot == -1) {
@@ -4280,7 +4802,7 @@
                     input.link = null; //remove there
                     delete this.graph.links[link_id]; //remove the link from the links pool
                     if (this.graph) {
-                        this.graph._version++;
+                        this.graph.onGraphChanged({action: "disconnectOutput", doSave: opts.doProcessChange}); //this.graph._version++;
                     }
                     if (target_node.onConnectionsChange) {
                         target_node.onConnectionsChange(
@@ -4335,7 +4857,7 @@
                 var target_node = this.graph.getNodeById(link_info.target_id);
                 var input = null;
                 if (this.graph) {
-                    this.graph._version++;
+                    this.graph.onGraphChanged({action: "disconnectOutput", doSave: opts.doProcessChange}); //this.graph._version++;
                 }
                 if (target_node) {
                     input = target_node.inputs[link_info.target_slot];
@@ -4394,7 +4916,10 @@
      * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
      * @return {boolean} if it was disconnected successfully
      */
-    LGraphNode.prototype.disconnectInput = function(slot) {
+    LGraphNode.prototype.disconnectInput = function(slot, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { doProcessChange: true };
+        var opts = Object.assign(optsDef,optsIn);
         //seek for the output slot
         if (slot.constructor === String) {
             slot = this.findInputSlot(slot);
@@ -4444,7 +4969,7 @@
 
 				delete this.graph.links[link_id]; //remove from the pool
 				if (this.graph) {
-					this.graph._version++;
+					this.graph.onGraphChanged({action: "disconnectInput", doSave: opts.doProcessChange}); //this.graph._version++;
 				}
 				if (this.onConnectionsChange) {
 					this.onConnectionsChange(
@@ -4692,7 +5217,7 @@ LGraphNode.prototype.executeAction = function(action)
      * @method collapse
      **/
     LGraphNode.prototype.collapse = function(force) {
-        this.graph._version++;
+        this.graph.onGraphChanged({action: "collapse"}); //this.graph._version++;
         if (this.constructor.collapsable === false && !force) {
             return;
         }
@@ -4710,7 +5235,7 @@ LGraphNode.prototype.executeAction = function(action)
      **/
 
     LGraphNode.prototype.pin = function(v) {
-        this.graph._version++;
+        this.graph.onGraphChanged({action: "pin"}); //this.graph._version++;
         if (v === undefined) {
             this.flags.pinned = !this.flags.pinned;
         } else {
@@ -5102,13 +5627,14 @@ LGraphNode.prototype.executeAction = function(action)
         this.filter = null; //allows to filter to only accept some type of nodes in a graph
 
         // options
+        this.allow_addOutSlot_onExecuted = true;
         this.highquality_render = true;
         this.use_gradients = false; //set to true to render titlebar with gradients
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
 		this.read_only = false; //if set to true users cannot modify the graph
-        this.render_only_selected = true;
+        //this.render_only_selected = true; // refactor: not implemented
         this.live_mode = false;
         this.show_info = true;
         this.allow_dragcanvas = true;
@@ -5122,7 +5648,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_canvas_border = true;
         this.render_connections_shadows = false; //too much cpu
         this.render_connections_border = true;
-        this.render_curved_connections = false;
+        this.render_curved_connections = true;
         this.render_connection_arrows = false;
         this.render_collapsed_slots = true;
         this.render_execution_order = false;
@@ -5130,8 +5656,9 @@ LGraphNode.prototype.executeAction = function(action)
 		this.render_link_tooltip = true;
         this.links_render_mode = LiteGraph.SPLINE_LINK;
         
+        // atlasan: refactor: options object do need refactoring .. all the options are actually outside of it
         this.autoresize = options.autoresize;
-        
+        this.skip_render = options.skip_render;
         
         this.mouse = [0, 0]; //mouse in canvas coordinates, where 0,0 is the top-left corner of the blue rectangle
         this.graph_mouse = [0, 0]; //mouse in graph coordinates, where 0,0 is the top-left corner of the blue rectangle
@@ -5171,7 +5698,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.setCanvas(canvas);
         this.clear();
 
-        if (!options.skip_render) {
+        if (!this.skip_render) {
             this.startRendering();
         }
 
@@ -5786,6 +6313,7 @@ LGraphNode.prototype.executeAction = function(action)
                                 ) {
                                     this.connecting_node = node;
                                     this.connecting_output = output;
+                                    this.connecting_output.slot_index = i;
                                     this.connecting_pos = node.getConnectionPos( false, i );
                                     this.connecting_slot = i;
 
@@ -5856,7 +6384,9 @@ LGraphNode.prototype.executeAction = function(action)
                                             this.move_destination_link_without_shift ||
                                             e.shiftKey
                                         ) {
-                                            if (!LiteGraph.click_do_break_link_to) node.disconnectInput(i);
+                                            if (!LiteGraph.click_do_break_link_to){
+                                                node.disconnectInput(i);
+                                            }
                                             this.connecting_node = this.graph._nodes_by_id[
                                                 link_info.origin_id
                                             ];
@@ -5880,6 +6410,7 @@ LGraphNode.prototype.executeAction = function(action)
                                         // connect from in to out, from to to from // atlasan implemented
                                         this.connecting_node = node;
                                         this.connecting_input = input;
+                                        this.connecting_input.slot_index = i;
                                         this.connecting_pos = node.getConnectionPos( true, i );
                                         this.connecting_slot = i;
                                         
@@ -6324,14 +6855,15 @@ LGraphNode.prototype.executeAction = function(action)
 			this.block_click = false; //used to avoid sending twice a click in a immediate button
 		}
 
+        // switch on button
         if (e.which == 1) {
+            //left button
 
 			if( this.node_widget )
 			{
 				this.processNodeWidgets( this.node_widget[0], this.graph_mouse, e );
 			}
 
-            //left button
             this.node_widget = null;
 
             if (this.selected_group) {
@@ -6533,6 +7065,9 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 				if( this.onNodeMoved )
 					this.onNodeMoved( this.node_dragged );
+                
+                this.graph.onGraphChanged({action: "nodeDrag", doSave: true});
+                
 				this.graph.afterChange(this.node_dragged);
                 this.node_dragged = null;
                 
@@ -6797,6 +7332,14 @@ LGraphNode.prototype.executeAction = function(action)
             //collapse
             //...
 
+            // control Z, control Y, ctlrZ, ctlrY
+            if (e.keyCode == 89 && e.ctrlKey || (e.keyCode == 90 && e.ctrlKey && e.shiftKey)){
+                // Y
+                this.graph.actionHistoryForward();
+            }else if (e.keyCode == 90 && e.ctrlKey){
+                // Z
+                this.graph.actionHistoryBack();
+            }
             // console.debug("keydown "+e.keyCode); // atlasan debug REMOVE
             
             //TODO
@@ -6926,7 +7469,8 @@ LGraphNode.prototype.executeAction = function(action)
                 node.pos[0] += this.graph_mouse[0] - posMin[0]; //+= 5; // atlasan edit :: paste in last known mouse position
                 node.pos[1] += this.graph_mouse[1] - posMin[1]; //+= 5;
 
-                this.graph.add(node);
+                this.graph.add(node,{doProcessChange:false});
+                
                 nodes.push(node);
             }
         }
@@ -6944,6 +7488,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.selectNodes(nodes);
 
+        this.graph.onGraphChanged({action: "paste", doSave: true});
+        
 		this.graph.afterChange();
     };
 
@@ -7028,10 +7574,11 @@ LGraphNode.prototype.executeAction = function(action)
 				this.graph.beforeChange();
                 var node = LiteGraph.createNode(nodetype.type);
                 node.pos = [e.canvasX, e.canvasY];
-                this.graph.add(node);
+                this.graph.add(node, false, {doProcessChange: false});
                 if (node.onDropFile) {
                     node.onDropFile(file);
                 }
+                this.graph.onGraphChanged({action: "fileDrop", doSave: true});
 				this.graph.afterChange();
             }
         }
@@ -7219,8 +7766,18 @@ LGraphNode.prototype.executeAction = function(action)
         this.current_node = null;
         this.highlighted_links = {};
         this.setDirty(true);
+        
 		this.graph.afterChange();
     };
+    
+    /**
+     * connect TWO nodes looking for matching types
+     * @method autoConnectNodes
+     **/
+    // atlasan: implement: use connectByType (check all matching input-outputs?)
+    /*LGraphCanvas.prototype.autoConnectNodes = function(input_node, output_node){
+        
+    }*/
 
     /**
      * centers the camera on a given node
@@ -7702,7 +8259,7 @@ LGraphNode.prototype.executeAction = function(action)
 				var newnode = LiteGraph.createNode( type );
 				if(newnode)
 				{
-					subgraph.add( newnode );
+					subgraph.add( newnode, false, {doProcessChange: false} );
 					this.block_click = false;
 					this.last_click_position = null;
 					this.selectNodes([newnode]);
@@ -8582,7 +9139,7 @@ LGraphNode.prototype.executeAction = function(action)
                     var grad = LGraphCanvas.gradients[title_color];
                     if (!grad) {
                         grad = LGraphCanvas.gradients[ title_color ] = ctx.createLinearGradient(0, 0, 400, 0);
-                        grad.addColorStop(0, title_color);
+                        grad.addColorStop(0, title_color); // atlasan refactor: validate color !! prevent DOMException
                         grad.addColorStop(1, "#000");
                     }
                     ctx.fillStyle = grad;
@@ -10009,10 +10566,6 @@ LGraphNode.prototype.executeAction = function(action)
             }
         }
 
-        if (this.onMenuNodeInputs) {
-            entries = this.onMenuNodeInputs(entries);
-        }
-        // atlasan refactor: never used code, make a meaning
         if (node.onMenuNodeInputs) {
             var retEntries = node.onMenuNodeInputs(entries);
             if(retEntries) entries = retEntries;
@@ -10045,7 +10598,11 @@ LGraphNode.prototype.executeAction = function(action)
 
             if (v.value) {
 				node.graph.beforeChange();
-                node.addInput(v.value[0], v.value[1], v.value[2]);
+                
+                var slotOpts = {optional: true};
+                if (v.value[2]) slotOpts = Object.assign(slotOpts, v.value[2]);
+                
+                node.addInput(v.value[0], v.value[1], slotOpts);
                 if (node.onNodeInputAdd) { // atlasan: implement a callback to the node when adding a slot
                     node.onNodeInputAdd(v.value);
                 }
@@ -10109,6 +10666,11 @@ LGraphNode.prototype.executeAction = function(action)
         if (this.onMenuNodeOutputs) {
             entries = this.onMenuNodeOutputs(entries);
         }
+        if (canvas.allow_addOutSlot_onExecuted){
+            if (node.findOutputSlot("onExecuted") == -1){
+                entries.push({content: "On Executed", value: ["onExecuted", LiteGraph.EVENT, {nameLocked: true}], className: "event"}); //, opts: {}
+            }
+        }
         // atlasan refactor: never used code, make a meaning
         if (node.onMenuNodeOutputs) {
             var retEntries = node.onMenuNodeOutputs(entries);
@@ -10163,7 +10725,12 @@ LGraphNode.prototype.executeAction = function(action)
                 return false;
             } else {
 				node.graph.beforeChange();
-                node.addOutput(v.value[0], v.value[1], v.value[2]);
+                
+                var slotOpts = {optional: true};
+                if (v.value[2]) slotOpts = Object.assign(slotOpts, v.value[2]);
+                //if(v.opts) slotOpts = Object.assign(slotOpts, v.opts);
+                
+                node.addOutput(v.value[0], v.value[1], slotOpts);
                 if (node.onNodeOutputAdd) { // atlasan: implement a callback to the node when adding a slot
                     node.onNodeOutputAdd(v.value);
                 }
@@ -10277,8 +10844,10 @@ LGraphNode.prototype.executeAction = function(action)
 						if(!node.inputs || !node.inputs.length || !node.outputs || !node.outputs.length)
 							return;
 						//if( node_left.outputs[ link.origin_slot ].type == node.inputs[0].type && node.outputs[0].type == node_right.inputs[0].type ){
-							if (node_left.connectByType( link.origin_slot, node, link.origin_slot.type )){
-                                node.connectByType( link.target_slot, node_right, link.target_slot.type );
+                            var orType = node_left.outputs[link.origin_slot].type;
+                            var destType = node_right.inputs[link.target_slot].type;
+							if (node_left.connectByType( link.origin_slot, node, orType )){
+                                node.connectByType( link.target_slot, node_right, destType );
                                 node.pos[0] -= node.size[0] * 0.5;
                             }
 						//}
@@ -10770,7 +11339,7 @@ LGraphNode.prototype.executeAction = function(action)
                     selIn.appendChild(opt);
                     //console.debug("append "+opt.value); // atlasan debug REMOVE
                     //console.debug("check "+options.type_filter_in+" with "+aSlots[iK]); // atlasan debug REMOVE
-                    if(options.type_filter_in !==false && options.type_filter_in == aSlots[iK]){
+                    if(options.type_filter_in !==false && (options.type_filter_in+"").toLowerCase() == (aSlots[iK]+"").toLowerCase()){
                         //selIn.selectedIndex ..
                         opt.selected = true;
                     }
@@ -10794,7 +11363,7 @@ LGraphNode.prototype.executeAction = function(action)
                     opt.value = aSlots[iK];
                     opt.innerHTML = aSlots[iK];
                     selOut.appendChild(opt);
-                    if(options.type_filter_out !==false && options.type_filter_out == aSlots[iK]){
+                    if(options.type_filter_out !==false && (options.type_filter_out+"").toLowerCase() == (aSlots[iK]+"").toLowerCase()){
                         //selOut.selectedIndex ..
                         opt.selected = true;
                     }
@@ -10849,12 +11418,13 @@ LGraphNode.prototype.executeAction = function(action)
                     }
 
 					graphcanvas.graph.beforeChange();
+                    
                     var node = LiteGraph.createNode(name);
                     if (node) {
                         node.pos = graphcanvas.convertEventToCanvasOffset(
                             event
                         );
-                        graphcanvas.graph.add(node);
+                        graphcanvas.graph.add(node, false, {doProcessChange: false});
                     }
 
                     if (extra && extra.data) {
@@ -10888,8 +11458,9 @@ LGraphNode.prototype.executeAction = function(action)
                             node.configure(extra.data.json);
                         }
 
-						graphcanvas.graph.afterChange();
                     }
+                    
+                    graphcanvas.graph.onGraphChanged({action: "nodeAdd", doSave: true});
                     
                     // atlasan :: join node after inserting
                     if (options.node_from){
@@ -10899,17 +11470,22 @@ LGraphNode.prototype.executeAction = function(action)
                                 iS = options.node_from.findOutputSlot(options.slot_from);    
                             break;
                             case "object":
-                                iS = options.node_from.findOutputSlot(options.slot_from.name);    
+                                if (options.slot_from.name){
+                                    iS = options.node_from.findOutputSlot(options.slot_from.name);
+                                }else{
+                                    iS = -1;
+                                }
+                                if (iS==-1 && typeof options.slot_from.slot_index !== "undefined") iS = options.slot_from.slot_index;
                             break;
                             case "number":
-                                iS = options.slot_from
+                                iS = options.slot_from;
                             break;
                             default:
                                 iS = 0; // try with first if no name set
                         }
                         if (typeof options.node_from.outputs[iS] !== undefined){
                             if (iS!==false && iS>-1){
-                                //console.debug("search_conn ! try to "+iS+" "+node+" "+0); // atlasan debug REMOVE
+                                // console.debug("search_conn ! try to "+iS+" ("+(typeof options.slot_from)+") "+node+" "+options.node_from.outputs[iS].type); // atlasan debug REMOVE
                                 options.node_from.connectByType( iS, node, options.node_from.outputs[iS].type );
                             }
                         }else{
@@ -10923,23 +11499,30 @@ LGraphNode.prototype.executeAction = function(action)
                                 iS = options.node_to.findInputSlot(options.slot_from);    
                             break;
                             case "object":
-                                iS = options.node_to.findInputSlot(options.slot_from.name);    
+                                if (options.slot_from.name){
+                                    iS = options.node_to.findInputSlot(options.slot_from.name);
+                                }else{
+                                    iS = -1;
+                                }
+                                if (iS==-1 && typeof options.slot_from.slot_index !== "undefined") iS = options.slot_from.slot_index;
                             break;
                             case "number":
-                                iS = options.slot_from
+                                iS = options.slot_from;
                             break;
                             default:
                                 iS = 0; // try with first if no name set
                         }
                         if (typeof options.node_to.inputs[iS] !== undefined){
                             if (iS!==false && iS>-1){
-                                //console.debug("search_conn_nodeTO ! try to "+iS+" "+options.node_to.inputs[iS].type); // atlasan debug REMOVE
+                                // console.debug("search_conn_nodeTO ! try to "+iS+" "+options.node_to.inputs[iS].type); // atlasan debug REMOVE
                                 options.node_to.connectByTypeOutput(iS,node,options.node_to.inputs[iS].type);
                             }
                         }else{
                             console.warn("cant find slot_nodeTO " + options.slot_from); // atlasan debug REMOVE
                         }
                     }
+                    
+                    graphcanvas.graph.afterChange();
                 }
             }
 
@@ -11416,8 +11999,10 @@ LGraphNode.prototype.executeAction = function(action)
 
 		root.close = function()
 		{
-			this.parentNode.removeChild(this);
-            if (root.onClose && typeof root.onClose == "function") root.onClose();
+            if (root.onClose && typeof root.onClose == "function"){
+                root.onClose();
+            }
+            root.parentNode.removeChild(root);
 		}
 
         // function to swap panel content
@@ -11560,7 +12145,7 @@ LGraphNode.prototype.executeAction = function(action)
 
 			function innerChange(name, value)
 			{
-				console.log("widget change: ",name,value);
+				// console.log("widget change: ",name,value);
 				//that.dirty_canvas = true;
 				if(options.callback)
 					options.callback(name,value,options);
@@ -11678,8 +12263,8 @@ LGraphNode.prototype.executeAction = function(action)
             
             // panel.addWidget( "string", "Graph name", "", {}, fUpdate); // atlasan: implement: why not?
             
-            panel.addWidget( "boolean", "Render link arrows", graphcanvas.render_connection_arrows, {on: "True", off: "False"}, fUpdate);
             var aProps = LiteGraph.availableCanvasOptions;
+            aProps.sort();
             for(pI in aProps){
                 var pX = aProps[pI];
                 panel.addWidget( "boolean", pX, graphcanvas[pX], {key: pX, on: "True", off: "False"}, fUpdate);
@@ -12216,6 +12801,7 @@ LGraphNode.prototype.executeAction = function(action)
                 options[1].disabled = false;
             }
         }
+        if (this.allow_addOutSlot_onExecuted) options[1].disabled = false;
 
         if (node.getExtraMenuOptions) {
             var extra = node.getExtraMenuOptions(this, options);
@@ -12302,33 +12888,44 @@ LGraphNode.prototype.executeAction = function(action)
             } else {
                 if (
                     slot &&
-                    slot.output &&
-                    slot.output.links &&
-                    slot.output.links.length
+                    (
+                        (slot.output && slot.output.links && slot.output.links.length)
+                        || (slot.input && slot.input.link)
+                    )
                 ) {
                     menu_info.push({ content: "Disconnect Links", slot: slot });
                 }
                 var _slot = slot.input || slot.output;
-                menu_info.push(
-                    _slot.locked
-                        ? "Cannot remove"
-                        : { content: "Remove Slot", slot: slot }
-                );
-                menu_info.push(
-                    _slot.nameLocked
-                        ? "Cannot rename"
-                        : { content: "Rename Slot", slot: slot }
-                );
+                if (LiteGraph.canRemoveSlots){
+                    if (_slot.optional || !LiteGraph.canRemoveSlots_onlyOptional){
+                        menu_info.push(
+                            _slot.locked
+                                ? "Cannot remove"
+                                : { content: "Remove Slot", slot: slot }
+                        );
+                    }
+                }
+                if (LiteGraph.canRenameSlots){
+                    if (_slot.optional || !LiteGraph.canRenameSlots_onlyOptional){
+                        menu_info.push(
+                            _slot.nameLocked
+                                ? "Cannot rename"
+                                : { content: "Rename Slot", slot: slot }
+                        );
+                    }
+                }
     
             }
-            options.title =
-                (slot.input ? slot.input.type : slot.output.type) || "*";
-            if (slot.input && slot.input.type == LiteGraph.ACTION) {
+            
+            var slotOb = slot.input || slot.output;
+            options.title = slotOb.type || "*";
+            if (slotOb.type == LiteGraph.ACTION) {
                 options.title = "Action";
-            }
-            if (slot.output && slot.output.type == LiteGraph.EVENT) {
+            }else if (slotOb.type == LiteGraph.EVENT) {
                 options.title = "Event";
             }
+            // if(slotOb.name) options.title = slotOb.name + ": " + options.title;
+            
         } else {
             if (node) {
                 //on node
@@ -12368,19 +12965,23 @@ LGraphNode.prototype.executeAction = function(action)
 
             if (v.content == "Remove Slot") {
                 var info = v.slot;
+                node.graph.beforeChange();
                 if (info.input) {
                     node.removeInput(info.slot);
                 } else if (info.output) {
                     node.removeOutput(info.slot);
                 }
+                node.graph.afterChange();
                 return;
             } else if (v.content == "Disconnect Links") {
                 var info = v.slot;
+                node.graph.beforeChange();
                 if (info.output) {
                     node.disconnectOutput(info.slot);
                 } else if (info.input) {
                     node.disconnectInput(info.slot);
                 }
+                node.graph.afterChange();
                 return;
             } else if (v.content == "Rename Slot") {
                 var info = v.slot;
@@ -12398,6 +12999,7 @@ LGraphNode.prototype.executeAction = function(action)
                 dialog
                     .querySelector("button")
                     .addEventListener("click", function(e) {
+                        node.graph.beforeChange();
                         if (input.value) {
                             if (slot_info) {
                                 slot_info.label = input.value;
@@ -12405,6 +13007,7 @@ LGraphNode.prototype.executeAction = function(action)
                             that.setDirty(true);
                         }
                         dialog.close();
+                        node.graph.afterChange();
                     });
             }
 
