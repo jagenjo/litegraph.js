@@ -13296,7 +13296,7 @@ if (typeof exports != "undefined") {
     TriggerEvent.title = "TriggerEvent";
     TriggerEvent.desc = "Triggers event if input evaluates to true";
 
-    TriggerEvent.prototype.onExecute = function(action, param) {
+    TriggerEvent.prototype.onExecute = function(param, options) {
 		var v = this.getInputData(0);
 		var changed = (v != this.prev);
 		if(this.prev === 0)

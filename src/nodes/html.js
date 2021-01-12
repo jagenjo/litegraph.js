@@ -49,9 +49,12 @@
     }
     HtmlEventListener.title = "HTML Listener";
     HtmlEventListener.desc = "Add an event listener on an html element";
-    HtmlEventListener.prototype.onExecute = function(action, param, options){
+    HtmlEventListener.prototype.onExecute = function(param, options){
         // no code?
-        if (this.mode == LiteGraph.ON_TRIGGER) this.onAction(action, param, options);
+        if (this.mode == LiteGraph.ON_TRIGGER){
+            action = this.id+"_"+(action?action:"action")+"_exectoact_"+Math.floor(Math.random()*9999);
+            this.onAction(action, param, options);
+        }
         else this.setOutputData(3,null);
     }
     HtmlEventListener.prototype.onAction = function(action, param, options){
@@ -94,9 +97,12 @@
     }
     HtmlEventListenerRemove.title = "HTML Remove Listener";
     HtmlEventListenerRemove.desc = "Remove an event listener by passing his reference";
-    HtmlEventListenerRemove.prototype.onExecute = function(action, param, options){
+    HtmlEventListenerRemove.prototype.onExecute = function(param, options){
         // no code?
-        if (this.mode == LiteGraph.ON_TRIGGER) this.onAction(action, param, options);
+        if (this.mode == LiteGraph.ON_TRIGGER){
+            action = this.id+"_"+(action?action:"action")+"_exectoact_"+Math.floor(Math.random()*9999);
+            this.onAction(action, param, options);
+        }
     }
     HtmlEventListenerRemove.prototype.onAction = function(action, param, options){
         var oLis = this.getInputData(0);
@@ -121,7 +127,7 @@
     }
     HtmlValue.title = "HTML GET Value";
     HtmlValue.desc = "Get the value (or the text content) of an HTML element";
-    HtmlValue.prototype.onExecute = function(action, param, options){
+    HtmlValue.prototype.onExecute = function(param, options){
         var el = this.getInputData(0);
         var res = false;
         if (el){
@@ -157,7 +163,7 @@
     }
     HtmlValueSet.title = "HTML SET Value";
     HtmlValueSet.desc = "Set the value (or the text content) of an HTML element";
-    HtmlValueSet.prototype.onExecute = function(action, param, options){
+    HtmlValueSet.prototype.onExecute = function(param, options){
         //if (this.mode == LiteGraph.ON_TRIGGER) this.onAction(action, param, options);
         var el = this.getInputData(0);
         var sVal = this.getInputOrProperty("value"); //getInputData(1);
@@ -204,9 +210,12 @@
     }
     HtmlCreateElement.title = "HTML Create El";
     HtmlCreateElement.desc = "Create an HTML element";
-    HtmlCreateElement.prototype.onExecute = function(action, param, options){
+    HtmlCreateElement.prototype.onExecute = function(param, options){
         // no code?
-        if (this.mode == LiteGraph.ON_TRIGGER) this.onAction(action, param, options);
+        if (this.mode == LiteGraph.ON_TRIGGER){
+            action = this.id+"_"+(action?action:"action")+"_exectoact_"+Math.floor(Math.random()*9999);
+            this.onAction(action, param, options);
+        }
     }
     HtmlCreateElement.prototype.onAction = function(action, param, options){
         var sType = this.getInputOrProperty("type"); //this.getInputData(1);
@@ -237,9 +246,12 @@
     }
     HtmlAppendChild.title = "HTML Append Child";
     HtmlAppendChild.desc = "Append an HTML element to another";
-    HtmlAppendChild.prototype.onExecute = function(action, param, options){
+    HtmlAppendChild.prototype.onExecute = function(param, options){
         // no code?
-        if (this.mode == LiteGraph.ON_TRIGGER) this.onAction(action, param, options);
+        if (this.mode == LiteGraph.ON_TRIGGER){
+            action = this.id+"_"+(action?action:"action")+"_exectoact_"+Math.floor(Math.random()*9999);
+            this.onAction(action, param, options);
+        }
     }
     HtmlAppendChild.prototype.onAction = function(action, param, options){
         var parent = this.getInputData(0);
@@ -263,9 +275,12 @@
     }
     HtmlRemoveElement.title = "HTML Remove element";
     HtmlRemoveElement.desc = "Remove an HTML element";
-    HtmlRemoveElement.prototype.onExecute = function(action, param, options){
+    HtmlRemoveElement.prototype.onExecute = function(param, options){
         // no code?
-        if (this.mode == LiteGraph.ON_TRIGGER) this.onAction(action, param, options);
+        if (this.mode == LiteGraph.ON_TRIGGER){
+            action = this.id+"_"+(action?action:"action")+"_exectoact_"+Math.floor(Math.random()*9999);
+            this.onAction(action, param, options);
+        }
     }
     HtmlRemoveElement.prototype.onAction = function(action, param, options){
         var element = this.getInputData(0);
@@ -278,9 +293,6 @@
         this.setOutputData(0,res);
     }
     LiteGraph.registerNodeType("html/remove_element", HtmlRemoveElement);
-    
-    
-    
     
     
 })(this);

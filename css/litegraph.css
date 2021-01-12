@@ -578,6 +578,7 @@
 }
 
 .graphdialog input,
+.graphdialog textarea,
 .graphdialog select {
     margin: 3px;
     min-width: 60px;
@@ -589,9 +590,15 @@
     outline: none;
 }
 
+.graphdialog textarea {
+	min-height: 150px;
+}
+
 .graphdialog button {
     margin-top: 3px;
     vertical-align: top;
+    background-color: #999;
+	border: 0;
 }
 
 .graphdialog button.rounded,

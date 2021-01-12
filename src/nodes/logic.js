@@ -189,7 +189,7 @@
     }
     logicBranch.title = "Branch";
     logicBranch.desc = "Branch execution on condition";
-    logicBranch.prototype.onExecute = function(action, param, options) {
+    logicBranch.prototype.onExecute = function(param, options) {
         var condtition = this.getInputData(1);
         if (condtition){
             this.triggerSlot(0);

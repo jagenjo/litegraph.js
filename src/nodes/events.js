@@ -31,7 +31,7 @@
     TriggerEvent.title = "TriggerEvent";
     TriggerEvent.desc = "Triggers event if input evaluates to true";
 
-    TriggerEvent.prototype.onExecute = function(action, param, options) {
+    TriggerEvent.prototype.onExecute = function( param, options) {
 		var v = this.getInputData(0);
 		var changed = (v != this.prev);
 		if(this.prev === 0)
@@ -69,7 +69,9 @@
 
     Sequencer.prototype.onAction = function(action, param, options) {
         if (this.outputs) {
+            options = options || {};
             for (var i = 0; i < this.outputs.length; ++i) {
+                options.action_call = options.action_call?options.action_call+"_seq_"+i:this.id+"_"+(action?action:"action")+"_seq_"+i+"_"+Math.floor(Math.random()*9999);
                 this.triggerSlot(i, param, null, options);
             }
         }
@@ -221,7 +223,7 @@
         }
     };
 
-    DelayEvent.prototype.onExecute = function(action, param, options) {
+    DelayEvent.prototype.onExecute = function(param, options) {
         var dt = this.graph.elapsed_time * 1000; //in ms
 
         if (this.isInputConnected(1)) {
