@@ -961,7 +961,7 @@
 
     LGraph.prototype.attachCanvas = function(graphcanvas) {
         //if (graphcanvas.constructor != LGraphCanvas) {
-        if ( ! graphcanvas.constructor.prototype instanceof LGraphCanvas ) {
+        if ( ! graphcanvas instanceof LGraphCanvas ) {
             throw "attachCanvas expects a LGraphCanvas instance";
         }
         if (graphcanvas.graph && graphcanvas.graph != this) {
@@ -8637,15 +8637,15 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.save();
             ctx.beginPath();
             if (shape == LiteGraph.BOX_SHAPE) {
-                ctx.rect(0, -LiteGraph.NODE_TITLE_HEIGHT, size[0], size[1]+LiteGraph.NODE_TITLE_HEIGHT);
+                ctx.rect(-6.5, -6.5-LiteGraph.NODE_TITLE_HEIGHT, size[0]+14, size[1]+13+LiteGraph.NODE_TITLE_HEIGHT);
             } else if (shape == LiteGraph.ROUND_SHAPE) {
-                ctx.roundRect(0, 0, size[0], size[1], 10);
+                ctx.roundRect(-6.5, -6.5, size[0]+14, size[1]+13, 10);
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
                     size[0] * 0.5,
                     size[1] * 0.5,
                     size[0] * 0.5,
-                    0,
+                    0 + 6.5,
                     Math.PI * 2
                 );
             }
