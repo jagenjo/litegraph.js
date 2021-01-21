@@ -599,6 +599,7 @@ export declare class LGraphNode {
     graph_version: number;
     pos: Vector2;
     is_selected: boolean;
+    mouseOver: boolean;
 
     id: number;
 
