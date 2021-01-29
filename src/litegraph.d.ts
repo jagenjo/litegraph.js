@@ -645,6 +645,8 @@ export declare class LGraphNode {
     resizable: boolean;
     /** slots are distributed horizontally */
     horizontal: boolean;
+    /** if true, the node will show the bgcolor as 'red'  */
+    has_errors?: boolean;
 
     /** configure a node from an object containing the serialized info */
     configure(info: SerializedLGraphNode): void;
