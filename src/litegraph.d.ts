@@ -1005,6 +1005,15 @@ export declare class LGraphNode {
         ioSlot: (INodeOutputSlot | INodeInputSlot)
     ): void;                           
 
+    /**
+     * if returns false, will abort the `LGraphNode.setProperty`
+     * Called when a property is changed
+     * @param property
+     * @param value
+     * @param prevValue
+     */
+    onPropertyChanged?(property: string, value: any, prevValue: any): void | boolean;
+
     /** Called by `LGraphCanvas.processContextMenu` */
     getMenuOptions?(graphCanvas: LGraphCanvas): ContextMenuItem[];
     getSlotMenuOptions?(slot: INodeSlot): ContextMenuItem[];
