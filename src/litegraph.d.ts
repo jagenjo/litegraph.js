@@ -860,7 +860,7 @@ export declare class LGraphNode {
      * @param target_node the target node to which this slot is connected [Optional, if not target_node is specified all nodes will be disconnected]
      * @return if it was disconnected successfully
      */
-    disconnectOutput(slot: number | string, targetNode: LGraphNode): boolean;
+    disconnectOutput(slot: number | string, targetNode?: LGraphNode): boolean;
     /**
      * disconnect one input
      * @param slot (could be the number of the slot or the string with the name of the slot)
