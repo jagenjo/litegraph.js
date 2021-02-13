@@ -599,6 +599,7 @@ export declare class LGraphNode {
     graph_version: number;
     pos: Vector2;
     is_selected: boolean;
+    mouseOver: boolean;
 
     id: number;
 
@@ -645,6 +646,8 @@ export declare class LGraphNode {
     resizable: boolean;
     /** slots are distributed horizontally */
     horizontal: boolean;
+    /** if true, the node will show the bgcolor as 'red'  */
+    has_errors?: boolean;
 
     /** configure a node from an object containing the serialized info */
     configure(info: SerializedLGraphNode): void;
@@ -740,7 +743,7 @@ export declare class LGraphNode {
         name: string,
         type: string | -1,
         extra_info?: Partial<INodeOutputSlot>
-    ): void;
+    ): INodeOutputSlot;
     /**
      * add a new output slot to use in this node
      * @param array of triplets like [[name,type,extra_info],[...]]
@@ -760,7 +763,7 @@ export declare class LGraphNode {
         name: string,
         type: string | -1,
         extra_info?: Partial<INodeInputSlot>
-    ): void;
+    ): INodeInputSlot;
     /**
      * add several new input slots in this node
      * @param array of triplets like [[name,type,extra_info],[...]]
@@ -858,7 +861,7 @@ export declare class LGraphNode {
      * @param target_node the target node to which this slot is connected [Optional, if not target_node is specified all nodes will be disconnected]
      * @return if it was disconnected successfully
      */
-    disconnectOutput(slot: number | string, targetNode: LGraphNode): boolean;
+    disconnectOutput(slot: number | string, targetNode?: LGraphNode): boolean;
     /**
      * disconnect one input
      * @param slot (could be the number of the slot or the string with the name of the slot)
@@ -953,13 +956,34 @@ export declare class LGraphNode {
     /**
      * if returns false the incoming connection will be canceled
      * Called by `LGraph.connect`
+     * @param inputIndex target input slot number
+     * @param outputType type of output slot
+     * @param outputSlot output slot object
+     * @param outputNode node containing the output
+     * @param outputIndex index of output slot
      */
     onConnectInput?(
         inputIndex: number,
-        type: INodeOutputSlot["type"],
+        outputType: INodeOutputSlot["type"],
         outputSlot: INodeOutputSlot,
-        _this: this,
-        slotIndex: number
+        outputNode: LGraphNode,
+        outputIndex: number
+    ): boolean;
+    /**
+     * if returns false the incoming connection will be canceled
+     * Called by `LGraph.connect`
+     * @param outputIndex target output slot number
+     * @param inputType type of input slot
+     * @param inputSlot input slot object
+     * @param inputNode node containing the input
+     * @param inputIndex index of input slot
+     */
+    onConnectOutput?(
+        outputIndex: number,
+        inputType: INodeInputSlot["type"],
+        inputSlot: INodeInputSlot,
+        inputNode: LGraphNode,
+        inputIndex: number
     ): boolean;
 
     /**
@@ -981,6 +1005,15 @@ export declare class LGraphNode {
         link: LLink,
         ioSlot: (INodeOutputSlot | INodeInputSlot)
     ): void;                           
+
+    /**
+     * if returns false, will abort the `LGraphNode.setProperty`
+     * Called when a property is changed
+     * @param property
+     * @param value
+     * @param prevValue
+     */
+    onPropertyChanged?(property: string, value: any, prevValue: any): void | boolean;
 
     /** Called by `LGraphCanvas.processContextMenu` */
     getMenuOptions?(graphCanvas: LGraphCanvas): ContextMenuItem[];

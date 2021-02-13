@@ -1365,6 +1365,8 @@
             return;
         } //cannot be removed
 
+		this.beforeChange(); //sure?
+
         //disconnect inputs
         if (node.inputs) {
             for (var i = 0; i < node.inputs.length; i++) {
@@ -1423,6 +1425,7 @@
 		this.sendActionToCanvas("checkPanels");
 
         this.setDirtyCanvas(true, true);
+		this.afterChange(); //sure?
         this.change();
 
         this.updateExecutionOrder();
@@ -8622,6 +8625,7 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.strokeStyle = outline_color;
             ctx.fillStyle = "#222";
             ctx.textAlign = "left";
+			//ctx.lineWidth = 2;
 			if(w.disabled)
 				ctx.globalAlpha *= 0.5;
 			var widget_width = w.width || width;
@@ -8769,13 +8773,15 @@ LGraphNode.prototype.executeAction = function(action)
 					else
 	                    ctx.rect( margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
-                    if (show_text) {
-						ctx.save();
+	                if (show_text) {
+						if(!w.disabled)
+							ctx.stroke();
+    					ctx.save();
 						ctx.beginPath();
 						ctx.rect(margin, posY, widget_width - margin * 2, H);
 						ctx.clip();
 
-	                    ctx.stroke();
+	                    //ctx.stroke();
                         ctx.fillStyle = secondary_text_color;
                         if (w.name != null) {
                             ctx.fillText(w.name, margin * 2, y + H * 0.7);
@@ -8850,10 +8856,8 @@ LGraphNode.prototype.executeAction = function(action)
 					break;
 				case "slider":
 					var range = w.options.max - w.options.min;
-					var nvalue = Math.clamp((x - 10) / (widget_width - 20), 0, 1);
-					w.value =
-						w.options.min +
-						(w.options.max - w.options.min) * nvalue;
+					var nvalue = Math.clamp((x - 15) / (widget_width - 30), 0, 1);
+					w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
 					if (w.callback) {
 						setTimeout(function() {
 							inner_value_change(w, w.value);
@@ -8963,7 +8967,7 @@ LGraphNode.prototype.executeAction = function(action)
 								this.value = v;
 								inner_value_change(this, v);
 							}.bind(w),
-							event);
+							event,w.options ? w.options.multiline : false );
 					}
 					break;
 				default:
@@ -9176,58 +9180,74 @@ LGraphNode.prototype.executeAction = function(action)
         canvas.graph.add(group);
     };
 
-    LGraphCanvas.onMenuAdd = function(node, options, e, prev_menu, callback) {
+    LGraphCanvas.onMenuAdd = function (node, options, e, prev_menu, callback) {
+
         var canvas = LGraphCanvas.active_canvas;
         var ref_window = canvas.getCanvasWindow();
-		var graph = canvas.graph;
-		if(!graph)
-			return;
+        var graph = canvas.graph;
+        if (!graph)
+            return;
 
-        var values = LiteGraph.getNodeTypesCategories( canvas.filter || graph.filter );
-        var entries = [];
-        for (var i=0; i < values.length; i++) {
-            if (values[i]) {
-				var name = values[i];
-				if(name.indexOf("::") != -1) //in case it has a namespace like "shader::math/rand" it hides the namespace
-					name = name.split("::")[1];
-                entries.push({ value: values[i], content: name, has_submenu: true });
-            }
-        }
-
-        //show categories
-        var menu = new LiteGraph.ContextMenu( entries, { event: e, callback: inner_clicked, parentMenu: prev_menu }, ref_window );
-
-        function inner_clicked(v, option, e) {
-            var category = v.value;
-            var node_types = LiteGraph.getNodeTypesInCategory( category, canvas.filter || graph.filter );
-            var values = [];
-            for (var i=0; i < node_types.length; i++) {
-                if (!node_types[i].skip_list) {
-                    values.push({
-                        content: node_types[i].title,
-                        value: node_types[i].type
-                    });
+        function inner_onMenuAdded(base_category ,prev_menu){
+    
+            var categories  = LiteGraph.getNodeTypesCategories(canvas.filter || graph.filter).filter(function(category){return category.startsWith(base_category)});
+            var entries = [];
+    
+            categories.map(function(category){
+    
+                if (!category) 
+                    return;
+    
+                var base_category_regex = new RegExp('^(' + base_category + ')');
+                var category_name = category.replace(base_category_regex,"").split('/')[0];
+                var category_path = base_category  === '' ? category_name + '/' : base_category + category_name + '/';
+    
+                var name = category_name;
+                if(name.indexOf("::") != -1) //in case it has a namespace like "shader::math/rand" it hides the namespace
+                    name = name.split("::")[1];
+                        
+                var index = entries.findIndex(function(entry){return entry.value === category_path});
+                if (index === -1) {
+                    entries.push({ value: category_path, content: name, has_submenu: true, callback : function(value, event, mouseEvent, contextMenu){
+                        inner_onMenuAdded(value.value, contextMenu)
+                    }});
                 }
-            }
-
-            new LiteGraph.ContextMenu( values, { event: e, callback: inner_create, parentMenu: menu }, ref_window );
-            return false;
+                
+            });
+    
+            var nodes = LiteGraph.getNodeTypesInCategory(base_category.slice(0, -1), canvas.filter || graph.filter );
+            nodes.map(function(node){
+    
+                if (node.skip_list)
+                    return;
+    
+                var entry = { value: node.type, content: node.title, has_submenu: false , callback : function(value, event, mouseEvent, contextMenu){
+                    
+                        var first_event = contextMenu.getFirstEvent();
+                        canvas.graph.beforeChange();
+                        var node = LiteGraph.createNode(value.value);
+                        if (node) {
+                            node.pos = canvas.convertEventToCanvasOffset(first_event);
+                            canvas.graph.add(node);
+                        }
+                        if(callback)
+                            callback(node);
+                        canvas.graph.afterChange();
+                    
+                    }
+                }
+    
+                entries.push(entry);
+    
+            });
+    
+            new LiteGraph.ContextMenu( entries, { event: e, parentMenu: prev_menu }, ref_window );
+    
         }
-
-        function inner_create(v, e) {
-            var first_event = prev_menu.getFirstEvent();
-			canvas.graph.beforeChange();
-            var node = LiteGraph.createNode(v.value);
-            if (node) {
-                node.pos = canvas.convertEventToCanvasOffset(first_event);
-                canvas.graph.add(node);
-            }
-			if(callback)
-				callback(node);
-			canvas.graph.afterChange();
-        }
-
+    
+        inner_onMenuAdded('',prev_menu);
         return false;
+    
     };
 
     LGraphCanvas.onMenuCollapseAll = function() {};
@@ -9550,18 +9570,18 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialog = document.createElement("div");
         dialog.className = "graphdialog";
-        dialog.innerHTML =
-            "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
+        dialog.innerHTML = "<span class='name'></span><input autofocus type='text' class='value'/><button>OK</button>";
+		//dialog.innerHTML = "<span class='name'></span><textarea autofocus class='value'></textarea><button>OK</button>";
         var title = dialog.querySelector(".name");
         title.innerText = property;
-        var input = dialog.querySelector("input");
+        var input = dialog.querySelector(".value");
         if (input) {
             input.value = value;
             input.addEventListener("blur", function(e) {
                 this.focus();
             });
             input.addEventListener("keydown", function(e) {
-                if (e.keyCode != 13) {
+                if (e.keyCode != 13 && e.target.localName != "textarea") {
                     return;
                 }
                 inner();
@@ -9611,7 +9631,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
     };
 
-    LGraphCanvas.prototype.prompt = function(title, value, callback, event) {
+    LGraphCanvas.prototype.prompt = function(title, value, callback, event, multiline) {
         var that = this;
         var input_html = "";
         title = title || "";
@@ -9620,8 +9640,10 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dialog = document.createElement("div");
         dialog.className = "graphdialog rounded";
-        dialog.innerHTML =
-            "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
+		if(multiline)
+	        dialog.innerHTML = "<span class='name'></span> <textarea autofocus class='value'></textarea><button class='rounded'>OK</button>";
+		else
+	        dialog.innerHTML = "<span class='name'></span> <input autofocus type='text' class='value'/><button class='rounded'>OK</button>";
         dialog.close = function() {
             that.prompt_box = null;
             if (dialog.parentNode) {
@@ -9653,13 +9675,13 @@ LGraphNode.prototype.executeAction = function(action)
         var value_element = dialog.querySelector(".value");
         value_element.value = value;
 
-        var input = dialog.querySelector("input");
+        var input = value_element;
         input.addEventListener("keydown", function(e) {
             modified = true;
             if (e.keyCode == 27) {
                 //ESC
                 dialog.close();
-            } else if (e.keyCode == 13) {
+            } else if (e.keyCode == 13 && e.target.localName != "textarea") {
                 if (callback) {
                     callback(this.value);
                 }
