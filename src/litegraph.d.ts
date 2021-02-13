@@ -534,6 +534,8 @@ export declare class LGraph {
     removeOutput(name: string): boolean;
     triggerInput(name: string, value: any): void;
     setCallback(name: string, func: (...args: any[]) => any): void;
+    beforeChange(info: LGraphNode): void;
+    afterChange(info: LGraphNode): void;                       
     connectionChange(node: LGraphNode): void;
     /** returns if the graph is in live mode */
     isLive(): boolean;
