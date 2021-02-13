@@ -1466,7 +1466,7 @@ declare class ContextMenu {
     ): void;
     static isCursorOverElement(event: MouseEvent, element: HTMLElement): void;
     static closeAllContextMenus(window: Window): void;
-    constructor(values: ContextMenuItem[], options?: IContextMenuOptions);
+    constructor(values: ContextMenuItem[], options?: IContextMenuOptions, window?: Window);
     options: IContextMenuOptions;
     parentMenu?: ContextMenu;
     lock: boolean;
