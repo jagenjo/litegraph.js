@@ -351,6 +351,7 @@ export declare class LGraph {
 
     constructor(o?: object);
 
+    filter: string;
     catch_errors: boolean;
     /** custom data */
     config: object;
