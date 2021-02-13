@@ -284,19 +284,23 @@ export const LiteGraph: {
 
     /**
      * Returns a list of node types matching one category
-     * @param category category name
-     * @return array with all the node classes
+     * @method getNodeTypesInCategory
+     * @param {String} category category name
+     * @param {String} filter only nodes with ctor.filter equal can be shown
+     * @return {Array} array with all the node classes
      */
     getNodeTypesInCategory(
         category: string,
-        filter: any
+        filter: string
     ): LGraphNodeConstructor[];
 
     /**
      * Returns a list with all the node type categories
-     * @return array with all the names of the categories
-     */
-    getNodeTypesCategories(): string[];
+     * @method getNodeTypesCategories
+     * @param {String} filter only nodes with ctor.filter equal can be shown
+     * @return {Array} array with all the names of the categories
+     */                           
+    getNodeTypesCategories(filter: string): string[];
 
     /** debug purposes: reloads all the js scripts that matches a wildcard */
     reloadNodes(folder_wildcard: string): void;
@@ -1125,6 +1129,8 @@ export declare class LGraphCanvas {
         }
     );
 
+    static active_canvas: HTMLCanvasElement;
+                           
     allow_dragcanvas: boolean;
     allow_dragnodes: boolean;
     /** allow to control widgets, buttons, collapse, etc */
