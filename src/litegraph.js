@@ -4683,6 +4683,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
         this.allow_searchbox = true;
         this.allow_reconnect_links = false; //allows to change a connection with having to redo it again
+		this.align_to_grid = false; //snap to grid
 
         this.drag_mode = false;
         this.dragging_rectangle = null;
@@ -5973,7 +5974,7 @@ LGraphNode.prototype.executeAction = function(action)
                 this.dirty_bgcanvas = true;
                 this.node_dragged.pos[0] = Math.round(this.node_dragged.pos[0]);
                 this.node_dragged.pos[1] = Math.round(this.node_dragged.pos[1]);
-                if (this.graph.config.align_to_grid) {
+                if (this.graph.config.align_to_grid || this.align_to_grid ) {
                     this.node_dragged.alignToGrid();
                 }
 				if( this.onNodeMoved )

@@ -4685,6 +4685,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
         this.allow_searchbox = true;
         this.allow_reconnect_links = false; //allows to change a connection with having to redo it again
+		this.align_to_grid = false; //snap to grid
 
         this.drag_mode = false;
         this.dragging_rectangle = null;
@@ -5975,7 +5976,7 @@ LGraphNode.prototype.executeAction = function(action)
                 this.dirty_bgcanvas = true;
                 this.node_dragged.pos[0] = Math.round(this.node_dragged.pos[0]);
                 this.node_dragged.pos[1] = Math.round(this.node_dragged.pos[1]);
-                if (this.graph.config.align_to_grid) {
+                if (this.graph.config.align_to_grid || this.align_to_grid ) {
                     this.node_dragged.alignToGrid();
                 }
 				if( this.onNodeMoved )
@@ -9182,58 +9183,74 @@ LGraphNode.prototype.executeAction = function(action)
         canvas.graph.add(group);
     };
 
-    LGraphCanvas.onMenuAdd = function(node, options, e, prev_menu, callback) {
+    LGraphCanvas.onMenuAdd = function (node, options, e, prev_menu, callback) {
+
         var canvas = LGraphCanvas.active_canvas;
         var ref_window = canvas.getCanvasWindow();
-		var graph = canvas.graph;
-		if(!graph)
-			return;
+        var graph = canvas.graph;
+        if (!graph)
+            return;
 
-        var values = LiteGraph.getNodeTypesCategories( canvas.filter || graph.filter );
-        var entries = [];
-        for (var i=0; i < values.length; i++) {
-            if (values[i]) {
-				var name = values[i];
-				if(name.indexOf("::") != -1) //in case it has a namespace like "shader::math/rand" it hides the namespace
-					name = name.split("::")[1];
-                entries.push({ value: values[i], content: name, has_submenu: true });
-            }
-        }
-
-        //show categories
-        var menu = new LiteGraph.ContextMenu( entries, { event: e, callback: inner_clicked, parentMenu: prev_menu }, ref_window );
-
-        function inner_clicked(v, option, e) {
-            var category = v.value;
-            var node_types = LiteGraph.getNodeTypesInCategory( category, canvas.filter || graph.filter );
-            var values = [];
-            for (var i=0; i < node_types.length; i++) {
-                if (!node_types[i].skip_list) {
-                    values.push({
-                        content: node_types[i].title,
-                        value: node_types[i].type
-                    });
+        function inner_onMenuAdded(base_category ,prev_menu){
+    
+            var categories  = LiteGraph.getNodeTypesCategories(canvas.filter || graph.filter).filter(function(category){return category.startsWith(base_category)});
+            var entries = [];
+    
+            categories.map(function(category){
+    
+                if (!category) 
+                    return;
+    
+                var base_category_regex = new RegExp('^(' + base_category + ')');
+                var category_name = category.replace(base_category_regex,"").split('/')[0];
+                var category_path = base_category  === '' ? category_name + '/' : base_category + category_name + '/';
+    
+                var name = category_name;
+                if(name.indexOf("::") != -1) //in case it has a namespace like "shader::math/rand" it hides the namespace
+                    name = name.split("::")[1];
+                        
+                var index = entries.findIndex(function(entry){return entry.value === category_path});
+                if (index === -1) {
+                    entries.push({ value: category_path, content: name, has_submenu: true, callback : function(value, event, mouseEvent, contextMenu){
+                        inner_onMenuAdded(value.value, contextMenu)
+                    }});
                 }
-            }
-
-            new LiteGraph.ContextMenu( values, { event: e, callback: inner_create, parentMenu: menu }, ref_window );
-            return false;
+                
+            });
+    
+            var nodes = LiteGraph.getNodeTypesInCategory(base_category.slice(0, -1), canvas.filter || graph.filter );
+            nodes.map(function(node){
+    
+                if (node.skip_list)
+                    return;
+    
+                var entry = { value: node.type, content: node.title, has_submenu: false , callback : function(value, event, mouseEvent, contextMenu){
+                    
+                        var first_event = contextMenu.getFirstEvent();
+                        canvas.graph.beforeChange();
+                        var node = LiteGraph.createNode(value.value);
+                        if (node) {
+                            node.pos = canvas.convertEventToCanvasOffset(first_event);
+                            canvas.graph.add(node);
+                        }
+                        if(callback)
+                            callback(node);
+                        canvas.graph.afterChange();
+                    
+                    }
+                }
+    
+                entries.push(entry);
+    
+            });
+    
+            new LiteGraph.ContextMenu( entries, { event: e, parentMenu: prev_menu }, ref_window );
+    
         }
-
-        function inner_create(v, e) {
-            var first_event = prev_menu.getFirstEvent();
-			canvas.graph.beforeChange();
-            var node = LiteGraph.createNode(v.value);
-            if (node) {
-                node.pos = canvas.convertEventToCanvasOffset(first_event);
-                canvas.graph.add(node);
-            }
-			if(callback)
-				callback(node);
-			canvas.graph.afterChange();
-        }
-
+    
+        inner_onMenuAdded('',prev_menu);
         return false;
+    
     };
 
     LGraphCanvas.onMenuCollapseAll = function() {};
