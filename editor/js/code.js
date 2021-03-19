@@ -14,6 +14,9 @@ window.onbeforeunload = function(){
 //enable scripting
 LiteGraph.allow_scripts = true;
 
+//test
+//editor.graphcanvas.viewport = [200,200,400,400];
+
 //create scene selector
 var elem = document.createElement("span");
 elem.className = "selector";
