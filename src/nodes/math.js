@@ -3,7 +3,7 @@
 
     //Converter
     function Converter() {
-        this.addInput("in", "*");
+        this.addInput("in", "");
 	this.addOutput("out");
         this.size = [80, 30];
     }
