@@ -353,5 +353,5 @@
 			o.data = null;
 	}
 
-    LiteGraph.registerNodeType("events/data_store", DataStore);
+    LiteGraph.registerNodeType("basic/data_store", DataStore);
 })(this);
