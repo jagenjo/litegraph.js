@@ -10328,7 +10328,7 @@ LGraphNode.prototype.executeAction = function(action)
 					innerChange(propname, v);
 				});
 			}
-			else if (type == "enum" || type == "combo")
+			else if (type == "enum" || type == "combo") {
 				var str_value = LGraphCanvas.getPropertyPrintableValue( value, options.values );
 				value_element.innerText = str_value;
 
@@ -10350,6 +10350,7 @@ LGraphNode.prototype.executeAction = function(action)
 						return false;
 					}
 				});
+            }
 
 			root.content.appendChild(elem);
 
