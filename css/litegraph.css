@@ -6,6 +6,11 @@
     -moz-user-select: none;
     -webkit-user-select: none;
 	outline: none;
+    font-family: Tahoma, sans-serif;
+}
+
+.lgraphcanvas * {
+    box-sizing: border-box;
 }
 
 .litegraph.litecontextmenu {
@@ -343,6 +348,7 @@
 }
 
 .litegraph .dialog .btn {
+	border: 0;
 	border-radius: 4px;
     padding: 4px 20px;
     margin-left: 0px;
