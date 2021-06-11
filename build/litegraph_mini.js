@@ -3501,7 +3501,7 @@
         out[0] = this.pos[0] - 4;
         out[1] = this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT;
         out[2] = this.size[0] + 4;
-        out[3] = this.size[1] + LiteGraph.NODE_TITLE_HEIGHT;
+        out[3] = this.flags.collapsed ? LiteGraph.NODE_TITLE_HEIGHT : this.size[1] + LiteGraph.NODE_TITLE_HEIGHT;
 
         if (this.onBounding) {
             this.onBounding(out);
@@ -8842,7 +8842,7 @@ LGraphNode.prototype.executeAction = function(action)
 			var widget_width = w.width || width;
 			//outside
 			if ( w != active_widget && 
-				(x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height) ) 
+				(x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height || w.last_y === undefined) ) 
 				continue;
 
 			var old_value = w.value;
@@ -14077,6 +14077,7 @@ if (typeof exports != "undefined") {
     //Converter
     function Converter() {
         this.addInput("in", "*");
+	this.addOutput("out");
         this.size = [80, 30];
     }
 
