@@ -14,10 +14,13 @@ window.onbeforeunload = function(){
 //enable scripting
 LiteGraph.allow_scripts = true;
 
+//test
+//editor.graphcanvas.viewport = [200,200,400,400];
+
 //create scene selector
 var elem = document.createElement("span");
 elem.className = "selector";
-elem.innerHTML = "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button>";
+elem.innerHTML = "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button> <button class='btn' id='multiview'>Multiview</button>";
 editor.tools.appendChild(elem);
 var select = elem.querySelector("select");
 select.addEventListener("change", function(e){
@@ -59,6 +62,7 @@ elem.querySelector("#download").addEventListener("click",function(){
 });
 
 elem.querySelector("#webgl").addEventListener("click", enableWebGL );
+elem.querySelector("#multiview").addEventListener("click", function(){ editor.addMultiview()  } );
 
 
 function addDemo( name, url )
