@@ -417,7 +417,11 @@
                 }
             }
 
-            return this.auto_sort_node_types ? r.sort() : r;
+            if (this.auto_sort_node_types) {
+                r.sort((a, b) => a.title.localeCompare(b.title));
+            }
+
+            return r;
         },
 
         /**
