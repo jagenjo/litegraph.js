@@ -419,7 +419,11 @@
                 }
             }
 
-            return this.auto_sort_node_types ? r.sort() : r;
+            if (this.auto_sort_node_types) {
+                r.sort((a, b) => a.title.localeCompare(b.title));
+            }
+
+            return r;
         },
 
         /**
@@ -10282,7 +10286,7 @@ LGraphNode.prototype.executeAction = function(action)
 			var elem = document.createElement("div");
 			elem.className = "property";
 			elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
-			elem.querySelector(".property_name").innerText = name;
+			elem.querySelector(".property_name").innerText = options.label || name;
 			var value_element = elem.querySelector(".property_value");
 			value_element.innerText = str_value;
 			elem.dataset["property"] = name;
@@ -10326,7 +10330,7 @@ LGraphNode.prototype.executeAction = function(action)
 					innerChange(propname, v);
 				});
 			}
-			else if (type == "enum" || type == "combo")
+			else if (type == "enum" || type == "combo") {
 				var str_value = LGraphCanvas.getPropertyPrintableValue( value, options.values );
 				value_element.innerText = str_value;
 
@@ -10348,6 +10352,7 @@ LGraphNode.prototype.executeAction = function(action)
 						return false;
 					}
 				});
+            }
 
 			root.content.appendChild(elem);
 
