@@ -1,3 +1,5 @@
+//packer version
+
 (function(global) {
     // *************************************************************
     //   LiteGraph CLASS                                     *******
@@ -10284,7 +10286,7 @@ LGraphNode.prototype.executeAction = function(action)
 			var elem = document.createElement("div");
 			elem.className = "property";
 			elem.innerHTML = "<span class='property_name'></span><span class='property_value'></span>";
-			elem.querySelector(".property_name").innerText = name;
+			elem.querySelector(".property_name").innerText = options.label || name;
 			var value_element = elem.querySelector(".property_value");
 			value_element.innerText = str_value;
 			elem.dataset["property"] = name;
@@ -16205,6 +16207,729 @@ if (typeof exports != "undefined") {
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
+
+	function Math3DMat4()
+	{
+        this.addInput("T", "vec3");
+        this.addInput("R", "vec3");
+        this.addInput("S", "vec3");
+        this.addOutput("mat4", "mat4");
+		this.properties = {
+			"T":[0,0,0],
+			"R":[0,0,0],
+			"S":[1,1,1],
+			R_in_degrees: true
+		};
+		this._result = mat4.create();
+		this._must_update = true;
+	}
+
+	Math3DMat4.title = "mat4";
+	Math3DMat4.temp_quat = new Float32Array([0,0,0,1]);
+	Math3DMat4.temp_mat4 = new Float32Array(16);
+	Math3DMat4.temp_vec3 = new Float32Array(3);
+
+	Math3DMat4.prototype.onPropertyChanged = function(name, value)
+	{
+		this._must_update = true;
+	}
+
+	Math3DMat4.prototype.onExecute = function()
+	{
+		var M = this._result;
+		var Q = Math3DMat4.temp_quat;
+		var temp_mat4 = Math3DMat4.temp_mat4;
+		var temp_vec3 = Math3DMat4.temp_vec3;
+
+		var T = this.getInputData(0);
+		var R = this.getInputData(1);
+		var S = this.getInputData(2);
+
+		if( this._must_update || T || R || S )
+		{
+			T = T || this.properties.T;
+			R = R || this.properties.R;
+			S = S || this.properties.S;
+			mat4.identity( M );
+			mat4.translate( M, M, T );
+			if(this.properties.R_in_degrees)
+			{
+				temp_vec3.set( R );
+				vec3.scale(temp_vec3,temp_vec3,DEG2RAD);
+				quat.fromEuler( Q, temp_vec3 );
+			}
+			else
+				quat.fromEuler( Q, R );
+			mat4.fromQuat( temp_mat4, Q );
+			mat4.multiply( M, M, temp_mat4 );
+			mat4.scale( M, M, S );
+		}
+
+		this.setOutputData(0, M);		
+	}
+
+    LiteGraph.registerNodeType("math3d/mat4", Math3DMat4);
+
+    //Math 3D operation
+    function Math3DOperation() {
+        this.addInput("A", "number,vec3");
+        this.addInput("B", "number,vec3");
+        this.addOutput("=", "number,vec3");
+        this.addProperty("OP", "+", "enum", { values: Math3DOperation.values });
+		this._result = vec3.create();
+    }
+
+    Math3DOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min","dot","cross"];
+
+    LiteGraph.registerSearchboxExtra("math3d/operation", "CROSS()", {
+        properties: {"OP":"cross"},
+        title: "CROSS()"
+    });
+
+    LiteGraph.registerSearchboxExtra("math3d/operation", "DOT()", {
+        properties: {"OP":"dot"},
+        title: "DOT()"
+    });
+
+	Math3DOperation.title = "Operation";
+    Math3DOperation.desc = "Easy math 3D operators";
+    Math3DOperation["@OP"] = {
+        type: "enum",
+        title: "operation",
+        values: Math3DOperation.values
+    };
+    Math3DOperation.size = [100, 60];
+
+    Math3DOperation.prototype.getTitle = function() {
+		if(this.properties.OP == "max" || this.properties.OP == "min" )
+			return this.properties.OP + "(A,B)";
+        return "A " + this.properties.OP + " B";
+    };
+
+    Math3DOperation.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        var B = this.getInputData(1);
+		if(A == null || B == null)
+			return;
+		if(A.constructor === Number)
+			A = [A,A,A];
+		if(B.constructor === Number)
+			B = [B,B,B];
+
+        var result = this._result;
+        switch (this.properties.OP) {
+            case "+":
+                result = vec3.add(result,A,B);
+                break;
+            case "-":
+                result = vec3.sub(result,A,B);
+                break;
+            case "x":
+            case "X":
+            case "*":
+                result = vec3.mul(result,A,B);
+                break;
+            case "/":
+                result = vec3.div(result,A,B);
+                break;
+            case "%":
+                result[0] = A[0]%B[0];
+                result[1] = A[1]%B[1];
+                result[2] = A[2]%B[2];
+                break;
+            case "^":
+                result[0] = Math.pow(A[0],B[0]);
+                result[1] = Math.pow(A[1],B[1]);
+                result[2] = Math.pow(A[2],B[2]);
+                break;
+            case "max":
+                result[0] = Math.max(A[0],B[0]);
+                result[1] = Math.max(A[1],B[1]);
+                result[2] = Math.max(A[2],B[2]);
+                break;
+            case "min":
+                result[0] = Math.min(A[0],B[0]);
+                result[1] = Math.min(A[1],B[1]);
+                result[2] = Math.min(A[2],B[2]);
+            case "dot":
+                result = vec3.dot(A,B);
+                break;
+            case "cross":
+                vec3.cross(result,A,B);
+                break;
+            default:
+                console.warn("Unknown operation: " + this.properties.OP);
+        }
+        this.setOutputData(0, result);
+    };
+
+    Math3DOperation.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+
+        ctx.font = "40px Arial";
+        ctx.fillStyle = "#666";
+        ctx.textAlign = "center";
+        ctx.fillText(
+            this.properties.OP,
+            this.size[0] * 0.5,
+            (this.size[1] + LiteGraph.NODE_TITLE_HEIGHT) * 0.5
+        );
+        ctx.textAlign = "left";
+    };
+
+    LiteGraph.registerNodeType("math3d/operation", Math3DOperation);
+
+    function Math3DVec3Scale() {
+        this.addInput("in", "vec3");
+        this.addInput("f", "number");
+        this.addOutput("out", "vec3");
+        this.properties = { f: 1 };
+        this._data = new Float32Array(3);
+    }
+
+    Math3DVec3Scale.title = "vec3_scale";
+    Math3DVec3Scale.desc = "scales the components of a vec3";
+
+    Math3DVec3Scale.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+        var f = this.getInputData(1);
+        if (f == null) {
+            f = this.properties.f;
+        }
+
+        var data = this._data;
+        data[0] = v[0] * f;
+        data[1] = v[1] * f;
+        data[2] = v[2] * f;
+        this.setOutputData(0, data);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec3-scale", Math3DVec3Scale);
+
+    function Math3DVec3Length() {
+        this.addInput("in", "vec3");
+        this.addOutput("out", "number");
+    }
+
+    Math3DVec3Length.title = "vec3_length";
+    Math3DVec3Length.desc = "returns the module of a vector";
+
+    Math3DVec3Length.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+        var dist = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        this.setOutputData(0, dist);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec3-length", Math3DVec3Length);
+
+    function Math3DVec3Normalize() {
+        this.addInput("in", "vec3");
+        this.addOutput("out", "vec3");
+        this._data = new Float32Array(3);
+    }
+
+    Math3DVec3Normalize.title = "vec3_normalize";
+    Math3DVec3Normalize.desc = "returns the vector normalized";
+
+    Math3DVec3Normalize.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+        var dist = Math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+        var data = this._data;
+        data[0] = v[0] / dist;
+        data[1] = v[1] / dist;
+        data[2] = v[2] / dist;
+
+        this.setOutputData(0, data);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec3-normalize", Math3DVec3Normalize);
+
+    function Math3DVec3Lerp() {
+        this.addInput("A", "vec3");
+        this.addInput("B", "vec3");
+        this.addInput("f", "vec3");
+        this.addOutput("out", "vec3");
+        this.properties = { f: 0.5 };
+        this._data = new Float32Array(3);
+    }
+
+    Math3DVec3Lerp.title = "vec3_lerp";
+    Math3DVec3Lerp.desc = "returns the interpolated vector";
+
+    Math3DVec3Lerp.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        if (A == null) {
+            return;
+        }
+        var B = this.getInputData(1);
+        if (B == null) {
+            return;
+        }
+        var f = this.getInputOrProperty("f");
+
+        var data = this._data;
+        data[0] = A[0] * (1 - f) + B[0] * f;
+        data[1] = A[1] * (1 - f) + B[1] * f;
+        data[2] = A[2] * (1 - f) + B[2] * f;
+
+        this.setOutputData(0, data);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec3-lerp", Math3DVec3Lerp);
+
+    function Math3DVec3Dot() {
+        this.addInput("A", "vec3");
+        this.addInput("B", "vec3");
+        this.addOutput("out", "number");
+    }
+
+    Math3DVec3Dot.title = "vec3_dot";
+    Math3DVec3Dot.desc = "returns the dot product";
+
+    Math3DVec3Dot.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        if (A == null) {
+            return;
+        }
+        var B = this.getInputData(1);
+        if (B == null) {
+            return;
+        }
+
+        var dot = A[0] * B[0] + A[1] * B[1] + A[2] * B[2];
+        this.setOutputData(0, dot);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec3-dot", Math3DVec3Dot);
+
+    //if glMatrix is installed...
+    if (global.glMatrix) {
+        function Math3DQuaternion() {
+            this.addOutput("quat", "quat");
+            this.properties = { x: 0, y: 0, z: 0, w: 1, normalize: false };
+            this._value = quat.create();
+        }
+
+        Math3DQuaternion.title = "Quaternion";
+        Math3DQuaternion.desc = "quaternion";
+
+        Math3DQuaternion.prototype.onExecute = function() {
+            this._value[0] = this.getInputOrProperty("x");
+            this._value[1] = this.getInputOrProperty("y");
+            this._value[2] = this.getInputOrProperty("z");
+            this._value[3] = this.getInputOrProperty("w");
+            if (this.properties.normalize) {
+                quat.normalize(this._value, this._value);
+            }
+            this.setOutputData(0, this._value);
+        };
+
+        Math3DQuaternion.prototype.onGetInputs = function() {
+            return [
+                ["x", "number"],
+                ["y", "number"],
+                ["z", "number"],
+                ["w", "number"]
+            ];
+        };
+
+        LiteGraph.registerNodeType("math3d/quaternion", Math3DQuaternion);
+
+        function Math3DRotation() {
+            this.addInputs([["degrees", "number"], ["axis", "vec3"]]);
+            this.addOutput("quat", "quat");
+            this.properties = { angle: 90.0, axis: vec3.fromValues(0, 1, 0) };
+
+            this._value = quat.create();
+        }
+
+        Math3DRotation.title = "Rotation";
+        Math3DRotation.desc = "quaternion rotation";
+
+        Math3DRotation.prototype.onExecute = function() {
+            var angle = this.getInputData(0);
+            if (angle == null) {
+                angle = this.properties.angle;
+            }
+            var axis = this.getInputData(1);
+            if (axis == null) {
+                axis = this.properties.axis;
+            }
+
+            var R = quat.setAxisAngle(this._value, axis, angle * 0.0174532925);
+            this.setOutputData(0, R);
+        };
+
+        LiteGraph.registerNodeType("math3d/rotation", Math3DRotation);
+
+
+        function MathEulerToQuat() {
+            this.addInput("euler", "vec3");
+            this.addOutput("quat", "quat");
+            this.properties = { euler:[0,0,0], use_yaw_pitch_roll: false };
+			this._degs = vec3.create();
+            this._value = quat.create();
+        }
+
+        MathEulerToQuat.title = "Euler->Quat";
+        MathEulerToQuat.desc = "Converts euler angles (in degrees) to quaternion";
+
+        MathEulerToQuat.prototype.onExecute = function() {
+            var euler = this.getInputData(0);
+            if (euler == null) {
+                euler = this.properties.euler;
+            }
+			vec3.scale( this._degs, euler, DEG2RAD );
+			if(this.properties.use_yaw_pitch_roll)
+				this._degs = [this._degs[2],this._degs[0],this._degs[1]];
+            var R = quat.fromEuler(this._value, this._degs);
+            this.setOutputData(0, R);
+        };
+
+        LiteGraph.registerNodeType("math3d/euler_to_quat", MathEulerToQuat);
+
+        function MathQuatToEuler() {
+            this.addInput(["quat", "quat"]);
+            this.addOutput("euler", "vec3");
+			this._value = vec3.create();
+        }
+
+        MathQuatToEuler.title = "Euler->Quat";
+        MathQuatToEuler.desc = "Converts rotX,rotY,rotZ in degrees to quat";
+
+        MathQuatToEuler.prototype.onExecute = function() {
+            var q = this.getInputData(0);
+			if(!q)
+				return;
+            var R = quat.toEuler(this._value, q);
+			vec3.scale( this._value, this._value, DEG2RAD );
+            this.setOutputData(0, this._value);
+        };
+
+        LiteGraph.registerNodeType("math3d/quat_to_euler", MathQuatToEuler);
+
+
+        //Math3D rotate vec3
+        function Math3DRotateVec3() {
+            this.addInputs([["vec3", "vec3"], ["quat", "quat"]]);
+            this.addOutput("result", "vec3");
+            this.properties = { vec: [0, 0, 1] };
+        }
+
+        Math3DRotateVec3.title = "Rot. Vec3";
+        Math3DRotateVec3.desc = "rotate a point";
+
+        Math3DRotateVec3.prototype.onExecute = function() {
+            var vec = this.getInputData(0);
+            if (vec == null) {
+                vec = this.properties.vec;
+            }
+            var quat = this.getInputData(1);
+            if (quat == null) {
+                this.setOutputData(vec);
+            } else {
+                this.setOutputData(
+                    0,
+                    vec3.transformQuat(vec3.create(), vec, quat)
+                );
+            }
+        };
+
+        LiteGraph.registerNodeType("math3d/rotate_vec3", Math3DRotateVec3);
+
+        function Math3DMultQuat() {
+            this.addInputs([["A", "quat"], ["B", "quat"]]);
+            this.addOutput("A*B", "quat");
+
+            this._value = quat.create();
+        }
+
+        Math3DMultQuat.title = "Mult. Quat";
+        Math3DMultQuat.desc = "rotate quaternion";
+
+        Math3DMultQuat.prototype.onExecute = function() {
+            var A = this.getInputData(0);
+            if (A == null) {
+                return;
+            }
+            var B = this.getInputData(1);
+            if (B == null) {
+                return;
+            }
+
+            var R = quat.multiply(this._value, A, B);
+            this.setOutputData(0, R);
+        };
+
+        LiteGraph.registerNodeType("math3d/mult-quat", Math3DMultQuat);
+
+        function Math3DQuatSlerp() {
+            this.addInputs([
+                ["A", "quat"],
+                ["B", "quat"],
+                ["factor", "number"]
+            ]);
+            this.addOutput("slerp", "quat");
+            this.addProperty("factor", 0.5);
+
+            this._value = quat.create();
+        }
+
+        Math3DQuatSlerp.title = "Quat Slerp";
+        Math3DQuatSlerp.desc = "quaternion spherical interpolation";
+
+        Math3DQuatSlerp.prototype.onExecute = function() {
+            var A = this.getInputData(0);
+            if (A == null) {
+                return;
+            }
+            var B = this.getInputData(1);
+            if (B == null) {
+                return;
+            }
+            var factor = this.properties.factor;
+            if (this.getInputData(2) != null) {
+                factor = this.getInputData(2);
+            }
+
+            var R = quat.slerp(this._value, A, B, factor);
+            this.setOutputData(0, R);
+        };
+
+        LiteGraph.registerNodeType("math3d/quat-slerp", Math3DQuatSlerp);
+
+
+        //Math3D rotate vec3
+        function Math3DRemapRange() {
+            this.addInput("vec3", "vec3");
+            this.addOutput("remap", "vec3");
+			this.addOutput("clamped", "vec3");
+            this.properties = { clamp: true, range_min: [-1, -1, 0], range_max: [1, 1, 0], target_min: [-1,-1,0], target_max:[1,1,0] };
+			this._value = vec3.create();
+			this._clamped = vec3.create();
+        }
+
+        Math3DRemapRange.title = "Remap Range";
+        Math3DRemapRange.desc = "remap a 3D range";
+
+        Math3DRemapRange.prototype.onExecute = function() {
+            var vec = this.getInputData(0);
+			if(vec)
+				this._value.set(vec);
+			var range_min = this.properties.range_min;
+			var range_max = this.properties.range_max;
+			var target_min = this.properties.target_min;
+			var target_max = this.properties.target_max;
+
+			//swap to avoid errors
+			/*
+			if(range_min > range_max)
+			{
+				range_min = range_max;
+				range_max = this.properties.range_min;
+			}
+
+			if(target_min > target_max)
+			{
+				target_min = target_max;
+				target_max = this.properties.target_min;
+			}
+			*/
+
+			for(var i = 0; i < 3; ++i)
+			{
+				var r = range_max[i] - range_min[i];
+				this._clamped[i] = Math.clamp( this._value[i], range_min[i], range_max[i] );
+				if(r == 0)
+				{
+					this._value[i] = (target_min[i] + target_max[i]) * 0.5;
+					continue;
+				}
+
+				var n = (this._value[i] - range_min[i]) / r;
+				if(this.properties.clamp)
+					n = Math.clamp(n,0,1);
+				var t = target_max[i] - target_min[i];
+				this._value[i] = target_min[i] + n * t;
+			}
+
+			this.setOutputData(0,this._value);
+			this.setOutputData(1,this._clamped);
+        };
+
+        LiteGraph.registerNodeType("math3d/remap_range", Math3DRemapRange);
+
+
+
+    } //glMatrix
+	else
+		console.warn("No glmatrix found, some Math3D nodes may not work");
+
+})(this);
+
+//basic nodes
+(function(global) {
+    var LiteGraph = global.LiteGraph;
+
+    function toString(a) {
+		if(a && a.constructor === Object)
+		{
+			try
+			{
+				return JSON.stringify(a);
+			}
+			catch (err)
+			{
+				return String(a);
+			}
+		}
+        return String(a);
+    }
+
+    LiteGraph.wrapFunctionAsNode("string/toString", toString, [""], "String");
+
+    function compare(a, b) {
+        return a == b;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "string/compare",
+        compare,
+        ["string", "string"],
+        "boolean"
+    );
+
+    function concatenate(a, b) {
+        if (a === undefined) {
+            return b;
+        }
+        if (b === undefined) {
+            return a;
+        }
+        return a + b;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "string/concatenate",
+        concatenate,
+        ["string", "string"],
+        "string"
+    );
+
+    function contains(a, b) {
+        if (a === undefined || b === undefined) {
+            return false;
+        }
+        return a.indexOf(b) != -1;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "string/contains",
+        contains,
+        ["string", "string"],
+        "boolean"
+    );
+
+    function toUpperCase(a) {
+        if (a != null && a.constructor === String) {
+            return a.toUpperCase();
+        }
+        return a;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "string/toUpperCase",
+        toUpperCase,
+        ["string"],
+        "string"
+    );
+
+    function split(str, separator) {
+		if(separator == null)
+			separator = this.properties.separator;
+        if (str == null )
+	        return [];
+		if( str.constructor === String )
+			return str.split(separator || " ");
+		else if( str.constructor === Array )
+		{
+			var r = [];
+			for(var i = 0; i < str.length; ++i)
+				r[i] = str[i].split(separator || " ");
+			return r;
+		}
+        return null;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "string/split",
+        split,
+        ["string,array", "string"],
+        "array",
+		{ separator: "," }
+    );
+
+    function toFixed(a) {
+        if (a != null && a.constructor === Number) {
+            return a.toFixed(this.properties.precision);
+        }
+        return a;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "string/toFixed",
+        toFixed,
+        ["number"],
+        "string",
+        { precision: 0 }
+    );
+
+
+    function StringToTable() {
+        this.addInput("", "string");
+        this.addOutput("table", "table");
+        this.addOutput("rows", "number");
+        this.addProperty("value", "");
+        this.addProperty("separator", ",");
+		this._table = null;
+    }
+
+    StringToTable.title = "toTable";
+    StringToTable.desc = "Splits a string to table";
+
+    StringToTable.prototype.onExecute = function() {
+        var input = this.getInputData(0);
+		if(!input)
+			return;
+		var separator = this.properties.separator || ",";
+		if(input != this._str || separator != this._last_separator )
+		{
+			this._last_separator = separator;
+			this._str = input;
+			this._table = input.split("\n").map(function(a){ return a.trim().split(separator)});
+		}
+        this.setOutputData(0, this._table );
+        this.setOutputData(1, this._table ? this._table.length : 0 );
+    };
+
+    LiteGraph.registerNodeType("string/toTable", StringToTable);
+
+})(this);
+
+(function(global) {
+    var LiteGraph = global.LiteGraph;
+
     function Selector() {
         this.addInput("sel", "number");
         this.addInput("A");
@@ -16286,6 +17011,903 @@ if (typeof exports != "undefined") {
     };
 
     LiteGraph.registerNodeType("logic/sequence", Sequence);
+})(this);
+
+(function(global) {
+    var LiteGraph = global.LiteGraph;
+
+    function GraphicsPlot() {
+        this.addInput("A", "Number");
+        this.addInput("B", "Number");
+        this.addInput("C", "Number");
+        this.addInput("D", "Number");
+
+        this.values = [[], [], [], []];
+        this.properties = { scale: 2 };
+    }
+
+    GraphicsPlot.title = "Plot";
+    GraphicsPlot.desc = "Plots data over time";
+    GraphicsPlot.colors = ["#FFF", "#F99", "#9F9", "#99F"];
+
+    GraphicsPlot.prototype.onExecute = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+
+        var size = this.size;
+
+        for (var i = 0; i < 4; ++i) {
+            var v = this.getInputData(i);
+            if (v == null) {
+                continue;
+            }
+            var values = this.values[i];
+            values.push(v);
+            if (values.length > size[0]) {
+                values.shift();
+            }
+        }
+    };
+
+    GraphicsPlot.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+
+        var size = this.size;
+
+        var scale = (0.5 * size[1]) / this.properties.scale;
+        var colors = GraphicsPlot.colors;
+        var offset = size[1] * 0.5;
+
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, size[0], size[1]);
+        ctx.strokeStyle = "#555";
+        ctx.beginPath();
+        ctx.moveTo(0, offset);
+        ctx.lineTo(size[0], offset);
+        ctx.stroke();
+
+        if (this.inputs) {
+            for (var i = 0; i < 4; ++i) {
+                var values = this.values[i];
+                if (!this.inputs[i] || !this.inputs[i].link) {
+                    continue;
+                }
+                ctx.strokeStyle = colors[i];
+                ctx.beginPath();
+                var v = values[0] * scale * -1 + offset;
+                ctx.moveTo(0, Math.clamp(v, 0, size[1]));
+                for (var j = 1; j < values.length && j < size[0]; ++j) {
+                    var v = values[j] * scale * -1 + offset;
+                    ctx.lineTo(j, Math.clamp(v, 0, size[1]));
+                }
+                ctx.stroke();
+            }
+        }
+    };
+
+    LiteGraph.registerNodeType("graphics/plot", GraphicsPlot);
+
+    function GraphicsImage() {
+        this.addOutput("frame", "image");
+        this.properties = { url: "" };
+    }
+
+    GraphicsImage.title = "Image";
+    GraphicsImage.desc = "Image loader";
+    GraphicsImage.widgets = [{ name: "load", text: "Load", type: "button" }];
+
+    GraphicsImage.supported_extensions = ["jpg", "jpeg", "png", "gif"];
+
+    GraphicsImage.prototype.onAdded = function() {
+        if (this.properties["url"] != "" && this.img == null) {
+            this.loadImage(this.properties["url"]);
+        }
+    };
+
+    GraphicsImage.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+        if (this.img && this.size[0] > 5 && this.size[1] > 5 && this.img.width) {
+            ctx.drawImage(this.img, 0, 0, this.size[0], this.size[1]);
+        }
+    };
+
+    GraphicsImage.prototype.onExecute = function() {
+        if (!this.img) {
+            this.boxcolor = "#000";
+        }
+        if (this.img && this.img.width) {
+            this.setOutputData(0, this.img);
+        } else {
+            this.setOutputData(0, null);
+        }
+        if (this.img && this.img.dirty) {
+            this.img.dirty = false;
+        }
+    };
+
+    GraphicsImage.prototype.onPropertyChanged = function(name, value) {
+        this.properties[name] = value;
+        if (name == "url" && value != "") {
+            this.loadImage(value);
+        }
+
+        return true;
+    };
+
+    GraphicsImage.prototype.loadImage = function(url, callback) {
+        if (url == "") {
+            this.img = null;
+            return;
+        }
+
+        this.img = document.createElement("img");
+
+        if (url.substr(0, 4) == "http" && LiteGraph.proxy) {
+            url = LiteGraph.proxy + url.substr(url.indexOf(":") + 3);
+        }
+
+        this.img.src = url;
+        this.boxcolor = "#F95";
+        var that = this;
+        this.img.onload = function() {
+            if (callback) {
+                callback(this);
+            }
+            console.log( "Image loaded, size: " + that.img.width + "x" + that.img.height );
+            this.dirty = true;
+            that.boxcolor = "#9F9";
+            that.setDirtyCanvas(true);
+        };
+        this.img.onerror = function() {
+			console.log("error loading the image:" + url);
+		}
+    };
+
+    GraphicsImage.prototype.onWidget = function(e, widget) {
+        if (widget.name == "load") {
+            this.loadImage(this.properties["url"]);
+        }
+    };
+
+    GraphicsImage.prototype.onDropFile = function(file) {
+        var that = this;
+        if (this._url) {
+            URL.revokeObjectURL(this._url);
+        }
+        this._url = URL.createObjectURL(file);
+        this.properties.url = this._url;
+        this.loadImage(this._url, function(img) {
+            that.size[1] = (img.height / img.width) * that.size[0];
+        });
+    };
+
+    LiteGraph.registerNodeType("graphics/image", GraphicsImage);
+
+    function ColorPalette() {
+        this.addInput("f", "number");
+        this.addOutput("Color", "color");
+        this.properties = {
+            colorA: "#444444",
+            colorB: "#44AAFF",
+            colorC: "#44FFAA",
+            colorD: "#FFFFFF"
+        };
+    }
+
+    ColorPalette.title = "Palette";
+    ColorPalette.desc = "Generates a color";
+
+    ColorPalette.prototype.onExecute = function() {
+        var c = [];
+
+        if (this.properties.colorA != null) {
+            c.push(hex2num(this.properties.colorA));
+        }
+        if (this.properties.colorB != null) {
+            c.push(hex2num(this.properties.colorB));
+        }
+        if (this.properties.colorC != null) {
+            c.push(hex2num(this.properties.colorC));
+        }
+        if (this.properties.colorD != null) {
+            c.push(hex2num(this.properties.colorD));
+        }
+
+        var f = this.getInputData(0);
+        if (f == null) {
+            f = 0.5;
+        }
+        if (f > 1.0) {
+            f = 1.0;
+        } else if (f < 0.0) {
+            f = 0.0;
+        }
+
+        if (c.length == 0) {
+            return;
+        }
+
+        var result = [0, 0, 0];
+        if (f == 0) {
+            result = c[0];
+        } else if (f == 1) {
+            result = c[c.length - 1];
+        } else {
+            var pos = (c.length - 1) * f;
+            var c1 = c[Math.floor(pos)];
+            var c2 = c[Math.floor(pos) + 1];
+            var t = pos - Math.floor(pos);
+            result[0] = c1[0] * (1 - t) + c2[0] * t;
+            result[1] = c1[1] * (1 - t) + c2[1] * t;
+            result[2] = c1[2] * (1 - t) + c2[2] * t;
+        }
+
+        /*
+	c[0] = 1.0 - Math.abs( Math.sin( 0.1 * reModular.getTime() * Math.PI) );
+	c[1] = Math.abs( Math.sin( 0.07 * reModular.getTime() * Math.PI) );
+	c[2] = Math.abs( Math.sin( 0.01 * reModular.getTime() * Math.PI) );
+	*/
+
+        for (var i=0; i < result.length; i++) {
+            result[i] /= 255;
+        }
+
+        this.boxcolor = colorToString(result);
+        this.setOutputData(0, result);
+    };
+
+    LiteGraph.registerNodeType("color/palette", ColorPalette);
+
+    function ImageFrame() {
+        this.addInput("", "image,canvas");
+        this.size = [200, 200];
+    }
+
+    ImageFrame.title = "Frame";
+    ImageFrame.desc = "Frame viewerew";
+    ImageFrame.widgets = [
+        { name: "resize", text: "Resize box", type: "button" },
+        { name: "view", text: "View Image", type: "button" }
+    ];
+
+    ImageFrame.prototype.onDrawBackground = function(ctx) {
+        if (this.frame && !this.flags.collapsed) {
+            ctx.drawImage(this.frame, 0, 0, this.size[0], this.size[1]);
+        }
+    };
+
+    ImageFrame.prototype.onExecute = function() {
+        this.frame = this.getInputData(0);
+        this.setDirtyCanvas(true);
+    };
+
+    ImageFrame.prototype.onWidget = function(e, widget) {
+        if (widget.name == "resize" && this.frame) {
+            var width = this.frame.width;
+            var height = this.frame.height;
+
+            if (!width && this.frame.videoWidth != null) {
+                width = this.frame.videoWidth;
+                height = this.frame.videoHeight;
+            }
+
+            if (width && height) {
+                this.size = [width, height];
+            }
+            this.setDirtyCanvas(true, true);
+        } else if (widget.name == "view") {
+            this.show();
+        }
+    };
+
+    ImageFrame.prototype.show = function() {
+        //var str = this.canvas.toDataURL("image/png");
+        if (showElement && this.frame) {
+            showElement(this.frame);
+        }
+    };
+
+    LiteGraph.registerNodeType("graphics/frame", ImageFrame);
+
+    function ImageFade() {
+        this.addInputs([
+            ["img1", "image"],
+            ["img2", "image"],
+            ["fade", "number"]
+        ]);
+        this.addOutput("", "image");
+        this.properties = { fade: 0.5, width: 512, height: 512 };
+    }
+
+    ImageFade.title = "Image fade";
+    ImageFade.desc = "Fades between images";
+    ImageFade.widgets = [
+        { name: "resizeA", text: "Resize to A", type: "button" },
+        { name: "resizeB", text: "Resize to B", type: "button" }
+    ];
+
+    ImageFade.prototype.onAdded = function() {
+        this.createCanvas();
+        var ctx = this.canvas.getContext("2d");
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, this.properties["width"], this.properties["height"]);
+    };
+
+    ImageFade.prototype.createCanvas = function() {
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = this.properties["width"];
+        this.canvas.height = this.properties["height"];
+    };
+
+    ImageFade.prototype.onExecute = function() {
+        var ctx = this.canvas.getContext("2d");
+        this.canvas.width = this.canvas.width;
+
+        var A = this.getInputData(0);
+        if (A != null) {
+            ctx.drawImage(A, 0, 0, this.canvas.width, this.canvas.height);
+        }
+
+        var fade = this.getInputData(2);
+        if (fade == null) {
+            fade = this.properties["fade"];
+        } else {
+            this.properties["fade"] = fade;
+        }
+
+        ctx.globalAlpha = fade;
+        var B = this.getInputData(1);
+        if (B != null) {
+            ctx.drawImage(B, 0, 0, this.canvas.width, this.canvas.height);
+        }
+        ctx.globalAlpha = 1.0;
+
+        this.setOutputData(0, this.canvas);
+        this.setDirtyCanvas(true);
+    };
+
+    LiteGraph.registerNodeType("graphics/imagefade", ImageFade);
+
+    function ImageCrop() {
+        this.addInput("", "image");
+        this.addOutput("", "image");
+        this.properties = { width: 256, height: 256, x: 0, y: 0, scale: 1.0 };
+        this.size = [50, 20];
+    }
+
+    ImageCrop.title = "Crop";
+    ImageCrop.desc = "Crop Image";
+
+    ImageCrop.prototype.onAdded = function() {
+        this.createCanvas();
+    };
+
+    ImageCrop.prototype.createCanvas = function() {
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = this.properties["width"];
+        this.canvas.height = this.properties["height"];
+    };
+
+    ImageCrop.prototype.onExecute = function() {
+        var input = this.getInputData(0);
+        if (!input) {
+            return;
+        }
+
+        if (input.width) {
+            var ctx = this.canvas.getContext("2d");
+
+            ctx.drawImage(
+                input,
+                -this.properties["x"],
+                -this.properties["y"],
+                input.width * this.properties["scale"],
+                input.height * this.properties["scale"]
+            );
+            this.setOutputData(0, this.canvas);
+        } else {
+            this.setOutputData(0, null);
+        }
+    };
+
+    ImageCrop.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+        if (this.canvas) {
+            ctx.drawImage(
+                this.canvas,
+                0,
+                0,
+                this.canvas.width,
+                this.canvas.height,
+                0,
+                0,
+                this.size[0],
+                this.size[1]
+            );
+        }
+    };
+
+    ImageCrop.prototype.onPropertyChanged = function(name, value) {
+        this.properties[name] = value;
+
+        if (name == "scale") {
+            this.properties[name] = parseFloat(value);
+            if (this.properties[name] == 0) {
+                console.error("Error in scale");
+                this.properties[name] = 1.0;
+            }
+        } else {
+            this.properties[name] = parseInt(value);
+        }
+
+        this.createCanvas();
+
+        return true;
+    };
+
+    LiteGraph.registerNodeType("graphics/cropImage", ImageCrop);
+
+    //CANVAS stuff
+
+    function CanvasNode() {
+        this.addInput("clear", LiteGraph.ACTION);
+        this.addOutput("", "canvas");
+        this.properties = { width: 512, height: 512, autoclear: true };
+
+        this.canvas = document.createElement("canvas");
+        this.ctx = this.canvas.getContext("2d");
+    }
+
+    CanvasNode.title = "Canvas";
+    CanvasNode.desc = "Canvas to render stuff";
+
+    CanvasNode.prototype.onExecute = function() {
+        var canvas = this.canvas;
+        var w = this.properties.width | 0;
+        var h = this.properties.height | 0;
+        if (canvas.width != w) {
+            canvas.width = w;
+        }
+        if (canvas.height != h) {
+            canvas.height = h;
+        }
+
+        if (this.properties.autoclear) {
+            this.ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+        this.setOutputData(0, canvas);
+    };
+
+    CanvasNode.prototype.onAction = function(action, param) {
+        if (action == "clear") {
+            this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        }
+    };
+
+    LiteGraph.registerNodeType("graphics/canvas", CanvasNode);
+
+    function DrawImageNode() {
+        this.addInput("canvas", "canvas");
+        this.addInput("img", "image,canvas");
+        this.addInput("x", "number");
+        this.addInput("y", "number");
+        this.properties = { x: 0, y: 0, opacity: 1 };
+    }
+
+    DrawImageNode.title = "DrawImage";
+    DrawImageNode.desc = "Draws image into a canvas";
+
+    DrawImageNode.prototype.onExecute = function() {
+        var canvas = this.getInputData(0);
+        if (!canvas) {
+            return;
+        }
+
+        var img = this.getInputOrProperty("img");
+        if (!img) {
+            return;
+        }
+
+        var x = this.getInputOrProperty("x");
+        var y = this.getInputOrProperty("y");
+        var ctx = canvas.getContext("2d");
+        ctx.drawImage(img, x, y);
+    };
+
+    LiteGraph.registerNodeType("graphics/drawImage", DrawImageNode);
+
+    function DrawRectangleNode() {
+        this.addInput("canvas", "canvas");
+        this.addInput("x", "number");
+        this.addInput("y", "number");
+        this.addInput("w", "number");
+        this.addInput("h", "number");
+        this.properties = {
+            x: 0,
+            y: 0,
+            w: 10,
+            h: 10,
+            color: "white",
+            opacity: 1
+        };
+    }
+
+    DrawRectangleNode.title = "DrawRectangle";
+    DrawRectangleNode.desc = "Draws rectangle in canvas";
+
+    DrawRectangleNode.prototype.onExecute = function() {
+        var canvas = this.getInputData(0);
+        if (!canvas) {
+            return;
+        }
+
+        var x = this.getInputOrProperty("x");
+        var y = this.getInputOrProperty("y");
+        var w = this.getInputOrProperty("w");
+        var h = this.getInputOrProperty("h");
+        var ctx = canvas.getContext("2d");
+        ctx.fillRect(x, y, w, h);
+    };
+
+    LiteGraph.registerNodeType("graphics/drawRectangle", DrawRectangleNode);
+
+    function ImageVideo() {
+        this.addInput("t", "number");
+        this.addOutputs([["frame", "image"], ["t", "number"], ["d", "number"]]);
+        this.properties = { url: "", use_proxy: true };
+    }
+
+    ImageVideo.title = "Video";
+    ImageVideo.desc = "Video playback";
+    ImageVideo.widgets = [
+        { name: "play", text: "PLAY", type: "minibutton" },
+        { name: "stop", text: "STOP", type: "minibutton" },
+        { name: "demo", text: "Demo video", type: "button" },
+        { name: "mute", text: "Mute video", type: "button" }
+    ];
+
+    ImageVideo.prototype.onExecute = function() {
+        if (!this.properties.url) {
+            return;
+        }
+
+        if (this.properties.url != this._video_url) {
+            this.loadVideo(this.properties.url);
+        }
+
+        if (!this._video || this._video.width == 0) {
+            return;
+        }
+
+        var t = this.getInputData(0);
+        if (t && t >= 0 && t <= 1.0) {
+            this._video.currentTime = t * this._video.duration;
+            this._video.pause();
+        }
+
+        this._video.dirty = true;
+        this.setOutputData(0, this._video);
+        this.setOutputData(1, this._video.currentTime);
+        this.setOutputData(2, this._video.duration);
+        this.setDirtyCanvas(true);
+    };
+
+    ImageVideo.prototype.onStart = function() {
+        this.play();
+    };
+
+    ImageVideo.prototype.onStop = function() {
+        this.stop();
+    };
+
+    ImageVideo.prototype.loadVideo = function(url) {
+        this._video_url = url;
+
+		var pos = url.substr(0,10).indexOf(":");
+		var protocol = "";
+		if(pos != -1)
+			protocol = url.substr(0,pos);
+
+		var host = "";
+		if(protocol)
+		{
+			host = url.substr(0,url.indexOf("/",protocol.length + 3));
+			host = host.substr(protocol.length+3);
+		}
+
+        if (
+            this.properties.use_proxy &&
+            protocol &&
+            LiteGraph.proxy &&
+			host != location.host
+        ) {
+            url = LiteGraph.proxy + url.substr(url.indexOf(":") + 3);
+        }
+
+        this._video = document.createElement("video");
+        this._video.src = url;
+        this._video.type = "type=video/mp4";
+
+        this._video.muted = true;
+        this._video.autoplay = true;
+
+        var that = this;
+        this._video.addEventListener("loadedmetadata", function(e) {
+            //onload
+            console.log("Duration: " + this.duration + " seconds");
+            console.log("Size: " + this.videoWidth + "," + this.videoHeight);
+            that.setDirtyCanvas(true);
+            this.width = this.videoWidth;
+            this.height = this.videoHeight;
+        });
+        this._video.addEventListener("progress", function(e) {
+            //onload
+            console.log("video loading...");
+        });
+        this._video.addEventListener("error", function(e) {
+            console.error("Error loading video: " + this.src);
+            if (this.error) {
+                switch (this.error.code) {
+                    case this.error.MEDIA_ERR_ABORTED:
+                        console.error("You stopped the video.");
+                        break;
+                    case this.error.MEDIA_ERR_NETWORK:
+                        console.error("Network error - please try again later.");
+                        break;
+                    case this.error.MEDIA_ERR_DECODE:
+                        console.error("Video is broken..");
+                        break;
+                    case this.error.MEDIA_ERR_SRC_NOT_SUPPORTED:
+                        console.error("Sorry, your browser can't play this video.");
+                        break;
+                }
+            }
+        });
+
+        this._video.addEventListener("ended", function(e) {
+            console.log("Video Ended.");
+            this.play(); //loop
+        });
+
+        //document.body.appendChild(this.video);
+    };
+
+    ImageVideo.prototype.onPropertyChanged = function(name, value) {
+        this.properties[name] = value;
+        if (name == "url" && value != "") {
+            this.loadVideo(value);
+        }
+
+        return true;
+    };
+
+    ImageVideo.prototype.play = function() {
+        if (this._video && this._video.videoWidth ) { //is loaded
+            this._video.play();
+        }
+    };
+
+    ImageVideo.prototype.playPause = function() {
+        if (!this._video) {
+            return;
+        }
+        if (this._video.paused) {
+            this.play();
+        } else {
+            this.pause();
+        }
+    };
+
+    ImageVideo.prototype.stop = function() {
+        if (!this._video) {
+            return;
+        }
+        this._video.pause();
+        this._video.currentTime = 0;
+    };
+
+    ImageVideo.prototype.pause = function() {
+        if (!this._video) {
+            return;
+        }
+        console.log("Video paused");
+        this._video.pause();
+    };
+
+    ImageVideo.prototype.onWidget = function(e, widget) {
+        /*
+	if(widget.name == "demo")
+	{
+		this.loadVideo();
+	}
+	else if(widget.name == "play")
+	{
+		if(this._video)
+			this.playPause();
+	}
+	if(widget.name == "stop")
+	{
+		this.stop();
+	}
+	else if(widget.name == "mute")
+	{
+		if(this._video)
+			this._video.muted = !this._video.muted;
+	}
+	*/
+    };
+
+    LiteGraph.registerNodeType("graphics/video", ImageVideo);
+
+    // Texture Webcam *****************************************
+    function ImageWebcam() {
+        this.addOutput("Webcam", "image");
+        this.properties = { facingMode: "user" };
+        this.boxcolor = "black";
+        this.frame = 0;
+    }
+
+    ImageWebcam.title = "Webcam";
+    ImageWebcam.desc = "Webcam image";
+    ImageWebcam.is_webcam_open = false;
+
+    ImageWebcam.prototype.openStream = function() {
+        if (!navigator.getUserMedia) {
+            //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
+            return;
+        }
+
+        this._waiting_confirmation = true;
+
+        // Not showing vendor prefixes.
+        var constraints = {
+            audio: false,
+            video: { facingMode: this.properties.facingMode }
+        };
+        navigator.mediaDevices
+            .getUserMedia(constraints)
+            .then(this.streamReady.bind(this))
+            .catch(onFailSoHard);
+
+        var that = this;
+        function onFailSoHard(e) {
+            console.log("Webcam rejected", e);
+            that._webcam_stream = false;
+            ImageWebcam.is_webcam_open = false;
+            that.boxcolor = "red";
+            that.trigger("stream_error");
+        }
+    };
+
+    ImageWebcam.prototype.closeStream = function() {
+        if (this._webcam_stream) {
+            var tracks = this._webcam_stream.getTracks();
+            if (tracks.length) {
+                for (var i = 0; i < tracks.length; ++i) {
+                    tracks[i].stop();
+                }
+            }
+            ImageWebcam.is_webcam_open = false;
+            this._webcam_stream = null;
+            this._video = null;
+            this.boxcolor = "black";
+            this.trigger("stream_closed");
+        }
+    };
+
+    ImageWebcam.prototype.onPropertyChanged = function(name, value) {
+        if (name == "facingMode") {
+            this.properties.facingMode = value;
+            this.closeStream();
+            this.openStream();
+        }
+    };
+
+    ImageWebcam.prototype.onRemoved = function() {
+        this.closeStream();
+    };
+
+    ImageWebcam.prototype.streamReady = function(localMediaStream) {
+        this._webcam_stream = localMediaStream;
+        //this._waiting_confirmation = false;
+        this.boxcolor = "green";
+
+        var video = this._video;
+        if (!video) {
+            video = document.createElement("video");
+            video.autoplay = true;
+            video.srcObject = localMediaStream;
+            this._video = video;
+            //document.body.appendChild( video ); //debug
+            //when video info is loaded (size and so)
+            video.onloadedmetadata = function(e) {
+                // Ready to go. Do some stuff.
+                console.log(e);
+                ImageWebcam.is_webcam_open = true;
+            };
+        }
+
+        this.trigger("stream_ready", video);
+    };
+
+    ImageWebcam.prototype.onExecute = function() {
+        if (this._webcam_stream == null && !this._waiting_confirmation) {
+            this.openStream();
+        }
+
+        if (!this._video || !this._video.videoWidth) {
+            return;
+        }
+
+        this._video.frame = ++this.frame;
+        this._video.width = this._video.videoWidth;
+        this._video.height = this._video.videoHeight;
+        this.setOutputData(0, this._video);
+        for (var i = 1; i < this.outputs.length; ++i) {
+            if (!this.outputs[i]) {
+                continue;
+            }
+            switch (this.outputs[i].name) {
+                case "width":
+                    this.setOutputData(i, this._video.videoWidth);
+                    break;
+                case "height":
+                    this.setOutputData(i, this._video.videoHeight);
+                    break;
+            }
+        }
+    };
+
+    ImageWebcam.prototype.getExtraMenuOptions = function(graphcanvas) {
+        var that = this;
+        var txt = !that.properties.show ? "Show Frame" : "Hide Frame";
+        return [
+            {
+                content: txt,
+                callback: function() {
+                    that.properties.show = !that.properties.show;
+                }
+            }
+        ];
+    };
+
+    ImageWebcam.prototype.onDrawBackground = function(ctx) {
+        if (
+            this.flags.collapsed ||
+            this.size[1] <= 20 ||
+            !this.properties.show
+        ) {
+            return;
+        }
+
+        if (!this._video) {
+            return;
+        }
+
+        //render to graph canvas
+        ctx.save();
+        ctx.drawImage(this._video, 0, 0, this.size[0], this.size[1]);
+        ctx.restore();
+    };
+
+    ImageWebcam.prototype.onGetOutputs = function() {
+        return [
+            ["width", "number"],
+            ["height", "number"],
+            ["stream_ready", LiteGraph.EVENT],
+            ["stream_closed", LiteGraph.EVENT],
+            ["stream_error", LiteGraph.EVENT]
+        ];
+    };
+
+    LiteGraph.registerNodeType("graphics/webcam", ImageWebcam);
 })(this);
 
 (function(global) {
@@ -21778,6 +23400,3756 @@ void main(void){\n\
 })(this);
 
 (function(global) {
+
+    if (typeof GL == "undefined")
+		return;
+
+    var LiteGraph = global.LiteGraph;
+	var LGraphCanvas = global.LGraphCanvas;
+
+	var SHADERNODES_COLOR = "#345";
+
+	var LGShaders = LiteGraph.Shaders = {};
+
+	var GLSL_types = LGShaders.GLSL_types = ["float","vec2","vec3","vec4","mat3","mat4","sampler2D","samplerCube"];
+	var GLSL_types_const = LGShaders.GLSL_types_const = ["float","vec2","vec3","vec4"];
+
+	var GLSL_functions_desc = {
+		"radians": "T radians(T degrees)",
+		"degrees": "T degrees(T radians)",
+		"sin": "T sin(T angle)",
+		"cos": "T cos(T angle)",
+		"tan": "T tan(T angle)",
+		"asin": "T asin(T x)",
+		"acos": "T acos(T x)",
+		"atan": "T atan(T x)",
+		"atan2": "T atan(T x,T y)",
+		"pow": "T pow(T x,T y)",
+		"exp": "T exp(T x)",
+		"log": "T log(T x)",
+		"exp2": "T exp2(T x)",
+		"log2": "T log2(T x)",
+		"sqrt": "T sqrt(T x)",
+		"inversesqrt": "T inversesqrt(T x)",
+		"abs": "T abs(T x)",
+		"sign": "T sign(T x)",
+		"floor": "T floor(T x)",
+		"round": "T round(T x)",
+		"ceil": "T ceil(T x)",
+		"fract": "T fract(T x)",
+		"mod": "T mod(T x,T y)", //"T mod(T x,float y)"
+		"min": "T min(T x,T y)",
+		"max": "T max(T x,T y)",
+		"clamp": "T clamp(T x,T minVal = 0.0,T maxVal = 1.0)",
+		"mix": "T mix(T x,T y,T a)", //"T mix(T x,T y,float a)"
+		"step": "T step(T edge, T edge2, T x)", //"T step(float edge, T x)"
+		"smoothstep": "T smoothstep(T edge, T edge2, T x)", //"T smoothstep(float edge, T x)"
+		"length":"float length(T x)",
+		"distance":"float distance(T p0, T p1)",
+		"normalize":"T normalize(T x)",
+		"dot": "float dot(T x,T y)",
+		"cross": "vec3 cross(vec3 x,vec3 y)",
+		"reflect": "vec3 reflect(vec3 V,vec3 N)",
+		"refract": "vec3 refract(vec3 V,vec3 N, float IOR)"
+	};
+
+	//parse them
+	var GLSL_functions = {};
+	var GLSL_functions_name = [];
+	parseGLSLDescriptions();
+
+	LGShaders.ALL_TYPES = "float,vec2,vec3,vec4";
+
+	function parseGLSLDescriptions()
+	{
+		GLSL_functions_name.length = 0;
+
+		for(var i in GLSL_functions_desc)
+		{
+			var op = GLSL_functions_desc[i];
+			var index = op.indexOf(" ");
+			var return_type = op.substr(0,index);
+			var index2 = op.indexOf("(",index);
+			var func_name = op.substr(index,index2-index).trim();
+			var params = op.substr(index2 + 1, op.length - index2 - 2).split(",");
+			for(var j in params)
+			{
+				var p = params[j].split(" ").filter(function(a){ return a; });
+				params[j] = { type: p[0].trim(), name: p[1].trim() };
+				if(p[2] == "=")
+					params[j].value = p[3].trim();
+			}
+			GLSL_functions[i] = { return_type: return_type, func: func_name, params: params };
+			GLSL_functions_name.push( func_name );
+			//console.log( GLSL_functions[i] );
+		}
+	}
+
+	//common actions to all shader node classes
+	function registerShaderNode( type, node_ctor )
+	{
+		//static attributes
+		node_ctor.color = SHADERNODES_COLOR;
+		node_ctor.filter = "shader";
+
+		//common methods
+		node_ctor.prototype.clearDestination = function(){ this.shader_destination = {};  }
+		node_ctor.prototype.propagateDestination = function propagateDestination( dest_name )
+		{
+			this.shader_destination[ dest_name ] = true;
+			if(this.inputs)
+			for(var i = 0; i < this.inputs.length; ++i)
+			{
+				var origin_node = this.getInputNode(i);
+				if(origin_node)
+					origin_node.propagateDestination( dest_name );
+			}
+		}
+		if(!node_ctor.prototype.onPropertyChanged)
+			node_ctor.prototype.onPropertyChanged = function()
+			{
+				if(this.graph)
+					 this.graph._version++;
+			}
+
+		/*
+		if(!node_ctor.prototype.onGetCode)
+			node_ctor.prototype.onGetCode = function()
+			{
+				//check destination to avoid lonely nodes
+				if(!this.shader_destination)
+					return;
+				//grab inputs with types
+				var inputs = [];
+				if(this.inputs)
+				for(var i = 0; i < this.inputs.length; ++i)
+					inputs.push({ type: this.getInputData(i), name: getInputLinkID(this,i) });
+				var outputs = [];
+				if(this.outputs)
+				for(var i = 0; i < this.outputs.length; ++i)
+					outputs.push({ name: getOutputLinkID(this,i) });
+				//pass to code func
+				var results = this.extractCode(inputs);
+				//grab output, pass to next
+				if(results)
+				for(var i = 0; i < results.length; ++i)
+				{
+					var r = results[i];
+					if(!r)
+						continue;
+					this.setOutputData(i,r.value);
+				}
+			}
+		*/
+
+		LiteGraph.registerNodeType( "shader::" + type, node_ctor );
+	}
+
+	function getShaderNodeVarName( node, name )
+	{
+		return "VAR_" + (name || "TEMP") + "_" + node.id;
+	}
+
+	function getInputLinkID( node, slot )
+	{
+		if(!node.inputs)
+			return null;
+		var link = node.getInputLink( slot );
+		if( !link )
+			return null;
+		var origin_node = node.graph.getNodeById( link.origin_id );
+		if( !origin_node )
+			return null;
+		if(origin_node.getOutputVarName)
+			return origin_node.getOutputVarName(link.origin_slot);
+		//generate
+		return "link_" + origin_node.id + "_" + link.origin_slot;
+	}
+
+	function getOutputLinkID( node, slot )
+	{
+		if (!node.isOutputConnected(slot))
+			return null;
+		return "link_" + node.id + "_" + slot;
+	}
+
+	LGShaders.registerShaderNode = registerShaderNode;
+	LGShaders.getInputLinkID = getInputLinkID;
+	LGShaders.getOutputLinkID = getOutputLinkID;
+	LGShaders.getShaderNodeVarName = getShaderNodeVarName;
+	LGShaders.parseGLSLDescriptions = parseGLSLDescriptions;
+
+	//given a const number, it transform it to a string that matches a type
+	var valueToGLSL = LiteGraph.valueToGLSL = function valueToGLSL( v, type, precision )
+	{
+		var n = 5; //num decimals
+		if(precision != null)
+			n = precision;
+		if(!type)
+		{
+			if(v.constructor === Number)
+				type = "float";
+			else if(v.length)
+			{
+				switch(v.length)
+				{
+					case 2: type = "vec2"; break;
+					case 3: type = "vec3"; break;
+					case 4: type = "vec4"; break;
+					case 9: type = "mat3"; break;
+					case 16: type = "mat4"; break;
+					default:
+						throw("unknown type for glsl value size");
+				}
+			}
+			else
+				throw("unknown type for glsl value: " + v.constructor);
+		}
+		switch(type)
+		{
+			case 'float': return v.toFixed(n); break;
+			case 'vec2': return "vec2(" + v[0].toFixed(n) + "," + v[1].toFixed(n) + ")"; break;
+			case 'color3':
+			case 'vec3': return "vec3(" + v[0].toFixed(n) + "," + v[1].toFixed(n) + "," + v[2].toFixed(n) + ")"; break;
+			case 'color4':
+			case 'vec4': return "vec4(" + v[0].toFixed(n) + "," + v[1].toFixed(n) + "," + v[2].toFixed(n) + "," + v[3].toFixed(n) + ")"; break;
+			case 'mat3': return "mat3(1.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,1.0)"; break; //not fully supported yet
+			case 'mat4': return "mat4(1.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,0.0,1.0,0.0,0.0,0.0,0.0,1.0)"; break;//not fully supported yet
+			default:
+				throw("unknown glsl type in valueToGLSL:", type);
+		}
+
+		return "";
+	}
+
+	//makes sure that a var is of a type, and if not, it converts it
+	var varToTypeGLSL = LiteGraph.varToTypeGLSL = function varToTypeGLSL( v, input_type, output_type )
+	{
+		if(input_type == output_type)
+			return v;
+		if(v == null)
+			switch(output_type)
+			{
+				case "float": return "0.0";
+				case "vec2":  return "vec2(0.0)";
+				case "vec3":  return "vec3(0.0)";
+				case "vec4":  return "vec4(0.0,0.0,0.0,1.0)";
+				default: //null
+					return null;
+			}
+
+		if(!output_type)
+			throw("error: no output type specified");
+		if(output_type == "float")
+		{
+			switch(input_type)
+			{
+				//case "float":
+				case "vec2":
+				case "vec3":
+				case "vec4":
+					return v + ".x";
+					break;
+				default: //null
+					return "0.0";
+					break;
+			}
+		}
+		else if(output_type == "vec2")
+		{
+			switch(input_type)
+			{
+				case "float":
+					return "vec2("+v+")";
+				//case "vec2":
+				case "vec3":
+				case "vec4":
+					return v + ".xy";
+				default: //null
+					return "vec2(0.0)";
+			}
+		}
+		else if(output_type == "vec3")
+		{
+			switch(input_type)
+			{
+				case "float":
+					return "vec3("+v+")";
+				case "vec2":
+					return "vec3(" + v + ",0.0)";
+				//case "vec3":
+				case "vec4":
+					return v + ".xyz";
+				default: //null
+					return "vec3(0.0)";
+			}
+		}
+		else if(output_type == "vec4")
+		{
+			switch(input_type)
+			{
+				case "float":
+					return "vec4("+v+")";
+				case "vec2":
+					return "vec4(" + v + ",0.0,1.0)";
+				case "vec3":
+					return "vec4(" + v + ",1.0)";
+				default: //null
+					return "vec4(0.0,0.0,0.0,1.0)";
+			}
+		}
+		throw("type cannot be converted");
+	}
+
+
+	//used to plug incompatible stuff
+	var convertVarToGLSLType = LiteGraph.convertVarToGLSLType = function convertVarToGLSLType( varname, type, target_type )
+	{
+		if(type == target_type)
+			return varname;
+		if(type == "float")
+			return target_type + "(" + varname + ")";
+		if(target_type == "vec2") //works for vec2,vec3 and vec4
+			return "vec2(" + varname + ".xy)";
+		if(target_type == "vec3") //works for vec2,vec3 and vec4
+		{
+			if(type == "vec2")
+				return "vec3(" + varname + ",0.0)";
+			if(type == "vec4")
+				return "vec4(" + varname + ".xyz)";
+		}
+		if(target_type == "vec4")
+		{
+			if(type == "vec2")
+				return "vec4(" + varname + ",0.0,0.0)";
+			if(target_type == "vec3")
+				return "vec4(" + varname + ",1.0)";
+		}
+		return null;
+	}
+
+	//used to host a shader body **************************************
+	function LGShaderContext()
+	{
+		//to store the code template
+		this.vs_template = "";
+		this.fs_template = "";
+
+		//required so nodes now where to fetch the input data
+		this.buffer_names = {
+			uvs: "v_coord"
+		};
+
+		this.extra = {}; //to store custom info from the nodes (like if this shader supports a feature, etc)
+
+		this._functions = {};
+		this._uniforms = {};
+		this._codeparts = {};
+		this._uniform_value = null;
+	}
+
+	LGShaderContext.prototype.clear = function()
+	{
+		this._uniforms = {};
+		this._functions = {};
+		this._codeparts = {};
+		this._uniform_value = null;
+
+		this.extra = {};
+	}
+
+	LGShaderContext.prototype.addUniform = function( name, type, value )
+	{
+		this._uniforms[ name ] = type;
+		if(value != null)
+		{
+			if(!this._uniform_value)
+				this._uniform_value = {};
+			this._uniform_value[name] = value;
+		}
+	}
+
+	LGShaderContext.prototype.addFunction = function( name, code )
+	{
+		this._functions[name] = code;
+	}
+
+	LGShaderContext.prototype.addCode = function( hook, code, destinations )
+	{
+		destinations = destinations || {"":""};
+		for(var i in destinations)
+		{
+			var h = i ? i + "_" + hook : hook;
+			if(!this._codeparts[ h ])
+				this._codeparts[ h ] = code + "\n";
+			else
+				this._codeparts[ h ] += code + "\n";
+		}
+	}
+
+	//the system works by grabbing code fragments from every node and concatenating them in blocks depending on where must they be attached
+	LGShaderContext.prototype.computeCodeBlocks = function( graph, extra_uniforms )
+	{
+		//prepare context
+		this.clear();
+
+		//grab output nodes
+		var vertexout = graph.findNodesByType("shader::output/vertex");
+		vertexout = vertexout && vertexout.length ? vertexout[0] : null;
+		var fragmentout = graph.findNodesByType("shader::output/fragcolor");
+		fragmentout = fragmentout && fragmentout.length ? fragmentout[0] : null;
+		if(!fragmentout) //??
+			return null; 
+
+		//propagate back destinations
+		graph.sendEventToAllNodes( "clearDestination" );
+		if(vertexout)
+			vertexout.propagateDestination("vs");
+		if(fragmentout)
+			fragmentout.propagateDestination("fs");
+
+		//gets code from graph
+		graph.sendEventToAllNodes("onGetCode", this );
+
+		var uniforms = "";
+		for(var i in this._uniforms)
+			uniforms += "uniform " + this._uniforms[i] + " " + i + ";\n";
+		if(extra_uniforms)
+			for(var i in extra_uniforms)
+				uniforms += "uniform " + extra_uniforms[i] + " " + i + ";\n";
+
+		var functions = "";
+		for(var i in this._functions)
+			functions += "//" + i + "\n" + this._functions[i] + "\n";
+
+		var blocks = this._codeparts;
+		blocks.uniforms = uniforms;
+		blocks.functions = functions;
+		return blocks;
+	}
+
+	//replaces blocks using the vs and fs template and returns the final codes
+	LGShaderContext.prototype.computeShaderCode = function( graph )
+	{
+		var blocks = this.computeCodeBlocks( graph );
+		var vs_code = GL.Shader.replaceCodeUsingContext( this.vs_template, blocks );
+		var fs_code = GL.Shader.replaceCodeUsingContext( this.fs_template, blocks );
+		return {
+			vs_code: vs_code,
+			fs_code: fs_code
+		};
+	}
+
+	//generates the shader code from the template and the 
+	LGShaderContext.prototype.computeShader = function( graph, shader )
+	{
+		var finalcode = this.computeShaderCode( graph );
+		console.log( finalcode.vs_code, finalcode.fs_code );
+
+		if(!LiteGraph.catch_exceptions)
+		{
+			this._shader_error = true;
+			if(shader)
+				shader.updateShader( finalcode.vs_code, finalcode.fs_code );
+			else
+				shader = new GL.Shader( finalcode.vs_code, finalcode.fs_code );
+			this._shader_error = false;
+			return shader;
+		}
+
+		try
+		{
+			if(shader)
+				shader.updateShader( finalcode.vs_code, finalcode.fs_code );
+			else
+				shader = new GL.Shader( finalcode.vs_code, finalcode.fs_code );
+			this._shader_error = false;
+			return shader;
+		}
+		catch (err)
+		{
+			if(!this._shader_error)
+			{
+				console.error(err);
+				if(err.indexOf("Fragment shader") != -1)
+					console.log( finalcode.fs_code.split("\n").map(function(v,i){ return i + ".- " + v; }).join("\n") );
+				else
+					console.log( finalcode.vs_code );
+			}
+			this._shader_error = true;
+			return null;
+		}
+
+		return null;//never here
+	}
+
+	LGShaderContext.prototype.getShader = function( graph )
+	{
+		//if graph not changed?
+		if(this._shader && this._shader._version == graph._version)
+			return this._shader;
+
+		//compile shader
+		var shader = this.computeShader( graph, this._shader );
+		if(!shader)
+			return null;
+		
+		this._shader = shader;
+		shader._version = graph._version;
+		return shader;
+	}
+
+	//some shader nodes could require to fill the box with some uniforms
+	LGShaderContext.prototype.fillUniforms = function( uniforms, param )
+	{
+		if(!this._uniform_value)
+			return;
+
+		for(var i in this._uniform_value)
+		{
+			var v = this._uniform_value[i];
+			if(v == null)
+				continue;
+			if(v.constructor === Function)
+				uniforms[i] = v.call( this, param );
+			else if(v.constructor === GL.Texture)
+			{
+				//todo...
+			}
+			else
+				uniforms[i] = v;
+		}
+	}
+
+	LiteGraph.ShaderContext = LiteGraph.Shaders.Context = LGShaderContext;
+
+	// LGraphShaderGraph *****************************
+	// applies a shader graph to texture, it can be uses as an example
+
+	function LGraphShaderGraph() {
+
+		//before inputs
+        this.subgraph = new LiteGraph.LGraph();
+        this.subgraph._subgraph_node = this;
+        this.subgraph._is_subgraph = true;
+		this.subgraph.filter = "shader";
+
+		this.addInput("in", "texture");
+		this.addOutput("out", "texture");
+		this.properties = { width: 0, height: 0, alpha: false, precision: typeof(LGraphTexture) != "undefined" ? LGraphTexture.DEFAULT : 2 };
+
+		var inputNode = this.subgraph.findNodesByType("shader::input/uniform")[0];
+		inputNode.pos = [200,300];
+
+		var sampler = LiteGraph.createNode("shader::texture/sampler2D");
+		sampler.pos = [400,300];
+		this.subgraph.add( sampler );
+
+		var outnode = LiteGraph.createNode("shader::output/fragcolor");
+		outnode.pos = [600,300];
+		this.subgraph.add( outnode );
+
+		inputNode.connect( 0, sampler );
+		sampler.connect( 0, outnode );
+
+		this.size = [180,60];
+		this.redraw_on_mouse = true; //force redraw
+
+		this._uniforms = {};
+		this._shader = null;
+		this._context = new LGShaderContext();
+		this._context.vs_template = "#define VERTEX\n" + GL.Shader.SCREEN_VERTEX_SHADER;
+		this._context.fs_template = LGraphShaderGraph.template;
+	}
+
+	LGraphShaderGraph.template = "\n\
+#define FRAGMENT\n\
+precision highp float;\n\
+varying vec2 v_coord;\n\
+{{varying}}\n\
+{{uniforms}}\n\
+{{functions}}\n\
+{{fs_functions}}\n\
+void main() {\n\n\
+vec2 uv = v_coord;\n\
+vec4 fragcolor = vec4(0.0);\n\
+vec4 fragcolor1 = vec4(0.0);\n\
+{{fs_code}}\n\
+gl_FragColor = fragcolor;\n\
+}\n\
+	";
+
+	LGraphShaderGraph.widgets_info = {
+		precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+	};
+
+	LGraphShaderGraph.title = "ShaderGraph";
+	LGraphShaderGraph.desc = "Builds a shader using a graph";
+	LGraphShaderGraph.input_node_type = "input/uniform";
+	LGraphShaderGraph.output_node_type = "output/fragcolor";
+	LGraphShaderGraph.title_color = SHADERNODES_COLOR;
+
+	LGraphShaderGraph.prototype.onSerialize = function(o)
+	{
+		o.subgraph = this.subgraph.serialize();
+	}
+
+	LGraphShaderGraph.prototype.onConfigure = function(o)
+	{
+		this.subgraph.configure(o.subgraph);
+	}
+
+	LGraphShaderGraph.prototype.onExecute = function() {
+		if (!this.isOutputConnected(0))
+			return;
+
+		//read input texture
+		var intex = this.getInputData(0);
+		if(intex && intex.constructor != GL.Texture)
+			intex = null;
+
+		var w = this.properties.width | 0;
+		var h = this.properties.height | 0;
+		if (w == 0) {
+			w = intex ? intex.width : gl.viewport_data[2];
+		} //0 means default
+		if (h == 0) {
+			h = intex ? intex.height : gl.viewport_data[3];
+		} //0 means default
+
+		var type = LGraphTexture.getTextureType( this.properties.precision, intex );
+
+		var texture = this._texture;
+		if ( !texture || texture.width != w || texture.height != h || texture.type != type ) {
+			texture = this._texture = new GL.Texture(w, h, {
+				type: type,
+				format: this.alpha ? gl.RGBA : gl.RGB,
+				filter: gl.LINEAR
+			});
+		}
+		
+		var shader = this.getShader( this.subgraph );
+		if(!shader)
+			return;
+
+		var uniforms = this._uniforms;
+		this._context.fillUniforms( uniforms );
+
+		var tex_slot = 0;
+		if(this.inputs)
+		for(var i = 0; i < this.inputs.length; ++i)
+		{
+			var input = this.inputs[i];
+			var data = this.getInputData(i);
+			if(input.type == "texture")
+			{
+				if(!data)
+					data = GL.Texture.getWhiteTexture();
+				data = data.bind(tex_slot++);
+			}
+
+			if(data != null)
+				uniforms[ "u_" + input.name ] = data;
+		}
+
+		var mesh = GL.Mesh.getScreenQuad();
+
+		gl.disable( gl.DEPTH_TEST );
+		gl.disable( gl.BLEND );
+
+		texture.drawTo(function(){
+			shader.uniforms( uniforms );
+			shader.draw( mesh );
+		});
+
+		//use subgraph output 
+		this.setOutputData(0, texture );
+	};
+
+	//add input node inside subgraph
+	LGraphShaderGraph.prototype.onInputAdded = function( slot_info )
+	{
+		var subnode = LiteGraph.createNode("shader::input/uniform");
+		subnode.setProperty("name",slot_info.name);
+		subnode.setProperty("type",slot_info.type);
+		this.subgraph.add( subnode );
+	}
+
+	//remove all
+	LGraphShaderGraph.prototype.onInputRemoved = function( slot, slot_info )
+	{
+		var nodes = this.subgraph.findNodesByType("shader::input/uniform");
+		for(var i = 0; i < nodes.length; ++i)
+		{
+			var node = nodes[i];
+			if(node.properties.name == slot_info.name )
+				this.subgraph.remove( node );
+		}
+	}
+
+	LGraphShaderGraph.prototype.computeSize = function()
+	{
+		var num_inputs = this.inputs ? this.inputs.length : 0;
+		var num_outputs = this.outputs ? this.outputs.length : 0;
+		return [ 200, Math.max(num_inputs,num_outputs) * LiteGraph.NODE_SLOT_HEIGHT + LiteGraph.NODE_TITLE_HEIGHT + 10];
+	}
+
+	LGraphShaderGraph.prototype.getShader = function()
+	{
+		var shader = this._context.getShader( this.subgraph );
+		if(!shader)
+			this.boxcolor = "red";
+		else
+			this.boxcolor = null;
+		return shader;
+	}
+
+	LGraphShaderGraph.prototype.onDrawBackground = function(ctx, graphcanvas, canvas, pos)
+	{
+		if(this.flags.collapsed)
+			return;
+
+		//allows to preview the node if the canvas is a webgl canvas
+		var tex = this.getOutputData(0);
+		var inputs_y = this.inputs ? this.inputs.length * LiteGraph.NODE_SLOT_HEIGHT : 0;
+		if (tex && ctx == tex.gl && this.size[1] > inputs_y + LiteGraph.NODE_TITLE_HEIGHT ) {
+			ctx.drawImage( tex, 10,y, this.size[0] - 20, this.size[1] - inputs_y - LiteGraph.NODE_TITLE_HEIGHT );
+		}
+
+		var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
+
+		//button
+		var over = LiteGraph.isInsideRectangle(pos[0],pos[1],this.pos[0],this.pos[1] + y,this.size[0],LiteGraph.NODE_TITLE_HEIGHT);
+		ctx.fillStyle = over ? "#555" : "#222";
+		ctx.beginPath();
+		if (this._shape == LiteGraph.BOX_SHAPE)
+			ctx.rect(0, y, this.size[0]+1, LiteGraph.NODE_TITLE_HEIGHT);
+		else
+			ctx.roundRect( 0, y, this.size[0]+1, LiteGraph.NODE_TITLE_HEIGHT, 0, 8);
+		ctx.fill();
+
+		//button
+		ctx.textAlign = "center";
+		ctx.font = "24px Arial";
+		ctx.fillStyle = over ? "#DDD" : "#999";
+		ctx.fillText( "+", this.size[0] * 0.5, y + 24 );
+	}
+
+	LGraphShaderGraph.prototype.onMouseDown = function(e, localpos, graphcanvas)
+	{
+		var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
+		if(localpos[1] > y)
+		{
+			graphcanvas.showSubgraphPropertiesDialog(this);
+		}
+	}
+
+	LGraphShaderGraph.prototype.onDrawSubgraphBackground = function(graphcanvas)
+	{
+		//TODO
+	}
+
+	LGraphShaderGraph.prototype.getExtraMenuOptions = function(graphcanvas)
+	{
+		var that = this;
+		var options = [{ content: "Print Code", callback: function(){
+			var code = that._context.computeShaderCode();
+			console.log( code.vs_code, code.fs_code );
+		}}];
+
+		return options;
+	}
+
+	LiteGraph.registerNodeType( "texture/shaderGraph", LGraphShaderGraph );
+
+	function shaderNodeFromFunction( classname, params, return_type, code )
+	{
+		//TODO
+	}
+
+	//Shader Nodes ***********************************************************
+
+	//applies a shader graph to a code
+	function LGraphShaderUniform() {
+		this.addOutput("out", "");
+		this.properties = { name: "", type: "" };
+	}
+
+	LGraphShaderUniform.title = "Uniform";
+	LGraphShaderUniform.desc = "Input data for the shader";
+
+	LGraphShaderUniform.prototype.getTitle = function()
+	{
+		if( this.properties.name && this.flags.collapsed)
+			return this.properties.type + " " + this.properties.name;
+		return "Uniform";
+	}
+
+	LGraphShaderUniform.prototype.onPropertyChanged = function(name,value)
+	{
+		this.outputs[0].name = this.properties.type + " " + this.properties.name;
+	}
+
+	LGraphShaderUniform.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		var type = this.properties.type;
+		if( !type )
+		{
+			if( !context.onGetPropertyInfo )
+				return;
+			var info = context.onGetPropertyInfo( this.property.name );
+			if(!info)
+				return;
+			type = info.type;
+		}
+		if(type == "number")
+			type = "float";
+		else if(type == "texture")
+			type = "sampler2D";
+		if ( LGShaders.GLSL_types.indexOf(type) == -1 )
+			return;
+
+		context.addUniform( "u_" + this.properties.name, type );
+		this.setOutputData( 0, type );
+	}
+
+	LGraphShaderUniform.prototype.getOutputVarName = function(slot)
+	{
+		return "u_" + this.properties.name;
+	}
+
+	registerShaderNode( "input/uniform", LGraphShaderUniform );
+
+
+	function LGraphShaderAttribute() {
+		this.addOutput("out", "vec2");
+		this.properties = { name: "coord", type: "vec2" };
+	}
+
+	LGraphShaderAttribute.title = "Attribute";
+	LGraphShaderAttribute.desc = "Input data from mesh attribute";
+
+	LGraphShaderAttribute.prototype.getTitle = function()
+	{
+		return "att. " + this.properties.name;
+	}
+
+	LGraphShaderAttribute.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		var type = this.properties.type;
+		if( !type || LGShaders.GLSL_types.indexOf(type) == -1 )
+			return;
+		if(type == "number")
+			type = "float";
+		if( this.properties.name != "coord")
+		{
+			context.addCode( "varying", " varying " + type +" v_" + this.properties.name + ";" );
+			//if( !context.varyings[ this.properties.name ] )
+			//context.addCode( "vs_code", "v_" + this.properties.name + " = " + input_name + ";" );
+		}
+		this.setOutputData( 0, type );
+	}
+
+	LGraphShaderAttribute.prototype.getOutputVarName = function(slot)
+	{
+		return "v_" + this.properties.name;
+	}
+
+	registerShaderNode( "input/attribute", LGraphShaderAttribute );
+
+	function LGraphShaderSampler2D() {
+		this.addInput("tex", "sampler2D");
+		this.addInput("uv", "vec2");
+		this.addOutput("rgba", "vec4");
+		this.addOutput("rgb", "vec3");
+	}
+
+	LGraphShaderSampler2D.title = "Sampler2D";
+	LGraphShaderSampler2D.desc = "Reads a pixel from a texture";
+
+	LGraphShaderSampler2D.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		var texname = getInputLinkID( this, 0 );
+		var varname = getShaderNodeVarName(this);
+		var code = "vec4 " + varname + " = vec4(0.0);\n";
+		if(texname)
+		{
+			var uvname = getInputLinkID( this, 1 ) || context.buffer_names.uvs;
+			code += varname + " = texture2D("+texname+","+uvname+");\n";
+		}
+
+		var link0 = getOutputLinkID( this, 0 );
+		if(link0)
+			code += "vec4 " + getOutputLinkID( this, 0 ) + " = "+varname+";\n";
+
+		var link1 = getOutputLinkID( this, 1 );
+		if(link1)
+			code += "vec3 " + getOutputLinkID( this, 1 ) + " = "+varname+".xyz;\n";
+
+		context.addCode( "code", code, this.shader_destination );
+		this.setOutputData( 0, "vec4" );
+		this.setOutputData( 1, "vec3" );
+	}
+
+	registerShaderNode( "texture/sampler2D", LGraphShaderSampler2D );
+
+	//*********************************
+
+	function LGraphShaderConstant()
+	{
+		this.addOutput("","float");
+
+		this.properties = {
+			type: "float",
+			value: 0
+		};
+
+		this.addWidget("combo","type","float",null, { values: GLSL_types_const, property: "type" } );
+		this.updateWidgets();
+	}
+
+	LGraphShaderConstant.title = "const";
+
+	LGraphShaderConstant.prototype.getTitle = function()
+	{
+		if(this.flags.collapsed)
+			return valueToGLSL( this.properties.value, this.properties.type, 2 );
+		return "Const";
+	}
+
+	LGraphShaderConstant.prototype.onPropertyChanged = function(name,value)
+	{
+		var that = this;
+		if(name == "type")
+		{
+			if(this.outputs[0].type != value)
+			{
+				this.disconnectOutput(0);
+				this.outputs[0].type = value;
+			}
+			this.widgets.length = 1; //remove extra widgets
+			this.updateWidgets();
+		}
+		if(name == "value")
+		{
+			if(!value.length)
+				this.widgets[1].value = value;
+			else
+			{
+				this.widgets[1].value = value[1];
+				if(value.length > 2)
+					this.widgets[2].value = value[2];
+				if(value.length > 3)
+					this.widgets[3].value = value[3];
+			}
+		}
+	}
+
+	LGraphShaderConstant.prototype.updateWidgets = function( old_value )
+	{
+		var that = this;
+		var old_value = this.properties.value;
+		var options = { step: 0.01 };
+		switch(this.properties.type)
+		{
+			case 'float': 
+				this.properties.value = 0;
+				this.addWidget("number","v",0,{ step:0.01, property: "value" });
+				break;
+			case 'vec2': 
+				this.properties.value = old_value && old_value.length == 2 ? [old_value[0],old_value[1]] : [0,0,0];
+				this.addWidget("number","x",this.properties.value[0], function(v){ that.properties.value[0] = v; },options); 
+				this.addWidget("number","y",this.properties.value[1], function(v){ that.properties.value[1] = v; },options); 
+				break;
+			case 'vec3': 
+				this.properties.value = old_value && old_value.length == 3 ? [old_value[0],old_value[1],old_value[2]] : [0,0,0];
+				this.addWidget("number","x",this.properties.value[0], function(v){ that.properties.value[0] = v; },options); 
+				this.addWidget("number","y",this.properties.value[1], function(v){ that.properties.value[1] = v; },options); 
+				this.addWidget("number","z",this.properties.value[2], function(v){ that.properties.value[2] = v; },options); 
+				break;
+			case 'vec4': 
+				this.properties.value = old_value && old_value.length == 4 ? [old_value[0],old_value[1],old_value[2],old_value[3]] : [0,0,0,0];
+				this.addWidget("number","x",this.properties.value[0], function(v){ that.properties.value[0] = v; },options); 
+				this.addWidget("number","y",this.properties.value[1], function(v){ that.properties.value[1] = v; },options); 
+				this.addWidget("number","z",this.properties.value[2], function(v){ that.properties.value[2] = v; },options); 
+				this.addWidget("number","w",this.properties.value[3], function(v){ that.properties.value[3] = v; },options); 
+				break;
+			default:
+				console.error("unknown type for constant");
+		}
+	}
+
+	LGraphShaderConstant.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		var value = valueToGLSL( this.properties.value, this.properties.type );
+		var link_name = getOutputLinkID(this,0);
+		if(!link_name) //not connected
+			return;
+
+		var code = "	" + this.properties.type + " " + link_name + " = " + value + ";";
+		context.addCode( "code", code, this.shader_destination );
+
+		this.setOutputData( 0, this.properties.type );
+	}
+
+	registerShaderNode( "const/const", LGraphShaderConstant );
+
+	function LGraphShaderVec2()
+	{
+		this.addInput("xy","vec2");
+		this.addInput("x","float");
+		this.addInput("y","float");
+		this.addOutput("xy","vec2");
+		this.addOutput("x","float");
+		this.addOutput("y","float");
+
+		this.properties = { x: 0, y: 0 };
+	}
+
+	LGraphShaderVec2.title = "vec2";
+	LGraphShaderVec2.varmodes = ["xy","x","y"];
+
+	LGraphShaderVec2.prototype.onPropertyChanged = function()
+	{
+		if(this.graph)
+			 this.graph._version++;
+	}
+
+	LGraphShaderVec2.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		var props = this.properties;
+
+		var varname = getShaderNodeVarName(this);
+		var code = "	vec2 " + varname + " = " + valueToGLSL([props.x,props.y]) + ";\n";
+
+		for(var i = 0;i < LGraphShaderVec2.varmodes.length; ++i)
+		{
+			var varmode = LGraphShaderVec2.varmodes[i];
+			var inlink = getInputLinkID(this,i);
+			if(!inlink)
+				continue;
+			code += "	" + varname + "."+varmode+" = " + inlink + ";\n";
+		}
+
+		for(var i = 0;i < LGraphShaderVec2.varmodes.length; ++i)
+		{
+			var varmode = LGraphShaderVec2.varmodes[i];
+			var outlink = getOutputLinkID(this,i);
+			if(!outlink)
+				continue;
+			var type = GLSL_types_const[varmode.length - 1];
+			code += "	"+type+" " + outlink + " = " + varname + "." + varmode + ";\n";
+			this.setOutputData( i, type );
+		}
+
+		context.addCode( "code", code, this.shader_destination );
+	}
+
+	registerShaderNode( "const/vec2", LGraphShaderVec2 );	
+
+	function LGraphShaderVec3()
+	{
+		this.addInput("xyz","vec3");
+		this.addInput("x","float");
+		this.addInput("y","float");
+		this.addInput("z","float");
+		this.addInput("xy","vec2");
+		this.addInput("xz","vec2");
+		this.addInput("yz","vec2");
+		this.addOutput("xyz","vec3");
+		this.addOutput("x","float");
+		this.addOutput("y","float");
+		this.addOutput("z","float");
+		this.addOutput("xy","vec2");
+		this.addOutput("xz","vec2");
+		this.addOutput("yz","vec2");
+
+		this.properties = { x:0, y: 0, z: 0 };
+	}
+
+	LGraphShaderVec3.title = "vec3";
+	LGraphShaderVec3.varmodes = ["xyz","x","y","z","xy","xz","yz"];
+
+	LGraphShaderVec3.prototype.onPropertyChanged = function()
+	{
+		if(this.graph)
+			this.graph._version++;
+	}
+
+	LGraphShaderVec3.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		var props = this.properties;
+
+		var varname = getShaderNodeVarName(this);
+		var code = "vec3 " + varname + " = " + valueToGLSL([props.x,props.y,props.z]) + ";\n";
+
+		for(var i = 0;i < LGraphShaderVec3.varmodes.length; ++i)
+		{
+			var varmode = LGraphShaderVec3.varmodes[i];
+			var inlink = getInputLinkID(this,i);
+			if(!inlink)
+				continue;
+			code += "	" + varname + "."+varmode+" = " + inlink + ";\n";
+		}
+
+		for(var i = 0; i < LGraphShaderVec3.varmodes.length; ++i)
+		{
+			var varmode = LGraphShaderVec3.varmodes[i];
+			var outlink = getOutputLinkID(this,i);
+			if(!outlink)
+				continue;
+			var type = GLSL_types_const[varmode.length - 1];
+			code += "	"+type+" " + outlink + " = " + varname + "." + varmode + ";\n";
+			this.setOutputData( i, type );
+		}
+
+		context.addCode( "code", code, this.shader_destination );
+	}
+
+	registerShaderNode( "const/vec3", LGraphShaderVec3 );	
+
+
+	function LGraphShaderVec4()
+	{
+		this.addInput("xyzw","vec4");
+		this.addInput("xyz","vec3");
+		this.addInput("x","float");
+		this.addInput("y","float");
+		this.addInput("z","float");
+		this.addInput("w","float");
+		this.addInput("xy","vec2");
+		this.addInput("yz","vec2");
+		this.addInput("zw","vec2");
+		this.addOutput("xyzw","vec4");
+		this.addOutput("xyz","vec3");
+		this.addOutput("x","float");
+		this.addOutput("y","float");
+		this.addOutput("z","float");
+		this.addOutput("xy","vec2");
+		this.addOutput("yz","vec2");
+		this.addOutput("zw","vec2");
+
+		this.properties = { x:0, y: 0, z: 0, w: 0 };
+	}
+
+	LGraphShaderVec4.title = "vec4";
+	LGraphShaderVec4.varmodes = ["xyzw","xyz","x","y","z","w","xy","yz","zw"];
+
+	LGraphShaderVec4.prototype.onPropertyChanged = function()
+	{
+		if(this.graph)
+			this.graph._version++;
+	}
+
+	LGraphShaderVec4.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		var props = this.properties;
+
+		var varname = getShaderNodeVarName(this);
+		var code = "vec4 " + varname + " = " + valueToGLSL([props.x,props.y,props.z,props.w]) + ";\n";
+
+		for(var i = 0;i < LGraphShaderVec4.varmodes.length; ++i)
+		{
+			var varmode = LGraphShaderVec4.varmodes[i];
+			var inlink = getInputLinkID(this,i);
+			if(!inlink)
+				continue;
+			code += "	" + varname + "."+varmode+" = " + inlink + ";\n";
+		}
+
+		for(var i = 0;i < LGraphShaderVec4.varmodes.length; ++i)
+		{
+			var varmode = LGraphShaderVec4.varmodes[i];
+			var outlink = getOutputLinkID(this,i);
+			if(!outlink)
+				continue;
+			var type = GLSL_types_const[varmode.length - 1];
+			code += "	"+type+" " + outlink + " = " + varname + "." + varmode + ";\n";
+			this.setOutputData( i, type );
+		}
+
+		context.addCode( "code", code, this.shader_destination );
+
+	}
+
+	registerShaderNode( "const/vec4", LGraphShaderVec4 );	
+	
+	//*********************************
+
+	function LGraphShaderFragColor() {
+		this.addInput("color", LGShaders.ALL_TYPES );
+		this.block_delete = true;
+	}
+
+	LGraphShaderFragColor.title = "FragColor";
+	LGraphShaderFragColor.desc = "Pixel final color";
+
+	LGraphShaderFragColor.prototype.onGetCode = function( context )
+	{
+		var link_name = getInputLinkID( this, 0 );
+		if(!link_name)
+			return;
+		var type = this.getInputData(0);
+		var code = varToTypeGLSL( link_name, type, "vec4" );
+		context.addCode("fs_code", "fragcolor = " + code + ";");
+	}
+
+	registerShaderNode( "output/fragcolor", LGraphShaderFragColor );
+
+
+	/*
+	function LGraphShaderDiscard()
+	{
+		this.addInput("v","T");
+		this.addInput("min","T");
+		this.properties = { min_value: 0.0 };
+		this.addWidget("number","min",0,{ step: 0.01, property: "min_value" });
+	}
+
+	LGraphShaderDiscard.title = "Discard";
+
+	LGraphShaderDiscard.prototype.onGetCode = function( context )
+	{
+		if(!this.isOutputConnected(0))
+			return;
+
+		var inlink = getInputLinkID(this,0);
+		var inlink1 = getInputLinkID(this,1);
+
+		if(!inlink && !inlink1) //not connected
+			return;
+		context.addCode("code", return_type + " " + outlink + " = ( (" + inlink + " - "+minv+") / ("+ maxv+" - "+minv+") ) * ("+ maxv2+" - "+minv2+") + " + minv2 + ";", this.shader_destination );
+		this.setOutputData( 0, return_type );
+	}
+
+	registerShaderNode( "output/discard", LGraphShaderDiscard );
+	*/
+
+
+	// *************************************************
+
+	function LGraphShaderOperation()
+	{
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
+		this.addOutput("out","");
+		this.properties = {
+			operation: "*"
+		};
+		this.addWidget("combo","op.",this.properties.operation,{ property: "operation", values: LGraphShaderOperation.operations });
+	}
+
+	LGraphShaderOperation.title = "Operation";
+	LGraphShaderOperation.operations = ["+","-","*","/"];
+
+	LGraphShaderOperation.prototype.getTitle = function()
+	{
+		if(this.flags.collapsed)
+			return "A" + this.properties.operation + "B";
+		else
+			return "Operation";
+	}
+
+	LGraphShaderOperation.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return;
+
+		var inlinks = [];
+		for(var i = 0; i < 3; ++i)
+			inlinks.push( { name: getInputLinkID(this,i), type: this.getInputData(i) || "float" } );
+
+		var outlink = getOutputLinkID(this,0);
+		if(!outlink) //not connected
+			return;
+
+		//func_desc
+		var base_type = inlinks[0].type;
+		var return_type = base_type;
+		var op = this.properties.operation;
+
+		var params = [];
+		for(var i = 0; i < 2; ++i)
+		{
+			var param_code = inlinks[i].name;
+			if(param_code == null) //not plugged
+			{
+				param_code = p.value != null ? p.value : "(1.0)";
+				inlinks[i].type = "float";
+			}
+
+			//convert
+			if( inlinks[i].type != base_type ) 
+			{
+				if( inlinks[i].type == "float" && (op == "*" || op == "/") )
+				{
+					//I find hard to create the opposite condition now, so I prefeer an else
+				}
+				else
+					param_code = convertVarToGLSLType( param_code, inlinks[i].type, base_type );
+			}
+			params.push( param_code );
+		}
+		
+		context.addCode("code", return_type + " " + outlink + " = "+ params[0] + op + params[1] + ";", this.shader_destination );
+		this.setOutputData( 0, return_type );
+	}
+
+	registerShaderNode( "math/operation", LGraphShaderOperation );
+
+
+	function LGraphShaderFunc()
+	{
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
+		this.addOutput("out","");
+		this.properties = {
+			func: "floor"
+		};
+		this._current = "floor";
+		this.addWidget("combo","func",this.properties.func,{ property: "func", values: GLSL_functions_name });
+	}
+
+	LGraphShaderFunc.title = "Func";
+
+	LGraphShaderFunc.prototype.onPropertyChanged = function(name,value)
+	{
+		if(this.graph)
+			this.graph._version++;
+
+		if(name == "func")
+		{
+			var func_desc = GLSL_functions[ value ];
+			if(!func_desc)
+				return;
+
+			//remove extra inputs
+			for(var i = func_desc.params.length; i < this.inputs.length; ++i)
+				this.removeInput(i);
+
+			//add and update inputs
+			for(var i = 0; i < func_desc.params.length; ++i)
+			{
+				var p = func_desc.params[i];
+				if( this.inputs[i] )
+					this.inputs[i].name = p.name + (p.value ? " (" + p.value + ")" : "");
+				else
+					this.addInput( p.name, LGShaders.ALL_TYPES );
+			}
+		}
+	}
+
+	LGraphShaderFunc.prototype.getTitle = function()
+	{
+		if(this.flags.collapsed)
+			return this.properties.func;
+		else
+			return "Func";
+	}
+
+	LGraphShaderFunc.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination)
+			return;
+
+		if(!this.isOutputConnected(0))
+			return;
+
+		var inlinks = [];
+		for(var i = 0; i < 3; ++i)
+			inlinks.push( { name: getInputLinkID(this,i), type: this.getInputData(i) || "float" } );
+
+		var outlink = getOutputLinkID(this,0);
+		if(!outlink) //not connected
+			return;
+
+		var func_desc = GLSL_functions[ this.properties.func ];
+		if(!func_desc)
+			return;
+
+		//func_desc
+		var base_type = inlinks[0].type;
+		var return_type = func_desc.return_type;
+		if( return_type == "T" )
+			return_type = base_type;
+
+		var params = [];
+		for(var i = 0; i < func_desc.params.length; ++i)
+		{
+			var p = func_desc.params[i];
+			var param_code = inlinks[i].name;
+			if(param_code == null) //not plugged
+			{
+				param_code = p.value != null ? p.value : "(1.0)";
+				inlinks[i].type = "float";
+			}
+			if( (p.type == "T" && inlinks[i].type != base_type) ||
+				(p.type != "T" && inlinks[i].type != base_type) )
+				param_code = convertVarToGLSLType( param_code, inlinks[i].type, base_type );
+			params.push( param_code );
+		}
+		
+		context.addFunction("round","float round(float v){ return floor(v+0.5); }\nvec2 round(vec2 v){ return floor(v+vec2(0.5));}\nvec3 round(vec3 v){ return floor(v+vec3(0.5));}\nvec4 round(vec4 v){ return floor(v+vec4(0.5)); }\n");
+		context.addCode("code", return_type + " " + outlink + " = "+func_desc.func+"("+params.join(",")+");", this.shader_destination );
+
+		this.setOutputData( 0, return_type );
+	}
+
+	registerShaderNode( "math/func", LGraphShaderFunc );
+
+
+
+	function LGraphShaderSnippet()
+	{
+		this.addInput("A", LGShaders.ALL_TYPES );
+		this.addInput("B", LGShaders.ALL_TYPES );
+		this.addOutput("C","vec4");
+		this.properties = {
+			code:"C = A+B",
+			type: "vec4"
+		}
+		this.addWidget("text","code",this.properties.code,{ property: "code" });
+		this.addWidget("combo","type",this.properties.type,{ values:["float","vec2","vec3","vec4"], property: "type" });
+	}
+
+	LGraphShaderSnippet.title = "Snippet";
+
+	LGraphShaderSnippet.prototype.onPropertyChanged = function(name,value)
+	{
+		if(this.graph)
+			this.graph._version++;
+
+		if(name == "type"&& this.outputs[0].type != value)
+		{
+			this.disconnectOutput(0);
+			this.outputs[0].type = value;
+		}
+	}
+
+	LGraphShaderSnippet.prototype.getTitle = function()
+	{
+		if(this.flags.collapsed)
+			return this.properties.code;
+		else
+			return "Snippet";
+	}
+
+	LGraphShaderSnippet.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var inlinkA = getInputLinkID(this,0);
+		if(!inlinkA)
+			inlinkA = "1.0";
+		var inlinkB = getInputLinkID(this,1);
+		if(!inlinkB)
+			inlinkB = "1.0";
+		var outlink = getOutputLinkID(this,0);
+		if(!outlink) //not connected
+			return;
+
+		var inA_type = this.getInputData(0) || "float";
+		var inB_type = this.getInputData(1) || "float";
+		var return_type = this.properties.type;
+
+		//cannot resolve input
+		if(inA_type == "T" || inB_type == "T")
+		{
+			return null;
+		}
+
+		var funcname = "funcSnippet" + this.id;
+
+		var func_code = "\n" + return_type + " " + funcname + "( " + inA_type + " A, " + inB_type + " B) {\n";
+		func_code += "	" + return_type + " C = " + return_type + "(0.0);\n";
+		func_code += "	" + this.properties.code + ";\n";
+		func_code += "	return C;\n}\n";
+
+		context.addCode("functions", func_code, this.shader_destination );
+		context.addCode("code", return_type + " " + outlink + " = "+funcname+"("+inlinkA+","+inlinkB+");", this.shader_destination );
+
+		this.setOutputData( 0, return_type );
+	}
+
+	registerShaderNode( "utils/snippet", LGraphShaderSnippet );
+
+	//************************************
+
+	function LGraphShaderRand()
+	{
+		this.addOutput("out","float");
+	}
+
+	LGraphShaderRand.title = "Rand";
+
+	LGraphShaderRand.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var outlink = getOutputLinkID(this,0);
+
+		context.addUniform( "u_rand" + this.id, "float", function(){ return Math.random(); });
+		context.addCode("code", "float " + outlink + " = u_rand" + this.id +";", this.shader_destination );
+		this.setOutputData( 0, "float" );
+	}
+
+	registerShaderNode( "input/rand", LGraphShaderRand );
+
+	//noise
+	//https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+	function LGraphShaderNoise()
+	{
+		this.addInput("out", LGShaders.ALL_TYPES );
+		this.addInput("scale", "float" );
+		this.addOutput("out","float");
+		this.properties = {
+			type: "noise",
+			scale: 1
+		};
+		this.addWidget("combo","type", this.properties.type, { property: "type", values: LGraphShaderNoise.NOISE_TYPES });
+		this.addWidget("number","scale", this.properties.scale, { property: "scale" });
+	}
+
+	LGraphShaderNoise.NOISE_TYPES = ["noise","rand"];
+
+	LGraphShaderNoise.title = "noise";
+
+	LGraphShaderNoise.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var inlink = getInputLinkID(this,0);
+		var outlink = getOutputLinkID(this,0);
+
+		var intype = this.getInputData(0);
+		if(!inlink)
+		{
+			intype = "vec2";
+			inlink = context.buffer_names.uvs;
+		}
+
+		context.addFunction("noise",LGraphShaderNoise.shader_functions);
+		context.addUniform( "u_noise_scale" + this.id, "float", this.properties.scale );
+		if( intype == "float" )
+			context.addCode("code", "float " + outlink + " = snoise( vec2(" + inlink +") * u_noise_scale" + this.id +");", this.shader_destination );
+		else if( intype == "vec2" || intype == "vec3" )
+			context.addCode("code", "float " + outlink + " = snoise(" + inlink +" * u_noise_scale" + this.id +");", this.shader_destination );
+		else if( intype == "vec4" )
+			context.addCode("code", "float " + outlink + " = snoise(" + inlink +".xyz * u_noise_scale" + this.id +");", this.shader_destination );
+		this.setOutputData( 0, "float" );
+	}
+
+	registerShaderNode( "math/noise", LGraphShaderNoise );
+
+LGraphShaderNoise.shader_functions = "\n\
+vec3 permute(vec3 x) { return mod(((x*34.0)+1.0)*x, 289.0); }\n\
+\n\
+float snoise(vec2 v){\n\
+  const vec4 C = vec4(0.211324865405187, 0.366025403784439,-0.577350269189626, 0.024390243902439);\n\
+  vec2 i  = floor(v + dot(v, C.yy) );\n\
+  vec2 x0 = v -   i + dot(i, C.xx);\n\
+  vec2 i1;\n\
+  i1 = (x0.x > x0.y) ? vec2(1.0, 0.0) : vec2(0.0, 1.0);\n\
+  vec4 x12 = x0.xyxy + C.xxzz;\n\
+  x12.xy -= i1;\n\
+  i = mod(i, 289.0);\n\
+  vec3 p = permute( permute( i.y + vec3(0.0, i1.y, 1.0 ))\n\
+  + i.x + vec3(0.0, i1.x, 1.0 ));\n\
+  vec3 m = max(0.5 - vec3(dot(x0,x0), dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)), 0.0);\n\
+  m = m*m ;\n\
+  m = m*m ;\n\
+  vec3 x = 2.0 * fract(p * C.www) - 1.0;\n\
+  vec3 h = abs(x) - 0.5;\n\
+  vec3 ox = floor(x + 0.5);\n\
+  vec3 a0 = x - ox;\n\
+  m *= 1.79284291400159 - 0.85373472095314 * ( a0*a0 + h*h );\n\
+  vec3 g;\n\
+  g.x  = a0.x  * x0.x  + h.x  * x0.y;\n\
+  g.yz = a0.yz * x12.xz + h.yz * x12.yw;\n\
+  return 130.0 * dot(m, g);\n\
+}\n\
+vec4 permute(vec4 x){return mod(((x*34.0)+1.0)*x, 289.0);}\n\
+vec4 taylorInvSqrt(vec4 r){return 1.79284291400159 - 0.85373472095314 * r;}\n\
+\n\
+float snoise(vec3 v){ \n\
+  const vec2  C = vec2(1.0/6.0, 1.0/3.0) ;\n\
+  const vec4  D = vec4(0.0, 0.5, 1.0, 2.0);\n\
+\n\
+// First corner\n\
+  vec3 i  = floor(v + dot(v, C.yyy) );\n\
+  vec3 x0 =   v - i + dot(i, C.xxx) ;\n\
+\n\
+// Other corners\n\
+  vec3 g = step(x0.yzx, x0.xyz);\n\
+  vec3 l = 1.0 - g;\n\
+  vec3 i1 = min( g.xyz, l.zxy );\n\
+  vec3 i2 = max( g.xyz, l.zxy );\n\
+\n\
+  //  x0 = x0 - 0. + 0.0 * C \n\
+  vec3 x1 = x0 - i1 + 1.0 * C.xxx;\n\
+  vec3 x2 = x0 - i2 + 2.0 * C.xxx;\n\
+  vec3 x3 = x0 - 1. + 3.0 * C.xxx;\n\
+\n\
+// Permutations\n\
+  i = mod(i, 289.0 ); \n\
+  vec4 p = permute( permute( permute( \n\
+             i.z + vec4(0.0, i1.z, i2.z, 1.0 ))\n\
+           + i.y + vec4(0.0, i1.y, i2.y, 1.0 )) \n\
+           + i.x + vec4(0.0, i1.x, i2.x, 1.0 ));\n\
+\n\
+// Gradients\n\
+// ( N*N points uniformly over a square, mapped onto an octahedron.)\n\
+  float n_ = 1.0/7.0; // N=7\n\
+  vec3  ns = n_ * D.wyz - D.xzx;\n\
+\n\
+  vec4 j = p - 49.0 * floor(p * ns.z *ns.z);  //  mod(p,N*N)\n\
+\n\
+  vec4 x_ = floor(j * ns.z);\n\
+  vec4 y_ = floor(j - 7.0 * x_ );    // mod(j,N)\n\
+\n\
+  vec4 x = x_ *ns.x + ns.yyyy;\n\
+  vec4 y = y_ *ns.x + ns.yyyy;\n\
+  vec4 h = 1.0 - abs(x) - abs(y);\n\
+\n\
+  vec4 b0 = vec4( x.xy, y.xy );\n\
+  vec4 b1 = vec4( x.zw, y.zw );\n\
+\n\
+  vec4 s0 = floor(b0)*2.0 + 1.0;\n\
+  vec4 s1 = floor(b1)*2.0 + 1.0;\n\
+  vec4 sh = -step(h, vec4(0.0));\n\
+\n\
+  vec4 a0 = b0.xzyw + s0.xzyw*sh.xxyy ;\n\
+  vec4 a1 = b1.xzyw + s1.xzyw*sh.zzww ;\n\
+\n\
+  vec3 p0 = vec3(a0.xy,h.x);\n\
+  vec3 p1 = vec3(a0.zw,h.y);\n\
+  vec3 p2 = vec3(a1.xy,h.z);\n\
+  vec3 p3 = vec3(a1.zw,h.w);\n\
+\n\
+//Normalise gradients\n\
+  vec4 norm = taylorInvSqrt(vec4(dot(p0,p0), dot(p1,p1), dot(p2, p2), dot(p3,p3)));\n\
+  p0 *= norm.x;\n\
+  p1 *= norm.y;\n\
+  p2 *= norm.z;\n\
+  p3 *= norm.w;\n\
+\n\
+// Mix final noise value\n\
+  vec4 m = max(0.6 - vec4(dot(x0,x0), dot(x1,x1), dot(x2,x2), dot(x3,x3)), 0.0);\n\
+  m = m * m;\n\
+  return 42.0 * dot( m*m, vec4( dot(p0,x0), dot(p1,x1),dot(p2,x2), dot(p3,x3) ) );\n\
+}\n\
+\n\
+vec3 hash3( vec2 p ){\n\
+    vec3 q = vec3( dot(p,vec2(127.1,311.7)), \n\
+				   dot(p,vec2(269.5,183.3)), \n\
+				   dot(p,vec2(419.2,371.9)) );\n\
+	return fract(sin(q)*43758.5453);\n\
+}\n\
+vec4 hash4( vec3 p ){\n\
+    vec4 q = vec4( dot(p,vec3(127.1,311.7,257.3)), \n\
+				   dot(p,vec3(269.5,183.3,335.1)), \n\
+				   dot(p,vec3(314.5,235.1,467.3)), \n\
+				   dot(p,vec3(419.2,371.9,114.9)) );\n\
+	return fract(sin(q)*43758.5453);\n\
+}\n\
+\n\
+float iqnoise( in vec2 x, float u, float v ){\n\
+    vec2 p = floor(x);\n\
+    vec2 f = fract(x);\n\
+	\n\
+	float k = 1.0+63.0*pow(1.0-v,4.0);\n\
+	\n\
+	float va = 0.0;\n\
+	float wt = 0.0;\n\
+    for( int j=-2; j<=2; j++ )\n\
+    for( int i=-2; i<=2; i++ )\n\
+    {\n\
+        vec2 g = vec2( float(i),float(j) );\n\
+		vec3 o = hash3( p + g )*vec3(u,u,1.0);\n\
+		vec2 r = g - f + o.xy;\n\
+		float d = dot(r,r);\n\
+		float ww = pow( 1.0-smoothstep(0.0,1.414,sqrt(d)), k );\n\
+		va += o.z*ww;\n\
+		wt += ww;\n\
+    }\n\
+	\n\
+    return va/wt;\n\
+}\n\
+"
+
+	function LGraphShaderTime()
+	{
+		this.addOutput("out","float");
+	}
+
+	LGraphShaderTime.title = "Time";
+
+	LGraphShaderTime.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var outlink = getOutputLinkID(this,0);
+
+		context.addUniform( "u_time" + this.id, "float", function(){ return getTime() * 0.001; });
+		context.addCode("code", "float " + outlink + " = u_time" + this.id +";", this.shader_destination );
+		this.setOutputData( 0, "float" );
+	}
+
+	registerShaderNode( "input/time", LGraphShaderTime );
+
+
+	function LGraphShaderDither()
+	{
+		this.addInput("in","T");
+		this.addOutput("out","float");
+	}
+
+	LGraphShaderDither.title = "Dither";
+
+	LGraphShaderDither.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var inlink = getInputLinkID(this,0);
+		var return_type = "float";
+		var outlink = getOutputLinkID(this,0);
+		var intype = this.getInputData(0);
+		inlink = varToTypeGLSL( inlink, intype, "float" );
+		context.addFunction("dither8x8", LGraphShaderDither.dither_func);
+		context.addCode("code", return_type + " " + outlink + " = dither8x8("+ inlink +");", this.shader_destination );
+		this.setOutputData( 0, return_type );
+	}
+
+	LGraphShaderDither.dither_values = [0.515625,0.140625,0.640625,0.046875,0.546875,0.171875,0.671875,0.765625,0.265625,0.890625,0.390625,0.796875,0.296875,0.921875,0.421875,0.203125,0.703125,0.078125,0.578125,0.234375,0.734375,0.109375,0.609375,0.953125,0.453125,0.828125,0.328125,0.984375,0.484375,0.859375,0.359375,0.0625,0.5625,0.1875,0.6875,0.03125,0.53125,0.15625,0.65625,0.8125,0.3125,0.9375,0.4375,0.78125,0.28125,0.90625,0.40625,0.25,0.75,0.125,0.625,0.21875,0.71875,0.09375,0.59375,1.0001,0.5,0.875,0.375,0.96875,0.46875,0.84375,0.34375];
+	
+	LGraphShaderDither.dither_func = "\n\
+		float dither8x8(float brightness) {\n\
+		  vec2 position = vec2(0.0);\n\
+		  #ifdef FRAGMENT\n\
+			position = gl_FragCoord.xy;\n\
+		  #endif\n\
+		  int x = int(mod(position.x, 8.0));\n\
+		  int y = int(mod(position.y, 8.0));\n\
+		  int index = x + y * 8;\n\
+		  float limit = 0.0;\n\
+		  if (x < 8) {\n\
+			if(index==0) limit = 0.015625;\n\
+			"+(LGraphShaderDither.dither_values.map( function(v,i){ return "else if(index== "+(i+1)+") limit = " + v + ";"}).join("\n"))+"\n\
+		  }\n\
+		  return brightness < limit ? 0.0 : 1.0;\n\
+		}\n",
+
+	registerShaderNode( "math/dither", LGraphShaderDither );
+
+	function LGraphShaderRemap()
+	{
+		this.addInput("", LGShaders.ALL_TYPES );
+		this.addOutput("","");
+		this.properties = {
+			min_value: 0,
+			max_value: 1,
+			min_value2: 0,
+			max_value2: 1
+		};
+		this.addWidget("number","min",0,{ step: 0.1, property: "min_value" });
+		this.addWidget("number","max",1,{ step: 0.1, property: "max_value" });
+		this.addWidget("number","min2",0,{ step: 0.1, property: "min_value2"});
+		this.addWidget("number","max2",1,{ step: 0.1, property: "max_value2"});
+	}
+
+	LGraphShaderRemap.title = "Remap";
+
+	LGraphShaderRemap.prototype.onPropertyChanged = function()
+	{
+		if(this.graph)
+			this.graph._version++;
+	}
+
+	LGraphShaderRemap.prototype.onConnectionsChange = function()
+	{
+		var return_type = this.getInputDataType(0);
+		this.outputs[0].type = return_type || "T";
+	}
+
+	LGraphShaderRemap.prototype.onGetCode = function( context )
+	{
+		if(!this.shader_destination || !this.isOutputConnected(0))
+			return;
+
+		var inlink = getInputLinkID(this,0);
+		var outlink = getOutputLinkID(this,0);
+		if(!inlink && !outlink) //not connected
+			return;
+
+		var return_type = this.getInputDataType(0);
+		this.outputs[0].type = return_type;
+		if(return_type == "T")
+		{
+			console.warn("node type is T and cannot be resolved");
+			return;
+		}
+
+		if(!inlink)
+		{
+			context.addCode("code","	" + return_type + " " + outlink + " = " + return_type + "(0.0);\n");
+			return;
+		}
+
+		var minv = valueToGLSL( this.properties.min_value );
+		var maxv = valueToGLSL( this.properties.max_value );
+		var minv2 = valueToGLSL( this.properties.min_value2 );
+		var maxv2 = valueToGLSL( this.properties.max_value2 );
+
+		context.addCode("code", return_type + " " + outlink + " = ( (" + inlink + " - "+minv+") / ("+ maxv+" - "+minv+") ) * ("+ maxv2+" - "+minv2+") + " + minv2 + ";", this.shader_destination );
+		this.setOutputData( 0, return_type );
+	}
+
+	registerShaderNode( "math/remap", LGraphShaderRemap );
+
+})(this);
+
+
+
+(function(global) {
+    var LiteGraph = global.LiteGraph;
+
+	var view_matrix = new Float32Array(16);
+	var projection_matrix = new Float32Array(16);
+	var viewprojection_matrix = new Float32Array(16);
+	var model_matrix = new Float32Array(16);
+	var global_uniforms = {
+		u_view: view_matrix,
+		u_projection: projection_matrix,
+		u_viewprojection: viewprojection_matrix,
+		u_model: model_matrix 
+	};
+
+	LiteGraph.LGraphRender = {
+		onRequestCameraMatrices: null //overwrite with your 3D engine specifics, it will receive (view_matrix, projection_matrix,viewprojection_matrix) and must be filled
+	};
+
+	function generateGeometryId() {
+		return (Math.random() * 100000)|0;
+	}
+
+	function LGraphPoints3D() {
+
+		this.addInput("obj", "");
+		this.addInput("radius", "number");
+
+		this.addOutput("out", "geometry");
+		this.addOutput("points", "[vec3]");
+		this.properties = {
+			radius: 1,
+			num_points: 4096,
+			generate_normals: true,
+			regular: false,
+			mode: LGraphPoints3D.SPHERE,
+			force_update: false
+		};
+
+		this.points = new Float32Array( this.properties.num_points * 3 );
+		this.normals = new Float32Array( this.properties.num_points * 3 );
+		this.must_update = true;
+		this.version = 0;
+
+		var that = this;
+		this.addWidget("button","update",null, function(){ that.must_update = true; });
+
+		this.geometry = {
+			vertices: null,
+			_id: generateGeometryId()
+		}
+
+		this._old_obj = null;
+		this._last_radius = null;
+	}
+
+	global.LGraphPoints3D = LGraphPoints3D;
+
+	LGraphPoints3D.RECTANGLE = 1;
+	LGraphPoints3D.CIRCLE = 2;
+
+	LGraphPoints3D.CUBE = 10;
+	LGraphPoints3D.SPHERE = 11;
+	LGraphPoints3D.HEMISPHERE = 12;
+	LGraphPoints3D.INSIDE_SPHERE = 13;
+
+	LGraphPoints3D.OBJECT = 20;
+	LGraphPoints3D.OBJECT_UNIFORMLY = 21;
+	LGraphPoints3D.OBJECT_INSIDE = 22;
+
+	LGraphPoints3D.MODE_VALUES = { "rectangle":LGraphPoints3D.RECTANGLE, "circle":LGraphPoints3D.CIRCLE, "cube":LGraphPoints3D.CUBE, "sphere":LGraphPoints3D.SPHERE, "hemisphere":LGraphPoints3D.HEMISPHERE, "inside_sphere":LGraphPoints3D.INSIDE_SPHERE, "object":LGraphPoints3D.OBJECT, "object_uniformly":LGraphPoints3D.OBJECT_UNIFORMLY, "object_inside":LGraphPoints3D.OBJECT_INSIDE };
+
+	LGraphPoints3D.widgets_info = {
+		mode: { widget: "combo", values: LGraphPoints3D.MODE_VALUES }
+	};
+
+	LGraphPoints3D.title = "list of points";
+	LGraphPoints3D.desc = "returns an array of points";
+
+	LGraphPoints3D.prototype.onPropertyChanged = function(name,value)
+	{
+		this.must_update = true;
+	}
+
+	LGraphPoints3D.prototype.onExecute = function() {
+
+		var obj = this.getInputData(0);
+		if( obj != this._old_obj || (obj && obj._version != this._old_obj_version) )
+		{
+			this._old_obj = obj;
+			this.must_update = true;
+		}
+
+		var radius = this.getInputData(1);
+		if(radius == null)
+			radius = this.properties.radius;
+		if( this._last_radius != radius )
+		{
+			this._last_radius = radius;
+			this.must_update = true;
+		}
+
+		if(this.must_update || this.properties.force_update )
+		{
+			this.must_update = false;
+			this.updatePoints();
+		}
+
+		this.geometry.vertices = this.points;
+		this.geometry.normals = this.normals;
+		this.geometry._version = this.version;
+
+		this.setOutputData( 0, this.geometry );
+	}
+
+	LGraphPoints3D.prototype.updatePoints = function() {
+		var num_points = this.properties.num_points|0;
+		if(num_points < 1)
+			num_points = 1;
+
+		if(!this.points || this.points.length != num_points * 3)
+			this.points = new Float32Array( num_points * 3 );
+
+		if(this.properties.generate_normals)
+		{
+			if (!this.normals || this.normals.length != this.points.length)
+				this.normals = new Float32Array( this.points.length );
+		}
+		else
+			this.normals = null;
+
+		var radius = this._last_radius || this.properties.radius;
+		var mode = this.properties.mode;
+
+		var obj = this.getInputData(0);
+		this._old_obj_version = obj ? obj._version : null;
+
+		this.points = LGraphPoints3D.generatePoints( radius, num_points, mode, this.points, this.normals, this.properties.regular, obj );
+
+		this.version++;
+	}
+
+	//global
+	LGraphPoints3D.generatePoints = function( radius, num_points, mode, points, normals, regular, obj )
+	{
+		var size = num_points * 3;
+		if(!points || points.length != size)
+			points = new Float32Array( size );
+		var temp = new Float32Array(3);
+		var UP = new Float32Array([0,1,0]);
+
+		if(regular)
+		{
+			if( mode == LGraphPoints3D.RECTANGLE)
+			{
+				var side = Math.floor(Math.sqrt(num_points));
+				for(var i = 0; i < side; ++i)
+				for(var j = 0; j < side; ++j)
+				{
+					var pos = i*3 + j*3*side;
+					points[pos] = ((i/side) - 0.5) * radius * 2;
+					points[pos+1] = 0;
+					points[pos+2] = ((j/side) - 0.5) * radius * 2;
+				}
+				points = new Float32Array( points.subarray(0,side*side*3) );
+				if(normals)
+				{
+					for(var i = 0; i < normals.length; i+=3)
+						normals.set(UP, i);
+				}
+			}
+			else if( mode == LGraphPoints3D.SPHERE)
+			{
+				var side = Math.floor(Math.sqrt(num_points));
+				for(var i = 0; i < side; ++i)
+				for(var j = 0; j < side; ++j)
+				{
+					var pos = i*3 + j*3*side;
+					polarToCartesian( temp, (i/side) * 2 * Math.PI, ((j/side) - 0.5) * 2 * Math.PI, radius );
+					points[pos] = temp[0];
+					points[pos+1] = temp[1];
+					points[pos+2] = temp[2];
+				}
+				points = new Float32Array( points.subarray(0,side*side*3) );
+				if(normals)
+					LGraphPoints3D.generateSphericalNormals( points, normals );
+			}
+			else if( mode == LGraphPoints3D.CIRCLE)
+			{
+				for(var i = 0; i < size; i+=3)
+				{
+					var angle = 2 * Math.PI * (i/size);
+					points[i] = Math.cos( angle ) * radius;
+					points[i+1] = 0;
+					points[i+2] = Math.sin( angle ) * radius;
+				}
+				if(normals)
+				{
+					for(var i = 0; i < normals.length; i+=3)
+						normals.set(UP, i);
+				}
+			}
+		}
+		else //non regular
+		{
+			if( mode == LGraphPoints3D.RECTANGLE)
+			{
+				for(var i = 0; i < size; i+=3)
+				{
+					points[i] = (Math.random() - 0.5) * radius * 2;
+					points[i+1] = 0;
+					points[i+2] = (Math.random() - 0.5) * radius * 2;
+				}
+				if(normals)
+				{
+					for(var i = 0; i < normals.length; i+=3)
+						normals.set(UP, i);
+				}
+			}
+			else if( mode == LGraphPoints3D.CUBE)
+			{
+				for(var i = 0; i < size; i+=3)
+				{
+					points[i] = (Math.random() - 0.5) * radius * 2;
+					points[i+1] = (Math.random() - 0.5) * radius * 2;
+					points[i+2] = (Math.random() - 0.5) * radius * 2;
+				}
+				if(normals)
+				{
+					for(var i = 0; i < normals.length; i+=3)
+						normals.set(UP, i);
+				}
+			}
+			else if( mode == LGraphPoints3D.SPHERE)
+			{
+				LGraphPoints3D.generateSphere( points, size, radius );
+				if(normals)
+					LGraphPoints3D.generateSphericalNormals( points, normals );
+			}
+			else if( mode == LGraphPoints3D.HEMISPHERE)
+			{
+				LGraphPoints3D.generateHemisphere( points, size, radius );
+				if(normals)
+					LGraphPoints3D.generateSphericalNormals( points, normals );
+			}
+			else if( mode == LGraphPoints3D.CIRCLE)
+			{
+				LGraphPoints3D.generateInsideCircle( points, size, radius );
+				if(normals)
+					LGraphPoints3D.generateSphericalNormals( points, normals );
+			}
+			else if( mode == LGraphPoints3D.INSIDE_SPHERE)
+			{
+				LGraphPoints3D.generateInsideSphere( points, size, radius );
+				if(normals)
+					LGraphPoints3D.generateSphericalNormals( points, normals );
+			}
+			else if( mode == LGraphPoints3D.OBJECT)
+			{
+				LGraphPoints3D.generateFromObject( points, normals, size, obj, false );
+			}
+			else if( mode == LGraphPoints3D.OBJECT_UNIFORMLY)
+			{
+				LGraphPoints3D.generateFromObject( points, normals, size, obj, true );
+			}
+			else if( mode == LGraphPoints3D.OBJECT_INSIDE)
+			{
+				LGraphPoints3D.generateFromInsideObject( points, size, obj );
+				//if(normals)
+				//	LGraphPoints3D.generateSphericalNormals( points, normals );
+			}
+			else
+				console.warn("wrong mode in LGraphPoints3D");
+		}
+
+		return points;
+	}
+
+	LGraphPoints3D.generateSphericalNormals = function(points, normals)
+	{
+		var temp = new Float32Array(3);
+		for(var i = 0; i < normals.length; i+=3)
+		{
+			temp[0] = points[i];
+			temp[1] = points[i+1];
+			temp[2] = points[i+2];
+			vec3.normalize(temp,temp);
+			normals.set(temp,i);
+		}
+	}
+
+	LGraphPoints3D.generateSphere = function (points, size, radius)
+	{
+		for(var i = 0; i < size; i+=3)
+		{
+			var r1 = Math.random();
+			var r2 = Math.random();
+			var x = 2 * Math.cos( 2 * Math.PI * r1 ) * Math.sqrt( r2 * (1-r2) );
+			var y = 1 - 2 * r2;
+			var z = 2 * Math.sin( 2 * Math.PI * r1 ) * Math.sqrt( r2 * (1-r2) );
+			points[i] = x * radius;
+			points[i+1] = y * radius;
+			points[i+2] = z * radius;
+		}			
+	}
+
+	LGraphPoints3D.generateHemisphere = function (points, size, radius)
+	{
+		for(var i = 0; i < size; i+=3)
+		{
+			var r1 = Math.random();
+			var r2 = Math.random();
+			var x = Math.cos( 2 * Math.PI * r1 ) * Math.sqrt(1 - r2*r2 );
+			var y = r2;
+			var z = Math.sin( 2 * Math.PI * r1 ) * Math.sqrt(1 - r2*r2 );
+			points[i] = x * radius;
+			points[i+1] = y * radius;
+			points[i+2] = z * radius;
+		}
+	}
+
+	LGraphPoints3D.generateInsideCircle = function (points, size, radius)
+	{
+		for(var i = 0; i < size; i+=3)
+		{
+			var r1 = Math.random();
+			var r2 = Math.random();
+			var x = Math.cos( 2 * Math.PI * r1 ) * Math.sqrt(1 - r2*r2 );
+			var y = r2;
+			var z = Math.sin( 2 * Math.PI * r1 ) * Math.sqrt(1 - r2*r2 );
+			points[i] = x * radius;
+			points[i+1] = 0;
+			points[i+2] = z * radius;
+		}
+	}
+
+	LGraphPoints3D.generateInsideSphere = function (points, size, radius)
+	{
+		for(var i = 0; i < size; i+=3)
+		{
+			var u = Math.random();
+			var v = Math.random();
+			var theta = u * 2.0 * Math.PI;
+			var phi = Math.acos(2.0 * v - 1.0);
+			var r = Math.cbrt(Math.random()) * radius;
+			var sinTheta = Math.sin(theta);
+			var cosTheta = Math.cos(theta);
+			var sinPhi = Math.sin(phi);
+			var cosPhi = Math.cos(phi);
+			points[i] = r * sinPhi * cosTheta;
+			points[i+1] = r * sinPhi * sinTheta;
+			points[i+2] = r * cosPhi;
+		}	
+	}
+
+	function findRandomTriangle( areas, f )
+	{
+		var l = areas.length;
+		var imin = 0;
+		var imid = 0;
+		var imax = l;
+
+		if(l == 0)
+			return -1;
+		if(l == 1)
+			return 0;
+		//dichotimic search
+		while (imax >= imin)
+		{
+			imid = ((imax + imin)*0.5)|0;
+			var t = areas[ imid ];
+			if( t == f )
+				return imid; 
+			if( imin == (imax - 1) )
+				return imin;
+			if (t < f)
+				imin = imid;
+			else         
+				imax = imid;
+		}
+		return imid;		
+	}
+
+	LGraphPoints3D.generateFromObject = function( points, normals, size, obj, evenly )
+	{
+		if(!obj)
+			return;
+
+		var vertices = null;
+		var mesh_normals = null;
+		var indices = null;
+		var areas = null;
+		if( obj.constructor === GL.Mesh )
+		{
+			vertices = obj.vertexBuffers.vertices.data;
+			mesh_normals = obj.vertexBuffers.normals ? obj.vertexBuffers.normals.data : null;
+			indices = obj.indexBuffers.indices ? obj.indexBuffers.indices.data : null;
+			if(!indices)
+				indices = obj.indexBuffers.triangles ? obj.indexBuffers.triangles.data : null;
+		}
+		if(!vertices)
+			return null;
+		var num_triangles = indices ? indices.length / 3 : vertices.length / (3*3);
+		var total_area = 0; //sum of areas of all triangles
+
+		if(evenly)
+		{
+			areas = new Float32Array(num_triangles); //accum
+			for(var i = 0; i < num_triangles; ++i)
+			{
+				if(indices)
+				{
+					a = indices[i*3]*3;
+					b = indices[i*3+1]*3;
+					c = indices[i*3+2]*3;
+				}
+				else
+				{
+					a = i*9;
+					b = i*9+3;
+					c = i*9+6;
+				}
+				var P1 = vertices.subarray(a,a+3);
+				var P2 = vertices.subarray(b,b+3);
+				var P3 = vertices.subarray(c,c+3);
+				var aL = vec3.distance( P1, P2 );
+				var bL = vec3.distance( P2, P3 );
+				var cL = vec3.distance( P3, P1 );
+				var s = (aL + bL+ cL) / 2;
+				total_area += Math.sqrt(s * (s - aL) * (s - bL) * (s - cL));
+				areas[i] = total_area;
+			}			
+			for(var i = 0; i < num_triangles; ++i) //normalize
+				areas[i] /= total_area;
+		}
+
+		for(var i = 0; i < size; i+=3)
+		{
+			var r = Math.random();
+			var index = evenly ? findRandomTriangle( areas, r ) : Math.floor(r * num_triangles );
+			//get random triangle
+			var a = 0;
+			var b = 0;
+			var c = 0;
+			if(indices)
+			{
+				a = indices[index*3]*3;
+				b = indices[index*3+1]*3;
+				c = indices[index*3+2]*3;
+			}
+			else
+			{
+				a = index*9;
+				b = index*9+3;
+				c = index*9+6;
+			}
+			var s = Math.random();
+			var t = Math.random();
+			var sqrt_s = Math.sqrt(s);
+			var af = 1 - sqrt_s;
+			var bf = sqrt_s * ( 1 - t);
+			var cf = t * sqrt_s;
+			points[i] = af * vertices[a] + bf*vertices[b] + cf*vertices[c];
+			points[i+1] = af * vertices[a+1] + bf*vertices[b+1] + cf*vertices[c+1];
+			points[i+2] = af * vertices[a+2] + bf*vertices[b+2] + cf*vertices[c+2];
+			if(normals && mesh_normals)
+			{
+				normals[i] = af * mesh_normals[a] + bf*mesh_normals[b] + cf*mesh_normals[c];
+				normals[i+1] = af * mesh_normals[a+1] + bf*mesh_normals[b+1] + cf*mesh_normals[c+1];
+				normals[i+2] = af * mesh_normals[a+2] + bf*mesh_normals[b+2] + cf*mesh_normals[c+2];
+				var N = normals.subarray(i,i+3);
+				vec3.normalize(N,N);
+			}
+		}
+	}
+
+	LGraphPoints3D.generateFromInsideObject = function( points, size, mesh )
+	{
+		if(!mesh || mesh.constructor !== GL.Mesh)
+			return;
+
+		var aabb = mesh.getBoundingBox();
+		if(!mesh.octree)
+			mesh.octree = new GL.Octree( mesh );
+		var octree = mesh.octree;
+		var origin = vec3.create();
+		var direction = vec3.fromValues(1,0,0);
+		var temp = vec3.create();
+		var i = 0;
+		var tries = 0;
+		while(i < size && tries < points.length * 10) //limit to avoid problems
+		{
+			tries += 1
+			var r = vec3.random(temp); //random point inside the aabb
+			r[0] = (r[0] * 2 - 1) * aabb[3] + aabb[0];
+			r[1] = (r[1] * 2 - 1) * aabb[4] + aabb[1];
+			r[2] = (r[2] * 2 - 1) * aabb[5] + aabb[2];
+			origin.set(r);
+			var hit = octree.testRay( origin, direction, 0, 10000, true, GL.Octree.ALL );
+			if(!hit || hit.length % 2 == 0) //not inside
+				continue;
+			points.set( r, i );
+			i+=3;
+		}
+	}
+
+	LiteGraph.registerNodeType( "geometry/points3D", LGraphPoints3D );
+
+
+
+	function LGraphPointsToInstances() {
+		this.addInput("points", "geometry");
+		this.addOutput("instances", "[mat4]");
+		this.properties = {
+			mode: 1,
+			autoupdate: true
+		};
+
+		this.must_update = true;
+		this.matrices = [];
+		this.first_time = true;
+	}
+
+	LGraphPointsToInstances.NORMAL = 0;
+	LGraphPointsToInstances.VERTICAL = 1;
+	LGraphPointsToInstances.SPHERICAL = 2;
+	LGraphPointsToInstances.RANDOM = 3;
+	LGraphPointsToInstances.RANDOM_VERTICAL = 4;
+
+	LGraphPointsToInstances.modes = {"normal":0,"vertical":1,"spherical":2,"random":3,"random_vertical":4};
+	LGraphPointsToInstances.widgets_info = {
+		mode: { widget: "combo", values: LGraphPointsToInstances.modes }
+	};
+
+	LGraphPointsToInstances.title = "points to inst";
+
+	LGraphPointsToInstances.prototype.onExecute = function()
+	{
+		var geo = this.getInputData(0);
+		if( !geo )
+		{
+			this.setOutputData(0,null);
+			return;
+		}
+
+		if( !this.isOutputConnected(0) )
+			return;
+
+		var has_changed = (geo._version != this._version || geo._id != this._geometry_id);
+
+		if( has_changed && this.properties.autoupdate || this.first_time )
+		{
+			this.first_time = false;
+			this.updateInstances( geo );
+		}
+
+		this.setOutputData( 0, this.matrices );
+	}
+
+	LGraphPointsToInstances.prototype.updateInstances = function( geometry )
+	{
+		var vertices = geometry.vertices;
+		if(!vertices)
+			return null;
+		var normals = geometry.normals;
+
+		var matrices = this.matrices;
+		var num_points = vertices.length / 3;
+		if( matrices.length != num_points)
+			matrices.length = num_points;
+		var identity = mat4.create();
+		var temp = vec3.create();
+		var zero = vec3.create();
+		var UP = vec3.fromValues(0,1,0);
+		var FRONT = vec3.fromValues(0,0,-1);
+		var RIGHT = vec3.fromValues(1,0,0);
+		var R = quat.create();
+
+		var front = vec3.create();
+		var right = vec3.create();
+		var top = vec3.create();
+
+		for(var i = 0; i < vertices.length; i += 3)
+		{
+			var index = i/3;
+			var m = matrices[index];
+			if(!m)
+				m = matrices[index] = mat4.create();
+			m.set( identity );
+			var point = vertices.subarray(i,i+3);
+
+			switch(this.properties.mode)
+			{
+				case LGraphPointsToInstances.NORMAL: 
+					mat4.setTranslation( m, point );
+					if(normals)
+					{
+						var normal = normals.subarray(i,i+3);
+						top.set( normal );
+						vec3.normalize( top, top );
+						vec3.cross( right, FRONT, top );
+						vec3.normalize( right, right );
+						vec3.cross( front, right, top );
+						vec3.normalize( front, front );
+						m.set(right,0);
+						m.set(top,4);
+						m.set(front,8);
+						mat4.setTranslation( m, point );
+					}
+					break;
+				case LGraphPointsToInstances.VERTICAL: 
+					mat4.setTranslation( m, point );
+					break;
+				case LGraphPointsToInstances.SPHERICAL: 
+					front.set( point );
+					vec3.normalize( front, front );
+					vec3.cross( right, UP, front );
+					vec3.normalize( right, right );
+					vec3.cross( top, front, right );
+					vec3.normalize( top, top );
+					m.set(right,0);
+					m.set(top,4);
+					m.set(front,8);
+					mat4.setTranslation( m, point );
+					break;
+				case LGraphPointsToInstances.RANDOM:
+					temp[0] = Math.random()*2 - 1;
+					temp[1] = Math.random()*2 - 1;
+					temp[2] = Math.random()*2 - 1;
+					vec3.normalize( temp, temp );
+					quat.setAxisAngle( R, temp, Math.random() * 2 * Math.PI );
+					mat4.fromQuat(m, R);
+					mat4.setTranslation( m, point );
+					break;
+				case LGraphPointsToInstances.RANDOM_VERTICAL:
+					quat.setAxisAngle( R, UP, Math.random() * 2 * Math.PI );
+					mat4.fromQuat(m, R);
+					mat4.setTranslation( m, point );
+					break;
+			}
+		}
+
+		this._version = geometry._version;
+		this._geometry_id = geometry._id;
+	}
+
+	LiteGraph.registerNodeType( "geometry/points_to_instances", LGraphPointsToInstances );
+
+
+	function LGraphGeometryTransform() {
+		this.addInput("in", "geometry,[mat4]");
+		this.addInput("mat4", "mat4");
+		this.addOutput("out", "geometry");
+		this.properties = {};
+
+		this.geometry = {
+			type: "triangles",
+			vertices: null,
+			_id: generateGeometryId(),
+			_version: 0
+		};
+
+		this._last_geometry_id = -1;
+		this._last_version = -1;
+		this._last_key = "";
+
+		this.must_update = true;
+	}
+
+	LGraphGeometryTransform.title = "Transform";
+
+	LGraphGeometryTransform.prototype.onExecute = function() {
+
+		var input = this.getInputData(0);
+		var model = this.getInputData(1);
+
+		if(!input)
+			return;
+
+		//array of matrices
+		if(input.constructor === Array)
+		{
+			if(input.length == 0)
+				return;
+			this.outputs[0].type = "[mat4]";
+			if( !this.isOutputConnected(0) )
+				return;
+
+			if(!model)
+			{
+				this.setOutputData(0,input);
+				return;
+			}
+
+			if(!this._output)
+				this._output = new Array();
+			if(this._output.length != input.length)
+				this._output.length = input.length;
+			for(var i = 0; i < input.length; ++i)
+			{
+				var m = this._output[i];
+				if(!m)
+					m = this._output[i] = mat4.create();
+				mat4.multiply(m,input[i],model);
+			}
+			this.setOutputData(0,this._output);
+			return;
+		}
+
+		//geometry
+		if(!input.vertices || !input.vertices.length)
+			return;
+		var geo = input;
+		this.outputs[0].type = "geometry";
+		if( !this.isOutputConnected(0) )
+			return;
+		if(!model)
+		{
+			this.setOutputData(0,geo);
+			return;
+		}
+
+		var key = typedArrayToArray(model).join(",");
+
+		if( this.must_update || geo._id != this._last_geometry_id || geo._version != this._last_version || key != this._last_key )
+		{
+			this.updateGeometry(geo, model);
+			this._last_key = key;
+			this._last_version = geo._version;
+			this._last_geometry_id = geo._id;
+			this.must_update = false;
+		}
+
+		this.setOutputData(0,this.geometry);
+	}
+
+	LGraphGeometryTransform.prototype.updateGeometry = function(geometry, model) {
+		var old_vertices = geometry.vertices;
+		var vertices = this.geometry.vertices;
+		if( !vertices || vertices.length != old_vertices.length )
+			vertices = this.geometry.vertices = new Float32Array( old_vertices.length );
+		var temp = vec3.create();
+
+		for(var i = 0, l = vertices.length; i < l; i+=3)
+		{
+			temp[0] = old_vertices[i]; temp[1] = old_vertices[i+1]; temp[2] = old_vertices[i+2]; 
+			mat4.multiplyVec3( temp, model, temp );
+			vertices[i] = temp[0]; vertices[i+1] = temp[1]; vertices[i+2] = temp[2];
+		}
+
+		if(geometry.normals)
+		{
+			if( !this.geometry.normals || this.geometry.normals.length != geometry.normals.length )
+				this.geometry.normals = new Float32Array( geometry.normals.length );
+			var normals = this.geometry.normals;
+			var normal_model = mat4.invert(mat4.create(), model);
+			if(normal_model)
+				mat4.transpose(normal_model, normal_model);
+			var old_normals = geometry.normals;
+			for(var i = 0, l = normals.length; i < l; i+=3)
+			{
+				temp[0] = old_normals[i]; temp[1] = old_normals[i+1]; temp[2] = old_normals[i+2]; 
+				mat4.multiplyVec3( temp, normal_model, temp );
+				normals[i] = temp[0]; normals[i+1] = temp[1]; normals[i+2] = temp[2];
+			}
+		}
+
+		this.geometry.type = geometry.type;
+		this.geometry._version++;
+	}
+
+	LiteGraph.registerNodeType( "geometry/transform", LGraphGeometryTransform );
+
+
+	function LGraphGeometryPolygon() {
+		this.addInput("sides", "number");
+		this.addInput("radius", "number");
+		this.addOutput("out", "geometry");
+		this.properties = { sides: 6, radius: 1, uvs: false }
+
+		this.geometry = {
+			type: "line_loop",
+			vertices: null,
+			_id: generateGeometryId()
+		};
+		this.geometry_id = -1;
+		this.version = -1;
+		this.must_update = true;
+
+		this.last_info = { sides: -1, radius: -1 };
+	}
+
+	LGraphGeometryPolygon.title = "Polygon";
+
+	LGraphGeometryPolygon.prototype.onExecute = function() {
+
+		if( !this.isOutputConnected(0) )
+			return;
+
+		var sides = this.getInputOrProperty("sides");
+		var radius = this.getInputOrProperty("radius");
+		sides = Math.max(3,sides)|0;
+
+		//update
+		if( this.last_info.sides != sides || this.last_info.radius != radius )
+			this.updateGeometry(sides, radius);
+
+		this.setOutputData(0,this.geometry);
+	}
+
+	LGraphGeometryPolygon.prototype.updateGeometry = function(sides, radius) {
+		var num = 3*sides;
+		var vertices = this.geometry.vertices;
+		if( !vertices || vertices.length != num )
+			vertices = this.geometry.vertices = new Float32Array( 3*sides );
+		var delta = (Math.PI * 2) / sides;
+		var gen_uvs = this.properties.uvs;
+		if(gen_uvs)
+		{
+			uvs = this.geometry.coords = new Float32Array( 3*sides );
+		}
+
+
+		for(var i = 0; i < sides; ++i)
+		{
+			var angle = delta * -i;
+			var x = Math.cos( angle ) * radius;
+			var y = 0;
+			var z = Math.sin( angle ) * radius;
+			vertices[i*3] = x;
+			vertices[i*3+1] = y;
+			vertices[i*3+2] = z;
+
+			if(gen_uvs)
+			{
+				
+
+			}
+		}
+		this.geometry._id = ++this.geometry_id;
+		this.geometry._version = ++this.version;
+		this.last_info.sides = sides;
+		this.last_info.radius = radius;
+	}
+
+	LiteGraph.registerNodeType( "geometry/polygon", LGraphGeometryPolygon );
+
+
+	function LGraphGeometryExtrude() {
+
+		this.addInput("", "geometry");
+		this.addOutput("", "geometry");
+		this.properties = { top_cap: true, bottom_cap: true, offset: [0,100,0] };
+		this.version = -1;
+
+		this._last_geo_version = -1;
+		this._must_update = true;
+	}
+
+	LGraphGeometryExtrude.title = "extrude";
+
+	LGraphGeometryExtrude.prototype.onPropertyChanged = function(name, value)
+	{
+		this._must_update = true;
+	}
+
+	LGraphGeometryExtrude.prototype.onExecute = function()
+	{
+		var geo = this.getInputData(0);
+		if( !geo || !this.isOutputConnected(0) )
+			return;
+
+		if(geo.version != this._last_geo_version || this._must_update)
+		{
+			this._geo = this.extrudeGeometry( geo, this._geo );
+			if(this._geo)
+				this._geo.version = this.version++;
+			this._must_update = false;
+		}
+
+		this.setOutputData(0, this._geo);
+	}
+
+	LGraphGeometryExtrude.prototype.extrudeGeometry = function( geo )
+	{
+		//for every pair of vertices
+		var vertices = geo.vertices;
+		var num_points = vertices.length / 3;
+
+		var tempA = vec3.create();
+		var tempB = vec3.create();
+		var tempC = vec3.create();
+		var tempD = vec3.create();
+		var offset = new Float32Array( this.properties.offset );
+
+		if(geo.type == "line_loop")
+		{
+			var new_vertices = new Float32Array( num_points * 6 * 3 ); //every points become 6 ( caps not included )
+			var npos = 0;
+			for(var i = 0, l = vertices.length; i < l; i += 3)
+			{
+				tempA[0] = vertices[i]; tempA[1] = vertices[i+1]; tempA[2] = vertices[i+2];
+
+				if( i+3 < l ) //loop
+				{
+					tempB[0] = vertices[i+3]; tempB[1] = vertices[i+4]; tempB[2] = vertices[i+5];
+				}
+				else
+				{
+					tempB[0] = vertices[0]; tempB[1] = vertices[1]; tempB[2] = vertices[2];
+				}
+
+				vec3.add( tempC, tempA, offset );
+				vec3.add( tempD, tempB, offset );
+
+				new_vertices.set( tempA, npos ); npos += 3;
+				new_vertices.set( tempB, npos ); npos += 3;
+				new_vertices.set( tempC, npos ); npos += 3;
+
+				new_vertices.set( tempB, npos ); npos += 3;
+				new_vertices.set( tempD, npos ); npos += 3;
+				new_vertices.set( tempC, npos ); npos += 3;
+			}
+		}
+
+		var out_geo = {
+			_id: generateGeometryId(),
+			type: "triangles",
+			vertices: new_vertices
+		};
+
+		return out_geo;
+	}
+
+	LiteGraph.registerNodeType( "geometry/extrude", LGraphGeometryExtrude );
+
+
+	function LGraphGeometryEval() {
+		this.addInput("in", "geometry");
+		this.addOutput("out", "geometry");
+
+		this.properties = {
+			code: "V[1] += 0.01 * Math.sin(I + T*0.001);",
+			execute_every_frame: false
+		};
+
+		this.geometry = null;
+		this.geometry_id = -1;
+		this.version = -1;
+		this.must_update = true;
+
+		this.vertices = null;
+		this.func = null;
+	}
+
+	LGraphGeometryEval.title = "geoeval";
+	LGraphGeometryEval.desc = "eval code";
+
+	LGraphGeometryEval.widgets_info = {
+		code: { widget: "code" }
+	};
+
+	LGraphGeometryEval.prototype.onConfigure = function(o)
+	{
+		this.compileCode();
+	}
+
+	LGraphGeometryEval.prototype.compileCode = function()
+	{
+		if(!this.properties.code)
+			return;
+
+		try
+		{
+			this.func = new Function("V","I","T", this.properties.code); 
+			this.boxcolor = "#AFA";
+			this.must_update = true;
+		}
+		catch (err)
+		{
+			this.boxcolor = "red";
+		}
+	}
+
+	LGraphGeometryEval.prototype.onPropertyChanged = function(name, value)
+	{
+		if(name == "code")
+		{
+			this.properties.code = value;
+			this.compileCode();
+		}
+	}
+
+	LGraphGeometryEval.prototype.onExecute = function() {
+		var geometry = this.getInputData(0);
+		if(!geometry)
+			return;
+
+		if(!this.func)
+		{
+			this.setOutputData(0,geometry);
+			return;
+		}
+
+		if( this.geometry_id != geometry._id || this.version != geometry._version || this.must_update || this.properties.execute_every_frame )
+		{
+			this.must_update = false;
+			this.geometry_id = geometry._id;
+			if(this.properties.execute_every_frame)
+				this.version++;
+			else
+				this.version = geometry._version;
+			var func = this.func;
+			var T = getTime();
+
+			//clone
+			if(!this.geometry)
+				this.geometry = {};
+			for(var i in geometry)
+			{
+				if(geometry[i] == null)
+					continue;
+				if( geometry[i].constructor == Float32Array )
+					this.geometry[i] = new Float32Array( geometry[i] );
+				else
+					this.geometry[i] = geometry[i];
+			}
+			this.geometry._id = geometry._id;
+			if(this.properties.execute_every_frame)
+				this.geometry._version = this.version;
+			else
+				this.geometry._version = geometry._version + 1;
+
+			var V = vec3.create();
+			var vertices = this.vertices;
+			if(!vertices || this.vertices.length != geometry.vertices.length)
+				vertices = this.vertices = new Float32Array( geometry.vertices );
+			else
+				vertices.set( geometry.vertices );
+			for(var i = 0; i < vertices.length; i+=3)
+			{
+				V[0] = vertices[i];
+				V[1] = vertices[i+1];
+				V[2] = vertices[i+2];
+				func(V,i/3,T);
+				vertices[i] = V[0];
+				vertices[i+1] = V[1];
+				vertices[i+2] = V[2];
+			}
+			this.geometry.vertices = vertices;
+		}
+
+		this.setOutputData(0,this.geometry);
+	}
+
+	LiteGraph.registerNodeType( "geometry/eval", LGraphGeometryEval );
+
+/*
+function LGraphGeometryDisplace() {
+		this.addInput("in", "geometry");
+		this.addInput("img", "image");
+		this.addOutput("out", "geometry");
+
+		this.properties = {
+			grid_size: 1
+		};
+
+		this.geometry = null;
+		this.geometry_id = -1;
+		this.version = -1;
+		this.must_update = true;
+
+		this.vertices = null;
+	}
+
+	LGraphGeometryDisplace.title = "displace";
+	LGraphGeometryDisplace.desc = "displace points";
+
+	LGraphGeometryDisplace.prototype.onExecute = function() {
+		var geometry = this.getInputData(0);
+		var image = this.getInputData(1);
+		if(!geometry)
+			return;
+
+		if(!image)
+		{
+			this.setOutputData(0,geometry);
+			return;
+		}
+
+		if( this.geometry_id != geometry._id || this.version != geometry._version || this.must_update )
+		{
+			this.must_update = false;
+			this.geometry_id = geometry._id;
+			this.version = geometry._version;
+
+			//copy
+			this.geometry = {};
+			for(var i in geometry)
+				this.geometry[i] = geometry[i];
+			this.geometry._id = geometry._id;
+			this.geometry._version = geometry._version + 1;
+
+			var grid_size = this.properties.grid_size;
+			if(grid_size != 0)
+			{
+				var vertices = this.vertices;
+				if(!vertices || this.vertices.length != this.geometry.vertices.length)
+					vertices = this.vertices = new Float32Array( this.geometry.vertices );
+				for(var i = 0; i < vertices.length; i+=3)
+				{
+					vertices[i] = Math.round(vertices[i]/grid_size) * grid_size;
+					vertices[i+1] = Math.round(vertices[i+1]/grid_size) * grid_size;
+					vertices[i+2] = Math.round(vertices[i+2]/grid_size) * grid_size;
+				}
+				this.geometry.vertices = vertices;
+			}
+		}
+
+		this.setOutputData(0,this.geometry);
+	}
+
+	LiteGraph.registerNodeType( "geometry/displace", LGraphGeometryDisplace );
+*/
+
+	function LGraphConnectPoints() {
+		this.addInput("in", "geometry");
+		this.addOutput("out", "geometry");
+
+		this.properties = {
+			min_dist: 0.4,
+			max_dist: 0.5,
+			max_connections: 0,
+			probability: 1
+		};
+
+		this.geometry_id = -1;
+		this.version = -1;
+		this.my_version = 1;
+		this.must_update = true;
+	}
+
+	LGraphConnectPoints.title = "connect points";
+	LGraphConnectPoints.desc = "adds indices between near points";
+
+	LGraphConnectPoints.prototype.onPropertyChanged = function(name,value)
+	{
+		this.must_update = true;
+	}
+
+	LGraphConnectPoints.prototype.onExecute = function() {
+		var geometry = this.getInputData(0);
+		if(!geometry)
+			return;
+
+		if( this.geometry_id != geometry._id || this.version != geometry._version || this.must_update )
+		{
+			this.must_update = false;
+			this.geometry_id = geometry._id;
+			this.version = geometry._version;
+
+			//copy
+			this.geometry = {};
+			for(var i in geometry)
+				this.geometry[i] = geometry[i];
+			this.geometry._id = generateGeometryId();
+			this.geometry._version = this.my_version++;
+
+			var vertices = geometry.vertices;
+			var l = vertices.length;
+			var min_dist = this.properties.min_dist;
+			var max_dist = this.properties.max_dist;
+			var probability = this.properties.probability;
+			var max_connections = this.properties.max_connections;
+			var indices = [];
+			
+			for(var i = 0; i < l; i+=3)
+			{
+				var x = vertices[i];
+				var y = vertices[i+1];
+				var z = vertices[i+2];
+				var connections = 0;
+				for(var j = i+3; j < l; j+=3)
+				{
+					var x2 = vertices[j];
+					var y2 = vertices[j+1];
+					var z2 = vertices[j+2];
+					var dist = Math.sqrt( (x-x2)*(x-x2) + (y-y2)*(y-y2) + (z-z2)*(z-z2));
+					if(dist > max_dist || dist < min_dist || (probability < 1 && probability < Math.random()) )
+						continue;
+					indices.push(i/3,j/3);
+					connections += 1;
+					if(max_connections && connections > max_connections)
+						break;
+				}
+			}
+			this.geometry.indices = this.indices = new Uint32Array(indices);
+		}
+
+		if(this.indices && this.indices.length)
+		{
+			this.geometry.indices = this.indices;
+			this.setOutputData( 0, this.geometry );
+		}
+		else
+			this.setOutputData( 0, null );
+	}
+
+	LiteGraph.registerNodeType( "geometry/connectPoints", LGraphConnectPoints );
+
+    //Works with Litegl.js to create WebGL nodes
+    if (typeof GL == "undefined") //LiteGL RELATED **********************************************
+		return;
+
+	function LGraphToGeometry() {
+		this.addInput("mesh", "mesh");
+		this.addOutput("out", "geometry");
+
+		this.geometry = {};
+		this.last_mesh = null;
+	}
+
+	LGraphToGeometry.title = "to geometry";
+	LGraphToGeometry.desc = "converts a mesh to geometry";
+
+	LGraphToGeometry.prototype.onExecute = function() {
+		var mesh = this.getInputData(0);
+		if(!mesh)
+			return;
+
+		if(mesh != this.last_mesh)
+		{
+			this.last_mesh = mesh;
+			for(i in mesh.vertexBuffers)
+			{
+				var buffer = mesh.vertexBuffers[i];
+				this.geometry[i] = buffer.data
+			}
+			if(mesh.indexBuffers["triangles"])
+				this.geometry.indices = mesh.indexBuffers["triangles"].data;
+
+			this.geometry._id = generateGeometryId();
+			this.geometry._version = 0;
+		}
+
+		this.setOutputData(0,this.geometry);
+		if(this.geometry)
+			this.setOutputData(1,this.geometry.vertices);
+	}
+
+	LiteGraph.registerNodeType( "geometry/toGeometry", LGraphToGeometry );
+
+	function LGraphGeometryToMesh() {
+		this.addInput("in", "geometry");
+		this.addOutput("mesh", "mesh");
+		this.properties = {};
+		this.version = -1;
+		this.mesh = null;
+	}
+
+	LGraphGeometryToMesh.title = "Geo to Mesh";
+
+	LGraphGeometryToMesh.prototype.updateMesh = function(geometry)
+	{
+		if(!this.mesh)
+			this.mesh = new GL.Mesh();
+
+		for(var i in geometry)
+		{
+			if(i[0] == "_")
+				continue;
+
+			var buffer_data = geometry[i];
+
+			var info = GL.Mesh.common_buffers[i];
+			if(!info && i != "indices") //unknown buffer
+				continue;
+			var spacing = info ? info.spacing : 3;
+			var mesh_buffer = this.mesh.vertexBuffers[i];
+
+			if(!mesh_buffer || mesh_buffer.data.length != buffer_data.length)
+			{
+				mesh_buffer = new GL.Buffer( i == "indices" ? GL.ELEMENT_ARRAY_BUFFER : GL.ARRAY_BUFFER, buffer_data, spacing, GL.DYNAMIC_DRAW );
+			}
+			else
+			{
+				mesh_buffer.data.set( buffer_data );
+				mesh_buffer.upload(GL.DYNAMIC_DRAW);
+			}
+
+			this.mesh.addBuffer( i, mesh_buffer );
+		}
+
+		if(this.mesh.vertexBuffers.normals &&this.mesh.vertexBuffers.normals.data.length != this.mesh.vertexBuffers.vertices.data.length )
+		{
+			var n = new Float32Array([0,1,0]);
+			var normals = new Float32Array( this.mesh.vertexBuffers.vertices.data.length );
+			for(var i = 0; i < normals.length; i+= 3)
+				normals.set( n, i );
+			mesh_buffer = new GL.Buffer( GL.ARRAY_BUFFER, normals, 3 );
+			this.mesh.addBuffer( "normals", mesh_buffer );
+		}
+
+		this.mesh.updateBoundingBox();
+		this.geometry_id = this.mesh.id = geometry._id;
+		this.version = this.mesh.version = geometry._version;
+		return this.mesh;
+	}
+
+	LGraphGeometryToMesh.prototype.onExecute = function() {
+
+		var geometry = this.getInputData(0);
+		if(!geometry)
+			return;
+		if( this.version != geometry._version || this.geometry_id != geometry._id )
+			this.updateMesh( geometry );
+		this.setOutputData(0, this.mesh);
+	}
+
+	LiteGraph.registerNodeType( "geometry/toMesh", LGraphGeometryToMesh );
+
+	function LGraphRenderMesh() {
+		this.addInput("mesh", "mesh");
+		this.addInput("mat4", "mat4");
+		this.addInput("tex", "texture");
+
+		this.properties = {
+			enabled: true,
+			primitive: GL.TRIANGLES,
+			additive: false,
+			color: [1,1,1],
+			opacity: 1
+		};
+
+		this.color = vec4.create([1,1,1,1]);
+		this.model_matrix = mat4.create();
+		this.uniforms = {
+			u_color: this.color,
+			u_model: this.model_matrix
+		};
+	}
+
+	LGraphRenderMesh.title = "Render Mesh";
+	LGraphRenderMesh.desc = "renders a mesh flat";
+
+	LGraphRenderMesh.PRIMITIVE_VALUES = { "points":GL.POINTS, "lines":GL.LINES, "line_loop":GL.LINE_LOOP,"line_strip":GL.LINE_STRIP, "triangles":GL.TRIANGLES, "triangle_fan":GL.TRIANGLE_FAN, "triangle_strip":GL.TRIANGLE_STRIP };
+
+	LGraphRenderMesh.widgets_info = {
+		primitive: { widget: "combo", values: LGraphRenderMesh.PRIMITIVE_VALUES },
+		color: { widget: "color" }
+	};
+
+	LGraphRenderMesh.prototype.onExecute = function() {
+
+		if(!this.properties.enabled)
+			return;
+
+		var mesh = this.getInputData(0);
+		if(!mesh)
+			return;
+
+		if(!LiteGraph.LGraphRender.onRequestCameraMatrices)
+		{
+			console.warn("cannot render geometry, LiteGraph.onRequestCameraMatrices is null, remember to fill this with a callback(view_matrix, projection_matrix,viewprojection_matrix) to use 3D rendering from the graph");
+			return;
+		}
+
+		LiteGraph.LGraphRender.onRequestCameraMatrices( view_matrix, projection_matrix,viewprojection_matrix );
+		var shader = null;
+		var texture = this.getInputData(2);
+		if(texture)
+		{
+			shader = gl.shaders["textured"];
+			if(!shader)
+				shader = gl.shaders["textured"] = new GL.Shader( LGraphRenderPoints.vertex_shader_code, LGraphRenderPoints.fragment_shader_code, { USE_TEXTURE:"" });
+		}
+		else
+		{
+			shader = gl.shaders["flat"];
+			if(!shader)
+				shader = gl.shaders["flat"] = new GL.Shader( LGraphRenderPoints.vertex_shader_code, LGraphRenderPoints.fragment_shader_code );
+		}
+
+		this.color.set( this.properties.color );
+		this.color[3] = this.properties.opacity;
+
+		var model_matrix = this.model_matrix;
+		var m = this.getInputData(1);
+		if(m)
+			model_matrix.set(m);
+		else
+			mat4.identity( model_matrix );
+
+		this.uniforms.u_point_size = 1;
+		var primitive = this.properties.primitive;
+
+		shader.uniforms( global_uniforms );
+		shader.uniforms( this.uniforms );
+
+		if(this.properties.opacity >= 1)
+			gl.disable( gl.BLEND );
+		else
+			gl.enable( gl.BLEND );
+		gl.enable( gl.DEPTH_TEST );
+		if( this.properties.additive )
+		{
+			gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
+			gl.depthMask( false );
+		}
+		else
+			gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
+
+		var indices = "indices";
+		if( mesh.indexBuffers.triangles )
+			indices = "triangles";
+		shader.draw( mesh, primitive, indices );
+		gl.disable( gl.BLEND );
+		gl.depthMask( true );
+	}
+
+	LiteGraph.registerNodeType( "geometry/render_mesh", LGraphRenderMesh );
+
+	//**************************
+
+
+	function LGraphGeometryPrimitive() {
+		this.addInput("size", "number");
+		this.addOutput("out", "mesh");
+		this.properties = { type: 1, size: 1, subdivisions: 32 };
+
+		this.version = (Math.random() * 100000)|0;
+		this.last_info = { type: -1, size: -1, subdivisions: -1 };
+	}
+
+	LGraphGeometryPrimitive.title = "Primitive";
+
+	LGraphGeometryPrimitive.VALID = { "CUBE":1, "PLANE":2, "CYLINDER":3, "SPHERE":4, "CIRCLE":5, "HEMISPHERE":6, "ICOSAHEDRON":7, "CONE":8, "QUAD":9 };
+	LGraphGeometryPrimitive.widgets_info = {
+		type: { widget: "combo", values: LGraphGeometryPrimitive.VALID }
+	};
+
+	LGraphGeometryPrimitive.prototype.onExecute = function() {
+
+		if( !this.isOutputConnected(0) )
+			return;
+
+		var size = this.getInputOrProperty("size");
+
+		//update
+		if( this.last_info.type != this.properties.type || this.last_info.size != size || this.last_info.subdivisions != this.properties.subdivisions )
+			this.updateMesh( this.properties.type, size, this.properties.subdivisions );
+
+		this.setOutputData(0,this._mesh);
+	}
+
+	LGraphGeometryPrimitive.prototype.updateMesh = function(type, size, subdivisions)
+	{
+		subdivisions = Math.max(0,subdivisions)|0;
+
+		switch (type)
+		{
+			case 1: //CUBE: 
+				this._mesh = GL.Mesh.cube({size: size, normals:true,coords:true});
+				break;
+			case 2: //PLANE:
+				this._mesh = GL.Mesh.plane({size: size, xz: true, detail: subdivisions, normals:true,coords:true});
+				break;
+			case 3: //CYLINDER:
+				this._mesh = GL.Mesh.cylinder({size: size, subdivisions: subdivisions, normals:true,coords:true});
+				break;
+			case 4: //SPHERE:
+				this._mesh = GL.Mesh.sphere({size: size, "long": subdivisions, lat: subdivisions, normals:true,coords:true});
+				break;
+			case 5: //CIRCLE:
+				this._mesh = GL.Mesh.circle({size: size, slices: subdivisions, normals:true, coords:true});
+				break;
+			case 6: //HEMISPHERE:
+				this._mesh = GL.Mesh.sphere({size: size, "long": subdivisions, lat: subdivisions, normals:true, coords:true, hemi: true});
+				break;
+			case 7: //ICOSAHEDRON:
+				this._mesh = GL.Mesh.icosahedron({size: size, subdivisions:subdivisions });
+				break;
+			case 8: //CONE:
+				this._mesh = GL.Mesh.cone({radius: size, height: size, subdivisions:subdivisions });
+				break;
+			case 9: //QUAD:
+				this._mesh = GL.Mesh.plane({size: size, xz: false, detail: subdivisions, normals:true, coords:true });
+				break;
+		}
+
+		this.last_info.type = type;
+		this.last_info.size = size;
+		this.last_info.subdivisions = subdivisions;
+		this._mesh.version = this.version++;
+	}
+
+	LiteGraph.registerNodeType( "geometry/mesh_primitive", LGraphGeometryPrimitive );
+
+
+	function LGraphRenderPoints() {
+		this.addInput("in", "geometry");
+		this.addInput("mat4", "mat4");
+		this.addInput("tex", "texture");
+		this.properties = {
+			enabled: true,
+			point_size: 0.1,
+			fixed_size: false,
+			additive: true,
+			color: [1,1,1],
+			opacity: 1
+		};
+
+		this.color = vec4.create([1,1,1,1]);
+
+		this.uniforms = {
+			u_point_size: 1,
+			u_perspective: 1,
+			u_point_perspective: 1,
+			u_color: this.color
+		};
+
+		this.geometry_id = -1;
+		this.version = -1;
+		this.mesh = null;
+	}
+
+	LGraphRenderPoints.title = "renderPoints";
+	LGraphRenderPoints.desc = "render points with a texture";
+
+	LGraphRenderPoints.widgets_info = {
+		color: { widget: "color" }
+	};
+
+	LGraphRenderPoints.prototype.updateMesh = function(geometry)
+	{
+		var buffer = this.buffer;
+		if(!this.buffer || !this.buffer.data || this.buffer.data.length != geometry.vertices.length)
+			this.buffer = new GL.Buffer( GL.ARRAY_BUFFER, geometry.vertices,3,GL.DYNAMIC_DRAW);
+		else
+		{
+			this.buffer.data.set( geometry.vertices );
+			this.buffer.upload(GL.DYNAMIC_DRAW);
+		}
+
+		if(!this.mesh)
+			this.mesh = new GL.Mesh();
+
+		this.mesh.addBuffer("vertices",this.buffer);
+		this.geometry_id = this.mesh.id = geometry._id;
+		this.version = this.mesh.version = geometry._version;
+	}
+
+	LGraphRenderPoints.prototype.onExecute = function() {
+
+		if(!this.properties.enabled)
+			return;
+
+		var geometry = this.getInputData(0);
+		if(!geometry)
+			return;
+		if(this.version != geometry._version || this.geometry_id != geometry._id )
+			this.updateMesh( geometry );
+
+		if(!LiteGraph.LGraphRender.onRequestCameraMatrices)
+		{
+			console.warn("cannot render geometry, LiteGraph.onRequestCameraMatrices is null, remember to fill this with a callback(view_matrix, projection_matrix,viewprojection_matrix) to use 3D rendering from the graph");
+			return;
+		}
+
+		LiteGraph.LGraphRender.onRequestCameraMatrices( view_matrix, projection_matrix,viewprojection_matrix );
+		var shader = null;
+
+		var texture = this.getInputData(2);
+		
+		if(texture)
+		{
+			shader = gl.shaders["textured_points"];
+			if(!shader)
+				shader = gl.shaders["textured_points"] = new GL.Shader( LGraphRenderPoints.vertex_shader_code, LGraphRenderPoints.fragment_shader_code, { USE_TEXTURED_POINTS:"" });
+		}
+		else
+		{
+			shader = gl.shaders["points"];
+			if(!shader)
+				shader = gl.shaders["points"] = new GL.Shader( LGraphRenderPoints.vertex_shader_code, LGraphRenderPoints.fragment_shader_code, { USE_POINTS: "" });
+		}
+
+		this.color.set( this.properties.color );
+		this.color[3] = this.properties.opacity;
+
+		var m = this.getInputData(1);
+		if(m)
+			model_matrix.set(m);
+		else
+			mat4.identity( model_matrix );
+
+		this.uniforms.u_point_size = this.properties.point_size;
+		this.uniforms.u_point_perspective = this.properties.fixed_size ? 0 : 1;
+		this.uniforms.u_perspective = gl.viewport_data[3] * projection_matrix[5];
+
+		shader.uniforms( global_uniforms );
+		shader.uniforms( this.uniforms );
+
+		if(this.properties.opacity >= 1)
+			gl.disable( gl.BLEND );
+		else
+			gl.enable( gl.BLEND );
+
+		gl.enable( gl.DEPTH_TEST );
+		if( this.properties.additive )
+		{
+			gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
+			gl.depthMask( false );
+		}
+		else
+			gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
+
+		shader.draw( this.mesh, GL.POINTS );
+
+		gl.disable( gl.BLEND );
+		gl.depthMask( true );
+	}
+
+	LiteGraph.registerNodeType( "geometry/render_points", LGraphRenderPoints );
+
+	LGraphRenderPoints.vertex_shader_code = '\
+		precision mediump float;\n\
+		attribute vec3 a_vertex;\n\
+		varying vec3 v_vertex;\n\
+		attribute vec3 a_normal;\n\
+		varying vec3 v_normal;\n\
+		#ifdef USE_COLOR\n\
+			attribute vec4 a_color;\n\
+			varying vec4 v_color;\n\
+		#endif\n\
+		attribute vec2 a_coord;\n\
+		varying vec2 v_coord;\n\
+		#ifdef USE_SIZE\n\
+			attribute float a_extra;\n\
+		#endif\n\
+		#ifdef USE_INSTANCING\n\
+			attribute mat4 u_model;\n\
+		#else\n\
+			uniform mat4 u_model;\n\
+		#endif\n\
+		uniform mat4 u_viewprojection;\n\
+		uniform float u_point_size;\n\
+		uniform float u_perspective;\n\
+		uniform float u_point_perspective;\n\
+		float computePointSize(float radius, float w)\n\
+		{\n\
+			if(radius < 0.0)\n\
+				return -radius;\n\
+			return u_perspective * radius / w;\n\
+		}\n\
+		void main() {\n\
+			v_coord = a_coord;\n\
+			#ifdef USE_COLOR\n\
+				v_color = a_color;\n\
+			#endif\n\
+			v_vertex = ( u_model * vec4( a_vertex, 1.0 )).xyz;\n\
+			v_normal = ( u_model * vec4( a_normal, 0.0 )).xyz;\n\
+			gl_Position = u_viewprojection * vec4(v_vertex,1.0);\n\
+			gl_PointSize = u_point_size;\n\
+			#ifdef USE_SIZE\n\
+				gl_PointSize = a_extra;\n\
+			#endif\n\
+			if(u_point_perspective != 0.0)\n\
+				gl_PointSize = computePointSize( gl_PointSize, gl_Position.w );\n\
+		}\
+	';
+
+	LGraphRenderPoints.fragment_shader_code = '\
+		precision mediump float;\n\
+		uniform vec4 u_color;\n\
+		#ifdef USE_COLOR\n\
+			varying vec4 v_color;\n\
+		#endif\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		void main() {\n\
+			vec4 color = u_color;\n\
+			#ifdef USE_TEXTURED_POINTS\n\
+				color *= texture2D(u_texture, gl_PointCoord.xy);\n\
+			#else\n\
+				#ifdef USE_TEXTURE\n\
+				  color *= texture2D(u_texture, v_coord);\n\
+				  if(color.a < 0.1)\n\
+					discard;\n\
+				#endif\n\
+				#ifdef USE_POINTS\n\
+					float dist = length( gl_PointCoord.xy - vec2(0.5) );\n\
+					if( dist > 0.45 )\n\
+						discard;\n\
+				#endif\n\
+			#endif\n\
+			#ifdef USE_COLOR\n\
+				color *= v_color;\n\
+			#endif\n\
+			gl_FragColor = color;\n\
+		}\
+	';
+
+	//based on https://inconvergent.net/2019/depth-of-field/
+	/*
+	function LGraphRenderGeometryDOF() {
+		this.addInput("in", "geometry");
+		this.addInput("mat4", "mat4");
+		this.addInput("tex", "texture");
+		this.properties = {
+			enabled: true,
+			lines: true,
+			point_size: 0.1,
+			fixed_size: false,
+			additive: true,
+			color: [1,1,1],
+			opacity: 1
+		};
+
+		this.color = vec4.create([1,1,1,1]);
+
+		this.uniforms = {
+			u_point_size: 1,
+			u_perspective: 1,
+			u_point_perspective: 1,
+			u_color: this.color
+		};
+
+		this.geometry_id = -1;
+		this.version = -1;
+		this.mesh = null;
+	}
+
+	LGraphRenderGeometryDOF.widgets_info = {
+		color: { widget: "color" }
+	};
+
+	LGraphRenderGeometryDOF.prototype.updateMesh = function(geometry)
+	{
+		var buffer = this.buffer;
+		if(!this.buffer || this.buffer.data.length != geometry.vertices.length)
+			this.buffer = new GL.Buffer( GL.ARRAY_BUFFER, geometry.vertices,3,GL.DYNAMIC_DRAW);
+		else
+		{
+			this.buffer.data.set( geometry.vertices );
+			this.buffer.upload(GL.DYNAMIC_DRAW);
+		}
+
+		if(!this.mesh)
+			this.mesh = new GL.Mesh();
+
+		this.mesh.addBuffer("vertices",this.buffer);
+		this.geometry_id = this.mesh.id = geometry._id;
+		this.version = this.mesh.version = geometry._version;
+	}
+
+	LGraphRenderGeometryDOF.prototype.onExecute = function() {
+
+		if(!this.properties.enabled)
+			return;
+
+		var geometry = this.getInputData(0);
+		if(!geometry)
+			return;
+		if(this.version != geometry._version || this.geometry_id != geometry._id )
+			this.updateMesh( geometry );
+
+		if(!LiteGraph.LGraphRender.onRequestCameraMatrices)
+		{
+			console.warn("cannot render geometry, LiteGraph.onRequestCameraMatrices is null, remember to fill this with a callback(view_matrix, projection_matrix,viewprojection_matrix) to use 3D rendering from the graph");
+			return;
+		}
+
+		LiteGraph.LGraphRender.onRequestCameraMatrices( view_matrix, projection_matrix,viewprojection_matrix );
+		var shader = null;
+
+		var texture = this.getInputData(2);
+		
+		if(texture)
+		{
+			shader = gl.shaders["textured_points"];
+			if(!shader)
+				shader = gl.shaders["textured_points"] = new GL.Shader( LGraphRenderGeometryDOF.vertex_shader_code, LGraphRenderGeometryDOF.fragment_shader_code, { USE_TEXTURED_POINTS:"" });
+		}
+		else
+		{
+			shader = gl.shaders["points"];
+			if(!shader)
+				shader = gl.shaders["points"] = new GL.Shader( LGraphRenderGeometryDOF.vertex_shader_code, LGraphRenderGeometryDOF.fragment_shader_code, { USE_POINTS: "" });
+		}
+
+		this.color.set( this.properties.color );
+		this.color[3] = this.properties.opacity;
+
+		var m = this.getInputData(1);
+		if(m)
+			model_matrix.set(m);
+		else
+			mat4.identity( model_matrix );
+
+		this.uniforms.u_point_size = this.properties.point_size;
+		this.uniforms.u_point_perspective = this.properties.fixed_size ? 0 : 1;
+		this.uniforms.u_perspective = gl.viewport_data[3] * projection_matrix[5];
+
+		shader.uniforms( global_uniforms );
+		shader.uniforms( this.uniforms );
+
+		if(this.properties.opacity >= 1)
+			gl.disable( gl.BLEND );
+		else
+			gl.enable( gl.BLEND );
+
+		gl.enable( gl.DEPTH_TEST );
+		if( this.properties.additive )
+		{
+			gl.blendFunc( gl.SRC_ALPHA, gl.ONE );
+			gl.depthMask( false );
+		}
+		else
+			gl.blendFunc( gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA );
+
+		shader.draw( this.mesh, GL.POINTS );
+
+		gl.disable( gl.BLEND );
+		gl.depthMask( true );
+	}
+
+	LiteGraph.registerNodeType( "geometry/render_dof", LGraphRenderGeometryDOF );
+
+	LGraphRenderGeometryDOF.vertex_shader_code = '\
+		precision mediump float;\n\
+		attribute vec3 a_vertex;\n\
+		varying vec3 v_vertex;\n\
+		attribute vec3 a_normal;\n\
+		varying vec3 v_normal;\n\
+		#ifdef USE_COLOR\n\
+			attribute vec4 a_color;\n\
+			varying vec4 v_color;\n\
+		#endif\n\
+		attribute vec2 a_coord;\n\
+		varying vec2 v_coord;\n\
+		#ifdef USE_SIZE\n\
+			attribute float a_extra;\n\
+		#endif\n\
+		#ifdef USE_INSTANCING\n\
+			attribute mat4 u_model;\n\
+		#else\n\
+			uniform mat4 u_model;\n\
+		#endif\n\
+		uniform mat4 u_viewprojection;\n\
+		uniform float u_point_size;\n\
+		uniform float u_perspective;\n\
+		uniform float u_point_perspective;\n\
+		float computePointSize(float radius, float w)\n\
+		{\n\
+			if(radius < 0.0)\n\
+				return -radius;\n\
+			return u_perspective * radius / w;\n\
+		}\n\
+		void main() {\n\
+			v_coord = a_coord;\n\
+			#ifdef USE_COLOR\n\
+				v_color = a_color;\n\
+			#endif\n\
+			v_vertex = ( u_model * vec4( a_vertex, 1.0 )).xyz;\n\
+			v_normal = ( u_model * vec4( a_normal, 0.0 )).xyz;\n\
+			gl_Position = u_viewprojection * vec4(v_vertex,1.0);\n\
+			gl_PointSize = u_point_size;\n\
+			#ifdef USE_SIZE\n\
+				gl_PointSize = a_extra;\n\
+			#endif\n\
+			if(u_point_perspective != 0.0)\n\
+				gl_PointSize = computePointSize( gl_PointSize, gl_Position.w );\n\
+		}\
+	';
+
+	LGraphRenderGeometryDOF.fragment_shader_code = '\
+		precision mediump float;\n\
+		uniform vec4 u_color;\n\
+		#ifdef USE_COLOR\n\
+			varying vec4 v_color;\n\
+		#endif\n\
+		varying vec2 v_coord;\n\
+		uniform sampler2D u_texture;\n\
+		void main() {\n\
+			vec4 color = u_color;\n\
+			#ifdef USE_TEXTURED_POINTS\n\
+				color *= texture2D(u_texture, gl_PointCoord.xy);\n\
+			#else\n\
+				#ifdef USE_TEXTURE\n\
+				  color *= texture2D(u_texture, v_coord);\n\
+				  if(color.a < 0.1)\n\
+					discard;\n\
+				#endif\n\
+				#ifdef USE_POINTS\n\
+					float dist = length( gl_PointCoord.xy - vec2(0.5) );\n\
+					if( dist > 0.45 )\n\
+						discard;\n\
+				#endif\n\
+			#endif\n\
+			#ifdef USE_COLOR\n\
+				color *= v_color;\n\
+			#endif\n\
+			gl_FragColor = color;\n\
+		}\
+	';
+	*/
+
+
+
+})(this);
+(function(global) {
     var LiteGraph = global.LiteGraph;
     var LGraphTexture = global.LGraphTexture;
 
@@ -25975,3 +31347,4 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
 
     LiteGraph.registerNodeType("network/sillyclient", LGSillyClient);
 })(this);
+

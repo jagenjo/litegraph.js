@@ -1,3 +1,5 @@
+//packer version
+
 (function(global) {
     // *************************************************************
     //   LiteGraph CLASS                                     *******
@@ -11904,3 +11906,4 @@ LGraphNode.prototype.executeAction = function(action)
 if (typeof exports != "undefined") {
     exports.LiteGraph = this.LiteGraph;
 }
+
