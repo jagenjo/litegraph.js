@@ -8855,16 +8855,15 @@ LGraphNode.prototype.executeAction = function(action)
 			//inside widget
 			switch (w.type) {
 				case "button":
-					if (event.type === "mousemove") {
-						break;
-					}
-					if (w.callback) {
-						setTimeout(function() {
-							w.callback(w, that, node, pos, event);
-						}, 20);
-					}
-					w.clicked = true;
-					this.dirty_canvas = true;
+					if (event.type === "mousedown") {
+                        if (w.callback) {
+                            setTimeout(function() {
+                                w.callback(w, that, node, pos, event);
+                            }, 20);
+                        }
+                        w.clicked = true;
+                        this.dirty_canvas = true;
+                    }
 					break;
 				case "slider":
 					var range = w.options.max - w.options.min;
@@ -14879,7 +14878,7 @@ if (typeof exports != "undefined") {
 
     //Converter
     function Converter() {
-        this.addInput("in", "*");
+        this.addInput("in", "");
 	this.addOutput("out");
         this.size = [80, 30];
     }
@@ -17749,7 +17748,7 @@ if (typeof exports != "undefined") {
     // Texture Webcam *****************************************
     function ImageWebcam() {
         this.addOutput("Webcam", "image");
-        this.properties = { facingMode: "user" };
+        this.properties = { filterFacingMode: false, facingMode: "user" };
         this.boxcolor = "black";
         this.frame = 0;
     }
@@ -17759,8 +17758,8 @@ if (typeof exports != "undefined") {
     ImageWebcam.is_webcam_open = false;
 
     ImageWebcam.prototype.openStream = function() {
-        if (!navigator.getUserMedia) {
-            //console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
+        if (!navigator.mediaDevices.getUserMedia) {
+            console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
             return;
         }
 
@@ -17769,7 +17768,7 @@ if (typeof exports != "undefined") {
         // Not showing vendor prefixes.
         var constraints = {
             audio: false,
-            video: { facingMode: this.properties.facingMode }
+            video: !this.properties.filterFacingMode ? true : { facingMode: this.properties.facingMode }
         };
         navigator.mediaDevices
             .getUserMedia(constraints)

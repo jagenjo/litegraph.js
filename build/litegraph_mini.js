@@ -8855,16 +8855,15 @@ LGraphNode.prototype.executeAction = function(action)
 			//inside widget
 			switch (w.type) {
 				case "button":
-					if (event.type === "mousemove") {
-						break;
-					}
-					if (w.callback) {
-						setTimeout(function() {
-							w.callback(w, that, node, pos, event);
-						}, 20);
-					}
-					w.clicked = true;
-					this.dirty_canvas = true;
+					if (event.type === "mousedown") {
+                        if (w.callback) {
+                            setTimeout(function() {
+                                w.callback(w, that, node, pos, event);
+                            }, 20);
+                        }
+                        w.clicked = true;
+                        this.dirty_canvas = true;
+                    }
 					break;
 				case "slider":
 					var range = w.options.max - w.options.min;
@@ -14081,7 +14080,7 @@ if (typeof exports != "undefined") {
 
     //Converter
     function Converter() {
-        this.addInput("in", "*");
+        this.addInput("in", "");
 	this.addOutput("out");
         this.size = [80, 30];
     }
