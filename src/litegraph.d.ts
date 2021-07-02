@@ -284,19 +284,23 @@ export const LiteGraph: {
 
     /**
      * Returns a list of node types matching one category
-     * @param category category name
-     * @return array with all the node classes
+     * @method getNodeTypesInCategory
+     * @param {String} category category name
+     * @param {String} filter only nodes with ctor.filter equal can be shown
+     * @return {Array} array with all the node classes
      */
     getNodeTypesInCategory(
         category: string,
-        filter: any
+        filter: string
     ): LGraphNodeConstructor[];
 
     /**
      * Returns a list with all the node type categories
-     * @return array with all the names of the categories
-     */
-    getNodeTypesCategories(): string[];
+     * @method getNodeTypesCategories
+     * @param {String} filter only nodes with ctor.filter equal can be shown
+     * @return {Array} array with all the names of the categories
+     */                           
+    getNodeTypesCategories(filter: string): string[];
 
     /** debug purposes: reloads all the js scripts that matches a wildcard */
     reloadNodes(folder_wildcard: string): void;
@@ -347,6 +351,7 @@ export declare class LGraph {
 
     constructor(o?: object);
 
+    filter: string;
     catch_errors: boolean;
     /** custom data */
     config: object;
@@ -529,6 +534,8 @@ export declare class LGraph {
     removeOutput(name: string): boolean;
     triggerInput(name: string, value: any): void;
     setCallback(name: string, func: (...args: any[]) => any): void;
+    beforeChange(info?: LGraphNode): void;
+    afterChange(info?: LGraphNode): void;                       
     connectionChange(node: LGraphNode): void;
     /** returns if the graph is in live mode */
     isLive(): boolean;
@@ -1125,6 +1132,8 @@ export declare class LGraphCanvas {
         }
     );
 
+    static active_canvas: HTMLCanvasElement;
+                           
     allow_dragcanvas: boolean;
     allow_dragnodes: boolean;
     /** allow to control widgets, buttons, collapse, etc */
@@ -1459,7 +1468,7 @@ declare class ContextMenu {
     ): void;
     static isCursorOverElement(event: MouseEvent, element: HTMLElement): void;
     static closeAllContextMenus(window: Window): void;
-    constructor(values: ContextMenuItem[], options?: IContextMenuOptions);
+    constructor(values: ContextMenuItem[], options?: IContextMenuOptions, window?: Window);
     options: IContextMenuOptions;
     parentMenu?: ContextMenu;
     lock: boolean;
