@@ -5011,6 +5011,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         this._mousedown_callback = this.processMouseDown.bind(this);
         this._mousewheel_callback = this.processMouseWheel.bind(this);
+        this._touch_callback = this.touchHandler.bind(this);
 
         canvas.addEventListener("mousedown", this._mousedown_callback, true); //down do not need to store the binded
         canvas.addEventListener("mousemove", this._mousemove_callback);
@@ -5026,10 +5027,10 @@ LGraphNode.prototype.executeAction = function(action)
         //touch events
         //if( 'touchstart' in document.documentElement )
         {
-            canvas.addEventListener("touchstart", this.touchHandler, true);
-            canvas.addEventListener("touchmove", this.touchHandler, true);
-            canvas.addEventListener("touchend", this.touchHandler, true);
-            canvas.addEventListener("touchcancel", this.touchHandler, true);
+            canvas.addEventListener("touchstart", this._touch_callback, true);
+            canvas.addEventListener("touchmove", this._touch_callback, true);
+            canvas.addEventListener("touchend", this._touch_callback, true);
+            canvas.addEventListener("touchcancel", this._touch_callback, true);
         }
 
         //Keyboard ******************
@@ -5077,10 +5078,10 @@ LGraphNode.prototype.executeAction = function(action)
         this.canvas.removeEventListener("drop", this._ondrop_callback);
         this.canvas.removeEventListener("dragenter", this._doReturnTrue);
 
-        this.canvas.removeEventListener("touchstart", this.touchHandler);
-        this.canvas.removeEventListener("touchmove", this.touchHandler);
-        this.canvas.removeEventListener("touchend", this.touchHandler);
-        this.canvas.removeEventListener("touchcancel", this.touchHandler);
+        this.canvas.removeEventListener("touchstart", this._touch_callback );
+        this.canvas.removeEventListener("touchmove", this._touch_callback );
+        this.canvas.removeEventListener("touchend", this._touch_callback );
+        this.canvas.removeEventListener("touchcancel", this._touch_callback );
 
         this._mousedown_callback = null;
         this._mousewheel_callback = null;
