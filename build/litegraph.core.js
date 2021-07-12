@@ -5015,6 +5015,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         this._mousedown_callback = this.processMouseDown.bind(this);
         this._mousewheel_callback = this.processMouseWheel.bind(this);
+        this._touch_callback = this.touchHandler.bind(this);
 
         canvas.addEventListener("mousedown", this._mousedown_callback, true); //down do not need to store the binded
         canvas.addEventListener("mousemove", this._mousemove_callback);
@@ -5030,10 +5031,10 @@ LGraphNode.prototype.executeAction = function(action)
         //touch events
         //if( 'touchstart' in document.documentElement )
         {
-            canvas.addEventListener("touchstart", this.touchHandler, true);
-            canvas.addEventListener("touchmove", this.touchHandler, true);
-            canvas.addEventListener("touchend", this.touchHandler, true);
-            canvas.addEventListener("touchcancel", this.touchHandler, true);
+            canvas.addEventListener("touchstart", this._touch_callback, true);
+            canvas.addEventListener("touchmove", this._touch_callback, true);
+            canvas.addEventListener("touchend", this._touch_callback, true);
+            canvas.addEventListener("touchcancel", this._touch_callback, true);
         }
 
         //Keyboard ******************
@@ -5081,10 +5082,10 @@ LGraphNode.prototype.executeAction = function(action)
         this.canvas.removeEventListener("drop", this._ondrop_callback);
         this.canvas.removeEventListener("dragenter", this._doReturnTrue);
 
-        this.canvas.removeEventListener("touchstart", this.touchHandler);
-        this.canvas.removeEventListener("touchmove", this.touchHandler);
-        this.canvas.removeEventListener("touchend", this.touchHandler);
-        this.canvas.removeEventListener("touchcancel", this.touchHandler);
+        this.canvas.removeEventListener("touchstart", this._touch_callback );
+        this.canvas.removeEventListener("touchmove", this._touch_callback );
+        this.canvas.removeEventListener("touchend", this._touch_callback );
+        this.canvas.removeEventListener("touchcancel", this._touch_callback );
 
         this._mousedown_callback = null;
         this._mousewheel_callback = null;
@@ -11070,40 +11071,80 @@ LGraphNode.prototype.executeAction = function(action)
 
     //API *************************************************
     //like rect but rounded corners
-    if (typeof(window) != "undefined" && window.CanvasRenderingContext2D) {
+    if (typeof(window) != "undefined" && window.CanvasRenderingContext2D && !window.CanvasRenderingContext2D.prototype.roundRect) {
         window.CanvasRenderingContext2D.prototype.roundRect = function(
-            x,
-            y,
-            width,
-            height,
-            radius,
-            radius_low
-        ) {
-            if (radius === undefined) {
-                radius = 5;
-            }
+		x,
+		y,
+		w,
+		h,
+		radius,
+		radius_low
+	) {
+		var top_left_radius = 0;
+		var top_right_radius = 0;
+		var bottom_left_radius = 0;
+		var bottom_right_radius = 0;
 
-            if (radius_low === undefined) {
-                radius_low = radius;
-            }
+		if ( radius === 0 )
+		{
+			this.rect(x,y,w,h);
+			return;
+		}
 
-            this.moveTo(x + radius, y);
-            this.lineTo(x + width - radius, y);
-            this.quadraticCurveTo(x + width, y, x + width, y + radius);
+		if(radius_low === undefined)
+			radius_low = radius;
 
-            this.lineTo(x + width, y + height - radius_low);
-            this.quadraticCurveTo(
-                x + width,
-                y + height,
-                x + width - radius_low,
-                y + height
-            );
-            this.lineTo(x + radius_low, y + height);
-            this.quadraticCurveTo(x, y + height, x, y + height - radius_low);
-            this.lineTo(x, y + radius);
-            this.quadraticCurveTo(x, y, x + radius, y);
-        };
-    }
+		//make it compatible with official one
+		if(radius != null && radius.constructor === Array)
+		{
+			if(radius.length == 1)
+				top_left_radius = top_right_radius = bottom_left_radius = bottom_right_radius = radius[0];
+			else if(radius.length == 2)
+			{
+				top_left_radius = bottom_right_radius = radius[0];
+				top_right_radius = bottom_left_radius = radius[1];
+			}
+			else if(radius.length == 4)
+			{
+				top_left_radius = radius[0];
+				top_right_radius = radius[1];
+				bottom_left_radius = radius[2];
+				bottom_right_radius = radius[3];
+			}
+			else
+				return;
+		}
+		else //old using numbers
+		{
+			top_left_radius = radius || 0;
+			top_right_radius = radius || 0;
+			bottom_left_radius = radius_low || 0;
+			bottom_right_radius = radius_low || 0;
+		}
+
+		//top right
+		this.moveTo(x + top_left_radius, y);
+		this.lineTo(x + w - top_right_radius, y);
+		this.quadraticCurveTo(x + w, y, x + w, y + top_right_radius);
+
+		//bottom right
+		this.lineTo(x + w, y + h - bottom_right_radius);
+		this.quadraticCurveTo(
+			x + w,
+			y + h,
+			x + w - bottom_right_radius,
+			y + h
+		);
+
+		//bottom left
+		this.lineTo(x + bottom_right_radius, y + h);
+		this.quadraticCurveTo(x, y + h, x, y + h - bottom_left_radius);
+
+		//top left
+		this.lineTo(x, y + bottom_left_radius);
+		this.quadraticCurveTo(x, y, x + top_left_radius, y);
+	};
+	}//if
 
     function compareObjects(a, b) {
         for (var i in a) {
