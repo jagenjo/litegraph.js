@@ -5684,9 +5684,11 @@ LGraphNode.prototype.executeAction = function(action)
                             var slot_type = node.inputs[slot].type;
                             if ( LiteGraph.isValidConnection( this.connecting_output.type, slot_type ) ) {
                                 this._highlight_input = pos;
+                                this._highlight_input_slot = node.inputs[slot];
                             }
                         } else {
                             this._highlight_input = null;
+                            this._highlight_input_slot = null;
                         }
                     }
                 }
@@ -6924,7 +6926,13 @@ LGraphNode.prototype.executeAction = function(action)
                         14,
                         10
                     );
-                } else {
+                } else if (this.connecting_output.shape === LiteGraph.ARROW_SHAPE) {
+                    ctx.moveTo(this.connecting_pos[0] + 8, this.connecting_pos[1] + 0.5);
+                    ctx.lineTo(this.connecting_pos[0] - 4, this.connecting_pos[1] + 6 + 0.5);
+                    ctx.lineTo(this.connecting_pos[0] - 4, this.connecting_pos[1] - 6 + 0.5);
+                    ctx.closePath();
+                } 
+                else {
                     ctx.arc(
                         this.connecting_pos[0],
                         this.connecting_pos[1],
@@ -6938,13 +6946,21 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.fillStyle = "#ffcc00";
                 if (this._highlight_input) {
                     ctx.beginPath();
-                    ctx.arc(
-                        this._highlight_input[0],
-                        this._highlight_input[1],
-                        6,
-                        0,
-                        Math.PI * 2
-                    );
+                    var shape = this._highlight_input_slot.shape;
+                    if (shape === LiteGraph.ARROW_SHAPE) {
+                        ctx.moveTo(this._highlight_input[0] + 8, this._highlight_input[1] + 0.5);
+                        ctx.lineTo(this._highlight_input[0] - 4, this._highlight_input[1] + 6 + 0.5);
+                        ctx.lineTo(this._highlight_input[0] - 4, this._highlight_input[1] - 6 + 0.5);
+                        ctx.closePath();
+                    } else {
+                        ctx.arc(
+                            this._highlight_input[0],
+                            this._highlight_input[1],
+                            6,
+                            0,
+                            Math.PI * 2
+                        );
+                    }
                     ctx.fill();
                 }
             }
