@@ -417,7 +417,7 @@ export declare class LGraph {
     /**
      * Positions every node in a more readable manner
      */
-    arrange(margin?: number): void;
+    arrange(margin?: number,layout?: string): void;
     /**
      * Returns the amount of time the graph has been running in milliseconds
      * @return number of milliseconds the graph has been running
