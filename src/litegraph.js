@@ -5685,9 +5685,11 @@ LGraphNode.prototype.executeAction = function(action)
                             var slot_type = node.inputs[slot].type;
                             if ( LiteGraph.isValidConnection( this.connecting_output.type, slot_type ) ) {
                                 this._highlight_input = pos;
+                                this._highlight_input_slot = node.inputs[slot];
                             }
                         } else {
                             this._highlight_input = null;
+                            this._highlight_input_slot = null;
                         }
                     }
                 }
@@ -6925,7 +6927,13 @@ LGraphNode.prototype.executeAction = function(action)
                         14,
                         10
                     );
-                } else {
+                } else if (this.connecting_output.shape === LiteGraph.ARROW_SHAPE) {
+                    ctx.moveTo(this.connecting_pos[0] + 8, this.connecting_pos[1] + 0.5);
+                    ctx.lineTo(this.connecting_pos[0] - 4, this.connecting_pos[1] + 6 + 0.5);
+                    ctx.lineTo(this.connecting_pos[0] - 4, this.connecting_pos[1] - 6 + 0.5);
+                    ctx.closePath();
+                } 
+                else {
                     ctx.arc(
                         this.connecting_pos[0],
                         this.connecting_pos[1],
@@ -6939,13 +6947,21 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.fillStyle = "#ffcc00";
                 if (this._highlight_input) {
                     ctx.beginPath();
-                    ctx.arc(
-                        this._highlight_input[0],
-                        this._highlight_input[1],
-                        6,
-                        0,
-                        Math.PI * 2
-                    );
+                    var shape = this._highlight_input_slot.shape;
+                    if (shape === LiteGraph.ARROW_SHAPE) {
+                        ctx.moveTo(this._highlight_input[0] + 8, this._highlight_input[1] + 0.5);
+                        ctx.lineTo(this._highlight_input[0] - 4, this._highlight_input[1] + 6 + 0.5);
+                        ctx.lineTo(this._highlight_input[0] - 4, this._highlight_input[1] - 6 + 0.5);
+                        ctx.closePath();
+                    } else {
+                        ctx.arc(
+                            this._highlight_input[0],
+                            this._highlight_input[1],
+                            6,
+                            0,
+                            Math.PI * 2
+                        );
+                    }
                     ctx.fill();
                 }
             }
@@ -11194,40 +11210,80 @@ LGraphNode.prototype.executeAction = function(action)
 
     //API *************************************************
     //like rect but rounded corners
-    if (typeof(window) != "undefined" && window.CanvasRenderingContext2D) {
+    if (typeof(window) != "undefined" && window.CanvasRenderingContext2D && !window.CanvasRenderingContext2D.prototype.roundRect) {
         window.CanvasRenderingContext2D.prototype.roundRect = function(
-            x,
-            y,
-            width,
-            height,
-            radius,
-            radius_low
-        ) {
-            if (radius === undefined) {
-                radius = 5;
-            }
+		x,
+		y,
+		w,
+		h,
+		radius,
+		radius_low
+	) {
+		var top_left_radius = 0;
+		var top_right_radius = 0;
+		var bottom_left_radius = 0;
+		var bottom_right_radius = 0;
 
-            if (radius_low === undefined) {
-                radius_low = radius;
-            }
+		if ( radius === 0 )
+		{
+			this.rect(x,y,w,h);
+			return;
+		}
 
-            this.moveTo(x + radius, y);
-            this.lineTo(x + width - radius, y);
-            this.quadraticCurveTo(x + width, y, x + width, y + radius);
+		if(radius_low === undefined)
+			radius_low = radius;
 
-            this.lineTo(x + width, y + height - radius_low);
-            this.quadraticCurveTo(
-                x + width,
-                y + height,
-                x + width - radius_low,
-                y + height
-            );
-            this.lineTo(x + radius_low, y + height);
-            this.quadraticCurveTo(x, y + height, x, y + height - radius_low);
-            this.lineTo(x, y + radius);
-            this.quadraticCurveTo(x, y, x + radius, y);
-        };
-    }
+		//make it compatible with official one
+		if(radius != null && radius.constructor === Array)
+		{
+			if(radius.length == 1)
+				top_left_radius = top_right_radius = bottom_left_radius = bottom_right_radius = radius[0];
+			else if(radius.length == 2)
+			{
+				top_left_radius = bottom_right_radius = radius[0];
+				top_right_radius = bottom_left_radius = radius[1];
+			}
+			else if(radius.length == 4)
+			{
+				top_left_radius = radius[0];
+				top_right_radius = radius[1];
+				bottom_left_radius = radius[2];
+				bottom_right_radius = radius[3];
+			}
+			else
+				return;
+		}
+		else //old using numbers
+		{
+			top_left_radius = radius || 0;
+			top_right_radius = radius || 0;
+			bottom_left_radius = radius_low || 0;
+			bottom_right_radius = radius_low || 0;
+		}
+
+		//top right
+		this.moveTo(x + top_left_radius, y);
+		this.lineTo(x + w - top_right_radius, y);
+		this.quadraticCurveTo(x + w, y, x + w, y + top_right_radius);
+
+		//bottom right
+		this.lineTo(x + w, y + h - bottom_right_radius);
+		this.quadraticCurveTo(
+			x + w,
+			y + h,
+			x + w - bottom_right_radius,
+			y + h
+		);
+
+		//bottom left
+		this.lineTo(x + bottom_right_radius, y + h);
+		this.quadraticCurveTo(x, y + h, x, y + h - bottom_left_radius);
+
+		//top left
+		this.lineTo(x, y + bottom_left_radius);
+		this.quadraticCurveTo(x, y, x + top_left_radius, y);
+	};
+	}//if
 
     function compareObjects(a, b) {
         for (var i in a) {
