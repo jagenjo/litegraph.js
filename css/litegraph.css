@@ -578,3 +578,55 @@
     background-color: white;
     color: black;
 }
+
+.litegraph .dialog {
+    min-height: 0;
+}
+.litegraph .dialog .dialog-content {
+display: block;
+}
+.litegraph .dialog .dialog-content .subgraph_property {
+padding: 5px;
+}
+.litegraph .dialog .dialog-footer {
+margin: 0;
+}
+.litegraph .dialog .dialog-footer .subgraph_property {
+margin-top: 0;
+display: flex;
+align-items: center;
+padding: 5px;
+}
+.litegraph .dialog .dialog-footer .subgraph_property .name {
+flex: 1;
+}
+.litegraph .graphdialog {
+display: flex;
+align-items: center;
+border-radius: 20px;
+padding: 4px 10px;
+position: fixed;
+transform: translateX(300px) translateY(30px);
+}
+.litegraph .graphdialog .name {
+padding: 0;
+min-height: 0;
+font-size: 16px;
+vertical-align: middle;
+}
+.litegraph .graphdialog .value {
+font-size: 16px;
+min-height: 0;
+margin: 0 10px;
+padding: 2px 5px;
+}
+.litegraph .graphdialog input[type="checkbox"] {
+width: 16px;
+height: 16px;
+}
+.litegraph .graphdialog button {
+padding: 4px 18px;
+border-radius: 20px;
+cursor: pointer;
+}
+  
