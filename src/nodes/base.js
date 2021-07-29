@@ -131,39 +131,63 @@
         }
     };
 
-	Subgraph.prototype.onDrawBackground = function(ctx, graphcanvas, canvas, pos)
-	{
-		if(this.flags.collapsed)
-			return;
+    Subgraph.prototype.onDrawBackground = function (ctx, graphcanvas, canvas, pos) {
+        if (this.flags.collapsed)
+            return;
+        var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
+        // button
+        var over = LiteGraph.isInsideRectangle(pos[0], pos[1], this.pos[0], this.pos[1] + y, this.size[0], LiteGraph.NODE_TITLE_HEIGHT);
+        let overleft = LiteGraph.isInsideRectangle(pos[0], pos[1], this.pos[0], this.pos[1] + y, this.size[0] / 2, LiteGraph.NODE_TITLE_HEIGHT)
+        ctx.fillStyle = over ? "#555" : "#222";
+        ctx.beginPath();
+        if (this._shape == LiteGraph.BOX_SHAPE) {
+            if (overleft) {
+                ctx.rect(0, y, this.size[0] / 2 + 1, LiteGraph.NODE_TITLE_HEIGHT);
+            } else {
+                ctx.rect(this.size[0] / 2, y, this.size[0] / 2 + 1, LiteGraph.NODE_TITLE_HEIGHT);
+            }
+        }
+        else {
+            if (overleft) {
+                ctx.roundRect(0, y, this.size[0] / 2 + 1, LiteGraph.NODE_TITLE_HEIGHT, 0, 8);
+            } else {
+                ctx.roundRect(this.size[0] / 2, y, this.size[0] / 2 + 1, LiteGraph.NODE_TITLE_HEIGHT, 0, 8);
+            }
+        }
+        if (over) {
+            ctx.fill();
+        } else {
+            ctx.fillRect(0, y, this.size[0] + 1, LiteGraph.NODE_TITLE_HEIGHT);
+        }
+        // button
+        ctx.textAlign = "center";
+        ctx.font = "24px Arial";
+        ctx.fillStyle = over ? "#DDD" : "#999";
+        ctx.fillText("+", this.size[0] * 0.25, y + 24);
+        ctx.fillText("+", this.size[0] * 0.75, y + 24);
+    }
 
-		var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
-
-		//button
-		var over = LiteGraph.isInsideRectangle(pos[0],pos[1],this.pos[0],this.pos[1] + y,this.size[0],LiteGraph.NODE_TITLE_HEIGHT);
-		ctx.fillStyle = over ? "#555" : "#222";
-		ctx.beginPath();
-		if (this._shape == LiteGraph.BOX_SHAPE)
-			ctx.rect(0, y, this.size[0]+1, LiteGraph.NODE_TITLE_HEIGHT);
-		else
-			ctx.roundRect( 0, y, this.size[0]+1, LiteGraph.NODE_TITLE_HEIGHT, 0, 8);
-		ctx.fill();
-
-		//button
-		ctx.textAlign = "center";
-		ctx.font = "24px Arial";
-		ctx.fillStyle = over ? "#DDD" : "#999";
-		ctx.fillText( "+", this.size[0] * 0.5, y + 24 );
-	}
-
-	Subgraph.prototype.onMouseDown = function(e, localpos, graphcanvas)
-	{
-		var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
-		if(localpos[1] > y)
-		{
-			graphcanvas.showSubgraphPropertiesDialog(this);
-		}
-	}
-
+    // Subgraph.prototype.onMouseDown = function(e, localpos, graphcanvas)
+    // {
+    // 	var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
+    // 	if(localpos[1] > y)
+    // 	{
+    // 		graphcanvas.showSubgraphPropertiesDialog(this);
+    // 	}
+    // }
+    Subgraph.prototype.onMouseDown = function (e, localpos, graphcanvas) {
+        var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
+        console.log(0)
+        if (localpos[1] > y) {
+            if (localpos[0] < this.size[0] / 2) {
+                console.log(1)
+                graphcanvas.showSubgraphPropertiesDialog(this);
+            } else {
+                console.log(2)
+                graphcanvas.showSubgraphPropertiesDialogRight(this);
+            }
+        }
+    }
 	Subgraph.prototype.computeSize = function()
 	{
 		var num_inputs = this.inputs ? this.inputs.length : 0;
@@ -541,48 +565,48 @@
         this.properties = {};
         var that = this;
 
-        Object.defineProperty(this.properties, "name", {
-            get: function() {
-                return that.name_in_graph;
-            },
-            set: function(v) {
-                if (v == "" || v == that.name_in_graph) {
-                    return;
-                }
-                if (that.name_in_graph) {
-                    //already added
-                    that.graph.renameOutput(that.name_in_graph, v);
-                } else {
-                    that.graph.addOutput(v, that.properties.type);
-                }
-                that.name_widget.value = v;
-                that.name_in_graph = v;
-            },
-            enumerable: true
-        });
+        // Object.defineProperty(this.properties, "name", {
+        //     get: function() {
+        //         return that.name_in_graph;
+        //     },
+        //     set: function(v) {
+        //         if (v == "" || v == that.name_in_graph) {
+        //             return;
+        //         }
+        //         if (that.name_in_graph) {
+        //             //already added
+        //             that.graph.renameOutput(that.name_in_graph, v);
+        //         } else {
+        //             that.graph.addOutput(v, that.properties.type);
+        //         }
+        //         that.name_widget.value = v;
+        //         that.name_in_graph = v;
+        //     },
+        //     enumerable: true
+        // });
 
-        Object.defineProperty(this.properties, "type", {
-            get: function() {
-                return that.inputs[0].type;
-            },
-            set: function(v) {
-                if (v == "action" || v == "event") {
-                    v = LiteGraph.ACTION;
-                }
-		        if (!LiteGraph.isValidConnection(that.inputs[0].type,v))
-					that.disconnectInput(0);
-                that.inputs[0].type = v;
-                if (that.name_in_graph) {
-                    //already added
-                    that.graph.changeOutputType(
-                        that.name_in_graph,
-                        that.inputs[0].type
-                    );
-                }
-                that.type_widget.value = v || "";
-            },
-            enumerable: true
-        });
+        // Object.defineProperty(this.properties, "type", {
+        //     get: function() {
+        //         return that.inputs[0].type;
+        //     },
+        //     set: function(v) {
+        //         if (v == "action" || v == "event") {
+        //             v = LiteGraph.ACTION;
+        //         }
+		//         if (!LiteGraph.isValidConnection(that.inputs[0].type,v))
+		// 			that.disconnectInput(0);
+        //         that.inputs[0].type = v;
+        //         if (that.name_in_graph) {
+        //             //already added
+        //             that.graph.changeOutputType(
+        //                 that.name_in_graph,
+        //                 that.inputs[0].type
+        //             );
+        //         }
+        //         that.type_widget.value = v || "";
+        //     },
+        //     enumerable: true
+        // });
 
         this.name_widget = this.addWidget("text","Name",this.properties.name,"name");
         this.type_widget = this.addWidget("text","Type",this.properties.type,"type");
@@ -592,6 +616,50 @@
 
     GraphOutput.title = "Output";
     GraphOutput.desc = "Output of the graph";
+
+    GraphOutput.prototype.onPropertyChanged = function (name, v) {
+        if (name == "name") {
+            if (v == "" || v == this.name_in_graph || v == "enabled") {
+                return false;
+            }
+            if (this.graph) {
+                if (this.name_in_graph) {
+                    //already added
+                    this.graph.renameOutput(this.name_in_graph, v);
+                } else {
+                    this.graph.addOutput(v, this.properties.type);
+                }
+            } //what if not?!
+            this.name_widget.value = v;
+            this.name_in_graph = v;
+        }
+        else if (name == "type") {
+            this.updateType();
+        }
+        else if (name == "value") {
+        }
+    }
+      
+      
+    GraphOutput.prototype.updateType = function () {
+        var type = this.properties.type;
+        if (this.type_widget)
+            this.type_widget.value = type;
+
+        //update output
+        if (this.inputs[0].type != type) {
+            if (!LiteGraph.isValidConnection(this.inputs[0].type, type))
+                this.disconnectInput(0);
+            this.inputs[0].type = type;
+        }
+
+        //update graph
+        if (this.graph && this.name_in_graph) {
+            this.graph.changeOutputType(this.name_in_graph, type);
+        }
+    }
+
+
 
     GraphOutput.prototype.onExecute = function() {
         this._value = this.getInputData(0);
