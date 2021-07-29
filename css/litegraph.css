@@ -606,7 +606,6 @@ align-items: center;
 border-radius: 20px;
 padding: 4px 10px;
 position: fixed;
-transform: translateX(300px) translateY(30px);
 }
 .litegraph .graphdialog .name {
 padding: 0;
