@@ -8060,7 +8060,8 @@ LGraphNode.prototype.executeAction = function(action)
             if (!low_quality) {
                 ctx.font = this.title_text_font;
                 var title = String(node.getTitle());
-                if (title) {
+                var draw_title_text = node.constructor.draw_title_text || true;
+                if (title && draw_title_text) {
                     if (selected) {
                         ctx.fillStyle = LiteGraph.NODE_SELECTED_TITLE_COLOR;
                     } else {
