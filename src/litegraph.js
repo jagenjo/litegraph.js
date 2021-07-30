@@ -7930,7 +7930,7 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.fill();
 
 			//separator
-			if(!node.flags.collapsed)
+			if(!node.flags.collapsed && render_title)
 			{
 				ctx.shadowColor = "transparent";
 				ctx.fillStyle = "rgba(0,0,0,0.2)";
