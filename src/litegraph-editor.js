@@ -16,11 +16,11 @@ function Editor(container_id, options) {
     this.content = root.querySelector(".content");
     this.footer = root.querySelector(".footer");
 
-    var canvas = root.querySelector(".graphcanvas");
+    var canvas = this.canvas = root.querySelector(".graphcanvas");
 
     //create graph
     var graph = (this.graph = new LGraph());
-    var graphcanvas = (this.graphcanvas = new LGraphCanvas(canvas, graph));
+    var graphcanvas = this.graphcanvas = new LGraphCanvas(canvas, graph);
     graphcanvas.background_image = "imgs/grid.png";
     graph.onAfterExecute = function() {
         graphcanvas.draw(true);
@@ -266,5 +266,18 @@ Editor.prototype.addMiniWindow = function(w, h) {
 
     this.root.querySelector(".content").appendChild(miniwindow);
 };
+
+Editor.prototype.addMultiview = function()
+{
+	var canvas = this.canvas;
+	this.graphcanvas.ctx.fillStyle = "black";
+	this.graphcanvas.ctx.fillRect(0,0,canvas.width,canvas.height);
+	this.graphcanvas.viewport = [0,0,canvas.width*0.5-2,canvas.height];
+
+	var graphcanvas = new LGraphCanvas( canvas, this.graph );
+    graphcanvas.background_image = "imgs/grid.png";
+    this.graphcanvas2 = graphcanvas;
+	this.graphcanvas2.viewport = [canvas.width*0.5,0,canvas.width*0.5,canvas.height];
+}
 
 LiteGraph.Editor = Editor;

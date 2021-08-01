@@ -91,7 +91,7 @@
         this.addOutput("out", "boolean");
     }
     logicAnd.title = "AND";
-    logicAnd.desc = "Return true if both inputs are true";
+    logicAnd.desc = "Return true if all inputs are true";
     logicAnd.prototype.onExecute = function() {
         ret = true;
         for (inX in this.inputs){
