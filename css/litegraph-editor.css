@@ -144,9 +144,9 @@
     vertical-align: top;
 }
 
-.litegraph-editor .footer button {
+/* .litegraph-editor .footer button { */
     /*font-size: 16px;*/
-}
+/* } */
 
 .litegraph-editor .toolbar-widget {
     display: inline-block;
