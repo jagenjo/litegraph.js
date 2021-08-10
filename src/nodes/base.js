@@ -167,24 +167,14 @@
         ctx.fillText("+", this.size[0] * 0.75, y + 24);
     }
 
-    // Subgraph.prototype.onMouseDown = function(e, localpos, graphcanvas)
-    // {
-    // 	var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
-    // 	if(localpos[1] > y)
-    // 	{
-    // 		graphcanvas.showSubgraphPropertiesDialog(this);
-    // 	}
-    // }
     Subgraph.prototype.onMouseDown = function (e, localpos, graphcanvas) {
         var y = this.size[1] - LiteGraph.NODE_TITLE_HEIGHT + 0.5;
         console.log(0)
         if (localpos[1] > y) {
             if (localpos[0] < this.size[0] / 2) {
-                console.log(1)
-                graphcanvas.showSubgraphPropertiesDialog(this);
+                graphcanvas.showSubgraphPropertiesDialog(this, "input");
             } else {
-                console.log(2)
-                graphcanvas.showSubgraphPropertiesDialogRight(this);
+                graphcanvas.showSubgraphPropertiesDialog(this, "output");
             }
         }
     }

@@ -7086,12 +7086,12 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.fillText(input.name, 30, y + h * 0.75);
                 // var tw = ctx.measureText(input.name);
                 ctx.fillStyle = "#777";
-                ctx.fillText(input.type, 130, y + h * 0.75);
+                ctx.fillText(input.type, 120, y + h * 0.75);
                 y += h;
             }
         //add + button
         if (this.drawButton(20, y + 2, w - 20, h - 2, "+", "#151515", "#222")) {
-            this.showSubgraphPropertiesDialog(subnode);
+            this.showSubgraphPropertiesDialog(subnode, "input");
         }
     }
     LGraphCanvas.prototype.drawSubgraphPanelRight = function (subgraph, subnode, ctx) {
@@ -7156,12 +7156,12 @@ LGraphNode.prototype.executeAction = function(action)
                 ctx.fillText(output.name, canvas_w - w + 30, y + h * 0.75);
                 // var tw = ctx.measureText(input.name);
                 ctx.fillStyle = "#777";
-                ctx.fillText(output.type, canvas_w - w + 130, y + h * 0.75);
+                ctx.fillText(output.type, canvas_w - w + 120, y + h * 0.75);
                 y += h;
             }
         //add + button
         if (this.drawButton(canvas_w - w, y + 2, w - 20, h - 2, "+", "#151515", "#222")) {
-            this.showSubgraphPropertiesDialogRight(subnode);
+            this.showSubgraphPropertiesDialog(subnode, "output");
         }
     }
 	//Draws a button into the canvas overlay and computes if it was clicked using the immediate gui paradigm
@@ -10582,81 +10582,25 @@ LGraphNode.prototype.executeAction = function(action)
 		this.canvas.parentNode.appendChild( panel );
 	}
 	
-	LGraphCanvas.prototype.showSubgraphPropertiesDialog = function(node)
-	{
-		console.log("showing subgraph properties dialog");
+    LGraphCanvas.prototype.showSubgraphPropertiesDialog = function (node, mode) {
+        console.log("showing subgraph properties dialog " + mode);
 
-		var old_panel = this.canvas.parentNode.querySelector(".subgraph_dialog");
-		if(old_panel)
-			old_panel.close();
-
-		var panel = this.createPanel("Subgraph Inputs",{closable:true, width: 500});
-		panel.node = node;
-		panel.classList.add("subgraph_dialog");
-
-		function inner_refresh()
-		{
-			panel.clear();
-
-			//show currents
-			if(node.inputs)
-				for(var i = 0; i < node.inputs.length; ++i)
-				{
-					var input = node.inputs[i];
-					if(input.not_subgraph_input)
-						continue;
-					var html = "<button>&#10005;</button> <span class='bullet_icon'></span><span class='name'></span><span class='type'></span>";
-					var elem = panel.addHTML(html,"subgraph_property");
-					elem.dataset["name"] = input.name;
-					elem.dataset["slot"] = i;
-					elem.querySelector(".name").innerText = input.name;
-					elem.querySelector(".type").innerText = input.type;
-					elem.querySelector("button").addEventListener("click",function(e){
-						node.removeInput( Number( this.parentNode.dataset["slot"] ) );
-						inner_refresh();
-					});
-				}
-		}
-
-		//add extra
-		var html = " + <span class='label'>Name</span><input class='name'/><span class='label'>Type</span><input class='type'></input><button>+</button>";
-		var elem = panel.addHTML(html,"subgraph_property extra", true);
-		elem.querySelector("button").addEventListener("click", function(e){
-			var elem = this.parentNode;
-			var name = elem.querySelector(".name").value;
-			var type = elem.querySelector(".type").value;
-			if(!name || node.findInputSlot(name) != -1)
-				return;
-			node.addInput(name,type);
-			elem.querySelector(".name").value = "";
-			elem.querySelector(".type").value = "";
-			inner_refresh();
-		});
-
-		inner_refresh();
-	    this.canvas.parentNode.appendChild(panel);
-		return panel;
-	}
-    LGraphCanvas.prototype.showSubgraphPropertiesDialogRight = function (node) {
-
-        // console.log("showing subgraph properties dialog");
-        var that = this;
         // old_panel if old_panel is exist close it
         var old_panel = this.canvas.parentNode.querySelector(".subgraph_dialog");
         if (old_panel)
             old_panel.close();
         // new panel
-        var panel = this.createPanel("Subgraph Outputs", { closable: true, width: 500 });
+        var panel = this.createPanel(mode === "input" ? "Subgraph Inputs" : "Subgraph Outputs", { closable: true, width: 500 });
         panel.node = node;
         panel.classList.add("subgraph_dialog");
-
         function inner_refresh() {
             panel.clear();
             //show currents
-            if (node.outputs)
-                for (var i = 0; i < node.outputs.length; ++i) {
-                    var input = node.outputs[i];
-                    if (input.not_subgraph_output)
+            let slots = mode === "input" ? node.inputs : node.outputs
+            if (slots)
+                for (var i = 0; i < slots.length; ++i) {
+                    var input = slots[i];
+                    if (input.not_subgraph_input)
                         continue;
                     var html = "<button>&#10005;</button> <span class='bullet_icon'></span><span class='name'></span><span class='type'></span>";
                     var elem = panel.addHTML(html, "subgraph_property");
@@ -10665,27 +10609,38 @@ LGraphNode.prototype.executeAction = function(action)
                     elem.querySelector(".name").innerText = input.name;
                     elem.querySelector(".type").innerText = input.type;
                     elem.querySelector("button").addEventListener("click", function (e) {
-                        node.removeOutput(Number(this.parentNode.dataset["slot"]));
+                        if (mode === "input") {
+                            node.removeInput(Number(this.parentNode.dataset["slot"]));
+                        } else {
+                            node.removeOutput(Number(this.parentNode.dataset["slot"]));
+                        }
                         inner_refresh();
                     });
                 }
         }
 
-        //add extra
-        var html = " + <span class='label'>Name</span><input class='name'/><span class='label'>Type</span><input class='type'></input><button>+</button>";
+        var html = " + <span class='label'>Name</span><input class='name'/><span class='label'>Type</span><input class='type'><button>+</button>";
         var elem = panel.addHTML(html, "subgraph_property extra", true);
-        elem.querySelector(".name").addEventListener("keydown", function (e) {
-            if (e.keyCode == 13) {
-                addOutput.apply(this)
-            }
-        })
         elem.querySelector("button").addEventListener("click", function (e) {
-            addOutput.apply(this)
+            mode === "input" ? addInput.apply(this) : addOutput.apply(this)
         });
+
+        function addInput() {
+            var elem = this.parentNode;
+            var name = elem.querySelector(".name").value;
+            var type = elem.querySelector(".type").value || "Any";
+            if (!name || node.findInputSlot(name) != -1)
+                return;
+            node.addInput(name, type);
+            elem.querySelector(".name").value = "";
+            elem.querySelector(".type").value = "";
+            inner_refresh();
+        }
+
         function addOutput() {
             var elem = this.parentNode;
             var name = elem.querySelector(".name").value;
-            var type = elem.querySelector(".type").value;
+            var type = elem.querySelector(".type").value || "Any";
             if (!name || node.findOutputSlot(name) != -1)
                 return;
             node.addOutput(name, type);
@@ -10698,6 +10653,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.canvas.parentNode.appendChild(panel);
         return panel;
     }
+      
 	LGraphCanvas.prototype.checkPanels = function()
 	{
 		if(!this.canvas)
