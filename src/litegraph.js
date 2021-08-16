@@ -7887,7 +7887,7 @@ LGraphNode.prototype.executeAction = function(action)
         var title_mode = node.constructor.title_mode;
 
         var render_title = true;
-        if (title_mode == LiteGraph.TRANSPARENT_TITLE) {
+        if (title_mode == LiteGraph.TRANSPARENT_TITLE || title_mode == LiteGraph.NO_TITLE) {
             render_title = false;
         } else if (title_mode == LiteGraph.AUTOHIDE_TITLE && mouse_over) {
             render_title = true;
