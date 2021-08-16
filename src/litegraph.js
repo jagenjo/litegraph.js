@@ -7029,7 +7029,7 @@ LGraphNode.prototype.executeAction = function(action)
 		ctx.fillStyle = "#111";
 		ctx.globalAlpha = 0.8;
 		ctx.beginPath();
-		ctx.roundRect(10,10,w, (num + 1) * h + 50,8 );
+		ctx.roundRect(10,10,w, (num + 1) * h + 50,[8] );
 		ctx.fill();
 		ctx.globalAlpha = 1;
 
@@ -7116,7 +7116,7 @@ LGraphNode.prototype.executeAction = function(action)
 		if(clicked)
 			ctx.fillStyle = "#AAA";
 		ctx.beginPath();
-		ctx.roundRect(x,y,w,h,4 );
+		ctx.roundRect(x,y,w,h,[4] );
 		ctx.fill();
 
 		if(text != null)
@@ -7429,7 +7429,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (shape == LiteGraph.BOX_SHAPE) {
                 ctx.rect(0, 0, size[0], size[1]);
             } else if (shape == LiteGraph.ROUND_SHAPE) {
-                ctx.roundRect(0, 0, size[0], size[1], 10);
+                ctx.roundRect(0, 0, size[0], size[1], [10]);
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
                     size[0] * 0.5,
@@ -7781,7 +7781,7 @@ LGraphNode.prototype.executeAction = function(action)
 		ctx.shadowBlur = 3;
 		ctx.fillStyle = "#454";
 		ctx.beginPath();
-		ctx.roundRect( pos[0] - w*0.5, pos[1] - 15 - h, w, h,3, 3);
+		ctx.roundRect( pos[0] - w*0.5, pos[1] - 15 - h, w, h, [3]);
 		ctx.moveTo( pos[0] - 10, pos[1] - 15 );
 		ctx.lineTo( pos[0] + 10, pos[1] - 15 );
 		ctx.lineTo( pos[0], pos[1] - 5 );
@@ -7850,8 +7850,7 @@ LGraphNode.prototype.executeAction = function(action)
                     area[1],
                     area[2],
                     area[3],
-                    this.round_radius,
-                    shape == LiteGraph.CARD_SHAPE ? 0 : this.round_radius
+                    shape == LiteGraph.CARD_SHAPE ? [this.round_radius,this.round_radius,0,0] : [this.round_radius] 
                 );
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
@@ -7916,8 +7915,7 @@ LGraphNode.prototype.executeAction = function(action)
                         -title_height,
                         size[0] + 1,
                         title_height,
-                        this.round_radius,
-                        node.flags.collapsed ? this.round_radius : 0
+                        node.flags.collapsed ? [this.round_radius] : [this.round_radius,this.round_radius,0,0]
                     );
                 }
                 ctx.fill();
@@ -8034,7 +8032,7 @@ LGraphNode.prototype.executeAction = function(action)
 				else
 				{
 					ctx.beginPath();
-					ctx.roundRect(x+2, -w+2, w-4, w-4,4);
+					ctx.roundRect(x+2, -w+2, w-4, w-4,[4]);
 					ctx.fill();
 				}
 				ctx.fillStyle = "#333";
@@ -8080,7 +8078,7 @@ LGraphNode.prototype.executeAction = function(action)
                     -6 + area[1],
                     12 + area[2],
                     12 + area[3],
-                    this.round_radius * 2
+                    [this.round_radius * 2]
                 );
             } else if (shape == LiteGraph.CARD_SHAPE) {
                 ctx.roundRect(
@@ -8088,8 +8086,7 @@ LGraphNode.prototype.executeAction = function(action)
                     -6 + area[1],
                     12 + area[2],
                     12 + area[3],
-                    this.round_radius * 2,
-                    2
+                    [this.round_radius * 2,2,this.round_radius * 2,2]
                 );
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
                 ctx.arc(
@@ -8679,7 +8676,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
                     if (show_text)
-	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, H * 0.5);
+	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, [H * 0.5]);
 					else
 	                    ctx.rect(margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
@@ -8736,7 +8733,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
 					if(show_text)
-	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, H * 0.5);
+	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, [H * 0.5] );
 					else
 	                    ctx.rect(margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
@@ -8796,7 +8793,7 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
                     if (show_text)
-	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, H * 0.5);
+	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, [H * 0.5]);
 					else
 	                    ctx.rect( margin, posY, widget_width - margin * 2, H );
                     ctx.fill();
