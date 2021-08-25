@@ -6927,6 +6927,8 @@ LGraphNode.prototype.executeAction = function(action)
                         14,
                         10
                     );
+	                ctx.fill();
+					ctx.beginPath();
                     ctx.rect(
                         this.graph_mouse[0] - 6 + 0.5,
                         this.graph_mouse[1] - 5 + 0.5,
@@ -6947,6 +6949,8 @@ LGraphNode.prototype.executeAction = function(action)
                         0,
                         Math.PI * 2
                     );
+	                ctx.fill();
+					ctx.beginPath();
                     ctx.arc(
                         this.graph_mouse[0],
                         this.graph_mouse[1],
