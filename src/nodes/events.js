@@ -320,6 +320,45 @@
 
     LiteGraph.registerNodeType("events/timer", TimerEvent);
 
+
+
+    function SemaphoreEvent() {
+        this.addInput("go", LiteGraph.ACTION );
+        this.addInput("green", LiteGraph.ACTION );
+        this.addInput("red", LiteGraph.ACTION );
+        this.addOutput("continue", LiteGraph.EVENT );
+        this.addOutput("blocked", LiteGraph.EVENT );
+        this.addOutput("is_green", "boolean" );
+		this._ready = false;
+		this.properties = {};
+		var that = this;
+		this.addWidget("button","reset","",function(){
+			that._ready = false;
+		});
+    }
+
+    SemaphoreEvent.title = "Semaphore Event";
+    SemaphoreEvent.desc = "Until both events are not triggered, it doesnt continue.";
+
+	SemaphoreEvent.prototype.onExecute = function()
+	{
+		this.setOutputData(1,this._ready);
+		this.boxcolor = this._ready ? "#9F9" : "#FA5";
+	}
+
+    SemaphoreEvent.prototype.onAction = function(action, param) {
+		if( action == "go" )
+			this.triggerSlot( this._ready ? 0 : 1 );
+		else if( action == "green" )
+			this._ready = true;
+		else if( action == "red" )
+			this._ready = false;
+    };
+
+    LiteGraph.registerNodeType("events/semaphore", SemaphoreEvent);
+
+
+
     function DataStore() {
         this.addInput("data", "");
         this.addInput("assign", LiteGraph.ACTION);
@@ -354,4 +393,7 @@
 	}
 
     LiteGraph.registerNodeType("basic/data_store", DataStore);
+
+
+
 })(this);

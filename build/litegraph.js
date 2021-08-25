@@ -420,7 +420,7 @@
             }
 
             if (this.auto_sort_node_types) {
-                r.sort((a, b) => a.title.localeCompare(b.title));
+                r.sort(function(a,b){return a.title.localeCompare(b.title)});
             }
 
             return r;
@@ -6929,6 +6929,12 @@ LGraphNode.prototype.executeAction = function(action)
                         14,
                         10
                     );
+                    ctx.rect(
+                        this.graph_mouse[0] - 6 + 0.5,
+                        this.graph_mouse[1] - 5 + 0.5,
+                        14,
+                        10
+                    );
                 } else if (this.connecting_output.shape === LiteGraph.ARROW_SHAPE) {
                     ctx.moveTo(this.connecting_pos[0] + 8, this.connecting_pos[1] + 0.5);
                     ctx.lineTo(this.connecting_pos[0] - 4, this.connecting_pos[1] + 6 + 0.5);
@@ -6939,6 +6945,13 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.arc(
                         this.connecting_pos[0],
                         this.connecting_pos[1],
+                        4,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.arc(
+                        this.graph_mouse[0],
+                        this.graph_mouse[1],
                         4,
                         0,
                         Math.PI * 2
@@ -7889,7 +7902,7 @@ LGraphNode.prototype.executeAction = function(action)
         var title_mode = node.constructor.title_mode;
 
         var render_title = true;
-        if (title_mode == LiteGraph.TRANSPARENT_TITLE) {
+        if (title_mode == LiteGraph.TRANSPARENT_TITLE || title_mode == LiteGraph.NO_TITLE) {
             render_title = false;
         } else if (title_mode == LiteGraph.AUTOHIDE_TITLE && mouse_over) {
             render_title = true;
@@ -13933,6 +13946,45 @@ if (typeof exports != "undefined") {
 
     LiteGraph.registerNodeType("events/timer", TimerEvent);
 
+
+
+    function SemaphoreEvent() {
+        this.addInput("go", LiteGraph.ACTION );
+        this.addInput("green", LiteGraph.ACTION );
+        this.addInput("red", LiteGraph.ACTION );
+        this.addOutput("continue", LiteGraph.EVENT );
+        this.addOutput("blocked", LiteGraph.EVENT );
+        this.addOutput("is_green", "boolean" );
+		this._ready = false;
+		this.properties = {};
+		var that = this;
+		this.addWidget("button","reset","",function(){
+			that._ready = false;
+		});
+    }
+
+    SemaphoreEvent.title = "Semaphore Event";
+    SemaphoreEvent.desc = "Until both events are not triggered, it doesnt continue.";
+
+	SemaphoreEvent.prototype.onExecute = function()
+	{
+		this.setOutputData(1,this._ready);
+		this.boxcolor = this._ready ? "#9F9" : "#FA5";
+	}
+
+    SemaphoreEvent.prototype.onAction = function(action, param) {
+		if( action == "go" )
+			this.triggerSlot( this._ready ? 0 : 1 );
+		else if( action == "green" )
+			this._ready = true;
+		else if( action == "red" )
+			this._ready = false;
+    };
+
+    LiteGraph.registerNodeType("events/semaphore", SemaphoreEvent);
+
+
+
     function DataStore() {
         this.addInput("data", "");
         this.addInput("assign", LiteGraph.ACTION);
@@ -13967,6 +14019,9 @@ if (typeof exports != "undefined") {
 	}
 
     LiteGraph.registerNodeType("basic/data_store", DataStore);
+
+
+
 })(this);
 
 //widgets
@@ -17020,7 +17075,7 @@ if (typeof exports != "undefined") {
 
 
     } //glMatrix
-	else
+	else if (LiteGraph.debug)
 		console.warn("No glmatrix found, some Math3D nodes may not work");
 
 })(this);

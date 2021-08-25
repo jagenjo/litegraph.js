@@ -6927,6 +6927,12 @@ LGraphNode.prototype.executeAction = function(action)
                         14,
                         10
                     );
+                    ctx.rect(
+                        this.graph_mouse[0] - 6 + 0.5,
+                        this.graph_mouse[1] - 5 + 0.5,
+                        14,
+                        10
+                    );
                 } else if (this.connecting_output.shape === LiteGraph.ARROW_SHAPE) {
                     ctx.moveTo(this.connecting_pos[0] + 8, this.connecting_pos[1] + 0.5);
                     ctx.lineTo(this.connecting_pos[0] - 4, this.connecting_pos[1] + 6 + 0.5);
@@ -6937,6 +6943,13 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.arc(
                         this.connecting_pos[0],
                         this.connecting_pos[1],
+                        4,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.arc(
+                        this.graph_mouse[0],
+                        this.graph_mouse[1],
                         4,
                         0,
                         Math.PI * 2
