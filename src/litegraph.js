@@ -8759,9 +8759,9 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
                     if (show_text)
-	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, [H * 0.5]);
+	                    ctx.roundRect(margin, y, widget_width - margin * 2, H, [H * 0.5]);
 					else
-	                    ctx.rect(margin, posY, widget_width - margin * 2, H );
+	                    ctx.rect(margin, y, widget_width - margin * 2, H );
                     ctx.fill();
 					if(show_text && !w.disabled)
 	                    ctx.stroke();
@@ -8816,9 +8816,9 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
 					if(show_text)
-	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, [H * 0.5] );
+	                    ctx.roundRect(margin, y, widget_width - margin * 2, H, [H * 0.5] );
 					else
-	                    ctx.rect(margin, posY, widget_width - margin * 2, H );
+	                    ctx.rect(margin, y, widget_width - margin * 2, H );
                     ctx.fill();
                     if (show_text) {
 						if(!w.disabled)
@@ -8827,14 +8827,14 @@ LGraphNode.prototype.executeAction = function(action)
 						if(!w.disabled)
 						{
 							ctx.beginPath();
-							ctx.moveTo(margin + 16, posY + 5);
-							ctx.lineTo(margin + 6, posY + H * 0.5);
-							ctx.lineTo(margin + 16, posY + H - 5);
+							ctx.moveTo(margin + 16, y + 5);
+							ctx.lineTo(margin + 6, y + H * 0.5);
+							ctx.lineTo(margin + 16, y + H - 5);
 							ctx.fill();
 							ctx.beginPath();
-							ctx.moveTo(widget_width - margin - 16, posY + 5);
-							ctx.lineTo(widget_width - margin - 6, posY + H * 0.5);
-							ctx.lineTo(widget_width - margin - 16, posY + H - 5);
+							ctx.moveTo(widget_width - margin - 16, y + 5);
+							ctx.lineTo(widget_width - margin - 6, y + H * 0.5);
+							ctx.lineTo(widget_width - margin - 16, y + H - 5);
 							ctx.fill();
 						}
                         ctx.fillStyle = secondary_text_color;
@@ -8876,16 +8876,16 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fillStyle = background_color;
                     ctx.beginPath();
                     if (show_text)
-	                    ctx.roundRect(margin, posY, widget_width - margin * 2, H, [H * 0.5]);
+	                    ctx.roundRect(margin, y, widget_width - margin * 2, H, [H * 0.5]);
 					else
-	                    ctx.rect( margin, posY, widget_width - margin * 2, H );
+	                    ctx.rect( margin, y, widget_width - margin * 2, H );
                     ctx.fill();
 	                if (show_text) {
 						if(!w.disabled)
 							ctx.stroke();
     					ctx.save();
 						ctx.beginPath();
-						ctx.rect(margin, posY, widget_width - margin * 2, H);
+						ctx.rect(margin, y, widget_width - margin * 2, H);
 						ctx.clip();
 
 	                    //ctx.stroke();
