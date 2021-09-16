@@ -50,19 +50,18 @@
 
     //Sequencer for events
     function Sequencer() {
-        this.addInput("", LiteGraph.ACTION);
-        this.addInput("", LiteGraph.ACTION);
-        this.addInput("", LiteGraph.ACTION);
+		var that = this;
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
-        this.size = [120, 30];
+        this.addWidget("button","+",null,function(){
+	        that.addInput("", LiteGraph.ACTION);
+	        that.addOutput("", LiteGraph.EVENT);
+        });
+        this.size = [90, 70];
         this.flags = { horizontal: true, render_box: false };
     }
 

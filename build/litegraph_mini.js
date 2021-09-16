@@ -1,5 +1,6 @@
 //packer version
 
+
 (function(global) {
     // *************************************************************
     //   LiteGraph CLASS                                     *******
@@ -9150,6 +9151,7 @@ LGraphNode.prototype.executeAction = function(action)
             var font_size =
                 group.font_size || LiteGraph.DEFAULT_GROUP_FONT_SIZE;
             ctx.font = font_size + "px Arial";
+			ctx.textAlign = "left";
             ctx.fillText(group.title, pos[0] + 4, pos[1] + font_size);
         }
 
@@ -9391,9 +9393,14 @@ LGraphNode.prototype.executeAction = function(action)
                     continue;
                 }
                 var label = entry[0];
-                if (entry[2] && entry[2].label) {
+				if(!entry[2])
+					entry[2] = {};
+
+                if (entry[2].label) {
                     label = entry[2].label;
                 }
+
+				entry[2].removable = true;
                 var data = { content: label, value: entry };
                 if (entry[1] == LiteGraph.ACTION) {
                     data.className = "event";
@@ -9480,9 +9487,12 @@ LGraphNode.prototype.executeAction = function(action)
                     continue;
                 } //skip the ones already on
                 var label = entry[0];
-                if (entry[2] && entry[2].label) {
+				if(!entry[2])
+					entry[2] = {};
+                if (entry[2].label) {
                     label = entry[2].label;
                 }
+				entry[2].removable = true;
                 var data = { content: label, value: entry };
                 if (entry[1] == LiteGraph.EVENT) {
                     data.className = "event";
@@ -11122,7 +11132,7 @@ LGraphNode.prototype.executeAction = function(action)
                 }
                 var _slot = slot.input || slot.output;
                 menu_info.push(
-                    _slot.locked
+                    _slot.locked || !_slot.removable
                         ? "Cannot remove"
                         : { content: "Remove Slot", slot: slot }
                 );
@@ -12102,6 +12112,7 @@ LGraphNode.prototype.executeAction = function(action)
 if (typeof exports != "undefined") {
     exports.LiteGraph = this.LiteGraph;
 }
+
 
 //basic nodes
 (function(global) {
@@ -13350,6 +13361,19 @@ if (typeof exports != "undefined") {
         "number"
     );
 
+    function length(v) {
+        if(v && v.length != null)
+			return Number(v.length);
+		return 0;
+    }
+
+    LiteGraph.wrapFunctionAsNode(
+        "basic/not",
+        function(a){ return !a; },
+        [""],
+        "boolean"
+    );
+
 	function DownloadData() {
         this.size = [60, 30];
         this.addInput("data", 0 );
@@ -13680,19 +13704,18 @@ if (typeof exports != "undefined") {
 
     //Sequencer for events
     function Sequencer() {
-        this.addInput("", LiteGraph.ACTION);
-        this.addInput("", LiteGraph.ACTION);
-        this.addInput("", LiteGraph.ACTION);
+		var that = this;
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
-        this.addOutput("", LiteGraph.EVENT);
-        this.size = [120, 30];
+        this.addWidget("button","+",null,function(){
+	        that.addInput("", LiteGraph.ACTION);
+	        that.addOutput("", LiteGraph.EVENT);
+        });
+        this.size = [90, 70];
         this.flags = { horizontal: true, render_box: false };
     }
 
