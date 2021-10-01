@@ -5019,7 +5019,7 @@ LGraphNode.prototype.executeAction = function(action)
         this._mousewheel_callback = this.processMouseWheel.bind(this);
         this._touch_callback = this.touchHandler.bind(this);
 
-        canvas.addEventListener("mousedown", this._mousedown_callback, true); //down do not need to store the binded
+        canvas.addEventListener("pointerdown", this._mousedown_callback, true); //down do not need to store the binded
         canvas.addEventListener("mousemove", this._mousemove_callback);
         canvas.addEventListener("mousewheel", this._mousewheel_callback, false);
 
@@ -5254,7 +5254,7 @@ LGraphNode.prototype.executeAction = function(action)
         var skip_dragging = false;
         var skip_action = false;
         var now = LiteGraph.getTime();
-        var is_double_click = now - this.last_mouseclick < 300;
+        var is_double_click = (now - this.last_mouseclick < 300) && (e.isPrimary);
 		this.mouse[0] = e.localX;
 		this.mouse[1] = e.localY;
         this.graph_mouse[0] = e.canvasX;
