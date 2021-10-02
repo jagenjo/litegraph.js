@@ -4808,6 +4808,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.last_mouse = [0, 0];
         this.last_mouseclick = 0;
+	  	this.pointer_is_down = false;
+	  	this.pointer_is_double = false;
         this.visible_area.set([0, 0, 0, 0]);
 
         if (this.onClear) {
@@ -5017,7 +5019,7 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
-        //console.log("pointerevents: binEvents");
+        //console.log("pointerevents: bindEvents");
         
         var canvas = this.canvas;
 
@@ -5256,7 +5258,7 @@ LGraphNode.prototype.executeAction = function(action)
 		var x = e.clientX;
 		var y = e.clientY;
 		//console.log(y,this.viewport);
-		//console.log("pointerevents: processMouseDown "+e.pointerId+" "+e.isPrimary+" :: "+x+" "+y);
+		//console.log("pointerevents: processMouseDown pointerId:"+e.pointerId+" which:"+e.which+" isPrimary:"+e.isPrimary+" :: x y "+x+" "+y);
 
 		this.ds.viewport = this.viewport;
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
@@ -5282,7 +5284,16 @@ LGraphNode.prototype.executeAction = function(action)
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
 		this.last_click_position = [this.mouse[0],this.mouse[1]];
-
+	  	
+	  	if (this.pointer_is_down && e.isPrimary!==undefined && !e.isPrimary){
+		  this.pointer_is_double = true;
+		  //console.log("pointerevents: pointer_is_double start");
+		}else{
+		  this.pointer_is_double = false;
+		}
+	  	this.pointer_is_down = true;
+	  
+	  	
         this.canvas.focus();
 
         LiteGraph.closeAllContextMenus(ref_window);
@@ -5293,8 +5304,8 @@ LGraphNode.prototype.executeAction = function(action)
                 return;
         }
 
-		//left button mouse
-        if (e.which == 1)
+		//left button mouse / single finger
+        if (e.which == 1 && !this.pointer_is_double)
 		{
             if (e.ctrlKey)
 			{
@@ -5536,7 +5547,7 @@ LGraphNode.prototype.executeAction = function(action)
             
         } else if (e.which == 2) {
             //middle button
-        } else if (e.which == 3) {
+        } else if (e.which == 3 || this.pointer_is_double) {
             //right button
 			if(!this.read_only)
 	            this.processContextMenu(node, e);
@@ -5607,10 +5618,6 @@ LGraphNode.prototype.executeAction = function(action)
         this.graph_mouse[1] = e.canvasY;
 
         //console.log("pointerevents: processMouseMove "+e.pointerId+" "+e.isPrimary);
-        //convertEventToCanvasOffset
-        console.log(mouse);
-        console.log(this.graph_mouse);
-        //console.log(delta);
         
 		if(this.block_click)
 		{
@@ -6074,6 +6081,11 @@ LGraphNode.prototype.executeAction = function(action)
 		this.draw();
 	*/
 
+	  	if (e.isPrimary!==undefined && e.isPrimary){
+			this.pointer_is_down = false;
+			this.pointer_is_double = false;
+		}
+	  
         this.graph.change();
 
         //console.log("pointerevents: processMouseUp stopPropagation");
@@ -11534,7 +11546,7 @@ LGraphNode.prototype.executeAction = function(action)
 			eventClass !== "PointerEvent"
         ) {
             console.error(
-                "Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it."
+                "Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it. ("+eventClass+")"
             );
             options.event = null;
         }
@@ -11555,6 +11567,7 @@ LGraphNode.prototype.executeAction = function(action)
         root.addEventListener(
             LiteGraph.pointerevents_method+"up",
             function(e) {
+			  	//console.log("pointerevents: ContextMenu up root prevent");
                 e.preventDefault();
                 return true;
             },
@@ -11576,6 +11589,7 @@ LGraphNode.prototype.executeAction = function(action)
         root.addEventListener(
             LiteGraph.pointerevents_method+"down",
             function(e) {
+			  	//console.log("pointerevents: ContextMenu down");
                 if (e.button == 2) {
                     that.close();
                     e.preventDefault();
@@ -11622,8 +11636,9 @@ LGraphNode.prototype.executeAction = function(action)
             num++;
         }
 
-        //close on leave
-        root.addEventListener(LiteGraph.pointerevents_method+"leave", function(e) {
+        //close on leave? touch enabled devices won't work 
+        /*root.addEventListener(LiteGraph.pointerevents_method+"leave", function(e) {
+		  	console.log("pointerevents: ContextMenu leave");
             if (that.lock) {
                 return;
             }
@@ -11632,9 +11647,10 @@ LGraphNode.prototype.executeAction = function(action)
             }
             root.closing_timer = setTimeout(that.close.bind(that, e), 500);
             //that.close(e);
-        });
+        });*/
 
         root.addEventListener(LiteGraph.pointerevents_method+"enter", function(e) {
+		  	//console.log("pointerevents: ContextMenu enter");
             if (root.closing_timer) {
                 clearTimeout(root.closing_timer);
             }
