@@ -4495,7 +4495,7 @@ LGraphNode.prototype.executeAction = function(action)
         
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 
-		console.log("pointerevents:: DragAndScale onMouse "+e.type+" "+is_inside);
+		//console.log("pointerevents: DragAndScale onMouse "+e.type+" "+is_inside);
 		
         var ignore = false;
         if (this.onmouse) {
@@ -4998,7 +4998,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     //used in some events to capture them
     LGraphCanvas.prototype._doNothing = function doNothing(e) {
-    	console.log("pointerevents:: _doNothing "+e.type);
+    	//console.log("pointerevents: _doNothing "+e.type);
         e.preventDefault();
         return false;
     };
@@ -5017,7 +5017,7 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
-        console.log("pointerevents:: binEvents");
+        //console.log("pointerevents: binEvents");
         
         var canvas = this.canvas;
 
@@ -5082,7 +5082,7 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
-        console.log("pointerevents:: unbindEvents");
+        //console.log("pointerevents: unbindEvents");
         
         var ref_window = this.getCanvasWindow();
         var document = ref_window.document;
@@ -5256,7 +5256,7 @@ LGraphNode.prototype.executeAction = function(action)
 		var x = e.clientX;
 		var y = e.clientY;
 		//console.log(y,this.viewport);
-		console.log("pointerevents:: processMouseDown "+e.pointerId+" "+e.isPrimary+" :: "+x+" "+y);
+		//console.log("pointerevents: processMouseDown "+e.pointerId+" "+e.isPrimary+" :: "+x+" "+y);
 
 		this.ds.viewport = this.viewport;
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
@@ -5530,7 +5530,7 @@ LGraphNode.prototype.executeAction = function(action)
             }
 
             if (!skip_action && clicking_canvas_bg && this.allow_dragcanvas) {
-            	console.log("pointerevents:: dragging_canvas start");
+            	//console.log("pointerevents: dragging_canvas start");
             	this.dragging_canvas = true;
             }
             
@@ -5606,7 +5606,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
 
-        console.log("pointerevents:: processMouseMove "+e.pointerId+" "+e.isPrimary);
+        //console.log("pointerevents: processMouseMove "+e.pointerId+" "+e.isPrimary);
         //convertEventToCanvasOffset
         console.log(mouse);
         console.log(this.graph_mouse);
@@ -5614,7 +5614,7 @@ LGraphNode.prototype.executeAction = function(action)
         
 		if(this.block_click)
 		{
-			console.log("pointerevents:: processMouseMove block_click");
+			//console.log("pointerevents: processMouseMove block_click");
 			e.preventDefault();
 			return false;
 		}
@@ -5655,7 +5655,7 @@ LGraphNode.prototype.executeAction = function(action)
             }
             this.dirty_bgcanvas = true;
         } else if (this.dragging_canvas) {
-        	//console.log("pointerevents:: processMouseMove is dragging_canvas");
+        	////console.log("pointerevents: processMouseMove is dragging_canvas");
             this.ds.offset[0] += delta[0] / this.ds.scale;
             this.ds.offset[1] += delta[1] / this.ds.scale;
             this.dirty_canvas = true;
@@ -5820,11 +5820,11 @@ LGraphNode.prototype.executeAction = function(action)
     	if(e.isPrimary!==undefined && !e.isPrimary){
     		/*e.stopPropagation();
         	e.preventDefault();*/
-    		console.log("pointerevents:: processMouseUp pointerN_stop "+e.pointerId+" "+e.isPrimary);
+    		//console.log("pointerevents: processMouseUp pointerN_stop "+e.pointerId+" "+e.isPrimary);
     		return false;
     	}
     	
-    	console.log("pointerevents:: processMouseUp "+e.pointerId+" "+e.isPrimary+" :: "+e.clientX+" "+e.clientY);
+    	//console.log("pointerevents: processMouseUp "+e.pointerId+" "+e.isPrimary+" :: "+e.clientX+" "+e.clientY);
     	
 		if( this.set_canvas_dirty_on_mouse_event )
 			this.dirty_canvas = true;
@@ -5839,7 +5839,7 @@ LGraphNode.prototype.executeAction = function(action)
         //restore the mousemove event back to the canvas
 		if(!this.options.skip_events)
 		{
-			console.log("pointerevents:: processMouseUp removeEventListener");
+			//console.log("pointerevents: processMouseUp removeEventListener");
 			// why move listener from document to canvas?
 			document.removeEventListener(LiteGraph.pointerevents_method+"move",this._mousemove_callback,true);
 			this.canvas.addEventListener(LiteGraph.pointerevents_method+"move",this._mousemove_callback,true);
@@ -5854,11 +5854,11 @@ LGraphNode.prototype.executeAction = function(action)
 
 		if(this.block_click)
 		{
-			console.log("pointerevents:: processMouseUp block_clicks");
+			//console.log("pointerevents: processMouseUp block_clicks");
 			this.block_click = false; //used to avoid sending twice a click in a immediate button
 		}
 
-		console.log("pointerevents:: processMouseUp which: "+e.which);
+		//console.log("pointerevents: processMouseUp which: "+e.which);
 		
         if (e.which == 1) {
 
@@ -6076,7 +6076,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.graph.change();
 
-        console.log("pointerevents:: processMouseUp stopPropagation");
+        //console.log("pointerevents: processMouseUp stopPropagation");
         e.stopPropagation();
         e.preventDefault();
         return false;
@@ -6688,7 +6688,7 @@ LGraphNode.prototype.executeAction = function(action)
         e.canvasX = clientX_rel / this.ds.scale - this.ds.offset[0];
         e.canvasY = clientY_rel / this.ds.scale - this.ds.offset[1];
         
-        console.log("pointerevents:: adjustMouseEvent "+e.clientX+":"+e.clientY+" "+clientX_rel+":"+clientY_rel+" "+e.canvasX+":"+e.canvasY);
+        //console.log("pointerevents: adjustMouseEvent "+e.clientX+":"+e.clientY+" "+clientX_rel+":"+clientY_rel+" "+e.canvasX+":"+e.canvasY);
     };
 
     /**
