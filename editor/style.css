@@ -253,3 +253,8 @@ textarea {
 	font-size: 1em;
 }
 
+.graphcanvas{
+	/*touch-action: manipulation; WONT WORK*/
+	/*touch-action: none; DESIDERABLE: implement zoom and pan*/
+	touch-action: pinch-zoom;
+}

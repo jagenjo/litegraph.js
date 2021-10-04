@@ -98,7 +98,10 @@
 
         searchbox_extras: {}, //used to add extra features to the search box
         auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
-
+        
+        pointerevents_method: "pointer", // "mouse"|"pointer" use mouse for retrocompatibility issues
+        // TODO implement pointercancel, gotpointercapture, lostpointercapture, (pointerover, pointerout if necessary)
+        
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -4441,8 +4444,9 @@ LGraphNode.prototype.executeAction = function(action)
 
         this._binded_mouse_callback = this.onMouse.bind(this);
 
-        element.addEventListener("mousedown", this._binded_mouse_callback);
-        element.addEventListener("mousemove", this._binded_mouse_callback);
+		LiteGraph.pointerListenerAdd(element,"down", this._binded_mouse_callback);
+		LiteGraph.pointerListenerAdd(element,"move", this._binded_mouse_callback);
+		LiteGraph.pointerListenerAdd(element,"up", this._binded_mouse_callback);
 
         element.addEventListener(
             "mousewheel",
@@ -4488,20 +4492,22 @@ LGraphNode.prototype.executeAction = function(action)
         e.canvasx = x;
         e.canvasy = y;
         e.dragging = this.dragging;
-
+        
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 
+		//console.log("pointerevents: DragAndScale onMouse "+e.type+" "+is_inside);
+		
         var ignore = false;
         if (this.onmouse) {
             ignore = this.onmouse(e);
         }
 
-        if (e.type == "mousedown" && is_inside) {
+        if (e.type == LiteGraph.pointerevents_method+"down" && is_inside) {
             this.dragging = true;
-            canvas.removeEventListener( "mousemove", this._binded_mouse_callback );
-            document.body.addEventListener( "mousemove", this._binded_mouse_callback );
-            document.body.addEventListener( "mouseup", this._binded_mouse_callback );
-        } else if (e.type == "mousemove") {
+			LiteGraph.pointerListenerRemove(canvas,"move",this._binded_mouse_callback);
+			LiteGraph.pointerListenerAdd(document,"move",this._binded_mouse_callback);
+			LiteGraph.pointerListenerAdd(document,"up",this._binded_mouse_callback);
+        } else if (e.type == LiteGraph.pointerevents_method+"move") {
             if (!ignore) {
                 var deltax = x - this.last_mouse[0];
                 var deltay = y - this.last_mouse[1];
@@ -4509,11 +4515,11 @@ LGraphNode.prototype.executeAction = function(action)
                     this.mouseDrag(deltax, deltay);
                 }
             }
-        } else if (e.type == "mouseup") {
+        } else if (e.type == LiteGraph.pointerevents_method+"up") {
             this.dragging = false;
-            document.body.removeEventListener( "mousemove", this._binded_mouse_callback );
-            document.body.removeEventListener( "mouseup", this._binded_mouse_callback );
-            canvas.addEventListener("mousemove", this._binded_mouse_callback );
+			LiteGraph.pointerListenerRemove(document,"move",this._binded_mouse_callback);
+			LiteGraph.pointerListenerRemove(document,"up",this._binded_mouse_callback);
+			LiteGraph.pointerListenerAdd(canvas,"move",this._binded_mouse_callback);
         } else if ( is_inside &&
             (e.type == "mousewheel" ||
             e.type == "wheel" ||
@@ -4802,6 +4808,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.last_mouse = [0, 0];
         this.last_mouseclick = 0;
+	  	this.pointer_is_down = false;
+	  	this.pointer_is_double = false;
         this.visible_area.set([0, 0, 0, 0]);
 
         if (this.onClear) {
@@ -4982,8 +4990,8 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         //input:  (move and up could be unbinded)
-        this._mousemove_callback = this.processMouseMove.bind(this);
-        this._mouseup_callback = this.processMouseUp.bind(this);
+        // why here? this._mousemove_callback = this.processMouseMove.bind(this);
+        // why here? this._mouseup_callback = this.processMouseUp.bind(this);
 
         if (!skip_events) {
             this.bindEvents();
@@ -4992,6 +5000,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     //used in some events to capture them
     LGraphCanvas.prototype._doNothing = function doNothing(e) {
+    	//console.log("pointerevents: _doNothing "+e.type);
         e.preventDefault();
         return false;
     };
@@ -5010,6 +5019,8 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
+        //console.log("pointerevents: bindEvents");
+        
         var canvas = this.canvas;
 
         var ref_window = this.getCanvasWindow();
@@ -5017,12 +5028,19 @@ LGraphNode.prototype.executeAction = function(action)
 
         this._mousedown_callback = this.processMouseDown.bind(this);
         this._mousewheel_callback = this.processMouseWheel.bind(this);
-        this._touch_callback = this.touchHandler.bind(this);
+        // why mousemove and mouseup were not binded here?
+        this._mousemove_callback = this.processMouseMove.bind(this);
+        this._mouseup_callback = this.processMouseUp.bind(this);
+        
+        //touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
+        //this._touch_callback = this.touchHandler.bind(this);
 
-        canvas.addEventListener("mousedown", this._mousedown_callback, true); //down do not need to store the binded
-        canvas.addEventListener("mousemove", this._mousemove_callback);
+		LiteGraph.pointerListenerAdd(canvas,"down", this._mousedown_callback, true); //down do not need to store the binded
         canvas.addEventListener("mousewheel", this._mousewheel_callback, false);
 
+        LiteGraph.pointerListenerAdd(canvas,"up", this._mouseup_callback, true); // CHECK: ??? binded or not
+		LiteGraph.pointerListenerAdd(canvas,"move", this._mousemove_callback);
+        
         canvas.addEventListener("contextmenu", this._doNothing);
         canvas.addEventListener(
             "DOMMouseScroll",
@@ -5030,14 +5048,14 @@ LGraphNode.prototype.executeAction = function(action)
             false
         );
 
-        //touch events
-        //if( 'touchstart' in document.documentElement )
+        //touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
+        /*if( 'touchstart' in document.documentElement )
         {
             canvas.addEventListener("touchstart", this._touch_callback, true);
             canvas.addEventListener("touchmove", this._touch_callback, true);
             canvas.addEventListener("touchend", this._touch_callback, true);
             canvas.addEventListener("touchcancel", this._touch_callback, true);
-        }
+        }*/
 
         //Keyboard ******************
         this._key_callback = this.processKey.bind(this);
@@ -5066,10 +5084,14 @@ LGraphNode.prototype.executeAction = function(action)
             return;
         }
 
+        //console.log("pointerevents: unbindEvents");
+        
         var ref_window = this.getCanvasWindow();
         var document = ref_window.document;
 
-        this.canvas.removeEventListener("mousedown", this._mousedown_callback);
+		LiteGraph.pointerListenerRemove(this.canvas,"move", this._mousedown_callback);
+        LiteGraph.pointerListenerRemove(this.canvas,"up", this._mousedown_callback);
+        LiteGraph.pointerListenerRemove(this.canvas,"down", this._mousedown_callback);
         this.canvas.removeEventListener(
             "mousewheel",
             this._mousewheel_callback
@@ -5084,10 +5106,11 @@ LGraphNode.prototype.executeAction = function(action)
         this.canvas.removeEventListener("drop", this._ondrop_callback);
         this.canvas.removeEventListener("dragenter", this._doReturnTrue);
 
-        this.canvas.removeEventListener("touchstart", this._touch_callback );
+        //touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
+        /*this.canvas.removeEventListener("touchstart", this._touch_callback );
         this.canvas.removeEventListener("touchmove", this._touch_callback );
         this.canvas.removeEventListener("touchend", this._touch_callback );
-        this.canvas.removeEventListener("touchcancel", this._touch_callback );
+        this.canvas.removeEventListener("touchcancel", this._touch_callback );*/
 
         this._mousedown_callback = null;
         this._mousewheel_callback = null;
@@ -5215,9 +5238,9 @@ LGraphNode.prototype.executeAction = function(action)
 		this.block_click = true;
 		this.last_mouseclick = 0;
 	}
-
+	
     LGraphCanvas.prototype.processMouseDown = function(e) {
-
+    	
 		if( this.set_canvas_dirty_on_mouse_event )
 			this.dirty_canvas = true;
 		
@@ -5232,9 +5255,10 @@ LGraphNode.prototype.executeAction = function(action)
         LGraphCanvas.active_canvas = this;
         var that = this;
 
-		var x = e.localX;
-		var y = e.localY;
+		var x = e.clientX;
+		var y = e.clientY;
 		//console.log(y,this.viewport);
+		//console.log("pointerevents: processMouseDown pointerId:"+e.pointerId+" which:"+e.which+" isPrimary:"+e.isPrimary+" :: x y "+x+" "+y);
 
 		this.ds.viewport = this.viewport;
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
@@ -5242,9 +5266,9 @@ LGraphNode.prototype.executeAction = function(action)
         //move mouse move event to the window in case it drags outside of the canvas
 		if(!this.options.skip_events)
 		{
-			this.canvas.removeEventListener("mousemove", this._mousemove_callback);
-			ref_window.document.addEventListener( "mousemove", this._mousemove_callback, true ); //catch for the entire window
-			ref_window.document.addEventListener( "mouseup", this._mouseup_callback, true );
+			LiteGraph.pointerListenerRemove(this.canvas,"move", this._mousemove_callback);
+			LiteGraph.pointerListenerAdd(ref_window.document,"move", this._mousemove_callback,true); //catch for the entire window
+			LiteGraph.pointerListenerAdd(ref_window.document,"up", this._mouseup_callback,true);
 		}
 
 		if(!is_inside)
@@ -5254,13 +5278,22 @@ LGraphNode.prototype.executeAction = function(action)
         var skip_dragging = false;
         var skip_action = false;
         var now = LiteGraph.getTime();
-        var is_double_click = now - this.last_mouseclick < 300;
-		this.mouse[0] = e.localX;
-		this.mouse[1] = e.localY;
+        var is_double_click = (now - this.last_mouseclick < 300) && (e.isPrimary!==undefined && e.isPrimary);
+		this.mouse[0] = e.clientX;
+		this.mouse[1] = e.clientY;
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
 		this.last_click_position = [this.mouse[0],this.mouse[1]];
-
+	  	
+	  	if (this.pointer_is_down && e.isPrimary!==undefined && !e.isPrimary){
+		  this.pointer_is_double = true;
+		  //console.log("pointerevents: pointer_is_double start");
+		}else{
+		  this.pointer_is_double = false;
+		}
+	  	this.pointer_is_down = true;
+	  
+	  	
         this.canvas.focus();
 
         LiteGraph.closeAllContextMenus(ref_window);
@@ -5271,8 +5304,8 @@ LGraphNode.prototype.executeAction = function(action)
                 return;
         }
 
-		//left button mouse
-        if (e.which == 1)
+		//left button mouse / single finger
+        if (e.which == 1 && !this.pointer_is_double)
 		{
             if (e.ctrlKey)
 			{
@@ -5508,11 +5541,13 @@ LGraphNode.prototype.executeAction = function(action)
             }
 
             if (!skip_action && clicking_canvas_bg && this.allow_dragcanvas) {
-                this.dragging_canvas = true;
+            	//console.log("pointerevents: dragging_canvas start");
+            	this.dragging_canvas = true;
             }
+            
         } else if (e.which == 2) {
             //middle button
-        } else if (e.which == 3) {
+        } else if (e.which == 3 || this.pointer_is_double) {
             //right button
 			if(!this.read_only)
 	            this.processContextMenu(node, e);
@@ -5522,8 +5557,8 @@ LGraphNode.prototype.executeAction = function(action)
         //if(this.node_selected != prev_selected)
         //	this.onNodeSelectionChange(this.node_selected);
 
-        this.last_mouse[0] = e.localX;
-        this.last_mouse[1] = e.localY;
+        this.last_mouse[0] = e.clientX;
+        this.last_mouse[1] = e.clientY;
         this.last_mouseclick = LiteGraph.getTime();
         this.last_mouse_dragging = true;
 
@@ -5571,7 +5606,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         LGraphCanvas.active_canvas = this;
         this.adjustMouseEvent(e);
-        var mouse = [e.localX, e.localY];
+        var mouse = [e.clientX, e.clientY];
 		this.mouse[0] = mouse[0];
 		this.mouse[1] = mouse[1];
         var delta = [
@@ -5582,8 +5617,11 @@ LGraphNode.prototype.executeAction = function(action)
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
 
+        //console.log("pointerevents: processMouseMove "+e.pointerId+" "+e.isPrimary);
+        
 		if(this.block_click)
 		{
+			//console.log("pointerevents: processMouseMove block_click");
 			e.preventDefault();
 			return false;
 		}
@@ -5624,6 +5662,7 @@ LGraphNode.prototype.executeAction = function(action)
             }
             this.dirty_bgcanvas = true;
         } else if (this.dragging_canvas) {
+        	////console.log("pointerevents: processMouseMove is dragging_canvas");
             this.ds.offset[0] += delta[0] / this.ds.scale;
             this.ds.offset[1] += delta[1] / this.ds.scale;
             this.dirty_canvas = true;
@@ -5784,6 +5823,16 @@ LGraphNode.prototype.executeAction = function(action)
      **/
     LGraphCanvas.prototype.processMouseUp = function(e) {
 
+    	//early exit for extra pointer
+    	if(e.isPrimary!==undefined && !e.isPrimary){
+    		/*e.stopPropagation();
+        	e.preventDefault();*/
+    		//console.log("pointerevents: processMouseUp pointerN_stop "+e.pointerId+" "+e.isPrimary);
+    		return false;
+    	}
+    	
+    	//console.log("pointerevents: processMouseUp "+e.pointerId+" "+e.isPrimary+" :: "+e.clientX+" "+e.clientY);
+    	
 		if( this.set_canvas_dirty_on_mouse_event )
 			this.dirty_canvas = true;
 
@@ -5797,9 +5846,10 @@ LGraphNode.prototype.executeAction = function(action)
         //restore the mousemove event back to the canvas
 		if(!this.options.skip_events)
 		{
-			document.removeEventListener("mousemove",this._mousemove_callback,true);
-			this.canvas.addEventListener("mousemove",this._mousemove_callback,true);
-			document.removeEventListener("mouseup", this._mouseup_callback, true);
+			//console.log("pointerevents: processMouseUp adjustEventListener");
+			LiteGraph.pointerListenerRemove(document,"move", this._mousemove_callback,true);
+			LiteGraph.pointerListenerAdd(this.canvas,"move", this._mousemove_callback,true);
+			LiteGraph.pointerListenerRemove(document,"up", this._mouseup_callback,true);
 		}
 
         this.adjustMouseEvent(e);
@@ -5810,10 +5860,12 @@ LGraphNode.prototype.executeAction = function(action)
 
 		if(this.block_click)
 		{
-			console.log("foo");
+			//console.log("pointerevents: processMouseUp block_clicks");
 			this.block_click = false; //used to avoid sending twice a click in a immediate button
 		}
 
+		//console.log("pointerevents: processMouseUp which: "+e.which);
+		
         if (e.which == 1) {
 
 			if( this.node_widget )
@@ -6028,8 +6080,14 @@ LGraphNode.prototype.executeAction = function(action)
 		this.draw();
 	*/
 
+	  	if (e.isPrimary!==undefined && e.isPrimary){
+			this.pointer_is_down = false;
+			this.pointer_is_double = false;
+		}
+	  
         this.graph.change();
 
+        //console.log("pointerevents: processMouseUp stopPropagation");
         e.stopPropagation();
         e.preventDefault();
         return false;
@@ -6048,8 +6106,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.adjustMouseEvent(e);
 
-		var x = e.localX;
-		var y = e.localY;
+		var x = e.clientX;
+		var y = e.clientY;
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 		if(!is_inside)
 			return;
@@ -6062,8 +6120,8 @@ LGraphNode.prototype.executeAction = function(action)
             scale *= 1 / 1.1;
         }
 
-        //this.setZoom( scale, [ e.localX, e.localY ] );
-        this.ds.changeScale(scale, [e.localX, e.localY]);
+        //this.setZoom( scale, [ e.clientX, e.clientY ] );
+        this.ds.changeScale(scale, [e.clientX, e.clientY]);
 
         this.graph.change();
 
@@ -6326,8 +6384,8 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.prototype.processDrop = function(e) {
         e.preventDefault();
         this.adjustMouseEvent(e);
-		var x = e.localX;
-		var y = e.localY;
+		var x = e.clientX;
+		var y = e.clientY;
 		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 		if(!is_inside)
 			return;
@@ -6622,23 +6680,26 @@ LGraphNode.prototype.executeAction = function(action)
      * @method adjustMouseEvent
      **/
     LGraphCanvas.prototype.adjustMouseEvent = function(e) {
-        if (this.canvas) {
+
+    	if (this.canvas) {
             var b = this.canvas.getBoundingClientRect();
-            e.localX = e.clientX - b.left;
-            e.localY = e.clientY - b.top;
+            clientX_rel = e.clientX - b.left;
+            clientY_rel = e.clientY - b.top;
         } else {
-            e.localX = e.clientX;
-            e.localY = e.clientY;
+        	clientX_rel = e.clientX;
+        	clientY_rel = e.clientY;
         }
+    	
+        e.deltaX = clientX_rel - this.last_mouse_position[0];
+        e.deltaY = clientY_rel- this.last_mouse_position[1];
 
-        e.deltaX = e.localX - this.last_mouse_position[0];
-        e.deltaY = e.localY - this.last_mouse_position[1];
+        this.last_mouse_position[0] = clientX_rel;
+        this.last_mouse_position[1] = clientY_rel;
 
-        this.last_mouse_position[0] = e.localX;
-        this.last_mouse_position[1] = e.localY;
-
-        e.canvasX = e.localX / this.ds.scale - this.ds.offset[0];
-        e.canvasY = e.localY / this.ds.scale - this.ds.offset[1];
+        e.canvasX = clientX_rel / this.ds.scale - this.ds.offset[0];
+        e.canvasY = clientY_rel / this.ds.scale - this.ds.offset[1];
+        
+        //console.log("pointerevents: adjustMouseEvent "+e.clientX+":"+e.clientY+" "+clientX_rel+":"+clientY_rel+" "+e.canvasX+":"+e.canvasY);
     };
 
     /**
@@ -8951,7 +9012,7 @@ LGraphNode.prototype.executeAction = function(action)
 			//inside widget
 			switch (w.type) {
 				case "button":
-					if (event.type === "mousedown") {
+					if (event.type === LiteGraph.pointerevents_method+"down") {
                         if (w.callback) {
                             setTimeout(function() {
                                 w.callback(w, that, node, pos, event);
@@ -8975,7 +9036,7 @@ LGraphNode.prototype.executeAction = function(action)
 				case "number":
 				case "combo":
 					var old_value = w.value;
-					if (event.type == "mousemove" && w.type == "number") {
+					if (event.type == LiteGraph.pointerevents_method+"move" && w.type == "number") {
 						w.value += event.deltaX * 0.1 * (w.options.step || 1);
 						if ( w.options.min != null && w.value < w.options.min ) {
 							w.value = w.options.min;
@@ -8983,7 +9044,7 @@ LGraphNode.prototype.executeAction = function(action)
 						if ( w.options.max != null && w.value > w.options.max ) {
 							w.value = w.options.max;
 						}
-					} else if (event.type == "mousedown") {
+					} else if (event.type == LiteGraph.pointerevents_method+"down") {
 						var values = w.options.values;
 						if (values && values.constructor === Function) {
 							values = w.options.values(w, node);
@@ -9038,7 +9099,7 @@ LGraphNode.prototype.executeAction = function(action)
 							}
 						}
 					} //end mousedown
-					else if(event.type == "mouseup" && w.type == "number")
+					else if(event.type == LiteGraph.pointerevents_method+"up" && w.type == "number")
 					{
 						var delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
 						if (event.click_time < 200 && delta == 0) {
@@ -9060,7 +9121,7 @@ LGraphNode.prototype.executeAction = function(action)
 					this.dirty_canvas = true;
 					break;
 				case "toggle":
-					if (event.type == "mousedown") {
+					if (event.type == LiteGraph.pointerevents_method+"down") {
 						w.value = !w.value;
 						setTimeout(function() {
 							inner_value_change(w, w.value);
@@ -9069,7 +9130,7 @@ LGraphNode.prototype.executeAction = function(action)
 					break;
 				case "string":
 				case "text":
-					if (event.type == "mousedown") {
+					if (event.type == LiteGraph.pointerevents_method+"down") {
 						this.prompt("Value",w.value,function(v) {
 								this.value = v;
 								inner_value_change(this, v);
@@ -9228,7 +9289,11 @@ LGraphNode.prototype.executeAction = function(action)
         return; //disabled
     };
 
-    LGraphCanvas.prototype.touchHandler = function(event) {
+    /* this is an implementation for touch not in production and not ready
+     * the idea is maybe good: simulate a similar event
+     * so let's try with pointerevents (working with both mouse and touch), and simulate the old mouseevents IF NECESSARY for retrocompatibility: existing old good nodes
+     */
+    /*LGraphCanvas.prototype.touchHandler = function(event) {
         //alert("foo");
         var touches = event.changedTouches,
             first = touches[0],
@@ -9270,12 +9335,12 @@ LGraphNode.prototype.executeAction = function(action)
             false,
             false,
             false,
-            0 /*left*/,
+            0, //left
             null
         );
         first.target.dispatchEvent(simulatedEvent);
         event.preventDefault();
-    };
+    };*/
 
     /* CONTEXT MENU ********************/
 
@@ -9771,7 +9836,7 @@ LGraphNode.prototype.executeAction = function(action)
             dialog.style.transform = "scale(" + this.ds.scale + ")";
         }
 
-        dialog.addEventListener("mouseleave", function(e) {
+		LiteGraph.pointerListenerAdd(dialog,"leave", function(e) {
             if (!modified) {
                 dialog.close();
             }
@@ -9876,14 +9941,14 @@ LGraphNode.prototype.executeAction = function(action)
             dialog.style.transform = "scale(" + this.ds.scale + ")";
         }
 
-        dialog.addEventListener("mouseenter", function(e) {
+		LiteGraph.pointerListenerAdd(dialog,"enter", function(e) {
             if (timeout_close) {
                 clearTimeout(timeout_close);
                 timeout_close = null;
             }
         });
 
-        dialog.addEventListener("mouseleave", function(e) {
+        LiteGraph.pointerListenerAdd(dialog,"leave", function(e) {
             //dialog.close();
             timeout_close = setTimeout(function() {
                 dialog.close();
@@ -11480,7 +11545,7 @@ LGraphNode.prototype.executeAction = function(action)
 			eventClass !== "PointerEvent"
         ) {
             console.error(
-                "Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it."
+                "Event passed to ContextMenu is not of type MouseEvent or CustomEvent. Ignoring it. ("+eventClass+")"
             );
             options.event = null;
         }
@@ -11498,9 +11563,9 @@ LGraphNode.prototype.executeAction = function(action)
         }, 100); //delay so the mouse up event is not caught by this element
 
         //this prevents the default context browser menu to open in case this menu was created when pressing right button
-        root.addEventListener(
-            "mouseup",
+		LiteGraph.pointerListenerAdd(root,"up",
             function(e) {
+			  	//console.log("pointerevents: ContextMenu up root prevent");
                 e.preventDefault();
                 return true;
             },
@@ -11519,9 +11584,9 @@ LGraphNode.prototype.executeAction = function(action)
             true
         );
 
-        root.addEventListener(
-            "mousedown",
+        LiteGraph.pointerListenerAdd(root,"down",
             function(e) {
+			  	//console.log("pointerevents: ContextMenu down");
                 if (e.button == 2) {
                     that.close();
                     e.preventDefault();
@@ -11568,8 +11633,9 @@ LGraphNode.prototype.executeAction = function(action)
             num++;
         }
 
-        //close on leave
-        root.addEventListener("mouseleave", function(e) {
+        //close on leave? touch enabled devices won't work TODO use a global device detector and condition on that
+        /*LiteGraph.pointerListenerAdd(root,"leave", function(e) {
+		  	console.log("pointerevents: ContextMenu leave");
             if (that.lock) {
                 return;
             }
@@ -11578,9 +11644,10 @@ LGraphNode.prototype.executeAction = function(action)
             }
             root.closing_timer = setTimeout(that.close.bind(that, e), 500);
             //that.close(e);
-        });
+        });*/
 
-        root.addEventListener("mouseenter", function(e) {
+		LiteGraph.pointerListenerAdd(root,"enter", function(e) {
+		  	//console.log("pointerevents: ContextMenu enter");
             if (root.closing_timer) {
                 clearTimeout(root.closing_timer);
             }
@@ -11681,7 +11748,7 @@ LGraphNode.prototype.executeAction = function(action)
             element.addEventListener("click", inner_onclick);
         }
         if (options.autoopen) {
-            element.addEventListener("mouseenter", inner_over);
+			LiteGraph.pointerListenerAdd(element,"enter",inner_over);
         }
 
         function inner_over(e) {
@@ -11776,7 +11843,7 @@ LGraphNode.prototype.executeAction = function(action)
                 e &&
                 !ContextMenu.isCursorOverElement(e, this.parentMenu.root)
             ) {
-                ContextMenu.trigger(this.parentMenu.root, "mouseleave", e);
+                ContextMenu.trigger(this.parentMenu.root, LiteGraph.pointerevents_method+"leave", e);
             }
         }
         if (this.current_submenu) {
@@ -12093,6 +12160,54 @@ LGraphNode.prototype.executeAction = function(action)
             .filter(Boolean); // split & filter [""]
     };
 
+	// helper pointerListener vs mouseListener, used by LGraphCanvas DragAndScale ContextMenu
+	LiteGraph.pointerListenerAdd = function(oDOM, sEvent, fCall, capture=false) {
+		if (!oDOM || !oDOM.addEventListener || !sEvent || typeof fCall!=="function"){
+			console.log("cant pointerListenerAdd "+oDOM+", "+sEvent+", "+fCall);
+			return; // -- break --
+		}
+		switch(sEvent){
+			//both pointer and move events
+			case "down": case "up": case "move": case "over": case "out": case "enter":
+			{
+				oDOM.addEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+			}
+			// only pointerevents
+			case "leave": case "cancel": case "gotpointercapture": case "lostpointercapture":
+			{
+				if (LiteGraph.pointerevents_method!="mouse"){
+					return oDOM.addEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+				}
+			}
+			// not "pointer" || "mouse"
+			default:
+				return oDOM.addEventListener(sEvent, fCall, capture);
+		}
+	}
+	LiteGraph.pointerListenerRemove = function(oDOM, sEvent, fCall, capture=false) {
+		if (!oDOM || !oDOM.removeEventListener || !sEvent || typeof fCall!=="function"){
+			console.log("cant pointerListenerRemove "+oDOM+", "+sEvent+", "+fCall);
+			return; // -- break --
+		}
+		switch(sEvent){
+			//both pointer and move events
+			case "down": case "up": case "move": case "over": case "out": case "enter":
+			{
+				oDOM.removeEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+			}
+			// only pointerevents
+			case "leave": case "cancel": case "gotpointercapture": case "lostpointercapture":
+			{
+				if (LiteGraph.pointerevents_method!="mouse"){
+					return oDOM.removeEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+				}
+			}
+			// not "pointer" || "mouse"
+			default:
+				return oDOM.removeEventListener(sEvent, fCall, capture);
+		}
+	}
+	
     Math.clamp = function(v, a, b) {
         return a > v ? a : b < v ? b : v;
     };
