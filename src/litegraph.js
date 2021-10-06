@@ -56,6 +56,7 @@
         CIRCLE_SHAPE: 3,
         CARD_SHAPE: 4,
         ARROW_SHAPE: 5,
+        GRID_SHAPE: 6, // initially implemented for array slots
 
         //enums
         INPUT: 1,
@@ -99,7 +100,7 @@
         searchbox_extras: {}, //used to add extra features to the search box
         auto_sort_node_types: false, // If set to true, will automatically sort node types / categories in the context menus
         
-        pointerevents_method: "pointer", // "mouse"|"pointer" use mouse for retrocompatibility issues
+        pointerevents_method: "pointer", // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
         // TODO implement pointercancel, gotpointercapture, lostpointercapture, (pointerover, pointerout if necessary)
         
         /**
@@ -7648,6 +7649,9 @@ LGraphNode.prototype.executeAction = function(action)
 
                     ctx.beginPath();
 
+					if (slot.type == "array"){
+                        slot_shape = LiteGraph.GRID_SHAPE; // ??? should place somewhere else.. in addInput? addOutput instead?
+                    }
                     if (
                         slot.type === LiteGraph.EVENT ||
                         slot.shape === LiteGraph.BOX_SHAPE
@@ -7667,11 +7671,22 @@ LGraphNode.prototype.executeAction = function(action)
                                 10
                             );
                         }
-                    } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
+                    } else if (slot_shape === LiteGraph.ARROW_SHAPE) {
                         ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
                         ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
                         ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
                         ctx.closePath();
+                    } else if (slot_shape === LiteGraph.GRID_SHAPE) {
+                        ctx.rect(pos[0] - 4, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] + 2, 2, 2);
+                        doStroke = false;
                     } else {
 						if(low_quality)
 	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 ); //faster
@@ -7696,16 +7711,21 @@ LGraphNode.prototype.executeAction = function(action)
             }
 
             //output connection slots
-            if (this.connecting_node) {
-                ctx.globalAlpha = 0.4 * editor_alpha;
-            }
 
             ctx.textAlign = horizontal ? "center" : "right";
             ctx.strokeStyle = "black";
             if (node.outputs) {
                 for (var i = 0; i < node.outputs.length; i++) {
                     var slot = node.outputs[i];
-
+                    
+                    var slot_type = slot.type;
+                    var slot_shape = slot.shape;
+                    
+                    //change opacity of incompatible slots when dragging a connection
+                    if (this.connecting_input && !LiteGraph.isValidConnection( slot_type , in_slot.type) ) {
+                        ctx.globalAlpha = 0.4 * editor_alpha;
+                    }
+                    
                     var pos = node.getConnectionPos(false, i, slot_pos);
                     pos[0] -= node.pos[0];
                     pos[1] -= node.pos[1];
@@ -7722,6 +7742,12 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.beginPath();
                     //ctx.rect( node.size[0] - 14,i*14,10,10);
 
+					if (slot.type == "array"){
+                        slot_shape = LiteGraph.GRID_SHAPE;
+                    }
+                    
+                    var doStroke = true;
+                    
                     if (
                         slot.type === LiteGraph.EVENT ||
                         slot.shape === LiteGraph.BOX_SHAPE
@@ -7741,11 +7767,22 @@ LGraphNode.prototype.executeAction = function(action)
                                 10
                             );
                         }
-                    } else if (slot.shape === LiteGraph.ARROW_SHAPE) {
+                    } else if (slot_shape === LiteGraph.ARROW_SHAPE) {
                         ctx.moveTo(pos[0] + 8, pos[1] + 0.5);
                         ctx.lineTo(pos[0] - 4, pos[1] + 6 + 0.5);
                         ctx.lineTo(pos[0] - 4, pos[1] - 6 + 0.5);
                         ctx.closePath();
+                    }  else if (slot_shape === LiteGraph.GRID_SHAPE) {
+                        ctx.rect(pos[0] - 4, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 4, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] - 1, 2, 2);
+                        ctx.rect(pos[0] - 4, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] - 1, pos[1] + 2, 2, 2);
+                        ctx.rect(pos[0] + 2, pos[1] + 2, 2, 2);
+                        doStroke = false;
                     } else {
 						if(low_quality)
 	                        ctx.rect(pos[0] - 4, pos[1] - 4, 8, 8 );
@@ -7759,7 +7796,7 @@ LGraphNode.prototype.executeAction = function(action)
 
                     //if(slot.links != null && slot.links.length)
                     ctx.fill();
-					if(!low_quality)
+					if(!low_quality && doStroke)
 	                    ctx.stroke();
 
                     //render output name
@@ -12193,12 +12230,14 @@ LGraphNode.prototype.executeAction = function(action)
 			//both pointer and move events
 			case "down": case "up": case "move": case "over": case "out": case "enter":
 			{
-				oDOM.removeEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+				if (LiteGraph.pointerevents_method=="pointer" || LiteGraph.pointerevents_method=="mouse"){
+					oDOM.removeEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+				}
 			}
 			// only pointerevents
 			case "leave": case "cancel": case "gotpointercapture": case "lostpointercapture":
 			{
-				if (LiteGraph.pointerevents_method!="mouse"){
+				if (LiteGraph.pointerevents_method=="pointer"){
 					return oDOM.removeEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
 				}
 			}
