@@ -3226,8 +3226,6 @@
 				if (!options.action_call) options.action_call = this.id+"_act_"+Math.floor(Math.random()*9999);
                 //pass the action name
                 var target_connection = node.inputs[link_info.target_slot];
-                //console.debug("ACTION: "+this.id+":"+this.order+" :: "+target_connection.name);
-                if (LiteGraph.refreshAncestorsOnActions) node.refreshAncestors({action: target_connection.name, param: param, options:options});
 				// wrap node.onAction(target_connection.name, param);
                 node.actionDo(target_connection.name, param, options);
             }
