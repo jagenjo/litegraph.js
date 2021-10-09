@@ -997,7 +997,7 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
         this.audionode = LGAudio.getAudioContext().createGain();
         this.audionode.gain.value = 0;
         this.addInput("in", "audio");
-        this.addInput("gate", "bool");
+        this.addInput("gate", "boolean");
         this.addOutput("out", "audio");
         this.gate = false;
     }

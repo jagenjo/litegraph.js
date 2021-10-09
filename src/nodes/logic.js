@@ -82,4 +82,120 @@
     };
 
     LiteGraph.registerNodeType("logic/sequence", Sequence);
+	
+    
+    function logicAnd(){
+        this.properties = { };
+        this.addInput("a", "boolean");
+        this.addInput("b", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    logicAnd.title = "AND";
+    logicAnd.desc = "Return true if all inputs are true";
+    logicAnd.prototype.onExecute = function() {
+        ret = true;
+        for (inX in this.inputs){
+            if (!this.getInputData(inX)){
+                ret = false;
+                break;
+            }
+        }
+        this.setOutputData(0, ret);
+    };
+    logicAnd.prototype.onGetInputs = function() {
+        return [
+            ["and", "boolean"]
+        ];
+    };
+    LiteGraph.registerNodeType("logic/AND", logicAnd);
+    
+    
+    function logicOr(){
+        this.properties = { };
+        this.addInput("a", "boolean");
+        this.addInput("b", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    logicOr.title = "OR";
+    logicOr.desc = "Return true if at least one input is true";
+    logicOr.prototype.onExecute = function() {
+        ret = false;
+        for (inX in this.inputs){
+            if (this.getInputData(inX)){
+                ret = true;
+                break;
+            }
+        }
+        this.setOutputData(0, ret);
+    };
+    logicOr.prototype.onGetInputs = function() {
+        return [
+            ["or", "boolean"]
+        ];
+    };
+    LiteGraph.registerNodeType("logic/OR", logicOr);
+    
+    
+    function logicNot(){
+        this.properties = { };
+        this.addInput("in", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    logicNot.title = "NOT";
+    logicNot.desc = "Return the logical negation";
+    logicNot.prototype.onExecute = function() {
+        var ret = !this.getInputData(0);
+        this.setOutputData(0, ret);
+    };
+    LiteGraph.registerNodeType("logic/NOT", logicNot);
+    
+    
+    function logicCompare(){
+        this.properties = { };
+        this.addInput("a", "boolean");
+        this.addInput("b", "boolean");
+        this.addOutput("out", "boolean");
+    }
+    logicCompare.title = "bool == bool";
+    logicCompare.desc = "Compare for logical equality";
+    logicCompare.prototype.onExecute = function() {
+        last = null;
+        ret = true;
+        for (inX in this.inputs){
+            if (last === null) last = this.getInputData(inX);
+            else
+                if (last != this.getInputData(inX)){
+                    ret = false;
+                    break;
+                }
+        }
+        this.setOutputData(0, ret);
+    };
+    logicCompare.prototype.onGetInputs = function() {
+        return [
+            ["bool", "boolean"]
+        ];
+    };
+    LiteGraph.registerNodeType("logic/CompareBool", logicCompare);
+    
+    
+    function logicBranch(){
+        this.properties = { };
+        this.addInput("onTrigger", LiteGraph.ACTION);
+        this.addInput("condition", "boolean");
+        this.addOutput("true", LiteGraph.EVENT);
+        this.addOutput("false", LiteGraph.EVENT);
+        this.mode = LiteGraph.ON_TRIGGER;
+    }
+    logicBranch.title = "Branch";
+    logicBranch.desc = "Branch execution on condition";
+    logicBranch.prototype.onExecute = function(param, options) {
+        var condtition = this.getInputData(1);
+        if (condtition){
+            this.triggerSlot(0);
+        }else{
+            this.triggerSlot(1);
+        }
+    };
+    LiteGraph.registerNodeType("logic/IF", logicBranch);
 })(this);
