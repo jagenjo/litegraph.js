@@ -1045,6 +1045,9 @@
         this.iteration += 1;
         this.elapsed_time = (now - this.last_update_time) * 0.001;
         this.last_update_time = now;
+        this.nodes_executing = [];
+        this.nodes_actioning = [];
+        this.nodes_executedAction = [];
     };
 
     /**
@@ -4004,24 +4007,24 @@
         }
         target_slot = target_node.findInputSlotByType(target_slotType, false, true);
         if (target_slot >= 0 && target_slot !== null){
-            console.debug("CONNbyTYPE type "+target_slotType+" for "+target_slot)
+            //console.debug("CONNbyTYPE type "+target_slotType+" for "+target_slot)
             return this.connect(slot, target_node, target_slot);
         }else{
-            console.log("type "+target_slotType+" not found or not free?")
+            //console.log("type "+target_slotType+" not found or not free?")
             if (opts.createEventInCase && target_slotType == LiteGraph.EVENT){
                 // WILL CREATE THE onTrigger IN SLOT
-				console.debug("connect WILL CREATE THE onTrigger "+target_slotType+" to "+target_node);
+				//console.debug("connect WILL CREATE THE onTrigger "+target_slotType+" to "+target_node);
                 return this.connect(slot, target_node, -1);
             }
             if (opts.generalTypeInCase && (target_slotType !== 0 && target_slotType !== "" && target_slotType !== "*")){
                 // connect TO a general type (*, 0), if not found the specific type
-				console.debug("connect TO a general type (*, 0), if not found the specific type "+target_slotType+" to "+target_node);
+				//console.debug("connect TO a general type (*, 0), if not found the specific type "+target_slotType+" to "+target_node);
                 target_slot = target_node.findInputSlotByType(0, false, true);
                 if (target_slot >= 0 && target_slot !== null){
                     return this.connect(slot, target_node, target_slot);
                 }
             }else{
-                console.debug("no way to connect "+target_slotType+" to "+target_node);
+                //console.debug("no way to connect "+target_slotType+" to "+target_node);
             }
             return null;
         }
@@ -7932,11 +7935,11 @@ LGraphNode.prototype.executeAction = function(action)
 		bgcolor = bgcolor || LiteGraph.NODE_DEFAULT_COLOR;
 		hovercolor = hovercolor || "#555";
 		textcolor = textcolor || LiteGraph.NODE_TEXT_COLOR;
-
+		var yFix = y + LiteGraph.NODE_TITLE_HEIGHT + 2;	// fix the height with the title
 		var pos = this.mouse;
-		var hover = LiteGraph.isInsideRectangle( pos[0], pos[1], x,y,w,h );
+		var hover = LiteGraph.isInsideRectangle( pos[0], pos[1], x,yFix,w,h );
 		pos = this.last_click_position;
-		var clicked = pos && LiteGraph.isInsideRectangle( pos[0], pos[1], x,y,w,h );
+		var clicked = pos && LiteGraph.isInsideRectangle( pos[0], pos[1], x,yFix,w,h );
 
 		ctx.fillStyle = hover ? hovercolor : bgcolor;
 		if(clicked)
@@ -10826,7 +10829,7 @@ LGraphNode.prototype.executeAction = function(action)
                     };
         options = Object.assign(def_options, options || {});
         
-		console.log(options);
+		//console.log(options);
 		
         var that = this;
         var input_html = "";
@@ -11335,7 +11338,7 @@ LGraphNode.prototype.executeAction = function(action)
                         //if (sV.toLowerCase() == "event/action") sV = LiteGraph.EVENT; // -1
                         
                         if(sOut && sV){
-                            console.log("will check filter against "+sV);
+                            //console.log("search will check filter against "+sV);
                             if (LiteGraph.registered_slot_out_types[sV] && LiteGraph.registered_slot_out_types[sV].nodes){ // type is stored
                                 //console.debug("check "+sType+" in "+LiteGraph.registered_slot_out_types[sV].nodes);
                                 var doesInc = LiteGraph.registered_slot_out_types[sV].nodes.includes(sType);
@@ -11788,7 +11791,7 @@ LGraphNode.prototype.executeAction = function(action)
 
 			function innerChange(name, value)
 			{
-				console.log("change",name,value);
+				//console.log("change",name,value);
 				//that.dirty_canvas = true;
 				if(options.callback)
 					options.callback(name,value,options);
@@ -13571,7 +13574,7 @@ LGraphNode.prototype.executeAction = function(action)
 	// helper pointerListener vs mouseListener, used by LGraphCanvas DragAndScale ContextMenu
 	LiteGraph.pointerListenerAdd = function(oDOM, sEvent, fCall, capture=false) {
 		if (!oDOM || !oDOM.addEventListener || !sEvent || typeof fCall!=="function"){
-			console.log("cant pointerListenerAdd "+oDOM+", "+sEvent+", "+fCall);
+			//console.log("cant pointerListenerAdd "+oDOM+", "+sEvent+", "+fCall);
 			return; // -- break --
 		}
 		switch(sEvent){
@@ -13594,7 +13597,7 @@ LGraphNode.prototype.executeAction = function(action)
 	}
 	LiteGraph.pointerListenerRemove = function(oDOM, sEvent, fCall, capture=false) {
 		if (!oDOM || !oDOM.removeEventListener || !sEvent || typeof fCall!=="function"){
-			console.log("cant pointerListenerRemove "+oDOM+", "+sEvent+", "+fCall);
+			//console.log("cant pointerListenerRemove "+oDOM+", "+sEvent+", "+fCall);
 			return; // -- break --
 		}
 		switch(sEvent){
