@@ -113,14 +113,14 @@
         click_do_break_link_to: false, // [false!]prefer false, way too easy to break links
         
         search_hide_on_mouse_leave: true, // [false on mobile] better true if not touch device, TODO add an helper/listener to close if false
-        search_filter_enabled: true, // [true!] enable filtering slots type in the search widget, !requires auto_load_slot_types
+        search_filter_enabled: false, // [true!] enable filtering slots type in the search widget, !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
         search_show_all_on_open: true, // [true!] opens the results list when opening the search widget
         
-        auto_load_slot_types: true, // [if want false, use true, run, get vars values to be statically set, than disable] nodes types and nodeclass association with node types need to be calculated, if dont want this, calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
+        auto_load_slot_types: false, // [if want false, use true, run, get vars values to be statically set, than disable] nodes types and nodeclass association with node types need to be calculated, if dont want this, calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
         
+		// set these values if not using auto_load_slot_types
         registered_slot_in_types: {}, // slot types for nodeclass
         registered_slot_out_types: {}, // slot types for nodeclass
-        
         slot_types_in: [], // slot types IN
         slot_types_out: [], // slot types OUT
         
@@ -3098,7 +3098,11 @@
             // enable this to give the event an ID
 			if (!options.action_call) options.action_call = this.id+"_exec_"+Math.floor(Math.random()*9999);
             
-            this.graph.nodes_executing[this.id] = true; //.push(this.id);
+            if (this.graph.nodes_executing) this.graph.nodes_executing[this.id] = true; //.push(this.id);
+			else{
+				this.graph.nodes_executing = {};
+				this.graph.nodes_executing[this.id] = true;
+			}
             
             this.onExecute(param, options);
             
@@ -10815,7 +10819,7 @@ LGraphNode.prototype.executeAction = function(action)
         def_options = { slot_from: null
                         ,node_from: null
                         ,node_to: null
-                        ,do_type_filter: LiteGraph.auto_load_slot_types && LiteGraph.search_filter_enabled // this will be checked for functionality enabled : filter on slot type, in and out
+                        ,do_type_filter: LiteGraph.search_filter_enabled // TODO check for registered_slot_[in/out]_types not empty // this will be checked for functionality enabled : filter on slot type, in and out
                         ,type_filter_in: false                          // these are default: pass to set initially set values
                         ,type_filter_out: false
                         ,show_general_if_none_on_typefilter: true
