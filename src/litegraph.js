@@ -123,13 +123,19 @@
         registered_slot_out_types: {}, // slot types for nodeclass
         slot_types_in: [], // slot types IN
         slot_types_out: [], // slot types OUT
-        
+        slot_types_default_in: [], // specify for each IN slot type a(/many) deafult node(s), use single string, array, or object (with node, title, parameters, ..) like for search
+		slot_types_default_out: [], // specify for each OUT slot type a(/many) deafult node(s), use single string, array, or object (with node, title, parameters, ..) like for search
+		
 		alt_drag_do_clone_nodes: false, // [true!] very handy, ALT click to clone and drag the new node
 
 		do_add_triggers_slots: false, // [true!] will create and connect event slots when using action/events connections, !WILL CHANGE node mode when using onTrigger (enable mode colors), onExecuted does not need this
 		
-		allowMultiOutputForEvents: true, // [false!] being events, it is strongly reccomended to use them sequentually, one by one
+		allow_multi_output_for_events: true, // [false!] being events, it is strongly reccomended to use them sequentually, one by one
 
+		middle_click_slot_add_default_node: false, //[true!] allows to create and connect a ndoe clicking with the third button (wheel)
+		
+		release_link_on_empty_shows_menu: false, //[true!] dragging a link to empty space will open a menu, add from list, search or defaults
+		
         pointerevents_method: "pointer", // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
         // TODO implement pointercancel, gotpointercapture, lostpointercapture, (pointerover, pointerout if necessary)
 
@@ -288,7 +294,7 @@
             if (typeof slot_type == "string"){
                 var aTypes = slot_type.split(",");
             }else if (slot_type == this.EVENT || slot_type == this.ACTION){
-                var aTypes = ["EVENT/ACTION"];
+                var aTypes = ["_event_"];
             }else{
                 var aTypes = ["*"];
             }
@@ -304,13 +310,13 @@
                 
                 // check if is a new type
                 if (!out){
-                    if (!this.slot_types_in.includes(sT)){
-                        this.slot_types_in.push(sT);
+                    if (!this.slot_types_in.includes(sT.toLowerCase())){
+                        this.slot_types_in.push(sT.toLowerCase());
                         this.slot_types_in.sort();
                     }
                 }else{
-                    if (!this.slot_types_out.includes(sT)){
-                        this.slot_types_out.push(sT);
+                    if (!this.slot_types_out.includes(sT.toLowerCase())){
+                        this.slot_types_out.push(sT.toLowerCase());
                         this.slot_types_out.sort();
                     }
                 }
@@ -832,6 +838,10 @@
 
         this.catch_errors = true;
 
+        this.nodes_executing = [];
+        this.nodes_actioning = [];
+        this.nodes_executedAction = [];
+        
         //subgraph_data
         this.inputs = {};
         this.outputs = {};
@@ -3098,12 +3108,8 @@
             // enable this to give the event an ID
 			if (!options.action_call) options.action_call = this.id+"_exec_"+Math.floor(Math.random()*9999);
             
-            if (this.graph.nodes_executing) this.graph.nodes_executing[this.id] = true; //.push(this.id);
-			else{
-				this.graph.nodes_executing = {};
-				this.graph.nodes_executing[this.id] = true;
-			}
-            
+            this.graph.nodes_executing[this.id] = true; //.push(this.id);
+
             this.onExecute(param, options);
             
             this.graph.nodes_executing[this.id] = false; //.pop();
@@ -4213,7 +4219,7 @@
         if (output.links !== null && output.links.length){
             switch(output.type){
                 case LiteGraph.EVENT:
-                    if (!LiteGraph.allowMultiOutputForEvents){
+                    if (!LiteGraph.allow_multi_output_for_events){
                         this.graph.beforeChange();
                         this.disconnectOutput(slot, false, {doProcessChange: false}); // Input(target_slot, {doProcessChange: false});
                         changed = true;
@@ -6083,6 +6089,148 @@ LGraphNode.prototype.executeAction = function(action)
             
         } else if (e.which == 2) {
             //middle button
+        	
+			if (LiteGraph.middle_click_slot_add_default_node){
+				if (node && this.allow_interaction && !skip_action && !this.read_only){
+					//not dragging mouse to connect two slots
+					if (
+						!this.connecting_node &&
+						!node.flags.collapsed &&
+						!this.live_mode
+					) {
+						var middleClickedSlot = false;
+						var middleClickedSlot_index = false;
+						var middleClickedSlot_isOut = false;
+						//search for outputs
+						if (node.outputs) {
+							for ( var i = 0, l = node.outputs.length; i < l; ++i ) {
+								var output = node.outputs[i];
+								var link_pos = node.getConnectionPos(false, i);
+								if (
+									isInsideRectangle(
+										e.canvasX,
+										e.canvasY,
+										link_pos[0] - 15,
+										link_pos[1] - 10,
+										30,
+										20
+									)
+								) {
+									middleClickedSlot = output;
+									middleClickedSlot_index = i;
+									middleClickedSlot_isOut = true;
+									break;
+								}
+							}
+						}
+
+						//search for inputs
+						if (node.inputs) {
+							for ( var i = 0, l = node.inputs.length; i < l; ++i ) {
+								var input = node.inputs[i];
+								var link_pos = node.getConnectionPos(true, i);
+								if (
+									isInsideRectangle(
+										e.canvasX,
+										e.canvasY,
+										link_pos[0] - 15,
+										link_pos[1] - 10,
+										30,
+										20
+									)
+								) {
+									middleClickedSlot = input;
+									middleClickedSlot_index = i;
+									middleClickedSlot_isOut = false;
+									break;
+								}
+							}
+						}
+						//console.log("middleClickSlots? "+middleClickedSlot+" & "+(middleClickedSlot_index!==false));
+						if (middleClickedSlot && middleClickedSlot_index!==false){
+							// check for defaults nodes for this slottype
+							var slotTypesDefault = middleClickedSlot_isOut ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
+							//console.log("middleClickSlots "+middleClickedSlot.type+" in "+slotTypesDefault[middleClickedSlot.type]);
+							if(slotTypesDefault && slotTypesDefault[middleClickedSlot.type]){
+								if (middleClickedSlot.link !== null) {
+									// is connected
+								}else{
+									// is not not connected
+								}
+								nodeNewType = false;
+								if(typeof slotTypesDefault[middleClickedSlot.type] == "object" || typeof slotTypesDefault[middleClickedSlot.type] == "array"){
+									for (typeX in slotTypesDefault[middleClickedSlot.type]){
+										nodeNewType = slotTypesDefault[middleClickedSlot.type][typeX];
+										break; // --------
+									}
+								}else{
+									nodeNewType = slotTypesDefault[middleClickedSlot.type];
+								}
+								if (nodeNewType) {
+									var nodeNewOpts = false;
+									if (typeof nodeNewType == "object" && nodeNewType.node){
+										nodeNewOpts = nodeNewType;
+										nodeNewType = nodeNewType.node;
+									}
+									//that.graph.beforeChange();
+									var newNode = LiteGraph.createNode(nodeNewType);
+									if(newNode){
+										// if is object pass options
+										if (nodeNewOpts){
+											if (nodeNewOpts.properties) {
+												for (var i in nodeNewOpts.properties) {
+													newNode.addProperty( i, nodeNewOpts.properties[i] );
+												}
+											}
+											if (nodeNewOpts.inputs) {
+												newNode.inputs = [];
+												for (var i in nodeNewOpts.inputs) {
+													newNode.addOutput(
+														nodeNewOpts.inputs[i][0],
+														nodeNewOpts.inputs[i][1]
+													);
+												}
+											}
+											if (nodeNewOpts.outputs) {
+												newNode.outputs = [];
+												for (var i in nodeNewOpts.outputs) {
+													newNode.addOutput(
+														nodeNewOpts.outputs[i][0],
+														nodeNewOpts.outputs[i][1]
+													);
+												}
+											}
+											if (nodeNewOpts.title) {
+												newNode.title = nodeNewOpts.title;
+											}
+											if (nodeNewOpts.json) {
+												newNode.configure(nodeNewOpts.json);
+											}
+
+										}
+										// add the node
+										that.graph.add(newNode);
+										// connect the two!
+										if (middleClickedSlot_isOut){
+											newNode.pos = [e.canvasX+30,e.canvasY]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];
+											node.connectByType( middleClickedSlot_index, newNode, middleClickedSlot.type );
+										}else{
+											newNode.pos = [e.canvasX-30-(newNode.size?newNode.size[0]:0),e.canvasY]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];
+											node.connectByTypeOutput( middleClickedSlot_index, newNode, middleClickedSlot.type );
+										}
+										//that.graph.afterChange();
+									}else{
+										console.log("failed creating "+nodeNewType);
+									}
+								}
+							}else{
+								//console.log("no slotTypesDefault for MIDDLECLICK "+middleClickedSlot.type);
+							}
+						}
+					}
+				}
+			}
+        	
         } else if (e.which == 3 || this.pointer_is_double) {
             //right button
 			if(!this.read_only)
@@ -6570,20 +6718,21 @@ LGraphNode.prototype.executeAction = function(action)
                 }else{
                     
                     // add menu when releasing link in empty space
-                    
-                    if (e.shiftKey && this.allow_searchbox){
-                        if(this.connecting_output){
-                            this.showSearchBox(e,{node_from: this.connecting_node, slot_from: this.connecting_output, type_filter_in: this.connecting_output.type});
-                        }else if(this.connecting_input){
-                            this.showSearchBox(e,{node_to: this.connecting_node, slot_from: this.connecting_input, type_filter_out: this.connecting_input.type});
-                        }
-                    }else{
-                        if(this.connecting_output){
-                            this.showConnectionMenu({nodeFrom: this.connecting_node, slotFrom: this.connecting_output, e: e});
-                        }else if(this.connecting_input){
-                            this.showConnectionMenu({nodeTo: this.connecting_node, slotTo: this.connecting_input, e: e});
-                        }
-                    }
+                	if (LiteGraph.release_link_on_empty_shows_menu){
+	                    if (e.shiftKey && this.allow_searchbox){
+	                        if(this.connecting_output){
+	                            this.showSearchBox(e,{node_from: this.connecting_node, slot_from: this.connecting_output, type_filter_in: this.connecting_output.type});
+	                        }else if(this.connecting_input){
+	                            this.showSearchBox(e,{node_to: this.connecting_node, slot_from: this.connecting_input, type_filter_out: this.connecting_input.type});
+	                        }
+	                    }else{
+	                        if(this.connecting_output){
+	                            this.showConnectionMenu({nodeFrom: this.connecting_node, slotFrom: this.connecting_output, e: e});
+	                        }else if(this.connecting_input){
+	                            this.showConnectionMenu({nodeTo: this.connecting_node, slotTo: this.connecting_input, e: e});
+	                        }
+	                    }
+                	}
                 }
 
                 this.connecting_output = null;
@@ -10569,14 +10718,40 @@ LGraphNode.prototype.executeAction = function(action)
         }
             
 		var options = ["Add Node",null];
+		
+		if (that.allow_searchbox){
+			options.push("Search");
+			options.push(null);
+		}
+		
+		// get defaults nodes for this slottype
+		var slotTypesDefault = isFrom ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
+		if(slotTypesDefault && slotTypesDefault[slotX.type]){
+			//console.log("TypeDefaulMenu (OUT?"+isFrom+") "+slotX.type+" :: "+slotTypesDefault[slotX.type]);
+			if (slotX.link !== null) {
+				// is connected
+			}else{
+				// is not not connected
+			}
+			//console.log(typeof slotTypesDefault[slotX.type]);
+			if(typeof slotTypesDefault[slotX.type] == "object" || typeof slotTypesDefault[slotX.type] == "array"){
+				for(var typeX in slotTypesDefault[slotX.type]){
+					//console.log(slotX.type+" has default "+slotTypesDefault[slotX.type][typeX]);
+					options.push(slotTypesDefault[slotX.type][typeX]);
+				}
+			}else{
+				options.push(slotTypesDefault[slotX.type]);
+			}
+		}
+		
         var menu = new LiteGraph.ContextMenu(options, {
             event: opts.e,
-			title: slotX && slotX.name ? slotX.name : null,
+			title: (slotX && slotX.name!="" ? (slotX.name + (slotX.type?" | ":"")) : "")+(slotX && slotX.type ? slotX.type : ""),
             callback: inner_clicked
         });
         
         function inner_clicked(v,options,e) {
-            console.debug("menuadd");
+            //console.log("Process showConnectionMenu selection");
             switch (v) {
                 case "Add Node":
                     LGraphCanvas.onMenuAdd(null, null, e, menu, function(node){
@@ -10587,10 +10762,90 @@ LGraphNode.prototype.executeAction = function(action)
                         }
                     });
                     break;
-                /*case "Delete":
-                    that.graph.removeLink(link.id);
-                    break;*/
+				case "Search":
+					if(isFrom){
+						that.showSearchBox(e,{node_from: opts.nodeFrom, slot_from: slotX, type_filter_in: slotX.type});
+					}else{
+						that.showSearchBox(e,{node_to: opts.nodeTo, slot_from: slotX, type_filter_out: slotX.type});
+					}
+					break;
                 default:
+					// check for defaults nodes for this slottype
+					var slotTypesDefault = isFrom ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
+					if(slotTypesDefault && slotTypesDefault[slotX.type]){
+						if (slotX.link !== null) {
+							// is connected
+						}else{
+							// is not not connected
+						}
+						nodeNewType = false;
+						if(typeof slotTypesDefault[slotX.type] == "object" || typeof slotTypesDefault[slotX.type] == "array"){
+							for(var typeX in slotTypesDefault[slotX.type]){
+								if (v == slotTypesDefault[slotX.type][typeX]) nodeNewType = slotTypesDefault[slotX.type][typeX];
+							}
+						}else{
+							if (v == slotTypesDefault[slotX.type]) nodeNewType = slotTypesDefault[slotX.type];
+						}
+						if (nodeNewType) {
+							var nodeNewOpts = false;
+							if (typeof nodeNewType == "object" && nodeNewType.node){
+								nodeNewOpts = nodeNewType;
+								nodeNewType = nodeNewType.node;
+							}
+							//that.graph.beforeChange();
+							var newNode = LiteGraph.createNode(nodeNewType);
+							if(newNode){
+								// if is object pass options
+								if (nodeNewOpts){
+									if (nodeNewOpts.properties) {
+										for (var i in nodeNewOpts.properties) {
+											newNode.addProperty( i, nodeNewOpts.properties[i] );
+										}
+									}
+									if (nodeNewOpts.inputs) {
+										newNode.inputs = [];
+										for (var i in nodeNewOpts.inputs) {
+											newNode.addOutput(
+												nodeNewOpts.inputs[i][0],
+												nodeNewOpts.inputs[i][1]
+											);
+										}
+									}
+									if (nodeNewOpts.outputs) {
+										newNode.outputs = [];
+										for (var i in nodeNewOpts.outputs) {
+											newNode.addOutput(
+												nodeNewOpts.outputs[i][0],
+												nodeNewOpts.outputs[i][1]
+											);
+										}
+									}
+									if (nodeNewOpts.title) {
+										newNode.title = nodeNewOpts.title;
+									}
+									if (nodeNewOpts.json) {
+										newNode.configure(nodeNewOpts.json);
+									}
+
+								}
+								// add the node
+								newNode.pos = [opts.e.canvasX,opts.e.canvasY]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];
+								that.graph.add(newNode);
+								//that.graph.afterChange();
+								// connect the two!
+								if (isFrom){
+									opts.nodeFrom.connectByType( iSlotConn, newNode, slotX.type );
+								}else{
+									opts.nodeTo.connectByTypeOutput( iSlotConn, newNode, slotX.type );
+								}
+							}else{
+								console.log("failed creating "+nodeNewType);
+							}
+						}
+					}else{
+						//console.log("no slotTypesDefault for "+slotX.type);
+					}
+					break;
             }
         }   
         
@@ -10974,7 +11229,7 @@ LGraphNode.prototype.executeAction = function(action)
                 var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length;
                 
                 if (options.type_filter_in == LiteGraph.EVENT || options.type_filter_in == LiteGraph.ACTION)
-                    options.type_filter_in = "event/action";
+                    options.type_filter_in = "_event_";
                 /* this will filter on * .. but better do it manually in case
                 else if(options.type_filter_in === "" || options.type_filter_in === 0)
                     options.type_filter_in = "*";*/
@@ -11001,7 +11256,7 @@ LGraphNode.prototype.executeAction = function(action)
                 var nSlots = aSlots.length; // this for object :: Object.keys(aSlots).length; 
                 
                 if (options.type_filter_out == LiteGraph.EVENT || options.type_filter_out == LiteGraph.ACTION)
-                    options.type_filter_out = "event/action";
+                    options.type_filter_out = "_event_";
                 /* this will filter on * .. but better do it manually in case
                 else if(options.type_filter_out === "" || options.type_filter_out === 0)
                     options.type_filter_out = "*";*/
@@ -11317,7 +11572,7 @@ LGraphNode.prototype.executeAction = function(action)
                         
                         var sV = sIn.value;
                         if (opts.inTypeOverride!==false) sV = opts.inTypeOverride;
-						//if (sV.toLowerCase() == "event/action") sV = LiteGraph.EVENT; // -1
+						//if (sV.toLowerCase() == "_event_") sV = LiteGraph.EVENT; // -1
                         
                         if(sIn && sV){
                             //console.log("will check filter against "+sV);
@@ -11336,7 +11591,7 @@ LGraphNode.prototype.executeAction = function(action)
                         
                         var sV = sOut.value;
                         if (opts.outTypeOverride!==false) sV = opts.outTypeOverride;
-                        //if (sV.toLowerCase() == "event/action") sV = LiteGraph.EVENT; // -1
+                        //if (sV.toLowerCase() == "_event_") sV = LiteGraph.EVENT; // -1
                         
                         if(sOut && sV){
                             //console.log("search will check filter against "+sV);
@@ -11846,8 +12101,8 @@ LGraphNode.prototype.executeAction = function(action)
             // assume coming from the menu event click
             if (!obEv || !obEv.event || !obEv.event.target || !obEv.event.target.lgraphcanvas){
                 console.warn("Canvas not found"); // need a ref to canvas obj
-                console.debug(event);
-                console.debug(event.target);
+                /*console.debug(event);
+                console.debug(event.target);*/
                 return;
             }
             var graphcanvas = obEv.event.target.lgraphcanvas;
@@ -12597,16 +12852,16 @@ LGraphNode.prototype.executeAction = function(action)
                     menu_info.push({ content: "Disconnect Links", slot: slot });
                 }
                 var _slot = slot.input || slot.output;
-                menu_info.push(
-                    _slot.locked || !_slot.removable
-                        ? "Cannot remove"
-                        : { content: "Remove Slot", slot: slot }
-                );
-                menu_info.push(
-                    _slot.nameLocked
-                        ? "Cannot rename"
-                        : { content: "Rename Slot", slot: slot }
-                );
+                if (_slot.removable){
+                	menu_info.push(
+	                    _slot.locked
+	                        ? "Cannot remove"
+	                        : { content: "Remove Slot", slot: slot }
+	                );
+            	}
+                if (!_slot.nameLocked){
+	                menu_info.push({ content: "Rename Slot", slot: slot });
+                }
     
             }
             options.title =
@@ -12687,19 +12942,32 @@ LGraphNode.prototype.executeAction = function(action)
                 if (input && slot_info) {
                     input.value = slot_info.label || "";
                 }
-                dialog
-                    .querySelector("button")
-                    .addEventListener("click", function(e) {
-                        node.graph.beforeChange();
-                        if (input.value) {
-                            if (slot_info) {
-                                slot_info.label = input.value;
-                            }
-                            that.setDirty(true);
+                var inner = function(){
+                	node.graph.beforeChange();
+                    if (input.value) {
+                        if (slot_info) {
+                            slot_info.label = input.value;
                         }
+                        that.setDirty(true);
+                    }
+                    dialog.close();
+                    node.graph.afterChange();
+                }
+                dialog.querySelector("button").addEventListener("click", inner);
+                input.addEventListener("keydown", function(e) {
+                    dialog.is_modified = true;
+                    if (e.keyCode == 27) {
+                        //ESC
                         dialog.close();
-                        node.graph.afterChange();
-                    });
+                    } else if (e.keyCode == 13) {
+                        inner(); // save
+                    } else if (e.keyCode != 13 && e.target.localName != "textarea") {
+                        return;
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                });
+                input.focus();
             }
 
             //if(v.callback)
