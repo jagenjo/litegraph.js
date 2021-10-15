@@ -1626,13 +1626,19 @@
      */
     LGraph.prototype.getNodeOnPos = function(x, y, nodes_list, margin) {
         nodes_list = nodes_list || this._nodes;
+		var nRet = null;
         for (var i = nodes_list.length - 1; i >= 0; i--) {
             var n = nodes_list[i];
             if (n.isPointInside(x, y, margin)) {
-                return n;
+                // check for lesser interest nodes (TODO check for overlapping, use the top)
+				/*if (typeof n == "LGraphGroup"){
+					nRet = n;
+				}else{*/
+					return n;
+				/*}*/
             }
         }
-        return null;
+        return nRet;
     };
 
     /**
@@ -6040,49 +6046,51 @@ LGraphNode.prototype.executeAction = function(action)
                 }
             } //clicked outside of nodes
             else {
-                //search for link connector
-				if(!this.read_only) 
-					for (var i = 0; i < this.visible_links.length; ++i) {
-						var link = this.visible_links[i];
-						var center = link._pos;
-						if (
-							!center ||
-							e.canvasX < center[0] - 4 ||
-							e.canvasX > center[0] + 4 ||
-							e.canvasY < center[1] - 4 ||
-							e.canvasY > center[1] + 4
-						) {
-							continue;
+				if (!skip_action){
+					//search for link connector
+					if(!this.read_only) {
+						for (var i = 0; i < this.visible_links.length; ++i) {
+							var link = this.visible_links[i];
+							var center = link._pos;
+							if (
+								!center ||
+								e.canvasX < center[0] - 4 ||
+								e.canvasX > center[0] + 4 ||
+								e.canvasY < center[1] - 4 ||
+								e.canvasY > center[1] + 4
+							) {
+								continue;
+							}
+							//link clicked
+							this.showLinkMenu(link, e);
+							this.over_link_center = null; //clear tooltip
+							break;
 						}
-						//link clicked
-						this.showLinkMenu(link, e);
-						this.over_link_center = null; //clear tooltip
-						break;
 					}
 
-                this.selected_group = this.graph.getGroupOnPos( e.canvasX, e.canvasY );
-                this.selected_group_resizing = false;
-                if (this.selected_group && !this.read_only ) {
-                    if (e.ctrlKey) {
-                        this.dragging_rectangle = null;
-                    }
+					this.selected_group = this.graph.getGroupOnPos( e.canvasX, e.canvasY );
+					this.selected_group_resizing = false;
+					if (this.selected_group && !this.read_only ) {
+						if (e.ctrlKey) {
+							this.dragging_rectangle = null;
+						}
 
-                    var dist = distance( [e.canvasX, e.canvasY], [ this.selected_group.pos[0] + this.selected_group.size[0], this.selected_group.pos[1] + this.selected_group.size[1] ] );
-                    if (dist * this.ds.scale < 10) {
-                        this.selected_group_resizing = true;
-                    } else {
-                        this.selected_group.recomputeInsideNodes();
-                    }
-                }
+						var dist = distance( [e.canvasX, e.canvasY], [ this.selected_group.pos[0] + this.selected_group.size[0], this.selected_group.pos[1] + this.selected_group.size[1] ] );
+						if (dist * this.ds.scale < 10) {
+							this.selected_group_resizing = true;
+						} else {
+							this.selected_group.recomputeInsideNodes();
+						}
+					}
 
-                if (is_double_click && !this.read_only && this.allow_searchbox) {
-                    this.showSearchBox(e);
-                    e.preventDefault();
-                    e.stopPropagation();
-                    
-                }
+					if (is_double_click && !this.read_only && this.allow_searchbox) {
+						this.showSearchBox(e);
+						e.preventDefault();
+						e.stopPropagation();
+					}
 
-                clicking_canvas_bg = true;
+					clicking_canvas_bg = true;
+				}
             }
 
             if (!skip_action && clicking_canvas_bg && this.allow_dragcanvas) {
@@ -6136,7 +6144,7 @@ LGraphNode.prototype.executeAction = function(action)
 							
 							var alphaPosY = 0.5-((mClikSlot_index+1)/((mClikSlot_isOut?node.outputs.length:node.inputs.length)));
 							var node_bounding = node.getBounding();
-							// etimate a position: this is a bad semi-bad-working mess .. 
+							// estimate a position: this is a bad semi-bad-working mess .. REFACTOR with a correct autoplacement that knows about the others slots and nodes
 							var posRef = [	(!mClikSlot_isOut?node_bounding[0]:node_bounding[0]+node_bounding[2])// + node_bounding[0]/this.canvas.width*150
 											,e.canvasY-80// + node_bounding[0]/this.canvas.width*66 // vertical "derive"
 										  ];
@@ -6156,9 +6164,22 @@ LGraphNode.prototype.executeAction = function(action)
 			}
         	
         } else if (e.which == 3 || this.pointer_is_double) {
+			
             //right button
-			if(!this.read_only)
-	            this.processContextMenu(node, e);
+			if(!this.read_only){
+				if(Object.keys(this.selected_nodes).length
+				   && (this.selected_nodes[node.id] || e.shiftKey || e.ctrlKey || e.metaKey)
+				){
+					// is multiselected or using shift to include the now node
+					if (!this.selected_nodes[node.id]) this.selectNodes([node],true); // add this if not present
+				}else{
+					// update selection
+					this.selectNodes([node]);
+				}
+				// show menu on this node
+				this.processContextMenu(node, e);
+			}
+			
         }
 
         //TODO
@@ -6529,11 +6550,17 @@ LGraphNode.prototype.executeAction = function(action)
             }
             this.selected_group_resizing = false;
 
+			var node = this.graph.getNodeOnPos(
+							e.canvasX,
+							e.canvasY,
+							this.visible_nodes
+						);
+			
             if (this.dragging_rectangle) {
                 if (this.graph) {
                     var nodes = this.graph._nodes;
                     var node_bounding = new Float32Array(4);
-                    this.deselectAllNodes();
+                    
                     //compute bounding and flip if left to right
                     var w = Math.abs(this.dragging_rectangle[2]);
                     var h = Math.abs(this.dragging_rectangle[3]);
@@ -6550,24 +6577,31 @@ LGraphNode.prototype.executeAction = function(action)
                     this.dragging_rectangle[2] = w;
                     this.dragging_rectangle[3] = h;
 
-                    //test against all nodes (not visible because the rectangle maybe start outside
-                    var to_select = [];
-                    for (var i = 0; i < nodes.length; ++i) {
-                        var node = nodes[i];
-                        node.getBounding(node_bounding);
-                        if (
-                            !overlapBounding(
-                                this.dragging_rectangle,
-                                node_bounding
-                            )
-                        ) {
-                            continue;
-                        } //out of the visible area
-                        to_select.push(node);
-                    }
-                    if (to_select.length) {
-                        this.selectNodes(to_select);
-                    }
+					// test dragging rect size, if minimun simulate a click
+					if (!node || (w > 10 && h > 10 )){
+						//test against all nodes (not visible because the rectangle maybe start outside
+						var to_select = [];
+						for (var i = 0; i < nodes.length; ++i) {
+							var nodeX = nodes[i];
+							nodeX.getBounding(node_bounding);
+							if (
+								!overlapBounding(
+									this.dragging_rectangle,
+									node_bounding
+								)
+							) {
+								continue;
+							} //out of the visible area
+							to_select.push(nodeX);
+						}
+						if (to_select.length) {
+							this.selectNodes(to_select,e.shiftKey); // add to selection with shift
+						}
+					}else{
+						// will select of update selection
+						this.selectNodes([node],e.shiftKey||e.ctrlKey); // add to selection add to selection with ctrlKey or shiftKey
+					}
+					
                 }
                 this.dragging_rectangle = null;
             } else if (this.connecting_node) {
@@ -6578,12 +6612,6 @@ LGraphNode.prototype.executeAction = function(action)
                 var connInOrOut = this.connecting_output || this.connecting_input;
                 var connType = connInOrOut.type;
                 
-                var node = this.graph.getNodeOnPos(
-                    e.canvasX,
-                    e.canvasY,
-                    this.visible_nodes
-                );
-
                 //node below mouse
                 if (node) {
                     
@@ -7228,7 +7256,7 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LGraphCanvas.prototype.processNodeSelected = function(node, e) {
-        this.selectNode(node, e && e.shiftKey);
+        this.selectNode(node, e && (e.shiftKey||e.ctrlKey));
         if (this.onNodeSelected) {
             this.onNodeSelected(node);
         }
@@ -7255,12 +7283,13 @@ LGraphNode.prototype.executeAction = function(action)
      **/
     LGraphCanvas.prototype.selectNodes = function( nodes, add_to_current_selection )
 	{
-        if (!add_to_current_selection) {
+		if (!add_to_current_selection) {
             this.deselectAllNodes();
         }
 
         nodes = nodes || this.graph._nodes;
-        for (var i = 0; i < nodes.length; ++i) {
+		if (typeof nodes == "string") nodes = [nodes];
+        for (var i in nodes) {
             var node = nodes[i];
             if (node.is_selected) {
                 continue;
@@ -10546,13 +10575,26 @@ LGraphNode.prototype.executeAction = function(action)
         return e.innerHTML;
     };
 
-    LGraphCanvas.onResizeNode = function(value, options, e, menu, node) {
+    LGraphCanvas.onMenuResizeNode = function(value, options, e, menu, node) {
         if (!node) {
             return;
         }
-        node.size = node.computeSize();
-        if (node.onResize)
-            node.onResize(node.size);
+        
+		var fApplyMultiNode = function(node){
+			node.size = node.computeSize();
+			if (node.onResize)
+				node.onResize(node.size);
+		}
+		
+		var graphcanvas = LGraphCanvas.active_canvas;
+		if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+			fApplyMultiNode(node);
+		}else{
+			for (var i in graphcanvas.selected_nodes) {
+				fApplyMultiNode(graphcanvas.selected_nodes[i]);
+			}
+		}
+		
         node.setDirtyCanvas(true, true);
     };
 
@@ -12484,9 +12526,22 @@ LGraphNode.prototype.executeAction = function(action)
 	}
 
     LGraphCanvas.onMenuNodeCollapse = function(value, options, e, menu, node) {
-		node.graph.beforeChange(node);
-        node.collapse();
-		node.graph.afterChange(node);
+		node.graph.beforeChange(/*?*/);
+		
+		var fApplyMultiNode = function(node){
+			node.collapse();
+		}
+		
+		var graphcanvas = LGraphCanvas.active_canvas;
+		if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+			fApplyMultiNode(node);
+		}else{
+			for (var i in graphcanvas.selected_nodes) {
+				fApplyMultiNode(graphcanvas.selected_nodes[i]);
+			}
+		}
+		
+		node.graph.afterChange(/*?*/);
     };
 
     LGraphCanvas.onMenuNodePin = function(value, options, e, menu, node) {
@@ -12504,12 +12559,23 @@ LGraphNode.prototype.executeAction = function(action)
                 return;
             }
             var kV = Object.values(LiteGraph.NODE_MODES).indexOf(v);
-            if (kV>=0 && LiteGraph.NODE_MODES[kV])
-                node.changeMode(kV);
-            else{
-                console.warn("unexpected mode: "+v);
-                node.changeMode(LiteGraph.ALWAYS);
-            }
+            var fApplyMultiNode = function(node){
+				if (kV>=0 && LiteGraph.NODE_MODES[kV])
+					node.changeMode(kV);
+				else{
+					console.warn("unexpected mode: "+v);
+					node.changeMode(LiteGraph.ALWAYS);
+				}
+			}
+			
+			var graphcanvas = LGraphCanvas.active_canvas;
+			if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+				fApplyMultiNode(node);
+			}else{
+				for (var i in graphcanvas.selected_nodes) {
+					fApplyMultiNode(graphcanvas.selected_nodes[i]);
+				}
+			}
         }
 
         return false;
@@ -12555,17 +12621,29 @@ LGraphNode.prototype.executeAction = function(action)
             }
 
             var color = v.value ? LGraphCanvas.node_colors[v.value] : null;
-            if (color) {
-                if (node.constructor === LiteGraph.LGraphGroup) {
-                    node.color = color.groupcolor;
-                } else {
-                    node.color = color.color;
-                    node.bgcolor = color.bgcolor;
-                }
-            } else {
-                delete node.color;
-                delete node.bgcolor;
-            }
+			
+			var fApplyColor = function(node){
+				if (color) {
+					if (node.constructor === LiteGraph.LGraphGroup) {
+						node.color = color.groupcolor;
+					} else {
+						node.color = color.color;
+						node.bgcolor = color.bgcolor;
+					}
+				} else {
+					delete node.color;
+					delete node.bgcolor;
+				}
+			}
+			
+			var graphcanvas = LGraphCanvas.active_canvas;
+			if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+				fApplyColor(node);
+			}else{
+				for (var i in graphcanvas.selected_nodes) {
+					fApplyColor(graphcanvas.selected_nodes[i]);
+				}
+			}
             node.setDirtyCanvas(true, true);
         }
 
@@ -12588,9 +12666,22 @@ LGraphNode.prototype.executeAction = function(action)
             if (!node) {
                 return;
             }
-			node.graph.beforeChange(node);
-            node.shape = v;
-			node.graph.afterChange(node);
+			node.graph.beforeChange(/*?*/); //node
+            
+			var fApplyMultiNode = function(node){
+				node.shape = v;
+			}
+
+			var graphcanvas = LGraphCanvas.active_canvas;
+			if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+				fApplyMultiNode(node);
+			}else{
+				for (var i in graphcanvas.selected_nodes) {
+					fApplyMultiNode(graphcanvas.selected_nodes[i]);
+				}
+			}
+			
+			node.graph.afterChange(/*?*/); //node
             node.setDirtyCanvas(true);
         }
 
@@ -12602,13 +12693,26 @@ LGraphNode.prototype.executeAction = function(action)
             throw "no node passed";
         }
 
-        if (node.removable === false) {
-            return;
-        }
-
 		var graph = node.graph;
 		graph.beforeChange();
-        graph.remove(node);
+        
+		
+		var fApplyMultiNode = function(node){
+			if (node.removable === false) {
+				return;
+			}
+			graph.remove(node);
+		}
+
+		var graphcanvas = LGraphCanvas.active_canvas;
+		if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+			fApplyMultiNode(node);
+		}else{
+			for (var i in graphcanvas.selected_nodes) {
+				fApplyMultiNode(graphcanvas.selected_nodes[i]);
+			}
+		}
+		
 		graph.afterChange();
         node.setDirtyCanvas(true, true);
     };
@@ -12634,17 +12738,37 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LGraphCanvas.onMenuNodeClone = function(value, options, e, menu, node) {
-        if (node.clonable == false) {
-            return;
-        }
-        var newnode = node.clone();
-        if (!newnode) {
-            return;
-        }
-        newnode.pos = [node.pos[0] + 5, node.pos[1] + 5];
-
+        
 		node.graph.beforeChange();
-        node.graph.add(newnode);
+        
+		var newSelected = {};
+		
+		var fApplyMultiNode = function(node){
+			if (node.clonable == false) {
+				return;
+			}
+			var newnode = node.clone();
+			if (!newnode) {
+				return;
+			}
+			newnode.pos = [node.pos[0] + 5, node.pos[1] + 5];
+			node.graph.add(newnode);
+			newSelected[newnode.id] = newnode;
+		}
+
+		var graphcanvas = LGraphCanvas.active_canvas;
+		if (!graphcanvas.selected_nodes || Object.keys(graphcanvas.selected_nodes).length <= 1){
+			fApplyMultiNode(node);
+		}else{
+			for (var i in graphcanvas.selected_nodes) {
+				fApplyMultiNode(graphcanvas.selected_nodes[i]);
+			}
+		}
+		
+		if(Object.keys(newSelected).length){
+			graphcanvas.selectNodes(newSelected);
+		}
+		
 		node.graph.afterChange();
 
         node.setDirtyCanvas(true, true);
@@ -12668,6 +12792,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.prototype.getCanvasMenuOptions = function() {
         var options = null;
+		var that = this;
         if (this.getMenuOptions) {
             options = this.getMenuOptions();
         } else {
@@ -12677,12 +12802,13 @@ LGraphNode.prototype.executeAction = function(action)
                     has_submenu: true,
                     callback: LGraphCanvas.onMenuAdd
                 },
-                { content: "Add Group", callback: LGraphCanvas.onGroupAdd }
+                { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
+				//{ content: "Arrange", callback: that.graph.arrange },
                 //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
             ];
-            if (LiteGraph.showCanvasOptions){
-                options.push({ content: "Options", callback: thisGCanvas.showShowGraphOptionsPanel });
-            }
+            /*if (LiteGraph.showCanvasOptions){
+                options.push({ content: "Options", callback: that.showShowGraphOptionsPanel });
+            }*/
 
             if (this._graph_stack && this._graph_stack.length > 0) {
                 options.push(null, {
@@ -12740,7 +12866,7 @@ LGraphNode.prototype.executeAction = function(action)
                 }];
             if(node.resizable !== false){
                 options.push({
-                    content: "Resize", callback: LGraphCanvas.onResizeNode
+                    content: "Resize", callback: LGraphCanvas.onMenuResizeNode
                 });
             }
             options.push(
