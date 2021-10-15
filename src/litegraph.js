@@ -3973,7 +3973,10 @@
             var aDest = (aSlots[i].type+"").toLowerCase().split(",");
             for(sI=0;sI<aSource.length;sI++){
                 for(dI=0;dI<aDest.length;dI++){
-                    if (aSource[sI] == aDest[dI]) {
+					//console.log("check aSource[sI] == aDest[dI] "+aSource[sI]+" == "+aDest[dI]);
+                    if (aSource[sI]=="_event_") aSource[sI] = LiteGraph.EVENT;
+					if (aDest[sI]=="_event_") aDest[sI] = LiteGraph.EVENT;
+					if (aSource[sI] == aDest[dI]) {
                         if (preferFreeSlot && aSlots[i].links && aSlots[i].links !== null) continue;
                         return !returnObj ? i : aSlots[i];
                     }
@@ -6098,27 +6101,18 @@ LGraphNode.prototype.executeAction = function(action)
 						!node.flags.collapsed &&
 						!this.live_mode
 					) {
-						var middleClickedSlot = false;
-						var middleClickedSlot_index = false;
-						var middleClickedSlot_isOut = false;
+						var mClikSlot = false;
+						var mClikSlot_index = false;
+						var mClikSlot_isOut = false;
 						//search for outputs
 						if (node.outputs) {
 							for ( var i = 0, l = node.outputs.length; i < l; ++i ) {
 								var output = node.outputs[i];
 								var link_pos = node.getConnectionPos(false, i);
-								if (
-									isInsideRectangle(
-										e.canvasX,
-										e.canvasY,
-										link_pos[0] - 15,
-										link_pos[1] - 10,
-										30,
-										20
-									)
-								) {
-									middleClickedSlot = output;
-									middleClickedSlot_index = i;
-									middleClickedSlot_isOut = true;
+								if (isInsideRectangle(e.canvasX,e.canvasY,link_pos[0] - 15,link_pos[1] - 10,30,20)) {
+									mClikSlot = output;
+									mClikSlot_index = i;
+									mClikSlot_isOut = true;
 									break;
 								}
 							}
@@ -6129,103 +6123,33 @@ LGraphNode.prototype.executeAction = function(action)
 							for ( var i = 0, l = node.inputs.length; i < l; ++i ) {
 								var input = node.inputs[i];
 								var link_pos = node.getConnectionPos(true, i);
-								if (
-									isInsideRectangle(
-										e.canvasX,
-										e.canvasY,
-										link_pos[0] - 15,
-										link_pos[1] - 10,
-										30,
-										20
-									)
-								) {
-									middleClickedSlot = input;
-									middleClickedSlot_index = i;
-									middleClickedSlot_isOut = false;
+								if (isInsideRectangle(e.canvasX,e.canvasY,link_pos[0] - 15,link_pos[1] - 10,30,20)) {
+									mClikSlot = input;
+									mClikSlot_index = i;
+									mClikSlot_isOut = false;
 									break;
 								}
 							}
 						}
-						//console.log("middleClickSlots? "+middleClickedSlot+" & "+(middleClickedSlot_index!==false));
-						if (middleClickedSlot && middleClickedSlot_index!==false){
-							// check for defaults nodes for this slottype
-							var slotTypesDefault = middleClickedSlot_isOut ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
-							//console.log("middleClickSlots "+middleClickedSlot.type+" in "+slotTypesDefault[middleClickedSlot.type]);
-							if(slotTypesDefault && slotTypesDefault[middleClickedSlot.type]){
-								if (middleClickedSlot.link !== null) {
-									// is connected
-								}else{
-									// is not not connected
-								}
-								nodeNewType = false;
-								if(typeof slotTypesDefault[middleClickedSlot.type] == "object" || typeof slotTypesDefault[middleClickedSlot.type] == "array"){
-									for (typeX in slotTypesDefault[middleClickedSlot.type]){
-										nodeNewType = slotTypesDefault[middleClickedSlot.type][typeX];
-										break; // --------
-									}
-								}else{
-									nodeNewType = slotTypesDefault[middleClickedSlot.type];
-								}
-								if (nodeNewType) {
-									var nodeNewOpts = false;
-									if (typeof nodeNewType == "object" && nodeNewType.node){
-										nodeNewOpts = nodeNewType;
-										nodeNewType = nodeNewType.node;
-									}
-									//that.graph.beforeChange();
-									var newNode = LiteGraph.createNode(nodeNewType);
-									if(newNode){
-										// if is object pass options
-										if (nodeNewOpts){
-											if (nodeNewOpts.properties) {
-												for (var i in nodeNewOpts.properties) {
-													newNode.addProperty( i, nodeNewOpts.properties[i] );
-												}
-											}
-											if (nodeNewOpts.inputs) {
-												newNode.inputs = [];
-												for (var i in nodeNewOpts.inputs) {
-													newNode.addOutput(
-														nodeNewOpts.inputs[i][0],
-														nodeNewOpts.inputs[i][1]
-													);
-												}
-											}
-											if (nodeNewOpts.outputs) {
-												newNode.outputs = [];
-												for (var i in nodeNewOpts.outputs) {
-													newNode.addOutput(
-														nodeNewOpts.outputs[i][0],
-														nodeNewOpts.outputs[i][1]
-													);
-												}
-											}
-											if (nodeNewOpts.title) {
-												newNode.title = nodeNewOpts.title;
-											}
-											if (nodeNewOpts.json) {
-												newNode.configure(nodeNewOpts.json);
-											}
-
-										}
-										// add the node
-										that.graph.add(newNode);
-										// connect the two!
-										if (middleClickedSlot_isOut){
-											newNode.pos = [e.canvasX+30,e.canvasY]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];
-											node.connectByType( middleClickedSlot_index, newNode, middleClickedSlot.type );
-										}else{
-											newNode.pos = [e.canvasX-30-(newNode.size?newNode.size[0]:0),e.canvasY]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];
-											node.connectByTypeOutput( middleClickedSlot_index, newNode, middleClickedSlot.type );
-										}
-										//that.graph.afterChange();
-									}else{
-										console.log("failed creating "+nodeNewType);
-									}
-								}
-							}else{
-								//console.log("no slotTypesDefault for MIDDLECLICK "+middleClickedSlot.type);
-							}
+						//console.log("middleClickSlots? "+mClikSlot+" & "+(mClikSlot_index!==false));
+						if (mClikSlot && mClikSlot_index!==false){
+							
+							var alphaPosY = 0.5-((mClikSlot_index+1)/((mClikSlot_isOut?node.outputs.length:node.inputs.length)));
+							var node_bounding = node.getBounding();
+							// etimate a position: this is a bad semi-bad-working mess .. 
+							var posRef = [	(!mClikSlot_isOut?node_bounding[0]:node_bounding[0]+node_bounding[2])// + node_bounding[0]/this.canvas.width*150
+											,e.canvasY-80// + node_bounding[0]/this.canvas.width*66 // vertical "derive"
+										  ];
+							var nodeCreated = this.createDefaultNodeForSlot({   	nodeFrom: !mClikSlot_isOut?null:node
+																					,slotFrom: !mClikSlot_isOut?null:mClikSlot_index
+																					,nodeTo: !mClikSlot_isOut?node:null
+																					,slotTo: !mClikSlot_isOut?mClikSlot_index:null
+																					,position: posRef //,e: e
+																					,nodeType: "AUTO" //nodeNewType
+																					,posAdd:[!mClikSlot_isOut?-30:30, -alphaPosY*130] //-alphaPosY*30]
+																					,posSizeFix:[!mClikSlot_isOut?-1:0, 0] //-alphaPosY*2*/
+																				});
+								
 						}
 					}
 				}
@@ -10635,7 +10559,16 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.prototype.showLinkMenu = function(link, e) {
         var that = this;
 		// console.log(link);
-		var options = ["Add Node",null,"Delete"];
+		var node_left = that.graph.getNodeById( link.origin_id );
+		var node_right = that.graph.getNodeById( link.target_id );
+		var fromType = false;
+		if (node_left && node_left.outputs && node_left.outputs[link.origin_slot]) fromType = node_left.outputs[link.origin_slot].type;
+        var destType = false;
+		if (node_right && node_right.outputs && node_right.outputs[link.target_slot]) destType = node_right.inputs[link.target_slot].type;
+		
+		var options = ["Add Node",null,"Delete",null];
+		
+		
         var menu = new LiteGraph.ContextMenu(options, {
             event: e,
 			title: link.data != null ? link.data.constructor.name : null,
@@ -10647,32 +10580,186 @@ LGraphNode.prototype.executeAction = function(action)
                 case "Add Node":
 					LGraphCanvas.onMenuAdd(null, null, e, menu, function(node){
 						// console.debug("node autoconnect");
-						var node_left = that.graph.getNodeById( link.origin_id );
-						var node_right = that.graph.getNodeById( link.target_id );
 						if(!node.inputs || !node.inputs.length || !node.outputs || !node.outputs.length){
 							return;
 						}
 						// leave the connection type checking inside connectByType
-						//if( node_left.outputs[ link.origin_slot ].type == node.inputs[0].type && node.outputs[0].type == node_right.inputs[0].type ){
-                            var orType = node_left.outputs[link.origin_slot].type;
-                            var destType = node_right.inputs[link.target_slot].type;
-							if (node_left.connectByType( link.origin_slot, node, orType )){
-                                node.connectByType( link.target_slot, node_right, destType );
-                                node.pos[0] -= node.size[0] * 0.5;
-                            }
-						//}
+						if (node_left.connectByType( link.origin_slot, node, fromType )){
+                        	node.connectByType( link.target_slot, node_right, destType );
+                            node.pos[0] -= node.size[0] * 0.5;
+                        }
 					});
 					break;
+					
                 case "Delete":
                     that.graph.removeLink(link.id);
                     break;
                 default:
+					/*var nodeCreated = createDefaultNodeForSlot({   nodeFrom: node_left
+																	,slotFrom: link.origin_slot
+																	,nodeTo: node
+																	,slotTo: link.target_slot
+																	,e: e
+																	,nodeType: "AUTO"
+																});
+					if(nodeCreated) console.log("new node in beetween "+v+" created");*/
             }
         }
 
         return false;
     };
     
+ 	LGraphCanvas.prototype.createDefaultNodeForSlot = function(optPass) { // addNodeMenu for connection
+        var optPass = optPass || {};
+        var opts = Object.assign({   nodeFrom: null // input
+                                    ,slotFrom: null // input
+                                    ,nodeTo: null   // output
+                                    ,slotTo: null   // output
+                                    ,position: []	// pass the event coords
+								  	,nodeType: null	// choose a nodetype to add, AUTO to set at first good
+								  	,posAdd:[0,0]	// adjust x,y
+								  	,posSizeFix:[0,0] // alpha, adjust the position x,y based on the new node size w,h
+                                }
+                                ,optPass
+                            );
+        var that = this;
+        
+        var isFrom = opts.nodeFrom && opts.slotFrom!==null;
+        var isTo = !isFrom && opts.nodeTo && opts.slotTo!==null;
+	
+        if (!isFrom && !isTo){
+            console.warn("No data passed to createDefaultNodeForSlot "+opts.nodeFrom+" "+opts.slotFrom+" "+opts.nodeTo+" "+opts.slotTo);
+            return false;
+        }
+		if (!opts.nodeType){
+            console.warn("No type to createDefaultNodeForSlot");
+            return false;
+        }
+        
+        var nodeX = isFrom ? opts.nodeFrom : opts.nodeTo;
+        var slotX = isFrom ? opts.slotFrom : opts.slotTo;
+        
+        var iSlotConn = false;
+        switch (typeof slotX){
+            case "string":
+                iSlotConn = isFrom ? nodeX.findOutputSlot(slotX,false) : nodeX.findInputSlot(slotX,false);
+                slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
+            break;
+            case "object":
+                // ok slotX
+                iSlotConn = isFrom ? nodeX.findOutputSlot(slotX.name) : nodeX.findInputSlot(slotX.name);
+            break;
+            case "number":
+                iSlotConn = slotX;
+                slotX = isFrom ? nodeX.outputs[slotX] : nodeX.inputs[slotX];
+            break;
+			case "undefined":
+            default:
+                // bad ?
+                //iSlotConn = 0;
+                console.warn("Cant get slot information "+slotX);
+                return false;
+        }
+	
+		if (slotX===false || iSlotConn===false){
+			console.warn("createDefaultNodeForSlot bad slotX "+slotX+" "+iSlotConn);
+		}
+		
+		// check for defaults nodes for this slottype
+		var fromSlotType = slotX.type==LiteGraph.EVENT?"_event_":slotX.type;
+		var slotTypesDefault = isFrom ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
+		if(slotTypesDefault && slotTypesDefault[fromSlotType]){
+			if (slotX.link !== null) {
+				// is connected
+			}else{
+				// is not not connected
+			}
+			nodeNewType = false;
+			if(typeof slotTypesDefault[fromSlotType] == "object" || typeof slotTypesDefault[fromSlotType] == "array"){
+				for(var typeX in slotTypesDefault[fromSlotType]){
+					if (opts.nodeType == slotTypesDefault[fromSlotType][typeX] || opts.nodeType == "AUTO"){
+						nodeNewType = slotTypesDefault[fromSlotType][typeX];
+						// console.log("opts.nodeType == slotTypesDefault[fromSlotType][typeX] :: "+opts.nodeType);
+						break; // --------
+					}
+				}
+			}else{
+				if (opts.nodeType == slotTypesDefault[fromSlotType] || opts.nodeType == "AUTO") nodeNewType = slotTypesDefault[fromSlotType];
+			}
+			if (nodeNewType) {
+				var nodeNewOpts = false;
+				if (typeof nodeNewType == "object" && nodeNewType.node){
+					nodeNewOpts = nodeNewType;
+					nodeNewType = nodeNewType.node;
+				}
+				
+				//that.graph.beforeChange();
+				
+				var newNode = LiteGraph.createNode(nodeNewType);
+				if(newNode){
+					// if is object pass options
+					if (nodeNewOpts){
+						if (nodeNewOpts.properties) {
+							for (var i in nodeNewOpts.properties) {
+								newNode.addProperty( i, nodeNewOpts.properties[i] );
+							}
+						}
+						if (nodeNewOpts.inputs) {
+							newNode.inputs = [];
+							for (var i in nodeNewOpts.inputs) {
+								newNode.addOutput(
+									nodeNewOpts.inputs[i][0],
+									nodeNewOpts.inputs[i][1]
+								);
+							}
+						}
+						if (nodeNewOpts.outputs) {
+							newNode.outputs = [];
+							for (var i in nodeNewOpts.outputs) {
+								newNode.addOutput(
+									nodeNewOpts.outputs[i][0],
+									nodeNewOpts.outputs[i][1]
+								);
+							}
+						}
+						if (nodeNewOpts.title) {
+							newNode.title = nodeNewOpts.title;
+						}
+						if (nodeNewOpts.json) {
+							newNode.configure(nodeNewOpts.json);
+						}
+
+					}
+					
+					// add the node
+					that.graph.add(newNode);
+					newNode.pos = [	opts.position[0]+opts.posAdd[0]+(opts.posSizeFix[0]?opts.posSizeFix[0]*newNode.size[0]:0)
+								   	,opts.position[1]+opts.posAdd[1]+(opts.posSizeFix[1]?opts.posSizeFix[1]*newNode.size[1]:0)]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];*/
+					
+					//that.graph.afterChange();
+					
+					// connect the two!
+					if (isFrom){
+						opts.nodeFrom.connectByType( iSlotConn, newNode, fromSlotType );
+					}else{
+						opts.nodeTo.connectByTypeOutput( iSlotConn, newNode, fromSlotType );
+					}
+					
+					// if connecting in between
+					if (isFrom && isTo){
+						// TODO
+					}
+					
+					return true;
+					
+				}else{
+					console.log("failed creating "+nodeNewType);
+				}
+			}
+		}
+		return false;
+	}
+ 
     LGraphCanvas.prototype.showConnectionMenu = function(optPass) { // addNodeMenu for connection
         var optPass = optPass || {};
         var opts = Object.assign({   nodeFrom: null  // input
@@ -10712,7 +10799,7 @@ LGraphNode.prototype.executeAction = function(action)
             break;
             default:
                 // bad ?
-                //iSlotConn = 0; // try with first if no name set :: implement, check better, if no name but type, look for type .. BUT PLEASE PASS A NAME, or an INDEX
+                //iSlotConn = 0;
                 console.warn("Cant get slot information "+slotX);
                 return false;
         }
@@ -10725,125 +10812,55 @@ LGraphNode.prototype.executeAction = function(action)
 		}
 		
 		// get defaults nodes for this slottype
+		var fromSlotType = slotX.type==LiteGraph.EVENT?"_event_":slotX.type;
 		var slotTypesDefault = isFrom ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
-		if(slotTypesDefault && slotTypesDefault[slotX.type]){
-			//console.log("TypeDefaulMenu (OUT?"+isFrom+") "+slotX.type+" :: "+slotTypesDefault[slotX.type]);
-			if (slotX.link !== null) {
-				// is connected
-			}else{
-				// is not not connected
-			}
-			//console.log(typeof slotTypesDefault[slotX.type]);
-			if(typeof slotTypesDefault[slotX.type] == "object" || typeof slotTypesDefault[slotX.type] == "array"){
-				for(var typeX in slotTypesDefault[slotX.type]){
-					//console.log(slotX.type+" has default "+slotTypesDefault[slotX.type][typeX]);
-					options.push(slotTypesDefault[slotX.type][typeX]);
+		if(slotTypesDefault && slotTypesDefault[fromSlotType]){
+			if(typeof slotTypesDefault[fromSlotType] == "object" || typeof slotTypesDefault[fromSlotType] == "array"){
+				for(var typeX in slotTypesDefault[fromSlotType]){
+					options.push(slotTypesDefault[fromSlotType][typeX]);
 				}
 			}else{
-				options.push(slotTypesDefault[slotX.type]);
+				options.push(slotTypesDefault[fromSlotType]);
 			}
 		}
 		
+		// build menu
         var menu = new LiteGraph.ContextMenu(options, {
             event: opts.e,
-			title: (slotX && slotX.name!="" ? (slotX.name + (slotX.type?" | ":"")) : "")+(slotX && slotX.type ? slotX.type : ""),
+			title: (slotX && slotX.name!="" ? (slotX.name + (fromSlotType?" | ":"")) : "")+(slotX && fromSlotType ? fromSlotType : ""),
             callback: inner_clicked
         });
         
+		// callback
         function inner_clicked(v,options,e) {
             //console.log("Process showConnectionMenu selection");
             switch (v) {
                 case "Add Node":
                     LGraphCanvas.onMenuAdd(null, null, e, menu, function(node){
                         if (isFrom){
-                            opts.nodeFrom.connectByType( iSlotConn, node, slotX.type );
+                            opts.nodeFrom.connectByType( iSlotConn, node, fromSlotType );
                         }else{
-                            opts.nodeTo.connectByTypeOutput( iSlotConn, node, slotX.type );
+                            opts.nodeTo.connectByTypeOutput( iSlotConn, node, fromSlotType );
                         }
                     });
                     break;
 				case "Search":
 					if(isFrom){
-						that.showSearchBox(e,{node_from: opts.nodeFrom, slot_from: slotX, type_filter_in: slotX.type});
+						that.showSearchBox(e,{node_from: opts.nodeFrom, slot_from: slotX, type_filter_in: fromSlotType});
 					}else{
-						that.showSearchBox(e,{node_to: opts.nodeTo, slot_from: slotX, type_filter_out: slotX.type});
+						that.showSearchBox(e,{node_to: opts.nodeTo, slot_from: slotX, type_filter_out: fromSlotType});
 					}
 					break;
                 default:
 					// check for defaults nodes for this slottype
-					var slotTypesDefault = isFrom ? LiteGraph.slot_types_default_out : LiteGraph.slot_types_default_in;
-					if(slotTypesDefault && slotTypesDefault[slotX.type]){
-						if (slotX.link !== null) {
-							// is connected
-						}else{
-							// is not not connected
-						}
-						nodeNewType = false;
-						if(typeof slotTypesDefault[slotX.type] == "object" || typeof slotTypesDefault[slotX.type] == "array"){
-							for(var typeX in slotTypesDefault[slotX.type]){
-								if (v == slotTypesDefault[slotX.type][typeX]) nodeNewType = slotTypesDefault[slotX.type][typeX];
-							}
-						}else{
-							if (v == slotTypesDefault[slotX.type]) nodeNewType = slotTypesDefault[slotX.type];
-						}
-						if (nodeNewType) {
-							var nodeNewOpts = false;
-							if (typeof nodeNewType == "object" && nodeNewType.node){
-								nodeNewOpts = nodeNewType;
-								nodeNewType = nodeNewType.node;
-							}
-							//that.graph.beforeChange();
-							var newNode = LiteGraph.createNode(nodeNewType);
-							if(newNode){
-								// if is object pass options
-								if (nodeNewOpts){
-									if (nodeNewOpts.properties) {
-										for (var i in nodeNewOpts.properties) {
-											newNode.addProperty( i, nodeNewOpts.properties[i] );
-										}
-									}
-									if (nodeNewOpts.inputs) {
-										newNode.inputs = [];
-										for (var i in nodeNewOpts.inputs) {
-											newNode.addOutput(
-												nodeNewOpts.inputs[i][0],
-												nodeNewOpts.inputs[i][1]
-											);
-										}
-									}
-									if (nodeNewOpts.outputs) {
-										newNode.outputs = [];
-										for (var i in nodeNewOpts.outputs) {
-											newNode.addOutput(
-												nodeNewOpts.outputs[i][0],
-												nodeNewOpts.outputs[i][1]
-											);
-										}
-									}
-									if (nodeNewOpts.title) {
-										newNode.title = nodeNewOpts.title;
-									}
-									if (nodeNewOpts.json) {
-										newNode.configure(nodeNewOpts.json);
-									}
-
-								}
-								// add the node
-								newNode.pos = [opts.e.canvasX,opts.e.canvasY]; //that.last_click_position; //[e.canvasX+30, e.canvasX+5];
-								that.graph.add(newNode);
-								//that.graph.afterChange();
-								// connect the two!
-								if (isFrom){
-									opts.nodeFrom.connectByType( iSlotConn, newNode, slotX.type );
-								}else{
-									opts.nodeTo.connectByTypeOutput( iSlotConn, newNode, slotX.type );
-								}
-							}else{
-								console.log("failed creating "+nodeNewType);
-							}
-						}
+					var nodeCreated = that.createDefaultNodeForSlot(Object.assign(opts,{ position: [opts.e.canvasX, opts.e.canvasY]
+																						,nodeType: v
+																					}));
+					if (nodeCreated){
+						// new node created
+						//console.log("node "+v+" created")
 					}else{
-						//console.log("no slotTypesDefault for "+slotX.type);
+						// failed or v is not in defaults
 					}
 					break;
             }

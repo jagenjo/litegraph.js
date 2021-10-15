@@ -50,7 +50,8 @@
 
     //Sequencer for events
     function Sequencer() {
-        this.addInput("", LiteGraph.ACTION);
+        var that = this;
+		this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addOutput("", LiteGraph.EVENT);
