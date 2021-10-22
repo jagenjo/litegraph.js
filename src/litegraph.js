@@ -611,11 +611,13 @@
          * @return {Boolean} true if they can be connected
          */
         isValidConnection: function(type_a, type_b) {
+			if (type_a=="" || type_a==="*") type_a = 0;
+			if (type_b=="" || type_b==="*") type_b = 0;
             if (
-                !type_a || //generic output
-                !type_b || //generic input
-                type_a == type_b || //same type (is valid for triggers)
-                (type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION)
+                !generic //generic output
+                || !type_b // generic input
+                || type_a == type_b //same type (is valid for triggers)
+                || (type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION)
             ) {
                 return true;
             }
@@ -636,7 +638,8 @@
             var supported_types_b = type_b.split(",");
             for (var i = 0; i < supported_types_a.length; ++i) {
                 for (var j = 0; j < supported_types_b.length; ++j) {
-                    if (supported_types_a[i] == supported_types_b[j]) {
+                    if(this.isValidConnection(supported_types_a[i],supported_types_b[j])){
+					//if (supported_types_a[i] == supported_types_b[j]) {
                         return true;
                     }
                 }
@@ -3973,15 +3976,19 @@
         if (!aSlots) {
             return -1;
         }
+		// !! empty string type is considered 0, * !!
+		if (type == "" || type == "*") type = 0; 
         for (var i = 0, l = aSlots.length; i < l; ++i) {
             var tFound = false;
             var aSource = (type+"").toLowerCase().split(",");
-            var aDest = (aSlots[i].type+"").toLowerCase().split(",");
+            var aDest = aSlots[i].type=="0"||aSlots[i].type=="*"?"0":aSlots[i].type;
+			aDest = (aDest+"").toLowerCase().split(",");
             for(sI=0;sI<aSource.length;sI++){
                 for(dI=0;dI<aDest.length;dI++){
-					//console.log("check aSource[sI] == aDest[dI] "+aSource[sI]+" == "+aDest[dI]);
-                    if (aSource[sI]=="_event_") aSource[sI] = LiteGraph.EVENT;
+					if (aSource[sI]=="_event_") aSource[sI] = LiteGraph.EVENT;
 					if (aDest[sI]=="_event_") aDest[sI] = LiteGraph.EVENT;
+					if (aSource[sI]=="*") aSource[sI] = 0;
+					if (aDest[sI]=="*") aDest[sI] = 0;
 					if (aSource[sI] == aDest[dI]) {
                         if (preferFreeSlot && aSlots[i].links && aSlots[i].links !== null) continue;
                         return !returnObj ? i : aSlots[i];
@@ -3994,9 +4001,12 @@
             for (var i = 0, l = aSlots.length; i < l; ++i) {
                 var tFound = false;
                 var aSource = (type+"").toLowerCase().split(",");
-                var aDest = (aSlots[i].type+"").toLowerCase().split(",");
+                var aDest = aSlots[i].type=="0"||aSlots[i].type=="*"?"0":aSlots[i].type;
+				aDest = (aDest+"").toLowerCase().split(",");
                 for(sI=0;sI<aSource.length;sI++){
                     for(dI=0;dI<aDest.length;dI++){
+						if (aSource[sI]=="*") aSource[sI] = 0;
+						if (aDest[sI]=="*") aDest[sI] = 0;
                         if (aSource[sI] == aDest[dI]) {
                             return !returnObj ? i : aSlots[i];
                         }
@@ -4018,6 +4028,7 @@
     LGraphNode.prototype.connectByType = function(slot, target_node, target_slotType, optsIn) {
         var optsIn = optsIn || {};
         var optsDef = { createEventInCase: true
+					   	,firstFreeIfOutputGeneralInCase: true
                         ,generalTypeInCase: true
                       };
         var opts = Object.assign(optsDef,optsIn);
@@ -4035,16 +4046,26 @@
 				//console.debug("connect WILL CREATE THE onTrigger "+target_slotType+" to "+target_node);
                 return this.connect(slot, target_node, -1);
             }
-            if (opts.generalTypeInCase && (target_slotType !== 0 && target_slotType !== "" && target_slotType !== "*")){
-                // connect TO a general type (*, 0), if not found the specific type
-				//console.debug("connect TO a general type (*, 0), if not found the specific type "+target_slotType+" to "+target_node);
-                target_slot = target_node.findInputSlotByType(0, false, true);
-                if (target_slot >= 0 && target_slot !== null){
+			// connect to the first general output slot if not found a specific type and 
+            if (opts.generalTypeInCase){
+                var target_slot = target_node.findInputSlotByType(0, false, true, true);
+				//console.debug("connect TO a general type (*, 0), if not found the specific type ",target_slotType," to ",target_node,"RES_SLOT:",target_slot);
+                if (target_slot >= 0){
                     return this.connect(slot, target_node, target_slot);
                 }
-            }else{
-                //console.debug("no way to connect "+target_slotType+" to "+target_node);
             }
+            // connect to the first free input slot if not found a specific type and this output is general
+            if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "")){
+                var target_slot = target_node.findInputSlotFree({typesNotAccepted: [LiteGraph.EVENT] });
+				//console.debug("connect TO TheFirstFREE ",target_slotType," to ",target_node,"RES_SLOT:",target_slot);
+                if (target_slot >= 0){
+					return this.connect(slot, target_node, target_slot);
+                }
+            }
+			
+			console.debug("no way to connect type: ",target_slotType," to targetNODE ",target_node);
+			//TODO filter
+			
             return null;
         }
     }
@@ -4096,6 +4117,9 @@
                 }
             }
             
+			console.debug("no way to connect byOUT type: ",source_slotType," to sourceNODE ",source_node);
+			//TODO filter
+			
             //console.log("type OUT! "+source_slotType+" not found or not free?")
             return null;
         }
@@ -4205,6 +4229,8 @@
 			if(changed)
 		        this.graph.connectionChange(this, link_info);
 			return null;
+		}else{
+			//console.debug("valid connection",output.type, input.type);
 		}
 
         //allows nodes to block connection, callback
@@ -5525,7 +5551,7 @@ LGraphNode.prototype.executeAction = function(action)
         this._mousemove_callback = this.processMouseMove.bind(this);
         this._mouseup_callback = this.processMouseUp.bind(this);
         
-        //touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
+        //touch events -- TODO IMPLEMENT
         //this._touch_callback = this.touchHandler.bind(this);
 
 		LiteGraph.pointerListenerAdd(canvas,"down", this._mousedown_callback, true); //down do not need to store the binded
@@ -6166,16 +6192,21 @@ LGraphNode.prototype.executeAction = function(action)
         } else if (e.which == 3 || this.pointer_is_double) {
 			
             //right button
-			if(!this.read_only){
-				if(Object.keys(this.selected_nodes).length
-				   && (this.selected_nodes[node.id] || e.shiftKey || e.ctrlKey || e.metaKey)
-				){
-					// is multiselected or using shift to include the now node
-					if (!this.selected_nodes[node.id]) this.selectNodes([node],true); // add this if not present
-				}else{
-					// update selection
-					this.selectNodes([node]);
+			if (this.allow_interaction && !skip_action && !this.read_only){
+				
+				// is it hover a node ?
+				if (node){
+					if(Object.keys(this.selected_nodes).length
+					   && (this.selected_nodes[node.id] || e.shiftKey || e.ctrlKey || e.metaKey)
+					){
+						// is multiselected or using shift to include the now node
+						if (!this.selected_nodes[node.id]) this.selectNodes([node],true); // add this if not present
+					}else{
+						// update selection
+						this.selectNodes([node]);
+					}
 				}
+				
 				// show menu on this node
 				this.processContextMenu(node, e);
 			}
@@ -10143,8 +10174,6 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     /* this is an implementation for touch not in production and not ready
-     * the idea is maybe good: simulate a similar event
-     * so let's try with pointerevents (working with both mouse and touch), and simulate the old mouseevents IF NECESSARY for retrocompatibility: existing old good nodes
      */
     /*LGraphCanvas.prototype.touchHandler = function(event) {
         //alert("foo");
@@ -13983,23 +14012,65 @@ LGraphNode.prototype.executeAction = function(action)
             .filter(Boolean); // split & filter [""]
     };
 
-	// helper pointerListener vs mouseListener, used by LGraphCanvas DragAndScale ContextMenu
-	LiteGraph.pointerListenerAdd = function(oDOM, sEvent, fCall, capture=false) {
-		if (!oDOM || !oDOM.addEventListener || !sEvent || typeof fCall!=="function"){
+	/* helper for interaction: pointer, touch, mouse Listeners
+	used by LGraphCanvas DragAndScale ContextMenu*/
+	LiteGraph.pointerListenerAdd = function(oDOM, sEvIn, fCall, capture=false) {
+		if (!oDOM || !oDOM.addEventListener || !sEvIn || typeof fCall!=="function"){
 			//console.log("cant pointerListenerAdd "+oDOM+", "+sEvent+", "+fCall);
 			return; // -- break --
 		}
+		
+		var sMethod = LiteGraph.pointerevents_method;
+		var sEvent = sEvIn;
+		
+		// UNDER CONSTRUCTION
+		// convert pointerevents to touch event when not available
+		if (sMethod=="pointer" && !window.PointerEvent){ 
+			console.warn("sMethod=='pointer' && !window.PointerEvent");
+			console.log("Converting pointer["+sEvent+"] : down move up cancel enter TO touchstart touchmove touchend, etc ..");
+			switch(sEvent){
+				case "down":{
+					sMethod = "touch";
+					sEvent = "start";
+					break;
+				}
+				case "move":{
+					sMethod = "touch";
+					//sEvent = "move";
+					break;
+				}
+				case "up":{
+					sMethod = "touch";
+					sEvent = "end";
+					break;
+				}
+				case "cancel":{
+					sMethod = "touch";
+					//sEvent = "cancel";
+					break;
+				}
+				case "enter":{
+					console.log("debug: Should I send a move event?"); // ???
+					break;
+				}
+				// case "over": case "out": not used at now
+				default:{
+					console.warn("PointerEvent not available in this browser ? The event "+sEvent+" would not be called");
+				}
+			}
+		}
+
 		switch(sEvent){
 			//both pointer and move events
 			case "down": case "up": case "move": case "over": case "out": case "enter":
 			{
-				oDOM.addEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+				oDOM.addEventListener(sMethod+sEvent, fCall, capture);
 			}
 			// only pointerevents
 			case "leave": case "cancel": case "gotpointercapture": case "lostpointercapture":
 			{
-				if (LiteGraph.pointerevents_method!="mouse"){
-					return oDOM.addEventListener(LiteGraph.pointerevents_method+sEvent, fCall, capture);
+				if (sMethod!="mouse"){
+					return oDOM.addEventListener(sMethod+sEvent, fCall, capture);
 				}
 			}
 			// not "pointer" || "mouse"
