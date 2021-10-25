@@ -614,7 +614,7 @@
 			if (type_a=="" || type_a==="*") type_a = 0;
 			if (type_b=="" || type_b==="*") type_b = 0;
             if (
-                !generic //generic output
+                !type_a //generic output
                 || !type_b // generic input
                 || type_a == type_b //same type (is valid for triggers)
                 || (type_a == LiteGraph.EVENT && type_b == LiteGraph.ACTION)
