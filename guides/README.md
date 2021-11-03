@@ -44,7 +44,7 @@ MyAddNode.prototype.onExecute = function()
   var B = this.getInputData(1);
   if( B === undefined )
     B = 0;
-  //assing data to otputs
+  //assing data to outputs
   this.setOutputData( 0, A + B );
 }
 
@@ -177,7 +177,7 @@ You can add widgets inside the node to edit text, values, etc.
 
 To do so you must create them in the constructor by calling ```node.addWidget```, the returned value is the object containing all the info about the widget, it is handy to store it in case you want to change the value later from code.
 
-The sintax is:
+The syntax is:
 
 ```js
 function MyNodeType()
@@ -188,7 +188,7 @@ function MyNodeType()
 
 This is the list of supported widgets:
 * **"number"** to change a value of a number, the syntax is ```this.addWidget("number","Number", current_value, callback, { min: 0, max: 100, step: 1} );```
-* **"slider"** to change a number by draging the mouse, the syntax is the same as number.
+* **"slider"** to change a number by dragging the mouse, the syntax is the same as number.
 * **"combo"** to select between multiple choices, the syntax is:
 
   ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```

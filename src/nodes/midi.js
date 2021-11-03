@@ -196,7 +196,7 @@
                 return MIDIEvent.TIMETICK;
                 break;
             default:
-                return Number(str); //asume its a hex code
+                return Number(str); //assume its a hex code
         }
     };
 
