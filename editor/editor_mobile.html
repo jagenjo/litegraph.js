@@ -1,0 +1,144 @@
+<!-- Javi Agenjo (@tamat) on 31/9/2011 -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LiteGraph</title>
+	<!--<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">-->
+	<meta http-equiv="X-UA-Compatible" content="chrome=1">
+
+    <link rel="stylesheet" type="text/css" href="../css/litegraph.css">
+    <link rel="stylesheet" type="text/css" href="../css/litegraph-editor.css">
+    <link rel="stylesheet" type="text/css" href="style.css">
+    
+</head>
+<body>
+	<div id="main">
+	</div>
+
+    <script type="text/javascript" src="../external/jquery-1.6.2.min.js"></script>
+    <script type="text/javascript" src="https://tamats.com/projects/sillyserver/src/sillyclient.js"></script>
+	<!-- <script type="text/javascript" src="https://unpkg.com/codeflask/build/codeflask.min.js"></script> -->
+	<script type="text/javascript" src="js/libs/gl-matrix-min.js"></script>
+    <script type="text/javascript" src="js/libs/audiosynth.js"></script>
+    <script type="text/javascript" src="js/libs/midi-parser.js"></script>
+
+    <script type="text/javascript" src="../src/litegraph.js"></script>
+    <script type="text/javascript" src="../src/litegraph-editor.js"></script>
+    <script type="text/javascript" src="js/defaults_mobile.js"></script>
+
+    <script type="text/javascript" src="../src/nodes/base.js"></script>
+    <script type="text/javascript" src="../src/nodes/logic.js"></script>
+    <script type="text/javascript" src="../src/nodes/events.js"></script>
+    <script type="text/javascript" src="../src/nodes/math.js"></script>
+    <script type="text/javascript" src="../src/nodes/math3d.js"></script>
+    <script type="text/javascript" src="../src/nodes/strings.js"></script>
+    <script type="text/javascript" src="../src/nodes/interface.js"></script>
+    <script type="text/javascript" src="../src/nodes/geometry.js"></script>
+    <script type="text/javascript" src="../src/nodes/graphics.js"></script>
+    <script type="text/javascript" src="../src/nodes/input.js"></script>
+    <script type="text/javascript" src="../src/nodes/midi.js"></script>
+    <script type="text/javascript" src="../src/nodes/audio.js"></script>
+    <script type="text/javascript" src="../src/nodes/network.js"></script>
+
+    <script type="text/javascript" src="js/demos.js"></script>
+	<script type="text/javascript" src="js/code.js"></script>
+
+	<script type="text/javascript" src="../src/nodes/others.js"></script>
+
+	<!--  htmlConsole use to debug on mobile, include and set editorUseHtmlConsole in defaults.js -->
+	<!-- enable console style, html, js enabling/disabling this comment here->  -->
+		
+	    <link rel="stylesheet" href="//htmlacademy.github.io/console.js/latest/css/style.css">
+	    <style>
+	    	.invisible{ display: none; }
+	    	.console__row{
+	    		margin: 1px;
+				padding: 2px;
+			}
+			.console-container{
+				min-width: 200px;
+				background: rgba(255,255,255,0.1);
+				position: fixed;
+				top: 38px;
+				left: 0;
+				overflow: auto;
+				height: calc(100%-38px);
+			}
+			.console-container.small{
+				max-width: 30%;
+			}
+			.graphcanvas{
+				/*WONT WORK touch-action: manipulation;*/
+				/*touch-action: none;*/
+				touch-action: pinch-zoom;
+			}
+	    </style>
+		
+		<div id="console-container" class="litegraph-editor console-container small invisible" style="">
+			<div class="console-tools" style="position: absolute; top: 0; right:0; z-index:2;">
+				<button class='btn' id='btn_console_close'>close</button>
+				<button class='btn' id='btn_console_clear'>clear</button>
+			</div>
+		</div>
+		
+		<script src="//htmlacademy.github.io/console.js/latest/js/index.js"></script>
+		<script>
+		
+			var editorUseHtmlConsole = true; // enable html console to debug on mobile
+		
+			// ToBarSelector
+			if(editorUseHtmlConsole){
+				document.getElementById("LGEditorTopBarSelector").innerHTML = "<button class='btn' id='btn_console'>Console</button> "
+																				+document.getElementById("LGEditorTopBarSelector").innerHTML;
+			}
+			
+			// html console
+			if(editorUseHtmlConsole){
+				elem.querySelector("#btn_console").addEventListener("click", function(){
+					var consoleCnt = document.getElementById('console-container');
+					if (consoleCnt.classList.contains("invisible")){
+						consoleCnt.classList.remove("invisible");
+					}else{
+						jsConsole.clean();
+						consoleCnt.classList.add("invisible");
+					}	
+				});
+				
+			
+				const params = {
+					expandDepth : 1,
+					common : {
+						excludeProperties : ['__proto__'],
+						removeProperties: ['__proto__'],
+						maxFieldsInHead : 5,
+						minFieldsToAutoexpand : 5,
+						maxFieldsToAutoexpand : 15
+					}
+				};
+				var jsConsole = new Console(document.querySelector('.console-container'), params);
+				jsConsole.log("Here is console.log!");
+			    
+				// map console log-debug to jsConsole
+				console.log = function(par){
+			    	jsConsole.log(par);
+			    	var objDiv = document.getElementById("console-container");
+					objDiv.scrollTop = objDiv.scrollHeight;
+			    }
+			    console.debug = console.log;
+			    
+			    console.log("going into html console");
+			    
+			    document.getElementById("btn_console_clear").addEventListener("click", function(){
+			    	var consoleCnt = document.getElementById('console-container');
+			    	jsConsole.clean();
+			    });
+			    document.getElementById("btn_console_close").addEventListener("click", function(){
+			    	var consoleCnt = document.getElementById('console-container');
+			    	consoleCnt.classList.add("invisible");
+			    });
+			}
+		</script>
+	<!--  -->
+
+</body>
+</html>
