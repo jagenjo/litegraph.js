@@ -1,6 +1,7 @@
 var webgl_canvas = null;
 
 LiteGraph.node_images_path = "../nodes_data/";
+
 var editor = new LiteGraph.Editor("main",{miniwindow:false});
 window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
@@ -19,8 +20,10 @@ LiteGraph.allow_scripts = true;
 
 //create scene selector
 var elem = document.createElement("span");
+elem.id = "LGEditorTopBarSelector";
 elem.className = "selector";
-elem.innerHTML = "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button> <button class='btn' id='multiview'>Multiview</button>";
+elem.innerHTML = "";
+elem.innerHTML += "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button> <button class='btn' id='multiview'>Multiview</button>";
 editor.tools.appendChild(elem);
 var select = elem.querySelector("select");
 select.addEventListener("change", function(e){

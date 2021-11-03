@@ -71,6 +71,7 @@
             local_pos[1] < this.size[1] - 2
         ) {
             this.clicked = true;
+            this.setOutputData(1, this.clicked);
             this.triggerSlot(0, this.properties.message);
             return true;
         }
@@ -672,7 +673,7 @@
             typeof v == "number" ? v.toFixed(this.properties["decimals"]) : v;
 
         if (typeof this.str == "string") {
-            var lines = this.str.split("\\n");
+            var lines = this.str.replace(/[\r\n]/g, "\\n").split("\\n");
             for (var i=0; i < lines.length; i++) {
                 ctx.fillText(
                     lines[i],
