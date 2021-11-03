@@ -48,8 +48,8 @@
 
     LiteGraph.registerNodeType("events/trigger", TriggerEvent);
 
-    //Sequencer for events
-    function Sequencer() {
+    //Sequence of events
+    function Sequence() {
 		var that = this;
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
@@ -65,14 +65,14 @@
         this.flags = { horizontal: true, render_box: false };
     }
 
-    Sequencer.title = "Sequencer";
-    Sequencer.desc = "Trigger events when an event arrives";
+    Sequence.title = "Sequence";
+    Sequence.desc = "Triggers a sequence of events when an event arrives";
 
-    Sequencer.prototype.getTitle = function() {
+    Sequence.prototype.getTitle = function() {
         return "";
     };
 
-    Sequencer.prototype.onAction = function(action, param) {
+    Sequence.prototype.onAction = function(action, param) {
         if (this.outputs) {
             for (var i = 0; i < this.outputs.length; ++i) {
                 this.triggerSlot(i, param);
@@ -80,7 +80,75 @@
         }
     };
 
-    LiteGraph.registerNodeType("events/sequencer", Sequencer);
+    LiteGraph.registerNodeType("events/sequence", Sequence);
+
+
+    //Sequencer for events
+    function Stepper() {
+		var that = this;
+		this.properties = { index: 0 };
+        this.addInput("index", "number");
+        this.addInput("step", LiteGraph.ACTION);
+        this.addInput("reset", LiteGraph.ACTION);
+        this.addOutput("index", "number");
+        this.addOutput("", LiteGraph.EVENT);
+        this.addOutput("", LiteGraph.EVENT);
+        this.addOutput("", LiteGraph.EVENT,{removable:true});
+        this.addWidget("button","+",null,function(){
+	        that.addOutput("", LiteGraph.EVENT, {removable:true});
+        });
+        this.size = [120, 120];
+        this.flags = { render_box: false };
+    }
+
+    Stepper.title = "Stepper";
+    Stepper.desc = "Trigger events sequentially when an tick arrives";
+
+	Stepper.prototype.onDrawBackground = function(ctx)
+	{
+        if (this.flags.collapsed) {
+            return;
+        }
+		var index = this.properties.index || 0;
+        ctx.fillStyle = "#AFB";
+		var w = this.size[0];
+        var y = (index + 1)* LiteGraph.NODE_SLOT_HEIGHT + 4;
+        ctx.beginPath();
+        ctx.moveTo(w - 30, y);
+        ctx.lineTo(w - 30, y + LiteGraph.NODE_SLOT_HEIGHT);
+        ctx.lineTo(w - 15, y + LiteGraph.NODE_SLOT_HEIGHT * 0.5);
+        ctx.fill();
+	}
+
+	Stepper.prototype.onExecute = function()
+	{
+		var index = this.getInputData(0);
+		if(index != null)
+		{
+			index = Math.floor(index);
+			index = Math.clamp( index, 0, this.outputs ? (this.outputs.length - 2) : 0 );
+			if( index != this.properties.index )
+			{
+				this.properties.index = index;
+			    this.triggerSlot( index+1 );
+			}
+		}
+
+		this.setOutputData(0, this.properties.index );
+	}
+
+    Stepper.prototype.onAction = function(action, param) {
+		if(action == "reset")
+			this.properties.index = 0;
+		else if(action == "step")
+		{
+            this.triggerSlot(this.properties.index+1, param);
+			var n = this.outputs ? this.outputs.length - 1 : 0;
+			this.properties.index = (this.properties.index + 1) % n;
+        }
+    };
+
+    LiteGraph.registerNodeType("events/stepper", Stepper);
 
     //Filter events
     function FilterEvent() {
