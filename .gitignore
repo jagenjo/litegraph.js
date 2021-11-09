@@ -4,6 +4,8 @@ npm-debug.log
 temp/
 temp/*
 
-# Editor
+# Editors
 /.vscode/*
 !/.vscode/extensions.json
+*.bak
+.project
