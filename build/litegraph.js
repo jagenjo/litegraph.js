@@ -138,7 +138,7 @@
 		
 		release_link_on_empty_shows_menu: false, //[true!] dragging a link to empty space will open a menu, add from list, search or defaults
 		
-        pointerevents_method: "pointer", // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
+        pointerevents_method: "mouse", // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
         // TODO implement pointercancel, gotpointercapture, lostpointercapture, (pointerover, pointerout if necessary)
 
         /**
@@ -7757,6 +7757,13 @@ LGraphNode.prototype.executeAction = function(action)
 
                 var connType = connInOrOut.type;
                 var connDir = connInOrOut.dir;
+				if(connDir == null)
+				{
+					if (this.connecting_output)
+						connDir = this.connecting_node.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT;
+					else
+						connDir = this.connecting_node.horizontal ? LiteGraph.UP : LiteGraph.LEFT;
+				}
                 var connShape = connInOrOut.shape;
                 
                 switch (connType) {
@@ -7776,10 +7783,7 @@ LGraphNode.prototype.executeAction = function(action)
                     false,
                     null,
                     link_color,
-                    connDir ||
-                        (this.connecting_node.horizontal
-                            ? LiteGraph.DOWN
-                            : LiteGraph.RIGHT),
+                    connDir,
                     LiteGraph.CENTER
                 );
 

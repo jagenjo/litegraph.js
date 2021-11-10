@@ -7755,6 +7755,13 @@ LGraphNode.prototype.executeAction = function(action)
 
                 var connType = connInOrOut.type;
                 var connDir = connInOrOut.dir;
+				if(connDir == null)
+				{
+					if (this.connecting_output)
+						connDir = this.connecting_node.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT;
+					else
+						connDir = this.connecting_node.horizontal ? LiteGraph.UP : LiteGraph.LEFT;
+				}
                 var connShape = connInOrOut.shape;
                 
                 switch (connType) {
@@ -7774,10 +7781,7 @@ LGraphNode.prototype.executeAction = function(action)
                     false,
                     null,
                     link_color,
-                    connDir ||
-                        (this.connecting_node.horizontal
-                            ? LiteGraph.DOWN
-                            : LiteGraph.RIGHT),
+                    connDir,
                     LiteGraph.CENTER
                 );
 
