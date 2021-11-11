@@ -22,6 +22,7 @@
         NODE_WIDGET_HEIGHT: 20,
         NODE_WIDTH: 140,
         NODE_MIN_WIDTH: 50,
+        NODE_MIN_SIZE:[50, 25],
         NODE_COLLAPSED_RADIUS: 10,
         NODE_COLLAPSED_WIDTH: 80,
         NODE_TITLE_COLOR: "#999",
@@ -454,6 +455,8 @@
             if (!node.size) {
                 node.size = node.computeSize();
 				//call onresize?
+            }else{
+                node.size_basic = node.size;
             }
             if (!node.pos) {
                 node.pos = LiteGraph.DEFAULT_POSITION.concat();
@@ -2332,6 +2335,7 @@
 	title: string
 	pos: [x,y]
 	size: [x,y]
+    size_basic: [x,y] minimum size for the node beforeRecalculation
 
 	input|output: every connection
 		+  { name:string, type:string, pos: [x,y]=Optional, direction: "input"|"output", links: Array });
@@ -2393,7 +2397,8 @@
 
     LGraphNode.prototype._ctor = function(title) {
         this.title = title || "Unnamed";
-        this.size = [LiteGraph.NODE_WIDTH, 60];
+        this.size = LiteGraph.NODE_MIN_SIZE;
+        this.size_basic = this.size;
         this.graph = null;
 
         this._pos = new Float32Array(10, 10);
@@ -5231,7 +5236,9 @@ LGraphNode.prototype.executeAction = function(action)
 		this.render_link_tooltip = true;
 
         this.links_render_mode = LiteGraph.SPLINE_LINK;
-
+        
+        this.free_resize = options.free_resize;
+        
         this.mouse = [0, 0]; //mouse in canvas coordinates, where 0,0 is the top-left corner of the blue rectangle
         this.graph_mouse = [0, 0]; //mouse in graph coordinates, where 0,0 is the top-left corner of the blue rectangle
 		this.canvas_mouse = this.graph_mouse; //LEGACY: REMOVE THIS, USE GRAPH_MOUSE INSTEAD
@@ -6486,7 +6493,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (this.resizing_node && !this.live_mode) {
                 //convert mouse to node space
 				var desired_size = [ e.canvasX - this.resizing_node.pos[0], e.canvasY - this.resizing_node.pos[1] ];
-				var min_size = this.resizing_node.computeSize();
+				var min_size = this.free_resize?LiteGraph.NODE_MIN_SIZE:this.resizing_node.computeSize(); //this.resizing_node.size_basic;// .computeSize();
 				desired_size[0] = Math.max( min_size[0], desired_size[0] );
 				desired_size[1] = Math.max( min_size[1], desired_size[1] );
 				this.resizing_node.setSize( desired_size );
