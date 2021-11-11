@@ -127,6 +127,11 @@
         slot_types_default_in: [], // specify for each IN slot type a(/many) deafult node(s), use single string, array, or object (with node, title, parameters, ..) like for search
 		slot_types_default_out: [], // specify for each OUT slot type a(/many) deafult node(s), use single string, array, or object (with node, title, parameters, ..) like for search
 		
+        graphDefaultConfig: {
+            align_to_grid: true,
+            links_ontop: false,
+        },
+
 		alt_drag_do_clone_nodes: false, // [true!] very handy, ALT click to clone and drag the new node
 
 		do_add_triggers_slots: false, // [true!] will create and connect event slots when using action/events connections, !WILL CHANGE node mode when using onTrigger (enable mode colors), onExecuted does not need this
@@ -833,6 +838,9 @@
 		this.vars = {};
 		this.extra = {}; //to store custom data
 
+        // apply default config
+        this.configApplyDefaults();
+        
         //timing
         this.globaltime = 0;
         this.runningtime = 0;
@@ -858,6 +866,29 @@
         this.sendActionToCanvas("clear");
     };
 
+    /**
+    * Apply config values to LGraph config object
+    * @method configApply
+     * @param {object} opts options to merge
+    */
+    LGraph.prototype.configApply = function(opts) {
+        /*
+        align_to_grid
+        links_ontop
+        */
+        this.config = Object.assign(this.config,opts);
+    }
+    
+    /**
+    * Apply config values to LGraph config object
+    * @method configApply
+     * @param {object} opts options to merge
+    */
+    LGraph.prototype.configApplyDefaults = function() {
+        var opts = LiteGraph.graphDefaultConfig;
+        this.configApply(opts);
+    }
+    
     /**
      * Attach Canvas to this graph
      * @method attachCanvas
