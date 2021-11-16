@@ -5211,7 +5211,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_dragnodes = true;
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
         this.allow_searchbox = true;
-        this.allow_reconnect_links = false; //allows to change a connection with having to redo it again
+        this.allow_reconnect_links = true; //allows to change a connection with having to redo it again
 		this.align_to_grid = false; //snap to grid
 
         this.drag_mode = false;
@@ -5870,17 +5870,11 @@ LGraphNode.prototype.executeAction = function(action)
                 } //if it wasn't selected?
 
                 //not dragging mouse to connect two slots
-                if (
-                    !this.connecting_node &&
-                    !node.flags.collapsed &&
-                    !this.live_mode
-                ) {
+                if ( !this.connecting_node && !node.flags.collapsed && !this.live_mode ) {
                     //Search for corner for resize
-                    if (
-                        !skip_action &&
+                    if ( !skip_action &&
                         node.resizable !== false &&
-                        isInsideRectangle(
-                            e.canvasX,
+                        isInsideRectangle( e.canvasX,
                             e.canvasY,
                             node.pos[0] + node.size[0] - 5,
                             node.pos[1] + node.size[1] - 5,
