@@ -7471,7 +7471,9 @@ LGraphNode.prototype.executeAction = function(action)
      * @method adjustMouseEvent
      **/
     LGraphCanvas.prototype.adjustMouseEvent = function(e) {
-
+	var clientX_rel = 0;
+        var clientY_rel = 0;
+	    
     	if (this.canvas) {
             var b = this.canvas.getBoundingClientRect();
             clientX_rel = e.clientX - b.left;
