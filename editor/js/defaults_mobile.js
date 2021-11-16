@@ -29,3 +29,13 @@ LiteGraph.allow_multi_output_for_events = false; // [false!] being events; it is
 LiteGraph.middle_click_slot_add_default_node = true;  //[true!] allows to create and connect a ndoe clicking with the third button (wheel)
 LiteGraph.release_link_on_empty_shows_menu = true; //[true!] dragging a link to empty space will open a menu, add from list, search or defaults
 LiteGraph.pointerevents_method = "pointer"; // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
+
+LiteGraph.two_fingers_opens_menu = true;
+
+LiteGraph.actionHistory_enabled = true; // [true!] cntrlZ, cntrlY
+LiteGraph.actionHistoryMaxSave = 40;
+
+/* EXECUTING ACTIONS AFTER UPDATING VALUES - ANCESTORS */
+LiteGraph.refreshAncestorsOnTriggers = true; //[true!]
+LiteGraph.refreshAncestorsOnActions = true; //[true!]
+LiteGraph.ensureUniqueExecutionAndActionCall = true;
