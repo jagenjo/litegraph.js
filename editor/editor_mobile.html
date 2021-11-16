@@ -119,12 +119,22 @@
 				jsConsole.log("Here is console.log!");
 			    
 				// map console log-debug to jsConsole
-				console.log = function(par){
-			    	jsConsole.log(par);
+				var olConsoleLog = console.log;
+				console.log = function(par,par2,par3,par4,par5){
+			    	jsConsole.log(par,par2,par3,par4,par5);
 			    	var objDiv = document.getElementById("console-container");
 					objDiv.scrollTop = objDiv.scrollHeight;
+					
+					olConsoleLog(par,par2,par3,par4,par5);
 			    }
-			    console.debug = console.log;
+				var oldConsoleDebug = console.debug;
+			    console.debug = function(par,par2,par3,par4,par5){
+			    	jsConsole.log(par,par2,par3,par4,par5);
+			    	var objDiv = document.getElementById("console-container");
+					objDiv.scrollTop = objDiv.scrollHeight;
+					
+					oldConsoleDebug(par,par2,par3,par4,par5);
+			    }
 			    
 			    console.log("going into html console");
 			    

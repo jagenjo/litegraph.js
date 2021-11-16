@@ -24,7 +24,7 @@
         this.addOutput("true", LiteGraph.EVENT);
         this.addOutput("change", LiteGraph.EVENT);
         this.addOutput("false", LiteGraph.EVENT);
-		this.properties = { only_on_change: true };
+		this.properties = { only_on_change: true, tooltip:"Triggers event if input evaluates to true" };
 		this.prev = 0;
     }
 

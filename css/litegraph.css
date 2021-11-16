@@ -199,6 +199,17 @@
     margin-top: 2px;
 }
 
+.litegraph.litesearchbox .close {
+    background-color: #000;
+    color: #FFF;
+    font: 14px;
+    margin-top: 6px;
+    min-height: 1.5em;
+    padding-left: 10px;
+    padding-right: 10px;
+    margin-right: 5px;
+}
+
 .litegraph.lite-search-item {
     font-family: Tahoma, sans-serif;
     background-color: rgba(0, 0, 0, 0.5);
