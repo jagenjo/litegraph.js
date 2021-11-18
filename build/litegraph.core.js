@@ -5800,14 +5800,15 @@ LGraphNode.prototype.executeAction = function(action)
         var skip_dragging = false;
         var skip_action = false;
         var now = LiteGraph.getTime();
-        var is_double_click = (now - this.last_mouseclick < 300) && (e.isPrimary!==undefined && e.isPrimary);
+		var is_primary = (e.isPrimary === undefined || !e.isPrimary);
+        var is_double_click = (now - this.last_mouseclick < 300) && is_primary;
 		this.mouse[0] = e.clientX;
 		this.mouse[1] = e.clientY;
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
 		this.last_click_position = [this.mouse[0],this.mouse[1]];
 	  	
-	  	if (this.pointer_is_down && e.isPrimary!==undefined && !e.isPrimary){
+	  	if (this.pointer_is_down && is_primary ){
 		  this.pointer_is_double = true;
 		  //console.log("pointerevents: pointer_is_double start");
 		}else{
@@ -6503,8 +6504,10 @@ LGraphNode.prototype.executeAction = function(action)
      **/
     LGraphCanvas.prototype.processMouseUp = function(e) {
 
+		var is_primary = ( e.isPrimary === undefined || e.isPrimary );
+
     	//early exit for extra pointer
-    	if(e.isPrimary!==undefined && !e.isPrimary){
+    	if(!is_primary){
     		/*e.stopPropagation();
         	e.preventDefault();*/
     		//console.log("pointerevents: processMouseUp pointerN_stop "+e.pointerId+" "+e.isPrimary);
@@ -6789,11 +6792,12 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         /*
-	if((this.dirty_canvas || this.dirty_bgcanvas) && this.rendering_timer_id == null)
-		this.draw();
-	*/
+		if((this.dirty_canvas || this.dirty_bgcanvas) && this.rendering_timer_id == null)
+			this.draw();
+		*/
 
-	  	if (e.isPrimary!==undefined && e.isPrimary){
+	  	if (is_primary)
+		{
 			this.pointer_is_down = false;
 			this.pointer_is_double = false;
 		}
