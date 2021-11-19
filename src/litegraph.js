@@ -2259,35 +2259,35 @@
         
         this._version++;
         
-        /*if(opts.action){
+        if(opts.action){
             console.debug("ACT: "+opts.action);
         }else{
             console.debug("ACT_noAction: "+opts);
         }
         if(opts.doSave){
-            console.debug("onGraphChanged SAVE :: "+opts.action);
-        }*/
+            console.debug("onGraphChanged SAVE :: "+opts.action); // debug history
+        }
         
         if(opts.doSave && LiteGraph.actionHistory_enabled){
 
             var oHistory = {   actionName: opts.action };
             if(opts.doSaveGraph){
                  oHistory  = Object.assign(oHistory
-							   ,{   graphSave: this.serialize()  // this is a heavy method, but the alternative is way more complex: every action has to have its contrary
-                            });
+                                           ,{   graphSave: this.serialize()  // this is a heavy method, but the alternative is way more complex: every action has to have its contrary
+                                        });
             }
 
             var obH = this.history;
 
             // check if pointer has gone back: remove newest
             while(obH.actionHistoryPtr < obH.actionHistoryVersions.length-1){
-                //console.debug("popping: gone back? "+(obH.actionHistoryPtr+" < "+(obH.actionHistoryVersions.length-1)));
+                console.debug("popping: gone back? "+(obH.actionHistoryPtr+" < "+(obH.actionHistoryVersions.length-1))); // debug history
                 obH.actionHistoryVersions.pop();
             }
             // check if maximum saves
             if(obH.actionHistoryVersions.length>=LiteGraph.actionHistoryMaxSave){
                 var olderSave = obH.actionHistoryVersions.shift();
-                //console.debug("maximum saves reached: "+obH.actionHistoryVersions.length+", remove older: "+olderSave);
+                console.debug("maximum saves reached: "+obH.actionHistoryVersions.length+", remove older: "+olderSave); // debug history
                 obH.actionHistory[olderSave] = false; // unset
             }
 
@@ -2298,7 +2298,7 @@
             // save to pointer
             obH.actionHistory[obH.actionHistoryPtr] = oHistory;
             
-			//console.debug("history saved: "+obH.actionHistoryPtr,oHistory.actionName);
+			console.debug("history saved: "+obH.actionHistoryPtr,oHistory.actionName); // debug history
 			
         }else{
             // console.debug("action dont save");
@@ -2321,13 +2321,14 @@
         
         if (obH.actionHistoryPtr != undefined && obH.actionHistoryPtr >= 0){
             obH.actionHistoryPtr--;
+            console.debug("history step back: "+obH.actionHistoryPtr); // debug history
             if (!this.actionHistoryLoad({iVersion: obH.actionHistoryPtr})){
-                //console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr);
+                console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr); // debug history
                 // history not found?
                 obH.actionHistoryPtr++;
                 return false;
             }else{
-                //console.debug("history step back: "+obH.actionHistoryPtr);
+                //console.debug("history loaded back: "+obH.actionHistoryPtr); // debug history
                 //console.debug(this.history);
                 return true;
             }
@@ -2352,13 +2353,14 @@
         
         if (obH.actionHistoryPtr<obH.actionHistoryVersions.length){
             obH.actionHistoryPtr++;
+            console.debug("history step forward: "+obH.actionHistoryPtr); // debug history
             if (!this.actionHistoryLoad({iVersion: obH.actionHistoryPtr})){
-                //console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr);
+                console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr); // debug history
                 // history not found?
                 obH.actionHistoryPtr--;
                 return false;
             }else{
-                //console.debug("history step forward: "+obH.actionHistoryPtr);
+                console.debug("history loaded forward: "+obH.actionHistoryPtr); // debug history
                 //console.debug(this.history);
                 return true;
             }
@@ -2386,7 +2388,7 @@
             var tmpHistory = JSON.stringify(this.history);
             this.configure( obH.actionHistory[opts.iVersion].graphSave );
             this.history = JSON.parse(tmpHistory);
-			//console.debug("history loaded: "+opts.iVersion,obH.actionHistory[opts.iVersion].actionName);
+			console.debug("history loaded: "+opts.iVersion,obH.actionHistory[opts.iVersion].actionName); // debug history
             // no: this.onGraphLoaded();
             return true;
         }else{
@@ -2485,6 +2487,7 @@
         var nodes = data.nodes;
 
         //decode links info (they are very verbose)
+        //console.debug("data.links",data.links);
         if (data.links && data.links.constructor === Array) {
             var links = [];
             for (var i = 0; i < data.links.length; ++i) {
@@ -2564,7 +2567,7 @@
 
         // TODO implement: when loading (configuring) a whole graph, skip calling graphChanged on every single configure
         if (!data._version){
-            this.onGraphChanged({action: "configure", doSave: false}); // this._version++;
+            this.onGraphChanged({action: "graphConfigure", doSave: false}); // this._version++;
         }else{
             // skip
             console.debug("skip onGraphChanged when configure passing version too!"); // atlasan DEBUG REMOVE
@@ -2768,9 +2771,9 @@
      * @method configure
      */
     LGraphNode.prototype.configure = function(info) {
-        if (this.graph) {
+        /*if (this.graph) {
             this.graph.onGraphChanged({action: "nodeConfigure", doSave: false}); //this.graph._version++;
-        }
+        }*/
         for (var j in info) {
             if (j == "properties") {
                 //i don't want to clone properties, I want to reuse the old container
@@ -2801,11 +2804,25 @@
         if (!info.title) {
             this.title = this.constructor.title;
         }
+        
+        if (this.outputs){
+            for (var i = 0; i < this.outputs.length; ++i) {
+                if(this.outputs[i].link) console.debug("outputsLink",this.outputs[i]);
+            }
+        }
+        if (this.inputs){
+            for (var i = 0; i < this.inputs.length; ++i) {
+                if(this.inputs[i].link) console.debug("inputsLink",this.inputs[i]);
+            }
+        }
 
         if (this.onConnectionsChange) {
             if (this.inputs) {
                 for (var i = 0; i < this.inputs.length; ++i) {
                     var input = this.inputs[i];
+                    if (!input.link) {
+                        continue;
+                    }
                     var link_info = this.graph
                         ? this.graph.links[input.link]
                         : null;
@@ -2826,9 +2843,11 @@
                         continue;
                     }
                     for (var j = 0; j < output.links.length; ++j) {
-                        var link_info = this.graph
+                        // attach link in the graph
+                        var link_info = this.graph //&& this.graph.links
                             ? this.graph.links[output.links[j]]
                             : null;
+                        // send connection change
                         this.onConnectionsChange(
                             LiteGraph.OUTPUT,
                             i,
@@ -2863,6 +2882,9 @@
         if (this.onConfigure) {
             this.onConfigure(info);
         }
+        if (this.graph) {
+            this.graph.onGraphChanged({action: "nodeConfigure", doSave: false}); //this.graph._version++;
+        }
     };
 
     /**
@@ -2888,7 +2910,7 @@
         }
 
         if (this.inputs) {
-            o.inputs = this.inputs;
+            o.inputs = LiteGraph.cloneObject(this.inputs); //this.inputs;
         }
 
         if (this.outputs) {
@@ -2896,7 +2918,7 @@
             for (var i = 0; i < this.outputs.length; i++) {
                 delete this.outputs[i]._data;
             }
-            o.outputs = this.outputs;
+            o.outputs = LiteGraph.cloneObject(this.outputs); //this.outputs;
         }
 
         if (this.title && this.title != this.constructor.title) {
