@@ -16,6 +16,9 @@ LiteGraph.search_hide_on_mouse_leave = false; // [false on mobile] better true i
 LiteGraph.search_filter_enabled = true; // [true!] enable filtering slots type in the search widget; !requires auto_load_slot_types or manual set registered_slot_[in/out]_types and slot_types_[in/out]
 LiteGraph.search_show_all_on_open = true; // [true!] opens the results list when opening the search widget
 
+LiteGraph.show_node_tooltip = true; // [true!] show a tooltip with node property "tooltip" over the selected node
+LiteGraph.show_node_tooltip_use_descr_property= false; // enabled tooltip from desc when property tooltip not set
+
 LiteGraph.auto_load_slot_types = true; // [if want false; use true; run; get vars values to be statically set; than disable] nodes types and nodeclass association with node types need to be calculated; if dont want this; calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
 /*// set these values if not using auto_load_slot_types
 LiteGraph.registered_slot_in_types = {}; // slot types for nodeclass
@@ -38,4 +41,4 @@ LiteGraph.actionHistoryMaxSave = 40;
 /* EXECUTING ACTIONS AFTER UPDATING VALUES - ANCESTORS */
 LiteGraph.refreshAncestorsOnTriggers = true; //[true!]
 LiteGraph.refreshAncestorsOnActions = true; //[true!]
-LiteGraph.ensureUniqueExecutionAndActionCall = true;
+LiteGraph.ensureUniqueExecutionAndActionCall = true; //[true!];

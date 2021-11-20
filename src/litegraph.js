@@ -3479,7 +3479,7 @@
     LGraphNode.prototype.addOnTriggerInput = function(){
         var trigS = this.findInputSlot("onTrigger");
         if (trigS == -1){ //!trigS || 
-            var input = this.addInput("onTrigger", LiteGraph.EVENT, {optional: true, nameLocked: true});
+            var input = this.addInput("onTrigger", LiteGraph.EVENT, {removable: true}); //optional: true, nameLocked: true});
             return this.findInputSlot("onTrigger");
         }
         return trigS;
@@ -3488,7 +3488,7 @@
     LGraphNode.prototype.addOnExecutedOutput = function(){
         var trigS = this.findOutputSlot("onExecuted");
         if (trigS == -1){ //!trigS || 
-            var output = this.addOutput("onExecuted", LiteGraph.ACTION, {optional: true, nameLocked: true});
+            var output = this.addOutput("onExecuted", LiteGraph.ACTION, {removable: true}); //optional: true, nameLocked: true});
             return this.findOutputSlot("onExecuted");
         }
         return trigS;
@@ -4509,6 +4509,7 @@
                         ,generalTypeInCase: true
                       };
         var opts = Object.assign(optsDef,optsIn);
+        target_slotType = target_slotType || "*";
         if (target_node && target_node.constructor === Number) {
             target_node = this.graph.getNodeById(target_node);
         }
@@ -4532,7 +4533,7 @@
                 }
             }
             // connect to the first free input slot if not found a specific type and this output is general
-            if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "")){
+            if (opts.firstFreeIfOutputGeneralInCase && (target_slotType == 0 || target_slotType == "*" || target_slotType == "" || target_slotType == "undefined")){
                 var target_slot = target_node.findInputSlotFree({typesNotAccepted: [LiteGraph.EVENT] });
 				//console.debug("connect TO TheFirstFREE ",target_slotType," to ",target_node,"RES_SLOT:",target_slot);
                 if (target_slot >= 0){
@@ -4562,6 +4563,7 @@
                         ,generalTypeInCase: true
                       };
         var opts = Object.assign(optsDef,optsIn);
+        source_slotType = source_slotType || "*";
         if (source_node && source_node.constructor === Number) {
             source_node = this.graph.getNodeById(source_node);
         }
@@ -4587,7 +4589,7 @@
 				}
             }
             // connect to the first free output slot if not found a specific type and this input is general
-            if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "")){
+            if (opts.firstFreeIfInputGeneralInCase && (source_slotType == 0 || source_slotType == "*" || source_slotType == "" || source_slotType == "undefined")){
                 var source_slot = source_node.findOutputSlotFree({typesNotAccepted: [LiteGraph.EVENT] });
                 if (source_slot >= 0){
                     return source_node.connect(source_slot, this, slot);
@@ -4728,7 +4730,7 @@
             target_node.disconnectInput(target_slot, {doProcessChange: false});
 			changed = true;
         }
-        if (output.links !== null && output.links.length){
+        if (output.links && output.links.length){
             switch(output.type){
                 case LiteGraph.EVENT:
                     if (!LiteGraph.allow_multi_output_for_events){
@@ -9118,7 +9120,9 @@ LGraphNode.prototype.executeAction = function(action)
                     ctx.fill();
 
                     //render name
-                    if (render_text) {
+                    if (render_text
+                        && !(slot.name == "onTrigger" || slot.name == "onExecuted")
+                    ) {
                         var text = slot.label != null ? slot.label : slot.name;
                         if (text) {
                             ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
@@ -9229,7 +9233,9 @@ LGraphNode.prototype.executeAction = function(action)
 	                    ctx.stroke();
 
                     //render output name
-                    if (render_text) {
+                    if (render_text
+                        && !(slot.name == "onTrigger" || slot.name == "onExecuted")
+                    ) {
                         var text = slot.label != null ? slot.label : slot.name;
                         if (text) {
                             ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
@@ -9355,7 +9361,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
         var text = node.properties.tooltip!=undefined?node.properties.tooltip:"";
         if (!text || text==""){
-            if (LiteGraph.show_node_tooltip_use_descr_property){
+            if (LiteGraph.show_node_tooltip_use_descr_property && node.constructor.desc){
                 text = node.constructor.desc;
             }
         }
@@ -9367,28 +9373,39 @@ LGraphNode.prototype.executeAction = function(action)
         var pos = [0,-LiteGraph.NODE_TITLE_HEIGHT]; //node.pos;
 		//text = text.substr(0,30); //avoid weird
 		//text = text + "\n" + text;
+        var size = node.flags.collapsed? [LiteGraph.NODE_COLLAPSED_WIDTH, LiteGraph.NODE_TITLE_HEIGHT] : node.size;
+
+        // using a trick to save the calculated height of the tip the first time using trasparent, to than show it
+        // node.ttip_oTMultiRet is not set or false the first time
 
 		ctx.font = "14px Courier New";
 		var info = ctx.measureText(text);
-		var w = Math.min(node.size[0],200) + 20; //info.width + 20;
-		var h = node.ttip_oTMultiRet ? node.ttip_oTMultiRet.height + 20 : 24;
-		ctx.shadowColor = "black";
+		var w = Math.max(node.size[0],160) + 20; //info.width + 20;
+		var h = node.ttip_oTMultiRet ? node.ttip_oTMultiRet.height + 15 : 21;
+		
+		ctx.globalAlpha = 0.7 * this.editor_alpha;
+		
+		ctx.shadowColor = node.ttip_oTMultiRet?"black":"transparent";
 		ctx.shadowOffsetX = 2;
 		ctx.shadowOffsetY = 2;
 		ctx.shadowBlur = 3;
-		ctx.fillStyle = "#454";
+		ctx.fillStyle = node.ttip_oTMultiRet?"#454":"transparent";
 		ctx.beginPath();
-		ctx.roundRect( pos[0] - w*0.5 + node.size[0]/2, pos[1] - 15 - h, w, h, [3]);
-		ctx.moveTo( pos[0] - 10 + node.size[0]/2, pos[1] - 15 );
-		ctx.lineTo( pos[0] + 10 + node.size[0]/2, pos[1] - 15 );
-		ctx.lineTo( pos[0] + node.size[0]/2, pos[1] - 5 );
+        
+		ctx.roundRect( pos[0] - w*0.5 + size[0]/2, pos[1] - 15 - h, w, h, [3]);
+		ctx.moveTo( pos[0] - 10 + size[0]/2, pos[1] - 15 );
+		ctx.lineTo( pos[0] + 10 + size[0]/2, pos[1] - 15 );
+		ctx.lineTo( pos[0] + size[0]/2, pos[1] - 5 );
 		ctx.fill();
         ctx.shadowColor = "transparent";
 		ctx.textAlign = "center";
-		ctx.fillStyle = "#CEC"; // TODO canvas option
+		ctx.fillStyle = node.ttip_oTMultiRet?"#CEC":"transparent";
 		
-		//ctx.fillText(text, pos[0] + node.size[0]/2, pos[1] - 15 - h * 0.3);
-		var oTMultiRet = LiteGraph.canvasFillTextMultiline(ctx, text, pos[0] + node.size[0]/2, pos[1] - (h), Math.min(node.size[0],200), 14);		
+		ctx.globalAlpha = this.editor_alpha;
+		
+		// ctx.fillText(text, pos[0] + size[0]/2, pos[1] - 15 - h * 0.3);
+		var oTMultiRet = LiteGraph.canvasFillTextMultiline(ctx, text, pos[0] + size[0]/2, pos[1] - (h), w, 14);		
+        
 		node.ttip_oTMultiRet = oTMultiRet;
 		
         ctx.closePath();
@@ -11006,6 +11023,11 @@ LGraphNode.prototype.executeAction = function(action)
             var retEntries = node.onMenuNodeInputs(entries);
             if(retEntries) entries = retEntries;
         }
+        if (LiteGraph.do_add_triggers_slots){ //canvas.allow_addOutSlot_onExecuted
+            if (node.findInputSlot("onTrigger") == -1){
+                entries.push({content: "On Trigger", value: ["onTrigger", LiteGraph.EVENT, {nameLocked: true, removable: true}], className: "event"}); //, opts: {}
+            }
+        }
 
         if (!entries.length) {
 			console.log("no input entries");
@@ -11107,7 +11129,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
         if (LiteGraph.do_add_triggers_slots){ //canvas.allow_addOutSlot_onExecuted
             if (node.findOutputSlot("onExecuted") == -1){
-                entries.push({content: "On Executed", value: ["onExecuted", LiteGraph.EVENT, {nameLocked: true}], className: "event"}); //, opts: {}
+                entries.push({content: "On Executed", value: ["onExecuted", LiteGraph.EVENT, {nameLocked: true, removable: true}], className: "event"}); //, opts: {}
             }
         }
         // add callback for modifing the menu elements onMenuNodeOutputs

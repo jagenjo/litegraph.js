@@ -17,7 +17,7 @@ LiteGraph.search_filter_enabled = true; // [true!] enable filtering slots type i
 LiteGraph.search_show_all_on_open = true; // [true!] opens the results list when opening the search widget
 
 LiteGraph.show_node_tooltip = true; // [true!] show a tooltip with node property "tooltip" over the selected node
-LiteGraph.show_node_tooltip_use_descr_property= true; // enabled tooltip from desc when property tooltip not set
+LiteGraph.show_node_tooltip_use_descr_property= false; // enabled tooltip from desc when property tooltip not set
 
 LiteGraph.auto_load_slot_types = true; // [if want false; use true; run; get vars values to be statically set; than disable] nodes types and nodeclass association with node types need to be calculated; if dont want this; calculate once and set registered_slot_[in/out]_types and slot_types_[in/out]
 /*// set these values if not using auto_load_slot_types
@@ -31,7 +31,7 @@ LiteGraph.do_add_triggers_slots = true; // [true!] will create and connect event
 LiteGraph.allow_multi_output_for_events = false; // [false!] being events; it is strongly reccomended to use them sequentually; one by one
 LiteGraph.middle_click_slot_add_default_node = true;  //[true!] allows to create and connect a ndoe clicking with the third button (wheel)
 LiteGraph.release_link_on_empty_shows_menu = true; //[true!] dragging a link to empty space will open a menu, add from list, search or defaults
-LiteGraph.pointerevents_method = "mouse"; // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
+LiteGraph.pointerevents_method = "mouse"; // "mouse"|"pointer" use mouse for compatibility issues, touch will work only with pointer 
 
 LiteGraph.actionHistory_enabled = true; // [true!] cntrlZ, cntrlY
 LiteGraph.actionHistoryMaxSave = 40;
@@ -39,4 +39,4 @@ LiteGraph.actionHistoryMaxSave = 40;
 /* EXECUTING ACTIONS AFTER UPDATING VALUES - ANCESTORS */
 LiteGraph.refreshAncestorsOnTriggers = true; //[true!]
 LiteGraph.refreshAncestorsOnActions = true; //[true!]
-LiteGraph.ensureUniqueExecutionAndActionCall = true;
+LiteGraph.ensureUniqueExecutionAndActionCall = true; //[true!]
