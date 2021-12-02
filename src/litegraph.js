@@ -11210,8 +11210,8 @@ LGraphNode.prototype.executeAction = function(action)
         
         dialog.close = function() {
             that.search_box = null;
-            //root_document.body.focus();
 			this.blur();
+            canvas.focus();
 			root_document.body.style.overflow = "";
 
             setTimeout(function() {
