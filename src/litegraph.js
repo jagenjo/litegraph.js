@@ -13017,6 +13017,32 @@ LGraphNode.prototype.executeAction = function(action)
             LGraphCanvas.active_node = node;
         }
 
+        var widget = null;
+        if (node && node.widgets) {
+
+            var x = event.canvasX - node.pos[0];
+            var y =  event.canvasY - node.pos[1];
+            var width = node.size[0];
+
+            for (var i = 0; i < node.widgets.length; ++i) {
+                var w = node.widgets[i];
+                if(!w || w.disabled)
+                    continue;
+
+                if (!w.getWidgetMenuOptions)
+                    continue;
+
+                var widget_height = w.computeSize ? w.computeSize(width)[1] : LiteGraph.NODE_WIDGET_HEIGHT;
+                var widget_width = w.width || width;
+
+                if (x < 6 || x > widget_width - 12 || y < w.last_y || y > w.last_y + widget_height || w.last_y === undefined) //is outside
+                    continue;
+
+                widget = w;
+                break;
+            }
+        }
+
         if (slot) {
             //on slot
             menu_info = [];
@@ -13052,6 +13078,12 @@ LGraphNode.prototype.executeAction = function(action)
             if (slot.output && slot.output.type == LiteGraph.EVENT) {
                 options.title = "Event";
             }
+            
+        } else if (widget) { 
+
+            options.title = widget.name || "Widget";
+            menu_info = widget.getWidgetMenuOptions(node);
+    
         } else {
             if (node) {
                 //on node
