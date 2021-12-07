@@ -89,6 +89,7 @@
         NO_TITLE: 1,
         TRANSPARENT_TITLE: 2,
         AUTOHIDE_TITLE: 3,
+        VERTICAL_LAYOUT: "vertical", // arrange nodes vertically
 
         proxy: null, //used to redirect calls
         node_images_path: "",
@@ -1260,7 +1261,7 @@
      * Positions every node in a more readable manner
      * @method arrange
      */
-    LGraph.prototype.arrange = function(margin) {
+    LGraph.prototype.arrange = function (margin, layout) {
         margin = margin || 100;
 
         var nodes = this.computeExecutionOrder(false, true);
@@ -1285,12 +1286,14 @@
             var y = margin + LiteGraph.NODE_TITLE_HEIGHT;
             for (var j = 0; j < column.length; ++j) {
                 var node = column[j];
-                node.pos[0] = x;
-                node.pos[1] = y;
-                if (node.size[0] > max_size) {
-                    max_size = node.size[0];
+                node.pos[0] = (layout == LiteGraph.VERTICAL_LAYOUT) ? y : x;
+                node.pos[1] = (layout == LiteGraph.VERTICAL_LAYOUT) ? x : y;
+                max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
+                if (node.size[max_size_index] > max_size) {
+                    max_size = node.size[max_size_index];
                 }
-                y += node.size[1] + margin + LiteGraph.NODE_TITLE_HEIGHT;
+                node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
+                y += node.size[node_size_index] + margin + LiteGraph.NODE_TITLE_HEIGHT;
             }
             x += max_size + margin;
         }
@@ -14694,7 +14697,7 @@ if (typeof exports != "undefined") {
         this.addInput("", "");
 
         this.name_in_graph = "";
-        this.properties = {};
+        this.properties = { name: "", type: "" };
         var that = this;
 
         // Object.defineProperty(this.properties, "name", {
@@ -14771,8 +14774,7 @@ if (typeof exports != "undefined") {
         else if (name == "value") {
         }
     }
-      
-      
+     
     GraphOutput.prototype.updateType = function () {
         var type = this.properties.type;
         if (this.type_widget)
@@ -14780,9 +14782,12 @@ if (typeof exports != "undefined") {
 
         //update output
         if (this.inputs[0].type != type) {
-            if (!LiteGraph.isValidConnection(this.inputs[0].type, type))
-                this.disconnectInput(0);
-            this.inputs[0].type = type;
+
+			if ( type == "action" || type == "event")
+	            type = LiteGraph.EVENT;
+			if (!LiteGraph.isValidConnection(this.inputs[0].type, type))
+				this.disconnectInput(0);
+			this.inputs[0].type = type;
         }
 
         //update graph
@@ -14800,7 +14805,7 @@ if (typeof exports != "undefined") {
 
     GraphOutput.prototype.onAction = function(action, param) {
         if (this.properties.type == LiteGraph.ACTION) {
-            this.graph.trigger(this.properties.name, param);
+            this.graph.trigger( this.properties.name, param );
         }
     };
 

@@ -562,7 +562,7 @@
         this.addInput("", "");
 
         this.name_in_graph = "";
-        this.properties = {};
+        this.properties = { name: "", type: "" };
         var that = this;
 
         // Object.defineProperty(this.properties, "name", {
@@ -639,8 +639,7 @@
         else if (name == "value") {
         }
     }
-      
-      
+     
     GraphOutput.prototype.updateType = function () {
         var type = this.properties.type;
         if (this.type_widget)
@@ -648,9 +647,12 @@
 
         //update output
         if (this.inputs[0].type != type) {
-            if (!LiteGraph.isValidConnection(this.inputs[0].type, type))
-                this.disconnectInput(0);
-            this.inputs[0].type = type;
+
+			if ( type == "action" || type == "event")
+	            type = LiteGraph.EVENT;
+			if (!LiteGraph.isValidConnection(this.inputs[0].type, type))
+				this.disconnectInput(0);
+			this.inputs[0].type = type;
         }
 
         //update graph
@@ -668,7 +670,7 @@
 
     GraphOutput.prototype.onAction = function(action, param) {
         if (this.properties.type == LiteGraph.ACTION) {
-            this.graph.trigger(this.properties.name, param);
+            this.graph.trigger( this.properties.name, param );
         }
     };
 
