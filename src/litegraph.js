@@ -2469,43 +2469,34 @@
             this.title = this.constructor.title;
         }
 
-        if (this.onConnectionsChange) {
-            if (this.inputs) {
-                for (var i = 0; i < this.inputs.length; ++i) {
-                    var input = this.inputs[i];
-                    var link_info = this.graph
-                        ? this.graph.links[input.link]
-                        : null;
-                    this.onConnectionsChange(
-                        LiteGraph.INPUT,
-                        i,
-                        true,
-                        link_info,
-                        input
-                    ); //link_info has been created now, so its updated
-                }
-            }
+		if (this.inputs) {
+			for (var i = 0; i < this.inputs.length; ++i) {
+				var input = this.inputs[i];
+				var link_info = this.graph ? this.graph.links[input.link] : null;
+				if (this.onConnectionsChange)
+					this.onConnectionsChange( LiteGraph.INPUT, i, true, link_info, input ); //link_info has been created now, so its updated
 
-            if (this.outputs) {
-                for (var i = 0; i < this.outputs.length; ++i) {
-                    var output = this.outputs[i];
-                    if (!output.links) {
-                        continue;
-                    }
-                    for (var j = 0; j < output.links.length; ++j) {
-                        var link_info = this.graph
-                            ? this.graph.links[output.links[j]]
-                            : null;
-                        this.onConnectionsChange(
-                            LiteGraph.OUTPUT,
-                            i,
-                            true,
-                            link_info,
-                            output
-                        ); //link_info has been created now, so its updated
-                    }
-                }
-            }
+				if( this.onInputAdded )
+					this.onInputAdded(input);
+
+			}
+		}
+
+		if (this.outputs) {
+			for (var i = 0; i < this.outputs.length; ++i) {
+				var output = this.outputs[i];
+				if (!output.links) {
+					continue;
+				}
+				for (var j = 0; j < output.links.length; ++j) {
+					var link_info = this.graph 	? this.graph.links[output.links[j]] : null;
+					if (this.onConnectionsChange)
+						this.onConnectionsChange( LiteGraph.OUTPUT, i, true, link_info, output ); //link_info has been created now, so its updated
+				}
+
+				if( this.onOutputAdded )
+					this.onOutputAdded(output);
+			}
         }
 
 		if( this.widgets )
@@ -3347,26 +3338,26 @@
      * @param {Object} extra_info this can be used to have special properties of an output (label, special color, position, etc)
      */
     LGraphNode.prototype.addOutput = function(name, type, extra_info) {
-        var o = { name: name, type: type, links: null };
+        var output = { name: name, type: type, links: null };
         if (extra_info) {
             for (var i in extra_info) {
-                o[i] = extra_info[i];
+                output[i] = extra_info[i];
             }
         }
 
         if (!this.outputs) {
             this.outputs = [];
         }
-        this.outputs.push(o);
+        this.outputs.push(output);
         if (this.onOutputAdded) {
-            this.onOutputAdded(o);
+            this.onOutputAdded(output);
         }
         
         if (LiteGraph.auto_load_slot_types) LiteGraph.registerNodeAndSlotType(this,type,true);
         
         this.setSize( this.computeSize() );
         this.setDirtyCanvas(true, true);
-        return o;
+        return output;
     };
 
     /**
@@ -3438,10 +3429,10 @@
      */
     LGraphNode.prototype.addInput = function(name, type, extra_info) {
         type = type || 0;
-        var o = { name: name, type: type, link: null };
+        var input = { name: name, type: type, link: null };
         if (extra_info) {
             for (var i in extra_info) {
-                o[i] = extra_info[i];
+                input[i] = extra_info[i];
             }
         }
 
@@ -3449,17 +3440,17 @@
             this.inputs = [];
         }
 
-        this.inputs.push(o);
+        this.inputs.push(input);
         this.setSize( this.computeSize() );
 
         if (this.onInputAdded) {
-            this.onInputAdded(o);
+            this.onInputAdded(input);
 		}
         
         LiteGraph.registerNodeAndSlotType(this,type);
 
         this.setDirtyCanvas(true, true);
-        return o;
+        return input;
     };
 
     /**
