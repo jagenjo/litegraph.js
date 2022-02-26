@@ -9905,10 +9905,10 @@ LGraphNode.prototype.executeAction = function(action)
                     }
 					break;
 				case "slider":
-					var range = w.options.max - w.options.min;
+					var old_value = w.value;
 					var nvalue = Math.clamp((x - 15) / (widget_width - 30), 0, 1);
 					w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
-					if (w.callback) {
+					if (old_value != w.value) {
 						setTimeout(function() {
 							inner_value_change(w, w.value);
 						}, 20);
