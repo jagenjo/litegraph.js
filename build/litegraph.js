@@ -24,6 +24,7 @@
         NODE_WIDGET_HEIGHT: 20,
         NODE_WIDTH: 140,
         NODE_MIN_WIDTH: 50,
+        NODE_MIN_SIZE:[50, 25],
         NODE_COLLAPSED_RADIUS: 10,
         NODE_COLLAPSED_WIDTH: 80,
         NODE_TITLE_COLOR: "#999",
@@ -52,6 +53,7 @@
         DEFAULT_POSITION: [100, 100], //default node position
         VALID_SHAPES: ["default", "box", "round", "card"], //,"circle"
 
+        
         //shapes are used for nodes but also for slots
         BOX_SHAPE: 1,
         ROUND_SHAPE: 2,
@@ -73,7 +75,8 @@
         ON_EVENT: 1,
         NEVER: 2,
         ON_TRIGGER: 3,
-
+        ON_REQUEST: 4, // used from event-based nodes, where ancestors are recursively executed on needed
+        
         UP: 1,
         DOWN: 2,
         LEFT: 3,
@@ -366,11 +369,17 @@
             var classobj = Function(code);
             classobj.title = name.split("/").pop();
             classobj.desc = "Generated from " + func.name;
+            
+            /*console.debug("wrapped "+func.name+" ::  // atlasan debug REMOVE
+            console.debug(classobj);
+            console.debug(code);*/
+                
             classobj.prototype.onExecute = function onExecute() {
                 for (var i = 0; i < params.length; ++i) {
                     params[i] = this.getInputData(i);
                 }
                 var r = func.apply(this, params);
+                //console.debug("wrapped res "+r);
                 this.setOutputData(0, r);
             };
             this.registerNodeType(name, classobj);
@@ -456,6 +465,8 @@
             if (!node.size) {
                 node.size = node.computeSize();
 				//call onresize?
+            }else{
+                node.size_basic = node.size;
             }
             if (!node.pos) {
                 node.pos = LiteGraph.DEFAULT_POSITION.concat();
@@ -781,6 +792,7 @@
     LGraph.supported_types = ["number", "string", "boolean"];
 
     //used to know which types of connections support this graph (some graphs do not allow certain types)
+    // atlasan refactort: this is never used uh ?
     LGraph.prototype.getSupportedTypes = function() {
         return this.supported_types || LGraph.supported_types;
     };
@@ -832,6 +844,9 @@
 		this.vars = {};
 		this.extra = {}; //to store custom data
 
+        // apply default config
+        this.configApplyDefaults();
+        
         //timing
         this.globaltime = 0;
         this.runningtime = 0;
@@ -858,13 +873,37 @@
     };
 
     /**
+    * Apply config values to LGraph config object
+    * @method configApply
+     * @param {object} opts options to merge
+    */
+    LGraph.prototype.configApply = function(opts) {
+        /*
+        align_to_grid
+        links_ontop
+        */
+        this.config = Object.assign(this.config,opts);
+    }
+    
+    /**
+    * Apply config values to LGraph config object
+    * @method configApply
+     * @param {object} opts options to merge
+    */
+    LGraph.prototype.configApplyDefaults = function() {
+        var opts = LiteGraph.graphDefaultConfig;
+        this.configApply(opts);
+    }
+    
+    /**
      * Attach Canvas to this graph
      * @method attachCanvas
      * @param {GraphCanvas} graph_canvas
      */
 
     LGraph.prototype.attachCanvas = function(graphcanvas) {
-        if (graphcanvas.constructor != LGraphCanvas) {
+        //if (graphcanvas.constructor != LGraphCanvas) {
+        if ( ! graphcanvas.constructor.prototype instanceof LGraphCanvas ) {
             throw "attachCanvas expects a LGraphCanvas instance";
         }
         if (graphcanvas.graph && graphcanvas.graph != this) {
@@ -1024,7 +1063,8 @@
                     for (var j = 0; j < limit; ++j) {
                         var node = nodes[j];
                         if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
-                            node.onExecute();
+                            //node.onExecute();
+                            node.execute();
                         }
                     }
 
@@ -1227,25 +1267,99 @@
      * @method getAncestors
      * @return {Array} an array with all the LGraphNodes that affect this node, in order of execution
      */
-    LGraph.prototype.getAncestors = function(node) {
+    LGraph.prototype.getAncestors = function(node, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { modesSkip: []
+                        ,modesOnly: []
+                        ,typesSkip: []
+                        ,typesOnly: []
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
         var ancestors = [];
+        var ancestorsIds = [];
         var pending = [node];
         var visited = {};
 
+        //console.log("---getAncestors--- for "+node.id+":"+node.order);
+      
         while (pending.length) {
+            // get next
             var current = pending.shift();
-            if (!current.inputs) {
+            if (!current) {
                 continue;
             }
-            if (!visited[current.id] && current != node) {
-                visited[current.id] = true;
-                ancestors.push(current);
+            //console.log("checking ancestor for "+current.id+":"+current.order);
+            if (visited[current.id]){
+              //console.log("already "+current.id+":"+current.order);
+              continue;
             }
-
+            // mark as visited
+            visited[current.id] = true;
+            
+            // add to ancestors
+            if (current.id != node.id) {
+                
+                // mode check
+                if (opts.modesSkip && opts.modesSkip.length){
+                    if (opts.modesSkip.indexOf(current.mode) != -1){
+                        //console.log("mode skip "+current.id+":"+current.order+" :: "+current.mode);
+                        continue;
+                    }
+                }
+                if (opts.modesOnly && opts.modesOnly.length){
+                    if (opts.modesOnly.indexOf(current.mode) == -1){
+                        //console.log("mode only "+current.id+":"+current.order+" :: "+current.mode);
+                        continue;
+                    }
+                }
+                
+                if (ancestorsIds.indexOf(current.id) == -1) {
+                  ancestors.push(current);
+                  ancestorsIds.push(current.id);
+                  //console.log("push current "+current.id+":"+current.order);
+                }else{
+                  //console.log("already push "+current.id+":"+current.order);
+                }
+                
+            }else{
+              //console.log("current == node "+current.id+":"+current.order+" -- "+node.id+":"+node.order);
+            }
+            
+            // get its inputs
+            if (!current.inputs){
+              continue;
+            }
             for (var i = 0; i < current.inputs.length; ++i) {
                 var input = current.getInputNode(i);
-                if (input && ancestors.indexOf(input) == -1) {
-                    pending.push(input);
+                if (!input) continue;
+                var inputType = current.inputs[i].type;
+                
+                // type check
+                if (opts.typesSkip && opts.typesSkip.length){
+                    if (opts.typesSkip.indexOf(inputType) != -1){
+                        //console.log("type skip "+input.id+":"+input.order+" :: "+inputType);
+                        continue;
+                    }else{
+                        //console.log("type ok? "+input.id+":"+input.order+" :: "+inputType+" : "+opts.typesSkip.indexOf(inputType));
+                    }
+                }
+                if (opts.typesOnly && opts.typesOnly.length){
+                    if (opts.typesOnly.indexOf(input.mode) == -1){
+                        //console.log("type only "+input.id+":"+input.order+" :: "+inputType);
+                        continue;
+                    }
+                }
+                
+                //console.log("input "+i+" "+input.id+":"+input.order);
+                // push em in
+                if (ancestorsIds.indexOf(input.id) == -1) {
+                    if(!visited[input.id]){
+                      pending.push(input);
+                      //console.log("push input "+input.id+":"+input.order);
+                    }else{
+                      //console.log("already input "+input.id+":"+input.order);
+                    }
                 }
             }
         }
@@ -1387,7 +1501,12 @@
      * @param {LGraphNode} node the instance of the node
      */
 
-    LGraph.prototype.add = function(node, skip_compute_order) {
+    LGraph.prototype.add = function(node, skip_compute_order, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { doProcessChange: true
+                        ,doCalcSize: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
         if (!node) {
             return;
         }
@@ -1398,15 +1517,13 @@
             this.setDirtyCanvas(true);
             this.change();
             node.graph = this;
-            this._version++;
+            this.onGraphChanged({action: "groupAdd", doSave: opts.doProcessChange}); // this._version++;
             return;
         }
 
         //nodes
         if (node.id != -1 && this._nodes_by_id[node.id] != null) {
-            console.warn(
-                "LiteGraph: there is already a node with this ID, changing it"
-            );
+            console.warn("LiteGraph: there is already a node with this ID, changing it");
             node.id = ++this.last_node_id;
         }
 
@@ -1422,7 +1539,8 @@
         }
 
         node.graph = this;
-        this._version++;
+        
+        this.onGraphChanged({action: "nodeAdd", doSave: opts.doProcessChange}); // this._version++;
 
         this._nodes.push(node);
         this._nodes_by_id[node.id] = node;
@@ -1443,6 +1561,10 @@
             this.onNodeAdded(node);
         }
 
+        if (opts.doCalcSize){
+            node.setSize( node.computeSize() );
+        }
+        
         this.setDirtyCanvas(true);
         this.change();
 
@@ -1456,13 +1578,15 @@
      */
 
     LGraph.prototype.remove = function(node) {
+        
+        // group ?
         if (node.constructor === LiteGraph.LGraphGroup) {
             var index = this._groups.indexOf(node);
             if (index != -1) {
                 this._groups.splice(index, 1);
             }
             node.graph = null;
-            this._version++;
+            this.onGraphChanged({action: "groupRemove"}); // this._version++;
             this.setDirtyCanvas(true, true);
             this.change();
             return;
@@ -1483,7 +1607,7 @@
             for (var i = 0; i < node.inputs.length; i++) {
                 var slot = node.inputs[i];
                 if (slot.link != null) {
-                    node.disconnectInput(i);
+                    node.disconnectInput(i, {doProcessChange: false});
                 }
             }
         }
@@ -1493,7 +1617,7 @@
             for (var i = 0; i < node.outputs.length; i++) {
                 var slot = node.outputs[i];
                 if (slot.links != null && slot.links.length) {
-                    node.disconnectOutput(i);
+                    node.disconnectOutput(i, false, {doProcessChange: false});
                 }
             }
         }
@@ -1506,7 +1630,7 @@
         }
 
         node.graph = null;
-        this._version++;
+        this.onGraphChanged({action: "nodeRemove"}); // this._version++;
 
         //remove from canvas render
         if (this.list_of_graphcanvas) {
@@ -1733,9 +1857,9 @@
 
 		this.beforeChange();
         this.inputs[name] = { name: name, type: type, value: value };
-        this._version++;
+        this.onGraphChanged({action: "addInput"}); // this._version++;
 		this.afterChange();
-
+        
         if (this.onInputAdded) {
             this.onInputAdded(name, type);
         }
@@ -1795,7 +1919,7 @@
 
         this.inputs[name] = this.inputs[old_name];
         delete this.inputs[old_name];
-        this._version++;
+        this.onGraphChanged({action: "renameInput"}); // this._version++;
 
         if (this.onInputRenamed) {
             this.onInputRenamed(old_name, name);
@@ -1826,7 +1950,7 @@
         }
 
         this.inputs[name].type = type;
-        this._version++;
+        this.onGraphChanged({action: "changeInputType"}); // this._version++;
         if (this.onInputTypeChanged) {
             this.onInputTypeChanged(name, type);
         }
@@ -1844,7 +1968,7 @@
         }
 
         delete this.inputs[name];
-        this._version++;
+        this.onGraphChanged({action: "graphRemoveInput"}); // this._version++;
 
         if (this.onInputRemoved) {
             this.onInputRemoved(name);
@@ -1865,7 +1989,7 @@
      */
     LGraph.prototype.addOutput = function(name, type, value) {
         this.outputs[name] = { name: name, type: type, value: value };
-        this._version++;
+        this.onGraphChanged({action: "addOutput"}); // this._version++;
 
         if (this.onOutputAdded) {
             this.onOutputAdded(name, type);
@@ -1922,7 +2046,7 @@
 
         this.outputs[name] = this.outputs[old_name];
         delete this.outputs[old_name];
-        this._version++;
+        this.onGraphChanged({action: "renameOutput"}); // this._version++;
 
         if (this.onOutputRenamed) {
             this.onOutputRenamed(old_name, name);
@@ -1953,7 +2077,7 @@
         }
 
         this.outputs[name].type = type;
-        this._version++;
+        this.onGraphChanged({action: "changeOutputType"}); // this._version++;
         if (this.onOutputTypeChanged) {
             this.onOutputTypeChanged(name, type);
         }
@@ -1969,7 +2093,7 @@
             return false;
         }
         delete this.outputs[name];
-        this._version++;
+        this.onGraphChanged({action: "removeOutput"}); // this._version++;
 
         if (this.onOutputRemoved) {
             this.onOutputRemoved(name);
@@ -2016,7 +2140,7 @@
         if (this.onConnectionChange) {
             this.onConnectionChange(node);
         }
-        this._version++;
+        this.onGraphChanged({action: "connectionChange", doSave: false}); // this._version++;
         this.sendActionToCanvas("onConnectionChange");
     };
 
@@ -2071,18 +2195,195 @@
     };
 
     /**
+    * Ment to serve the history-saving mechanism
+    * @method onGraphSaved
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.onGraphSaved = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        this.savedVersion = this._version;
+    };
+    
+    /**
+    * Ment to serve the history-saving mechanism
+    * @method onGraphSaved
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.onGraphLoaded = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        this.savedVersion = this._version;
+    };
+    
+    /**
+    * Ment to be the history and prevent-exit mechanism, call to change _version
+    * @method onGraphChanged
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.onGraphChanged = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { action: ""
+                        ,doSave: true
+                        ,doSaveGraph: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        this._version++;
+        
+        /*if(opts.action){ // atlasan DEBUG REMOVE
+            console.debug("ACT: "+opts.action);
+        }else{
+            console.debug("ACT_noAction: "+opts);
+        }
+        if(opts.doSave){ // atlasan DEBUG REMOVE
+            console.debug("onGraphChanged SAVE :: "+opts.action);
+        }*/
+        
+        if(opts.doSave){
+
+            var oHistory = {   actionName: opts.action };
+            if(opts.doSaveGraph){
+                 oHistory  = Object.assign(oHistory
+                                           ,{   graphSave: this.serialize()  // this is a heavy method, but the alternative is way more complex: every action has to have its contrary
+                            });
+            }
+
+            var obH = this.history;
+
+            // check if pointer has gone back: remove newest
+            while(obH.actionHistoryPtr < obH.actionHistoryVersions.length-1){
+                //console.debug("popping: gone back? "+(obH.actionHistoryPtr+" < "+(obH.actionHistoryVersions.length-1))); // atlasan DEBUG REMOVE
+                obH.actionHistoryVersions.pop();
+            }
+            // check if maximum saves
+            if(obH.actionHistoryVersions.length>=LiteGraph.actionHistoryMaxSave){
+                var olderSave = obH.actionHistoryVersions.shift();
+                //console.debug("maximum saves reached: "+obH.actionHistoryVersions.length+", remove older: "+olderSave); // atlasan DEBUG REMOVE
+                obH.actionHistory[olderSave] = false; // unset
+            }
+
+            // update pointer
+            obH.actionHistoryPtr = obH.actionHistoryVersions.length;
+            obH.actionHistoryVersions.push(obH.actionHistoryPtr);
+
+            // save to pointer
+            obH.actionHistory[obH.actionHistoryPtr] = oHistory;
+            
+        }else{
+            // console.debug("action dont save"); // atlasan DEBUG REMOVE
+        }
+        
+    };
+    
+    /**
+    * Go back in action history
+    * @method actionHistoryBack
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.actionHistoryBack = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        var obH = this.history;
+        
+        if (obH.actionHistoryPtr != undefined && obH.actionHistoryPtr >= 0){
+            obH.actionHistoryPtr--;
+            if (!this.actionHistoryLoad({iVersion: obH.actionHistoryPtr})){
+                //console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr);
+                // history not found?
+                obH.actionHistoryPtr++;
+                return false;
+            }else{
+                //console.debug("history step back: "+obH.actionHistoryPtr); // atlasan DEBUG REMOVE
+                //console.debug(this.history);
+                return true;
+            }
+        }else{
+            console.debug("history is already at older state");
+            return false;
+        }
+    };
+    
+    /**
+    * Go forward in action history
+    * @method actionHistoryForward
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.actionHistoryForward = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { 
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        var obH = this.history;
+        
+        if (obH.actionHistoryPtr<obH.actionHistoryVersions.length){
+            obH.actionHistoryPtr++;
+            if (!this.actionHistoryLoad({iVersion: obH.actionHistoryPtr})){
+                //console.warn("historyLoad failed, restore pointer? "+obH.actionHistoryPtr);
+                // history not found?
+                obH.actionHistoryPtr--;
+                return false;
+            }else{
+                //console.debug("history step forward: "+obH.actionHistoryPtr); // atlasan DEBUG REMOVE
+                //console.debug(this.history);
+                return true;
+            }
+        }else{
+            console.debug("history is already at newer state");
+            return false;
+        }
+    };
+    
+    /**
+    * Load from action history
+    * @method actionHistoryLoad
+    * @param {object} optsIn options
+    */
+    LGraph.prototype.actionHistoryLoad = function(optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { iVersion: false
+                        ,backStep: false
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        var obH = this.history;
+        
+        if(obH.actionHistory[opts.iVersion] && obH.actionHistory[opts.iVersion].graphSave){
+            var tmpHistory = JSON.stringify(this.history);
+            this.configure( obH.actionHistory[opts.iVersion].graphSave );
+            this.history = JSON.parse(tmpHistory);
+            // no: this.onGraphLoaded();
+            return true;
+        }else{
+            return false;
+        }
+    };
+    
+    /**
      * Destroys a link
      * @method removeLink
      * @param {Number} link_id
      */
-    LGraph.prototype.removeLink = function(link_id) {
+    LGraph.prototype.removeLink = function(link_id) { /* ,optsIn */
         var link = this.links[link_id];
         if (!link) {
             return;
         }
         var node = this.getNodeById(link.target_id);
         if (node) {
-            node.disconnectInput(link.target_slot);
+            this.beforeChange();
+            node.disconnectInput(link.target_slot); /* , optsIn */
+            this.afterChange();
         }
     };
 
@@ -2206,7 +2507,7 @@
                 }
 
                 node.id = n_info.id; //id it or it will create a new id
-                this.add(node, true); //add before configure, otherwise configure cannot create links
+                this.add(node, true, {doProcessChange: false}); //add before configure, otherwise configure cannot create links
             }
 
             //configure nodes afterwards so they can reach each other
@@ -2225,7 +2526,7 @@
             for (var i = 0; i < data.groups.length; ++i) {
                 var group = new LiteGraph.LGraphGroup();
                 group.configure(data.groups[i]);
-                this.add(group);
+                this.add(group, true, {doProcessChange: false});
             }
         }
 
@@ -2236,7 +2537,13 @@
 		if(this.onConfigure)
 			this.onConfigure(data);
 
-        this._version++;
+        // atlasan: implement: when loading (configuring) a whole graph, skip calling graphChanged on every single configure
+        if (!data._version){
+            this.onGraphChanged({action: "configure", doSave: false}); // this._version++;
+        }else{
+            // skip
+            console.debug("skip onGraphChanged when configure passing version too!"); // atlasan DEBUG REMOVE
+        }
         this.setDirtyCanvas(true, true);
         return error;
     };
@@ -2334,6 +2641,7 @@
 	title: string
 	pos: [x,y]
 	size: [x,y]
+    size_basic: [x,y] minimum size for the node beforeRecalculation
 
 	input|output: every connection
 		+  { name:string, type:string, pos: [x,y]=Optional, direction: "input"|"output", links: Array });
@@ -2395,7 +2703,8 @@
 
     LGraphNode.prototype._ctor = function(title) {
         this.title = title || "Unnamed";
-        this.size = [LiteGraph.NODE_WIDTH, 60];
+        this.size = LiteGraph.NODE_MIN_SIZE;
+        this.size_basic = this.size;
         this.graph = null;
 
         this._pos = new Float32Array(10, 10);
@@ -2435,7 +2744,7 @@
      */
     LGraphNode.prototype.configure = function(info) {
         if (this.graph) {
-            this.graph._version++;
+            this.graph.onGraphChanged({action: "nodeConfigure", doSave: false}); //this.graph._version++;
         }
         for (var j in info) {
             if (j == "properties") {
@@ -2762,6 +3071,59 @@
         }
     };
 
+    LGraphNode.prototype.refreshAncestors = function(optsIn){
+        var optsIn = optsIn || {};
+        var optsDef = { action: ""
+                        ,param: null
+                        ,options: null
+                        ,passParam: true
+                      };
+        var opts = Object.assign(optsDef,optsIn);
+        
+        if (!this.inputs) {
+            return;
+        }
+        if (LiteGraph.preventAncestorRecalculation){
+            if (this.graph.node_ancestorsCalculated && this.graph.node_ancestorsCalculated[this.id]){
+                console.debug("NODE already calculated subtree! Prevent! "+this.id+":"+this.order);
+                return;
+            }
+        }
+        
+        if (!opts.action || opts.action == "") opts.action = this.id+"_ancestors";
+        if (!opts.param || opts.param == "") opts.param = this.id+"_ancestors";
+        if (!opts.options) opts.options = {};
+        opts.options = Object.assign({action_call: opts.action},opts.options);
+        
+        //console.debug("ancestors processing");
+        //console.debug(this.id+":"+this.order+" "+opts.options.action_call);
+        
+        this.graph.ancestorsCall = true; // prevent triggering slots
+        
+        var optsAncestors = {   modesSkip: [LiteGraph.NEVER, LiteGraph.ON_EVENT, LiteGraph.ON_TRIGGER]
+                                ,modesOnly: [LiteGraph.ALWAYS, LiteGraph.ON_REQUEST]
+                                ,typesSkip: [LiteGraph.ACTION]
+                                ,typesOnly: []
+                             };
+        var aAncestors = this.graph.getAncestors(this,optsAncestors);
+        //console.log(aAncestors.length + " ancestors for "+this.id+":"+this.order); // atlasan debug REMOVE
+        for(iN in aAncestors){
+            //console.log(aAncestors[iN].order + " node in ancestors"); // atlasan debug REMOVE
+            aAncestors[iN].execute(opts.param, opts.options);
+            this.graph.node_ancestorsCalculated[aAncestors[iN].id] = true;
+        }
+          
+        this.graph.ancestorsCall = false; // restore triggering slots
+        
+        this.graph.node_ancestorsCalculated[this.id] = true;
+        
+        /*for(iI in this.inputs){
+            console.debug("refreshing ancestors for slot "+iI); // atlasan DEBUG REMOVE
+            this.getInputData(iI,true,true);  
+        }*/
+        return true;
+    }
+  
     /**
      * Retrieves the input data (data traveling through the connection) from one slot
      * @method getInputData
@@ -2769,7 +3131,7 @@
      * @param {boolean} force_update if set to true it will force the connected node of this slot to output data into this link
      * @return {*} data or if it is not connected returns undefined
      */
-    LGraphNode.prototype.getInputData = function(slot, force_update) {
+    LGraphNode.prototype.getInputData = function(slot, force_update, refresh_tree) {
         if (!this.inputs) {
             return;
         } //undefined;
@@ -2795,10 +3157,31 @@
             return link.data;
         }
 
+        /* atlasan: refactor: This is a basic, but seems working, version. Consider moving this out of here and use a single ancestorsCalculation (for each event?)
+         * */
+        if (refresh_tree){
+          //console.log("refresh tree!"); // atlasan debug REMOVE
+            /*var optsAncestors = {  modesSkip: [LiteGraph.NEVER, LiteGraph.ON_EVENT, LiteGraph.ON_TRIGGER]
+                                    ,modesOnly: [LiteGraph.ALWAYS, LiteGraph.ON_REQUEST]
+                                    ,typesSkip: [LiteGraph.ACTION]
+                                    ,typesOnly: []
+                                 };
+          var aAncestors = node.graph.getAncestors(node,optsAncestors);
+          for(iN in aAncestors){
+            //console.log(aAncestors[iN].order + " node in ancestors"); // atlasan debug REMOVE
+            aAncestors[iN].execute();
+          }*/
+            var uIdRand = this.id+"_getInputData_forced_"+Math.floor(Math.random()*9999);
+            var optsAncestors = {action: uIdRand, options:{action_call: uIdRand}};
+            this.refreshAncestors(optsAncestors);
+        }
+      
         if (node.updateOutputData) {
             node.updateOutputData(link.origin_slot);
         } else if (node.onExecute) {
-            node.onExecute();
+        //} else if (node.onExecute && node.mode == LiteGraph.ALWAYS) {
+            //node.onExecute();
+            node.execute();
         }
 
         return link.data;
@@ -2930,20 +3313,18 @@
      * @return {*} value
      */
     LGraphNode.prototype.getInputOrProperty = function(name) {
-        if (!this.inputs || !this.inputs.length) {
-            return this.properties ? this.properties[name] : null;
-        }
-
-        for (var i = 0, l = this.inputs.length; i < l; ++i) {
-            var input_info = this.inputs[i];
-            if (name == input_info.name && input_info.link != null) {
-                var link = this.graph.links[input_info.link];
-                if (link) {
-                    return link.data;
+        if (this.inputs){
+            for (var i = 0, l = this.inputs.length; i < l; ++i) {
+                var input_info = this.inputs[i];
+                if (name == input_info.name && input_info.link != null) {
+                    var link = this.graph.links[input_info.link];
+                    if (link) {
+                        return link.data;
+                    }
                 }
             }
         }
-        return this.properties[name];
+        return this.properties ? this.properties[name] : null;
     };
 
     /**
@@ -3199,7 +3580,7 @@
         if (!this.outputs) {
             return;
         }
-
+        
         var output = this.outputs[slot];
         if (!output) {
             return;
@@ -3209,7 +3590,13 @@
         if (!links || !links.length) {
             return;
         }
-
+        
+        // atlasan: some magic check (ancestors calls)
+        if (this.graph && this.graph.ancestorsCall){
+            //console.debug("ancestors call, prevent triggering slot "+slot+" on "+this.id+":"+this.order);
+            return;
+        }
+        
         if (this.graph) {
             this.graph._last_trigger_time = LiteGraph.getTime();
         }
@@ -3233,10 +3620,7 @@
                 continue;
             }
 
-            //used to mark events in graph
-            var target_connection = node.inputs[link_info.target_slot];
-
-			if (node.mode === LiteGraph.ON_TRIGGER)
+            if (node.mode === LiteGraph.ON_TRIGGER)
 			{
 				// generate unique trigger ID if not present
 				if (!options.action_call) options.action_call = this.id+"_trigg_"+Math.floor(Math.random()*9999);
@@ -3245,6 +3629,10 @@
                     node.doExecute(param, options);
                 }
 			}
+            /*else if (node.mode === LiteGraph.ON_EVENT)
+			{
+                // this probably expect to have onAction be SET
+			}*/
 			else if (node.onAction) {
                 // generate unique action ID if not present
 				if (!options.action_call) options.action_call = this.id+"_act_"+Math.floor(Math.random()*9999);
@@ -3352,7 +3740,7 @@
                 o[i] = extra_info[i];
             }
         }
-
+        //registered_slot_types
         if (!this.outputs) {
             this.outputs = [];
         }
@@ -3433,7 +3821,7 @@
      * @method addInput
      * @param {string} name
      * @param {string} type string defining the input type ("vec3","number",...), it its a generic one use 0
-     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, etc)
+     * @param {Object} extra_info this can be used to have special properties of an input (label, color, position, optional, etc)
      */
     LGraphNode.prototype.addInput = function(name, type, extra_info) {
         type = type || 0;
@@ -3443,7 +3831,7 @@
                 o[i] = extra_info[i];
             }
         }
-
+        
         if (!this.inputs) {
             this.inputs = [];
         }
@@ -3496,8 +3884,8 @@
      * @method removeInput
      * @param {number} slot
      */
-    LGraphNode.prototype.removeInput = function(slot) {
-        this.disconnectInput(slot);
+    LGraphNode.prototype.removeInput = function(slot) { /* , optsIn */
+        this.disconnectInput(slot); /* , optsIn */
         var slot_info = this.inputs.splice(slot, 1);
         for (var i = slot; i < this.inputs.length; ++i) {
             if (!this.inputs[i]) {
@@ -3588,7 +3976,7 @@
         }
 
         size[1] = (this.constructor.slot_start_y || 0) + rows * LiteGraph.NODE_SLOT_HEIGHT;
-
+        
         var widgets_height = 0;
         if (this.widgets && this.widgets.length) {
             for (var i = 0, l = this.widgets.length; i < l; ++i) {
@@ -3623,7 +4011,7 @@
         }
 
         size[1] += 6; //margin
-
+        
         return size;
     };
 
@@ -4223,6 +4611,11 @@
             // This way node can choose another slot (or make a new one?)
             target_slot = target_node.onBeforeConnectInput(target_slot); //callback
         }
+        if (this.onConnectOutput) {
+            if ( this.onConnectOutput(slot, input.type, input, target_node, target_slot) === false ) {
+                return null;
+            }
+        }
 
 		//check target_slot and check connection types
         if (target_slot===false || target_slot===null || !LiteGraph.isValidConnection(output.type, input.type))
@@ -4287,9 +4680,7 @@
 		output.links.push(link_info.id);
 		//connect in input
 		target_node.inputs[target_slot].link = link_info.id;
-		if (this.graph) {
-			this.graph._version++;
-		}
+		
 		if (this.onConnectionsChange) {
 			this.onConnectionsChange(
 				LiteGraph.OUTPUT,
@@ -4325,6 +4716,8 @@
 			);
 		}
 
+        this.graph.onGraphChanged({action: "connect"}); //this.graph._version++;
+        
         this.setDirtyCanvas(false, true);
 		this.graph.afterChange();
 		this.graph.connectionChange(this, link_info);
@@ -4339,7 +4732,10 @@
      * @param {LGraphNode} target_node the target node to which this slot is connected [Optional, if not target_node is specified all nodes will be disconnected]
      * @return {boolean} if it was disconnected successfully
      */
-    LGraphNode.prototype.disconnectOutput = function(slot, target_node) {
+    LGraphNode.prototype.disconnectOutput = function(slot, target_node, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { doProcessChange: true };
+        var opts = Object.assign(optsDef,optsIn);
         if (slot.constructor === String) {
             slot = this.findOutputSlot(slot);
             if (slot == -1) {
@@ -4381,7 +4777,7 @@
                     input.link = null; //remove there
                     delete this.graph.links[link_id]; //remove the link from the links pool
                     if (this.graph) {
-                        this.graph._version++;
+                        this.graph.onGraphChanged({action: "disconnectOutput", doSave: opts.doProcessChange}); //this.graph._version++;
                     }
                     if (target_node.onConnectionsChange) {
                         target_node.onConnectionsChange(
@@ -4436,7 +4832,7 @@
                 var target_node = this.graph.getNodeById(link_info.target_id);
                 var input = null;
                 if (this.graph) {
-                    this.graph._version++;
+                    this.graph.onGraphChanged({action: "disconnectOutput", doSave: opts.doProcessChange}); //this.graph._version++;
                 }
                 if (target_node) {
                     input = target_node.inputs[link_info.target_slot];
@@ -4495,7 +4891,10 @@
      * @param {number_or_string} slot (could be the number of the slot or the string with the name of the slot)
      * @return {boolean} if it was disconnected successfully
      */
-    LGraphNode.prototype.disconnectInput = function(slot) {
+    LGraphNode.prototype.disconnectInput = function(slot, optsIn) {
+        var optsIn = optsIn || {};
+        var optsDef = { doProcessChange: true };
+        var opts = Object.assign(optsDef,optsIn);
         //seek for the output slot
         if (slot.constructor === String) {
             slot = this.findInputSlot(slot);
@@ -4545,7 +4944,7 @@
 
 				delete this.graph.links[link_id]; //remove from the pool
 				if (this.graph) {
-					this.graph._version++;
+					this.graph.onGraphChanged({action: "disconnectInput", doSave: opts.doProcessChange}); //this.graph._version++;
 				}
 				if (this.onConnectionsChange) {
 					this.onConnectionsChange(
@@ -4793,7 +5192,7 @@ LGraphNode.prototype.executeAction = function(action)
      * @method collapse
      **/
     LGraphNode.prototype.collapse = function(force) {
-        this.graph._version++;
+        this.graph.onGraphChanged({action: "collapse"}); //this.graph._version++;
         if (this.constructor.collapsable === false && !force) {
             return;
         }
@@ -4811,7 +5210,7 @@ LGraphNode.prototype.executeAction = function(action)
      **/
 
     LGraphNode.prototype.pin = function(v) {
-        this.graph._version++;
+        this.graph.onGraphChanged({action: "pin"}); //this.graph._version++;
         if (v === undefined) {
             this.flags.pinned = !this.flags.pinned;
         } else {
@@ -5196,15 +5595,31 @@ LGraphNode.prototype.executeAction = function(action)
             string: "#447",
             boolean: "#744",*/
         };
+        this.default_connection_color_byType = { // atlasan edit
+            number: "#7F7",
+            string: "#77F",
+            boolean: "#F77",
+        }
+        this.default_connection_color_byTypeOff = { // atlasan edit
+            number: "#474",
+            string: "#447",
+            boolean: "#744",
+        };
 
+        this.drag_mode = false; // never used ?
+        this.dragging_rectangle = null;
+        
+        this.filter = null; //allows to filter to only accept some type of nodes in a graph
+
+        // options
+        this.allow_addOutSlot_onExecuted = true;
         this.highquality_render = true;
         this.use_gradients = false; //set to true to render titlebar with gradients
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
-
 		this.read_only = false; //if set to true users cannot modify the graph
-        this.render_only_selected = true;
+        //this.render_only_selected = true; // refactor: not implemented
         this.live_mode = false;
         this.show_info = true;
         this.allow_dragcanvas = true;
@@ -5225,15 +5640,20 @@ LGraphNode.prototype.executeAction = function(action)
         this.render_canvas_border = true;
         this.render_connections_shadows = false; //too much cpu
         this.render_connections_border = true;
-        this.render_curved_connections = false;
+        this.render_curved_connections = true;
         this.render_connection_arrows = false;
         this.render_collapsed_slots = true;
         this.render_execution_order = false;
         this.render_title_colored = true;
 		this.render_link_tooltip = true;
-
         this.links_render_mode = LiteGraph.SPLINE_LINK;
-
+        
+        // atlasan: refactor: options object do need refactoring .. all the options are actually outside of it
+        this.autoresize = options.autoresize;
+        this.skip_render = options.skip_render;
+        this.clip_all_nodes = options.clip_all_nodes;
+        this.free_resize = options.free_resize;
+        
         this.mouse = [0, 0]; //mouse in canvas coordinates, where 0,0 is the top-left corner of the blue rectangle
         this.graph_mouse = [0, 0]; //mouse in graph coordinates, where 0,0 is the top-left corner of the blue rectangle
 		this.canvas_mouse = this.graph_mouse; //LEGACY: REMOVE THIS, USE GRAPH_MOUSE INSTEAD
@@ -5274,11 +5694,10 @@ LGraphNode.prototype.executeAction = function(action)
         this.setCanvas(canvas,options.skip_events);
         this.clear();
 
-        if (!options.skip_render) {
+        if (!this.skip_render) {
             this.startRendering();
         }
 
-        this.autoresize = options.autoresize;
     }
 
     global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
@@ -5287,8 +5706,12 @@ LGraphNode.prototype.executeAction = function(action)
 
     LGraphCanvas.link_type_colors = {
         "-1": LiteGraph.EVENT_LINK_COLOR,
-        number: "#AAA",
-        node: "#DCA"
+        node: "#DCA",
+        
+        // atlasan edit
+        number: "#7F7",
+        string: "#77F",
+        boolean: "#F77",
     };
     LGraphCanvas.gradients = {}; //cache of gradients
 
@@ -5544,6 +5967,8 @@ LGraphNode.prototype.executeAction = function(action)
         
         var canvas = this.canvas;
 
+        canvas.lgraphcanvas = this; // place a pointer in the dom element to get the LGraphCanvas related
+        
         var ref_window = this.getCanvasWindow();
         var document = ref_window.document; //hack used when moving canvas between windows
 
@@ -6305,7 +6730,7 @@ LGraphNode.prototype.executeAction = function(action)
             this.dragging_rectangle[2] = e.canvasX - this.dragging_rectangle[0];
             this.dragging_rectangle[3] = e.canvasY - this.dragging_rectangle[1];
             this.dirty_canvas = true;
-        } 
+        }
 		else if (this.selected_group && !this.read_only)
 		{
             //moving/resizing a group
@@ -6417,7 +6842,9 @@ LGraphNode.prototype.executeAction = function(action)
                                 this._highlight_output = null;
                             }
                         }
+                        
                     }
+                    
                 }
 
                 //Search for corner
@@ -6488,7 +6915,7 @@ LGraphNode.prototype.executeAction = function(action)
             if (this.resizing_node && !this.live_mode) {
                 //convert mouse to node space
 				var desired_size = [ e.canvasX - this.resizing_node.pos[0], e.canvasY - this.resizing_node.pos[1] ];
-				var min_size = this.resizing_node.computeSize();
+				var min_size = this.free_resize?LiteGraph.NODE_MIN_SIZE:this.resizing_node.computeSize(); //this.resizing_node.size_basic;// .computeSize();
 				desired_size[0] = Math.max( min_size[0], desired_size[0] );
 				desired_size[1] = Math.max( min_size[1], desired_size[1] );
 				this.resizing_node.setSize( desired_size );
@@ -6553,13 +6980,13 @@ LGraphNode.prototype.executeAction = function(action)
 		//console.log("pointerevents: processMouseUp which: "+e.which);
 		
         if (e.which == 1) {
+            //left button
 
 			if( this.node_widget )
 			{
 				this.processNodeWidgets( this.node_widget[0], this.graph_mouse, e );
 			}
 
-            //left button
             this.node_widget = null;
 
             if (this.selected_group) {
@@ -6637,7 +7064,9 @@ LGraphNode.prototype.executeAction = function(action)
 					
                 }
                 this.dragging_rectangle = null;
+                
             } else if (this.connecting_node) {
+                
                 //dragging a connection
                 this.dirty_canvas = true;
                 this.dirty_bgcanvas = true;
@@ -6725,13 +7154,17 @@ LGraphNode.prototype.executeAction = function(action)
                 this.connecting_pos = null;
                 this.connecting_node = null;
                 this.connecting_slot = -1;
+                
             } //not dragging connection
             else if (this.resizing_node) {
+                
                 this.dirty_canvas = true;
                 this.dirty_bgcanvas = true;
 				this.graph.afterChange(this.resizing_node);
                 this.resizing_node = null;
+                
             } else if (this.node_dragged) {
+                
                 //node being dragged?
                 var node = this.node_dragged;
                 if (
@@ -6751,10 +7184,15 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 				if( this.onNodeMoved )
 					this.onNodeMoved( this.node_dragged );
+                
+                this.graph.onGraphChanged({action: "nodeDrag", doSave: true});
+                
 				this.graph.afterChange(this.node_dragged);
                 this.node_dragged = null;
+                
             } //no node being dragged
             else {
+                
                 //get node over
                 var node = this.graph.getNodeOnPos(
                     e.canvasX,
@@ -6781,6 +7219,7 @@ LGraphNode.prototype.executeAction = function(action)
                         e.canvasY - this.node_capturing_input.pos[1]
                     ]);
                 }
+                
             }
         } else if (e.which == 2) {
             //middle button
@@ -7024,6 +7463,16 @@ LGraphNode.prototype.executeAction = function(action)
             //collapse
             //...
 
+            // control Z, control Y, ctlrZ, ctlrY
+            if (e.keyCode == 89 && e.ctrlKey || (e.keyCode == 90 && e.ctrlKey && e.shiftKey)){
+                // Y
+                this.graph.actionHistoryForward();
+            }else if (e.keyCode == 90 && e.ctrlKey){
+                // Z
+                this.graph.actionHistoryBack();
+            }
+            // console.debug("keydown "+e.keyCode); // atlasan debug REMOVE
+            
             //TODO
             if (this.selected_nodes) {
                 for (var i in this.selected_nodes) {
@@ -7032,6 +7481,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
                 }
             }
+            
         } else if (e.type == "keyup") {
             if (e.keyCode == 32) {
                 // space
@@ -7170,6 +7620,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         this.selectNodes(nodes);
 
+        this.graph.onGraphChanged({action: "paste", doSave: true});
+        
 		this.graph.afterChange();
     };
 
@@ -7263,10 +7715,11 @@ LGraphNode.prototype.executeAction = function(action)
 				this.graph.beforeChange();
                 var node = LiteGraph.createNode(nodetype.type);
                 node.pos = [e.canvasX, e.canvasY];
-                this.graph.add(node);
+                this.graph.add(node, false, {doProcessChange: false});
                 if (node.onDropFile) {
                     node.onDropFile(file);
                 }
+                this.graph.onGraphChanged({action: "fileDrop", doSave: true});
 				this.graph.afterChange();
             }
         }
@@ -7455,6 +7908,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.current_node = null;
         this.highlighted_links = {};
         this.setDirty(true);
+        
 		this.graph.afterChange();
     };
     
@@ -8390,12 +8844,12 @@ LGraphNode.prototype.executeAction = function(action)
             }
         }
 
-        if (node.clip_area) {
+        if (node.clip_area || this.clip_all_nodes){
             //Start clipping
             ctx.save();
             ctx.beginPath();
             if (shape == LiteGraph.BOX_SHAPE) {
-                ctx.rect(0, 0, size[0], size[1]);
+                ctx.rect(-6.5, -6.5-LiteGraph.NODE_TITLE_HEIGHT, size[0]+14, size[1]+13+LiteGraph.NODE_TITLE_HEIGHT);
             } else if (shape == LiteGraph.ROUND_SHAPE) {
                 ctx.roundRect(0, 0, size[0], size[1], [10]);
             } else if (shape == LiteGraph.CIRCLE_SHAPE) {
@@ -8403,7 +8857,7 @@ LGraphNode.prototype.executeAction = function(action)
                     size[0] * 0.5,
                     size[1] * 0.5,
                     size[0] * 0.5,
-                    0,
+                    0 + 6.5,
                     Math.PI * 2
                 );
             }
@@ -8445,6 +8899,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         //render inputs and outputs
         if (!node.flags.collapsed) {
+            
             //input connection slots
             if (node.inputs) {
                 for (var i = 0; i < node.inputs.length; i++) {
@@ -8458,7 +8913,8 @@ LGraphNode.prototype.executeAction = function(action)
                     if ( this.connecting_output && !LiteGraph.isValidConnection( slot.type , out_slot.type) ) {
                         ctx.globalAlpha = 0.4 * editor_alpha;
                     }
-
+                    /*console.debug(slot); // atlasan debug REMOVE
+                    console.debug(slot_type+" "+this.default_connection_color_byType[slot_type]);*/
                     ctx.fillStyle =
                         slot.link != null
                             ? slot.color_on ||
@@ -8485,8 +8941,8 @@ LGraphNode.prototype.executeAction = function(action)
                     var doStroke = true;
                     
                     if (
-                        slot.type === LiteGraph.EVENT ||
-                        slot.shape === LiteGraph.BOX_SHAPE
+                        //slot.type === LiteGraph.EVENT ||
+                        slot_shape === LiteGraph.BOX_SHAPE
                     ) {
                         if (horizontal) {
                             ctx.rect(
@@ -8747,7 +9203,7 @@ LGraphNode.prototype.executeAction = function(action)
             }
         }
 
-        if (node.clip_area) {
+        if (node.clip_area || this.clip_all_nodes){
             ctx.restore();
         }
 
@@ -9075,7 +9531,7 @@ LGraphNode.prototype.executeAction = function(action)
                 node.onDrawTitle(ctx);
             }
         }
-
+        
         //render selection marker
         if (selected) {
             if (node.onBounding) {
@@ -9298,6 +9754,8 @@ LGraphNode.prototype.executeAction = function(action)
         //choose color
         if (!color && link) {
             color = link.color || LGraphCanvas.link_type_colors[link.type];
+            /*console.debug("Render LINK which color? "+color+" "+link.type); // atlasan debug REMOVE
+            console.debug(link);*/
         }
         if (!color) {
             color = this.default_link_color;
@@ -9936,7 +10394,7 @@ LGraphNode.prototype.executeAction = function(action)
 							values = w.options.values(w, node);
 						}
 						var values_list = null;
-						
+
 						if( w.type != "number")
 							values_list = values.constructor === Array ? values : Object.keys(values);
 
@@ -9949,7 +10407,7 @@ LGraphNode.prototype.executeAction = function(action)
 							if ( w.options.max != null && w.value > w.options.max ) {
 								w.value = w.options.max;
 							}
-						} else if (delta) { //clicked in arrow, used for combos 
+						} else if (delta) { //clicked in arrow, used for combos
 							var index = -1;
 							this.last_mouseclick = 0; //avoids dobl click event
 							if(values.constructor === Object)
@@ -9966,7 +10424,7 @@ LGraphNode.prototype.executeAction = function(action)
 								w.value = values[index];
 							else
 								w.value = index;
-						} else { //combo clicked 
+						} else { //combo clicked
 							var text_values = values != values_list ? Object.values(values) : values;
 							var menu = new LiteGraph.ContextMenu(text_values, {
 									scale: Math.max(1, this.ds.scale),
@@ -10118,8 +10576,19 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.prototype.resize = function(width, height) {
         if (!width && !height) {
             var parent = this.canvas.parentNode;
+            
             width = parent.offsetWidth;
             height = parent.offsetHeight;
+            
+           /*var computed  = window.getComputedStyle(parent);
+           var padlft = parseFloat(computed.getPropertyValue('padding-left'));
+           var padrgt = parseFloat(computed.getPropertyValue('padding-right'));
+           var padtop = parseFloat(computed.getPropertyValue('padding-top'));
+           var padbtm = parseFloat(computed.getPropertyValue('padding-bottom'));
+
+           // set canvas dimension
+           width  = parent.clientWidth  - padlft - padrgt;
+           height = parent.clientHeight - padtop - padbtm;*/
         }
 
         if (this.canvas.width == width && this.canvas.height == height) {
@@ -11411,6 +11880,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
 
 					graphcanvas.graph.beforeChange();
+                    
                     var node = LiteGraph.createNode(name);
                     if (node) {
                         node.pos = graphcanvas.convertEventToCanvasOffset(
@@ -11790,6 +12260,7 @@ LGraphNode.prototype.executeAction = function(action)
                     dialog.modified();
                     setValue(!!input.checked);
                 });
+                
             }
         } else {
             input = dialog.querySelector("input");
@@ -11885,7 +12356,7 @@ LGraphNode.prototype.executeAction = function(action)
             offsetx += this.canvas.width * 0.5;
             offsety += this.canvas.height * 0.5;
         }
-
+        
         dialog.style.left = offsetx + "px";
         dialog.style.top = offsety + "px";
 
@@ -12369,6 +12840,7 @@ LGraphNode.prototype.executeAction = function(action)
 				node.graph.remove(node);
 				panel.close();
 			}).classList.add("delete");
+
 		}
 
 		panel.inner_showCodePad = function( propname )
@@ -12933,6 +13405,7 @@ LGraphNode.prototype.executeAction = function(action)
                 options[1].disabled = false;
             }
         }
+        if (this.allow_addOutSlot_onExecuted) options[1].disabled = false;
 
         if (node.getExtraMenuOptions) {
             var extra = node.getExtraMenuOptions(this, options);
@@ -13019,9 +13492,10 @@ LGraphNode.prototype.executeAction = function(action)
             } else {
                 if (
                     slot &&
-                    slot.output &&
-                    slot.output.links &&
-                    slot.output.links.length
+                    (
+                        (slot.output && slot.output.links && slot.output.links.length)
+                        || (slot.input && slot.input.link)
+                    )
                 ) {
                     menu_info.push({ content: "Disconnect Links", slot: slot });
                 }
@@ -13038,14 +13512,16 @@ LGraphNode.prototype.executeAction = function(action)
                 }
     
             }
-            options.title =
-                (slot.input ? slot.input.type : slot.output.type) || "*";
-            if (slot.input && slot.input.type == LiteGraph.ACTION) {
+            
+            var slotOb = slot.input || slot.output;
+            options.title = slotOb.type || "*";
+            if (slotOb.type == LiteGraph.ACTION) {
                 options.title = "Action";
-            }
-            if (slot.output && slot.output.type == LiteGraph.EVENT) {
+            }else if (slotOb.type == LiteGraph.EVENT) {
                 options.title = "Event";
             }
+            // if(slotOb.name) options.title = slotOb.name + ": " + options.title;
+            
         } else {
             if (node) {
                 //on node
@@ -16248,6 +16724,362 @@ if (typeof exports != "undefined") {
 
 })(this);
 
+    //Show value inside the debug console
+    function LogEvent() {
+        this.size = [60, 30];
+        this.addInput("event", LiteGraph.ACTION);
+    }
+
+    LogEvent.title = "Log Event";
+    LogEvent.desc = "Log event in console";
+
+    LogEvent.prototype.onAction = function(action, param, options) {
+        console.log(action, param);
+    };
+
+    LiteGraph.registerNodeType("events/log", LogEvent);
+
+    //convert to Event if the value is true
+    function TriggerEvent() {
+        this.size = [60, 30];
+        this.addInput("if", "");
+        this.addOutput("true", LiteGraph.EVENT);
+        this.addOutput("change", LiteGraph.EVENT);
+        this.addOutput("false", LiteGraph.EVENT);
+		this.properties = { only_on_change: true };
+		this.prev = 0;
+    }
+
+    TriggerEvent.title = "TriggerEvent";
+    TriggerEvent.desc = "Triggers event if input evaluates to true";
+
+    TriggerEvent.prototype.onExecute = function( param, options) {
+		var v = this.getInputData(0);
+		var changed = (v != this.prev);
+		if(this.prev === 0)
+			changed = false;
+		var must_resend = (changed && this.properties.only_on_change) || (!changed && !this.properties.only_on_change);
+		if(v && must_resend )
+	        this.triggerSlot(0, param, null, options);
+		if(!v && must_resend)
+	        this.triggerSlot(2, param, null, options);
+		if(changed)
+	        this.triggerSlot(1, param, null, options);
+		this.prev = v;
+    };
+
+    LiteGraph.registerNodeType("events/trigger", TriggerEvent);
+
+    //Sequencer for events
+    function Sequencer() {
+        this.addInput("", LiteGraph.ACTION);
+        this.addInput("", LiteGraph.ACTION);
+        this.addInput("", LiteGraph.ACTION);
+        this.addOutput("", LiteGraph.EVENT);
+        this.addOutput("", LiteGraph.EVENT);
+        this.addOutput("", LiteGraph.EVENT);
+        this.size = [120, 30];
+        this.flags = { horizontal: true, render_box: false };
+    }
+
+    Sequencer.title = "Sequencer";
+    Sequencer.desc = "Trigger events when an event arrives";
+
+    Sequencer.prototype.getTitle = function() {
+        return "";
+    };
+
+    Sequencer.prototype.onAction = function(action, param, options) {
+        if (this.outputs) {
+            options = options || {};
+            for (var i = 0; i < this.outputs.length; ++i) {
+                options.action_call = options.action_call?options.action_call+"_seq_"+i:this.id+"_"+(action?action:"action")+"_seq_"+i+"_"+Math.floor(Math.random()*9999);
+                this.triggerSlot(i, param, null, options);
+            }
+        }
+    };
+
+    LiteGraph.registerNodeType("events/sequencer", Sequencer);
+
+    //Filter events
+    function FilterEvent() {
+        this.size = [60, 30];
+        this.addInput("event", LiteGraph.ACTION);
+        this.addOutput("event", LiteGraph.EVENT);
+        this.properties = {
+            equal_to: "",
+            has_property: "",
+            property_equal_to: ""
+        };
+    }
+
+    FilterEvent.title = "Filter Event";
+    FilterEvent.desc = "Blocks events that do not match the filter";
+
+    FilterEvent.prototype.onAction = function(action, param, options) {
+        if (param == null) {
+            return;
+        }
+
+        if (this.properties.equal_to && this.properties.equal_to != param) {
+            return;
+        }
+
+        if (this.properties.has_property) {
+            var prop = param[this.properties.has_property];
+            if (prop == null) {
+                return;
+            }
+
+            if (
+                this.properties.property_equal_to &&
+                this.properties.property_equal_to != prop
+            ) {
+                return;
+            }
+        }
+
+        this.triggerSlot(0, param, null, options);
+    };
+
+    LiteGraph.registerNodeType("events/filter", FilterEvent);
+
+
+    function EventBranch() {
+        this.addInput("in", LiteGraph.ACTION);
+        this.addInput("cond", "boolean");
+        this.addOutput("true", LiteGraph.EVENT);
+        this.addOutput("false", LiteGraph.EVENT);
+        this.size = [120, 60];
+		this._value = false;
+    }
+
+    EventBranch.title = "Branch";
+    EventBranch.desc = "If condition is true, outputs triggers true, otherwise false";
+
+    EventBranch.prototype.onExecute = function() {
+		this._value = this.getInputData(1);
+	}
+
+    EventBranch.prototype.onAction = function(action, param, options) {
+        this._value = this.getInputData(1);
+		this.triggerSlot(this._value ? 0 : 1, param, null, options);
+	}
+
+    LiteGraph.registerNodeType("events/branch", EventBranch);
+
+    //Show value inside the debug console
+    function EventCounter() {
+        this.addInput("inc", LiteGraph.ACTION);
+        this.addInput("dec", LiteGraph.ACTION);
+        this.addInput("reset", LiteGraph.ACTION);
+        this.addOutput("change", LiteGraph.EVENT);
+        this.addOutput("num", "number");
+        this.addProperty("doCountExecution", false, "boolean", {name: "Count Executions"});
+        this.addWidget("toggle","Count Exec.",this.properties.doCountExecution,"doCountExecution");
+        this.num = 0;
+    }
+
+    EventCounter.title = "Counter";
+    EventCounter.desc = "Counts events";
+
+    EventCounter.prototype.getTitle = function() {
+        if (this.flags.collapsed) {
+            return String(this.num);
+        }
+        return this.title;
+    };
+
+    EventCounter.prototype.onAction = function(action, param, options) {
+        var v = this.num;
+        if (action == "inc") {
+            this.num += 1;
+        } else if (action == "dec") {
+            this.num -= 1;
+        } else if (action == "reset") {
+            this.num = 0;
+        }
+        if (this.num != v) {
+            this.trigger("change", this.num);
+        }
+    };
+
+    EventCounter.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+        ctx.fillStyle = "#AAA";
+        ctx.font = "20px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(this.num, this.size[0] * 0.5, this.size[1] * 0.5);
+    };
+
+    EventCounter.prototype.onExecute = function() {
+        if(this.properties.doCountExecution){
+            this.num += 1;
+        }
+        this.setOutputData(1, this.num);
+    };
+
+    LiteGraph.registerNodeType("events/counter", EventCounter);
+
+    //Show value inside the debug console
+    function DelayEvent() {
+        this.size = [60, 30];
+        this.addProperty("time_in_ms", 1000);
+        this.addInput("event", LiteGraph.ACTION);
+        this.addOutput("on_time", LiteGraph.EVENT);
+
+        this._pending = [];
+    }
+
+    DelayEvent.title = "Delay";
+    DelayEvent.desc = "Delays one event";
+
+    DelayEvent.prototype.onAction = function(action, param, options) {
+        var time = this.properties.time_in_ms;
+        if (time <= 0) {
+            this.trigger(null, param, options);
+        } else {
+            this._pending.push([time, param]);
+        }
+    };
+
+    DelayEvent.prototype.onExecute = function(param, options) {
+        var dt = this.graph.elapsed_time * 1000; //in ms
+
+        if (this.isInputConnected(1)) {
+            this.properties.time_in_ms = this.getInputData(1);
+        }
+
+        for (var i = 0; i < this._pending.length; ++i) {
+            var actionPass = this._pending[i];
+            actionPass[0] -= dt;
+            if (actionPass[0] > 0) {
+                continue;
+            }
+
+            //remove
+            this._pending.splice(i, 1);
+            --i;
+
+            //trigger
+            this.trigger(null, actionPass[1], options);
+        }
+    };
+
+    DelayEvent.prototype.onGetInputs = function() {
+        return [["event", LiteGraph.ACTION], ["time_in_ms", "number"]];
+    };
+
+    LiteGraph.registerNodeType("events/delay", DelayEvent);
+
+    //Show value inside the debug console
+    function TimerEvent() {
+        this.addProperty("interval", 1000);
+        this.addProperty("event", "tick");
+        this.addOutput("on_tick", LiteGraph.EVENT);
+        this.time = 0;
+        this.last_interval = 1000;
+        this.triggered = false;
+    }
+
+    TimerEvent.title = "Timer";
+    TimerEvent.desc = "Sends an event every N milliseconds";
+
+    TimerEvent.prototype.onStart = function() {
+        this.time = 0;
+    };
+
+    TimerEvent.prototype.getTitle = function() {
+        return "Timer: " + this.last_interval.toString() + "ms";
+    };
+
+    TimerEvent.on_color = "#AAA";
+    TimerEvent.off_color = "#222";
+
+    TimerEvent.prototype.onDrawBackground = function() {
+        this.boxcolor = this.triggered
+            ? TimerEvent.on_color
+            : TimerEvent.off_color;
+        this.triggered = false;
+    };
+
+    TimerEvent.prototype.onExecute = function() {
+        var dt = this.graph.elapsed_time * 1000; //in ms
+
+        var trigger = this.time == 0;
+
+        this.time += dt;
+        this.last_interval = Math.max(
+            1,
+            this.getInputOrProperty("interval") | 0
+        );
+
+        if (
+            !trigger &&
+            (this.time < this.last_interval || isNaN(this.last_interval))
+        ) {
+            if (this.inputs && this.inputs.length > 1 && this.inputs[1]) {
+                this.setOutputData(1, false);
+            }
+            return;
+        }
+
+        this.triggered = true;
+        this.time = this.time % this.last_interval;
+        this.trigger("on_tick", this.properties.event);
+        if (this.inputs && this.inputs.length > 1 && this.inputs[1]) {
+            this.setOutputData(1, true);
+        }
+    };
+
+    TimerEvent.prototype.onGetInputs = function() {
+        return [["interval", "number"]];
+    };
+
+    TimerEvent.prototype.onGetOutputs = function() {
+        return [["tick", "boolean"]];
+    };
+
+    LiteGraph.registerNodeType("events/timer", TimerEvent);
+
+    function DataStore() {
+        this.addInput("data", 0);
+        this.addInput("assign", LiteGraph.ACTION);
+        this.addOutput("data", 0);
+		this._last_value = null;
+		this.properties = { data: null, serialize: true };
+		var that = this;
+		this.addWidget("button","store","",function(){
+			that.properties.data = that._last_value;
+		});
+    }
+
+    DataStore.title = "Data Store";
+    DataStore.desc = "Stores data and only changes when event is received";
+
+	DataStore.prototype.onExecute = function()
+	{
+		this._last_value = this.getInputData(0);
+		this.setOutputData(0, this.properties.data );
+	}
+
+    DataStore.prototype.onAction = function(action, param, options) {
+		this.properties.data = this._last_value;
+    };
+
+	DataStore.prototype.onSerialize = function(o)
+	{
+		if(o.data == null)
+			return;
+		if(this.properties.serialize == false || (o.data.constructor !== String && o.data.constructor !== Number && o.data.constructor !== Boolean && o.data.constructor !== Array && o.data.constructor !== Object ))
+			o.data = null;
+	}
+
+    LiteGraph.registerNodeType("basic/data_store", DataStore);
+})(this);
+
 //widgets
 (function(global) {
     var LiteGraph = global.LiteGraph;
@@ -16890,6 +17722,7 @@ if (typeof exports != "undefined") {
             glowSize: 0,
             decimals: 1
         };
+        // not optimal in this case: // this.txtValue = this.addWidget("text","value", "multiline", "value", { multiline:true } );
     }
 
     WidgetText.title = "Text";
@@ -17049,357 +17882,6 @@ if (typeof exports != "undefined") {
 
 (function(global) {
     var LiteGraph = global.LiteGraph;
-
-    function GamepadInput() {
-        this.addOutput("left_x_axis", "number");
-        this.addOutput("left_y_axis", "number");
-        this.addOutput("button_pressed", LiteGraph.EVENT);
-        this.properties = { gamepad_index: 0, threshold: 0.1 };
-
-        this._left_axis = new Float32Array(2);
-        this._right_axis = new Float32Array(2);
-        this._triggers = new Float32Array(2);
-        this._previous_buttons = new Uint8Array(17);
-        this._current_buttons = new Uint8Array(17);
-    }
-
-    GamepadInput.title = "Gamepad";
-    GamepadInput.desc = "gets the input of the gamepad";
-
-    GamepadInput.CENTER = 0;
-    GamepadInput.LEFT = 1;
-    GamepadInput.RIGHT = 2;
-    GamepadInput.UP = 4;
-    GamepadInput.DOWN = 8;
-
-    GamepadInput.zero = new Float32Array(2);
-    GamepadInput.buttons = [
-        "a",
-        "b",
-        "x",
-        "y",
-        "lb",
-        "rb",
-        "lt",
-        "rt",
-        "back",
-        "start",
-        "ls",
-        "rs",
-        "home"
-    ];
-
-    GamepadInput.prototype.onExecute = function() {
-        //get gamepad
-        var gamepad = this.getGamepad();
-        var threshold = this.properties.threshold || 0.0;
-
-        if (gamepad) {
-            this._left_axis[0] =
-                Math.abs(gamepad.xbox.axes["lx"]) > threshold
-                    ? gamepad.xbox.axes["lx"]
-                    : 0;
-            this._left_axis[1] =
-                Math.abs(gamepad.xbox.axes["ly"]) > threshold
-                    ? gamepad.xbox.axes["ly"]
-                    : 0;
-            this._right_axis[0] =
-                Math.abs(gamepad.xbox.axes["rx"]) > threshold
-                    ? gamepad.xbox.axes["rx"]
-                    : 0;
-            this._right_axis[1] =
-                Math.abs(gamepad.xbox.axes["ry"]) > threshold
-                    ? gamepad.xbox.axes["ry"]
-                    : 0;
-            this._triggers[0] =
-                Math.abs(gamepad.xbox.axes["ltrigger"]) > threshold
-                    ? gamepad.xbox.axes["ltrigger"]
-                    : 0;
-            this._triggers[1] =
-                Math.abs(gamepad.xbox.axes["rtrigger"]) > threshold
-                    ? gamepad.xbox.axes["rtrigger"]
-                    : 0;
-        }
-
-        if (this.outputs) {
-            for (var i = 0; i < this.outputs.length; i++) {
-                var output = this.outputs[i];
-                if (!output.links || !output.links.length) {
-                    continue;
-                }
-                var v = null;
-
-                if (gamepad) {
-                    switch (output.name) {
-                        case "left_axis":
-                            v = this._left_axis;
-                            break;
-                        case "right_axis":
-                            v = this._right_axis;
-                            break;
-                        case "left_x_axis":
-                            v = this._left_axis[0];
-                            break;
-                        case "left_y_axis":
-                            v = this._left_axis[1];
-                            break;
-                        case "right_x_axis":
-                            v = this._right_axis[0];
-                            break;
-                        case "right_y_axis":
-                            v = this._right_axis[1];
-                            break;
-                        case "trigger_left":
-                            v = this._triggers[0];
-                            break;
-                        case "trigger_right":
-                            v = this._triggers[1];
-                            break;
-                        case "a_button":
-                            v = gamepad.xbox.buttons["a"] ? 1 : 0;
-                            break;
-                        case "b_button":
-                            v = gamepad.xbox.buttons["b"] ? 1 : 0;
-                            break;
-                        case "x_button":
-                            v = gamepad.xbox.buttons["x"] ? 1 : 0;
-                            break;
-                        case "y_button":
-                            v = gamepad.xbox.buttons["y"] ? 1 : 0;
-                            break;
-                        case "lb_button":
-                            v = gamepad.xbox.buttons["lb"] ? 1 : 0;
-                            break;
-                        case "rb_button":
-                            v = gamepad.xbox.buttons["rb"] ? 1 : 0;
-                            break;
-                        case "ls_button":
-                            v = gamepad.xbox.buttons["ls"] ? 1 : 0;
-                            break;
-                        case "rs_button":
-                            v = gamepad.xbox.buttons["rs"] ? 1 : 0;
-                            break;
-                        case "hat_left":
-                            v = gamepad.xbox.hatmap & GamepadInput.LEFT;
-                            break;
-                        case "hat_right":
-                            v = gamepad.xbox.hatmap & GamepadInput.RIGHT;
-                            break;
-                        case "hat_up":
-                            v = gamepad.xbox.hatmap & GamepadInput.UP;
-                            break;
-                        case "hat_down":
-                            v = gamepad.xbox.hatmap & GamepadInput.DOWN;
-                            break;
-                        case "hat":
-                            v = gamepad.xbox.hatmap;
-                            break;
-                        case "start_button":
-                            v = gamepad.xbox.buttons["start"] ? 1 : 0;
-                            break;
-                        case "back_button":
-                            v = gamepad.xbox.buttons["back"] ? 1 : 0;
-                            break;
-                        case "button_pressed":
-                            for (
-                                var j = 0;
-                                j < this._current_buttons.length;
-                                ++j
-                            ) {
-                                if (
-                                    this._current_buttons[j] &&
-                                    !this._previous_buttons[j]
-                                ) {
-                                    this.triggerSlot(
-                                        i,
-                                        GamepadInput.buttons[j]
-                                    );
-                                }
-                            }
-                            break;
-                        default:
-                            break;
-                    }
-                } else {
-                    //if no gamepad is connected, output 0
-                    switch (output.name) {
-                        case "button_pressed":
-                            break;
-                        case "left_axis":
-                        case "right_axis":
-                            v = GamepadInput.zero;
-                            break;
-                        default:
-                            v = 0;
-                    }
-                }
-                this.setOutputData(i, v);
-            }
-        }
-    };
-
-	GamepadInput.mapping = {a:0,b:1,x:2,y:3,lb:4,rb:5,lt:6,rt:7,back:8,start:9,ls:10,rs:11 };
-	GamepadInput.mapping_array = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs"];
-
-    GamepadInput.prototype.getGamepad = function() {
-        var getGamepads =
-            navigator.getGamepads ||
-            navigator.webkitGetGamepads ||
-            navigator.mozGetGamepads;
-        if (!getGamepads) {
-            return null;
-        }
-        var gamepads = getGamepads.call(navigator);
-        var gamepad = null;
-
-        this._previous_buttons.set(this._current_buttons);
-
-        //pick the first connected
-        for (var i = this.properties.gamepad_index; i < 4; i++) {
-            if (!gamepads[i]) {
-                continue;
-            }
-            gamepad = gamepads[i];
-
-            //xbox controller mapping
-            var xbox = this.xbox_mapping;
-            if (!xbox) {
-                xbox = this.xbox_mapping = {
-                    axes: [],
-                    buttons: {},
-                    hat: "",
-                    hatmap: GamepadInput.CENTER
-                };
-            }
-
-            xbox.axes["lx"] = gamepad.axes[0];
-            xbox.axes["ly"] = gamepad.axes[1];
-            xbox.axes["rx"] = gamepad.axes[2];
-            xbox.axes["ry"] = gamepad.axes[3];
-            xbox.axes["ltrigger"] = gamepad.buttons[6].value;
-            xbox.axes["rtrigger"] = gamepad.buttons[7].value;
-            xbox.hat = "";
-            xbox.hatmap = GamepadInput.CENTER;
-
-            for (var j = 0; j < gamepad.buttons.length; j++) {
-                this._current_buttons[j] = gamepad.buttons[j].pressed;
-
-				if(j < 12)
-				{
-					xbox.buttons[ GamepadInput.mapping_array[j] ] = gamepad.buttons[j].pressed;
-					if(gamepad.buttons[j].was_pressed)
-						this.trigger( GamepadInput.mapping_array[j] + "_button_event" );
-				}
-				else //mapping of XBOX
-					switch ( j ) //I use a switch to ensure that a player with another gamepad could play
-					{
-						case 12:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "up";
-								xbox.hatmap |= GamepadInput.UP;
-							}
-							break;
-						case 13:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "down";
-								xbox.hatmap |= GamepadInput.DOWN;
-							}
-							break;
-						case 14:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "left";
-								xbox.hatmap |= GamepadInput.LEFT;
-							}
-							break;
-						case 15:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "right";
-								xbox.hatmap |= GamepadInput.RIGHT;
-							}
-							break;
-						case 16:
-							xbox.buttons["home"] = gamepad.buttons[j].pressed;
-							break;
-						default:
-					}
-            }
-            gamepad.xbox = xbox;
-            return gamepad;
-        }
-    };
-
-    GamepadInput.prototype.onDrawBackground = function(ctx) {
-        if (this.flags.collapsed) {
-            return;
-        }
-
-        //render gamepad state?
-        var la = this._left_axis;
-        var ra = this._right_axis;
-        ctx.strokeStyle = "#88A";
-        ctx.strokeRect(
-            (la[0] + 1) * 0.5 * this.size[0] - 4,
-            (la[1] + 1) * 0.5 * this.size[1] - 4,
-            8,
-            8
-        );
-        ctx.strokeStyle = "#8A8";
-        ctx.strokeRect(
-            (ra[0] + 1) * 0.5 * this.size[0] - 4,
-            (ra[1] + 1) * 0.5 * this.size[1] - 4,
-            8,
-            8
-        );
-        var h = this.size[1] / this._current_buttons.length;
-        ctx.fillStyle = "#AEB";
-        for (var i = 0; i < this._current_buttons.length; ++i) {
-            if (this._current_buttons[i]) {
-                ctx.fillRect(0, h * i, 6, h);
-            }
-        }
-    };
-
-    GamepadInput.prototype.onGetOutputs = function() {
-        return [
-            ["left_axis", "vec2"],
-            ["right_axis", "vec2"],
-            ["left_x_axis", "number"],
-            ["left_y_axis", "number"],
-            ["right_x_axis", "number"],
-            ["right_y_axis", "number"],
-            ["trigger_left", "number"],
-            ["trigger_right", "number"],
-            ["a_button", "number"],
-            ["b_button", "number"],
-            ["x_button", "number"],
-            ["y_button", "number"],
-            ["lb_button", "number"],
-            ["rb_button", "number"],
-            ["ls_button", "number"],
-            ["rs_button", "number"],
-            ["start_button", "number"],
-            ["back_button", "number"],
-            ["a_button_event", LiteGraph.EVENT ],
-            ["b_button_event", LiteGraph.EVENT ],
-            ["x_button_event", LiteGraph.EVENT ],
-            ["y_button_event", LiteGraph.EVENT ],
-            ["lb_button_event", LiteGraph.EVENT ],
-            ["rb_button_event", LiteGraph.EVENT ],
-            ["ls_button_event", LiteGraph.EVENT ],
-            ["rs_button_event", LiteGraph.EVENT ],
-            ["start_button_event", LiteGraph.EVENT ],
-            ["back_button_event", LiteGraph.EVENT ],
-            ["hat_left", "number"],
-            ["hat_right", "number"],
-            ["hat_up", "number"],
-            ["hat_down", "number"],
-            ["hat", "number"],
-            ["button_pressed", LiteGraph.EVENT]
-        ];
-    };
-
-    LiteGraph.registerNodeType("input/gamepad", GamepadInput);
-})(this);
 
 (function(global) {
     var LiteGraph = global.LiteGraph;
@@ -19453,6 +19935,1680 @@ if (typeof exports != "undefined") {
     };
 
     LiteGraph.registerNodeType("string/toTable", StringToTable);
+
+})(this);
+
+        this._left_axis = new Float32Array(2);
+        this._right_axis = new Float32Array(2);
+        this._triggers = new Float32Array(2);
+        this._previous_buttons = new Uint8Array(17);
+        this._current_buttons = new Uint8Array(17);
+    }
+
+    GamepadInput.title = "Gamepad";
+    GamepadInput.desc = "gets the input of the gamepad";
+
+    GamepadInput.CENTER = 0;
+    GamepadInput.LEFT = 1;
+    GamepadInput.RIGHT = 2;
+    GamepadInput.UP = 4;
+    GamepadInput.DOWN = 8;
+
+    GamepadInput.zero = new Float32Array(2);
+    GamepadInput.buttons = [
+        "a",
+        "b",
+        "x",
+        "y",
+        "lb",
+        "rb",
+        "lt",
+        "rt",
+        "back",
+        "start",
+        "ls",
+        "rs",
+        "home"
+    ];
+
+    GamepadInput.prototype.onExecute = function() {
+        //get gamepad
+        var gamepad = this.getGamepad();
+        var threshold = this.properties.threshold || 0.0;
+
+        if (gamepad) {
+            this._left_axis[0] =
+                Math.abs(gamepad.xbox.axes["lx"]) > threshold
+                    ? gamepad.xbox.axes["lx"]
+                    : 0;
+            this._left_axis[1] =
+                Math.abs(gamepad.xbox.axes["ly"]) > threshold
+                    ? gamepad.xbox.axes["ly"]
+                    : 0;
+            this._right_axis[0] =
+                Math.abs(gamepad.xbox.axes["rx"]) > threshold
+                    ? gamepad.xbox.axes["rx"]
+                    : 0;
+            this._right_axis[1] =
+                Math.abs(gamepad.xbox.axes["ry"]) > threshold
+                    ? gamepad.xbox.axes["ry"]
+                    : 0;
+            this._triggers[0] =
+                Math.abs(gamepad.xbox.axes["ltrigger"]) > threshold
+                    ? gamepad.xbox.axes["ltrigger"]
+                    : 0;
+            this._triggers[1] =
+                Math.abs(gamepad.xbox.axes["rtrigger"]) > threshold
+                    ? gamepad.xbox.axes["rtrigger"]
+                    : 0;
+        }
+
+        if (this.outputs) {
+            for (var i = 0; i < this.outputs.length; i++) {
+                var output = this.outputs[i];
+                if (!output.links || !output.links.length) {
+                    continue;
+                }
+                var v = null;
+
+                if (gamepad) {
+                    switch (output.name) {
+                        case "left_axis":
+                            v = this._left_axis;
+                            break;
+                        case "right_axis":
+                            v = this._right_axis;
+                            break;
+                        case "left_x_axis":
+                            v = this._left_axis[0];
+                            break;
+                        case "left_y_axis":
+                            v = this._left_axis[1];
+                            break;
+                        case "right_x_axis":
+                            v = this._right_axis[0];
+                            break;
+                        case "right_y_axis":
+                            v = this._right_axis[1];
+                            break;
+                        case "trigger_left":
+                            v = this._triggers[0];
+                            break;
+                        case "trigger_right":
+                            v = this._triggers[1];
+                            break;
+                        case "a_button":
+                            v = gamepad.xbox.buttons["a"] ? 1 : 0;
+                            break;
+                        case "b_button":
+                            v = gamepad.xbox.buttons["b"] ? 1 : 0;
+                            break;
+                        case "x_button":
+                            v = gamepad.xbox.buttons["x"] ? 1 : 0;
+                            break;
+                        case "y_button":
+                            v = gamepad.xbox.buttons["y"] ? 1 : 0;
+                            break;
+                        case "lb_button":
+                            v = gamepad.xbox.buttons["lb"] ? 1 : 0;
+                            break;
+                        case "rb_button":
+                            v = gamepad.xbox.buttons["rb"] ? 1 : 0;
+                            break;
+                        case "ls_button":
+                            v = gamepad.xbox.buttons["ls"] ? 1 : 0;
+                            break;
+                        case "rs_button":
+                            v = gamepad.xbox.buttons["rs"] ? 1 : 0;
+                            break;
+                        case "hat_left":
+                            v = gamepad.xbox.hatmap & GamepadInput.LEFT;
+                            break;
+                        case "hat_right":
+                            v = gamepad.xbox.hatmap & GamepadInput.RIGHT;
+                            break;
+                        case "hat_up":
+                            v = gamepad.xbox.hatmap & GamepadInput.UP;
+                            break;
+                        case "hat_down":
+                            v = gamepad.xbox.hatmap & GamepadInput.DOWN;
+                            break;
+                        case "hat":
+                            v = gamepad.xbox.hatmap;
+                            break;
+                        case "start_button":
+                            v = gamepad.xbox.buttons["start"] ? 1 : 0;
+                            break;
+                        case "back_button":
+                            v = gamepad.xbox.buttons["back"] ? 1 : 0;
+                            break;
+                        case "button_pressed":
+                            for (
+                                var j = 0;
+                                j < this._current_buttons.length;
+                                ++j
+                            ) {
+                                if (
+                                    this._current_buttons[j] &&
+                                    !this._previous_buttons[j]
+                                ) {
+                                    this.triggerSlot(
+                                        i,
+                                        GamepadInput.buttons[j]
+                                    );
+                                }
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                } else {
+                    //if no gamepad is connected, output 0
+                    switch (output.name) {
+                        case "button_pressed":
+                            break;
+                        case "left_axis":
+                        case "right_axis":
+                            v = GamepadInput.zero;
+                            break;
+                        default:
+                            v = 0;
+                    }
+                }
+                this.setOutputData(i, v);
+            }
+        }
+    };
+
+	GamepadInput.mapping = {a:0,b:1,x:2,y:3,lb:4,rb:5,lt:6,rt:7,back:8,start:9,ls:10,rs:11 };
+	GamepadInput.mapping_array = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs"];
+
+    GamepadInput.prototype.getGamepad = function() {
+        var getGamepads =
+            navigator.getGamepads ||
+            navigator.webkitGetGamepads ||
+            navigator.mozGetGamepads;
+        if (!getGamepads) {
+            return null;
+        }
+        var gamepads = getGamepads.call(navigator);
+        var gamepad = null;
+
+        this._previous_buttons.set(this._current_buttons);
+
+        //pick the first connected
+        for (var i = this.properties.gamepad_index; i < 4; i++) {
+            if (!gamepads[i]) {
+                continue;
+            }
+            gamepad = gamepads[i];
+
+            //xbox controller mapping
+            var xbox = this.xbox_mapping;
+            if (!xbox) {
+                xbox = this.xbox_mapping = {
+                    axes: [],
+                    buttons: {},
+                    hat: "",
+                    hatmap: GamepadInput.CENTER
+                };
+            }
+
+            xbox.axes["lx"] = gamepad.axes[0];
+            xbox.axes["ly"] = gamepad.axes[1];
+            xbox.axes["rx"] = gamepad.axes[2];
+            xbox.axes["ry"] = gamepad.axes[3];
+            xbox.axes["ltrigger"] = gamepad.buttons[6].value;
+            xbox.axes["rtrigger"] = gamepad.buttons[7].value;
+            xbox.hat = "";
+            xbox.hatmap = GamepadInput.CENTER;
+
+            for (var j = 0; j < gamepad.buttons.length; j++) {
+                this._current_buttons[j] = gamepad.buttons[j].pressed;
+
+				if(j < 12)
+				{
+					xbox.buttons[ GamepadInput.mapping_array[j] ] = gamepad.buttons[j].pressed;
+					if(gamepad.buttons[j].was_pressed)
+						this.trigger( GamepadInput.mapping_array[j] + "_button_event" );
+				}
+				else //mapping of XBOX
+					switch ( j ) //I use a switch to ensure that a player with another gamepad could play
+					{
+						case 12:
+							if (gamepad.buttons[j].pressed) {
+								xbox.hat += "up";
+								xbox.hatmap |= GamepadInput.UP;
+							}
+							break;
+						case 13:
+							if (gamepad.buttons[j].pressed) {
+								xbox.hat += "down";
+								xbox.hatmap |= GamepadInput.DOWN;
+							}
+							break;
+						case 14:
+							if (gamepad.buttons[j].pressed) {
+								xbox.hat += "left";
+								xbox.hatmap |= GamepadInput.LEFT;
+							}
+							break;
+						case 15:
+							if (gamepad.buttons[j].pressed) {
+								xbox.hat += "right";
+								xbox.hatmap |= GamepadInput.RIGHT;
+							}
+							break;
+						case 16:
+							xbox.buttons["home"] = gamepad.buttons[j].pressed;
+							break;
+						default:
+					}
+            }
+            gamepad.xbox = xbox;
+            return gamepad;
+        }
+    };
+
+    GamepadInput.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+
+        //render gamepad state?
+        var la = this._left_axis;
+        var ra = this._right_axis;
+        ctx.strokeStyle = "#88A";
+        ctx.strokeRect(
+            (la[0] + 1) * 0.5 * this.size[0] - 4,
+            (la[1] + 1) * 0.5 * this.size[1] - 4,
+            8,
+            8
+        );
+        ctx.strokeStyle = "#8A8";
+        ctx.strokeRect(
+            (ra[0] + 1) * 0.5 * this.size[0] - 4,
+            (ra[1] + 1) * 0.5 * this.size[1] - 4,
+            8,
+            8
+        );
+        var h = this.size[1] / this._current_buttons.length;
+        ctx.fillStyle = "#AEB";
+        for (var i = 0; i < this._current_buttons.length; ++i) {
+            if (this._current_buttons[i]) {
+                ctx.fillRect(0, h * i, 6, h);
+            }
+        }
+    };
+
+    GamepadInput.prototype.onGetOutputs = function() {
+        return [
+            ["left_axis", "vec2"],
+            ["right_axis", "vec2"],
+            ["left_x_axis", "number"],
+            ["left_y_axis", "number"],
+            ["right_x_axis", "number"],
+            ["right_y_axis", "number"],
+            ["trigger_left", "number"],
+            ["trigger_right", "number"],
+            ["a_button", "number"],
+            ["b_button", "number"],
+            ["x_button", "number"],
+            ["y_button", "number"],
+            ["lb_button", "number"],
+            ["rb_button", "number"],
+            ["ls_button", "number"],
+            ["rs_button", "number"],
+            ["start_button", "number"],
+            ["back_button", "number"],
+            ["a_button_event", LiteGraph.EVENT ],
+            ["b_button_event", LiteGraph.EVENT ],
+            ["x_button_event", LiteGraph.EVENT ],
+            ["y_button_event", LiteGraph.EVENT ],
+            ["lb_button_event", LiteGraph.EVENT ],
+            ["rb_button_event", LiteGraph.EVENT ],
+            ["ls_button_event", LiteGraph.EVENT ],
+            ["rs_button_event", LiteGraph.EVENT ],
+            ["start_button_event", LiteGraph.EVENT ],
+            ["back_button_event", LiteGraph.EVENT ],
+            ["hat_left", "number"],
+            ["hat_right", "number"],
+            ["hat_up", "number"],
+            ["hat_down", "number"],
+            ["hat", "number"],
+            ["button_pressed", LiteGraph.EVENT]
+        ];
+    };
+
+    LiteGraph.registerNodeType("input/gamepad", GamepadInput);
+})(this);
+
+(function(global) {
+    var LiteGraph = global.LiteGraph;
+
+    //Converter
+    function Converter() {
+        this.addInput("in", "*");
+        this.size = [80, 30];
+    }
+
+    Converter.title = "Converter";
+    Converter.desc = "type A to type B";
+
+    Converter.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+
+        if (this.outputs) {
+            for (var i = 0; i < this.outputs.length; i++) {
+                var output = this.outputs[i];
+                if (!output.links || !output.links.length) {
+                    continue;
+                }
+
+                var result = null;
+                switch (output.name) {
+                    case "number":
+                        result = v.length ? v[0] : parseFloat(v);
+                        break;
+                    case "vec2":
+                    case "vec3":
+                    case "vec4":
+                        var result = null;
+                        var count = 1;
+                        switch (output.name) {
+                            case "vec2":
+                                count = 2;
+                                break;
+                            case "vec3":
+                                count = 3;
+                                break;
+                            case "vec4":
+                                count = 4;
+                                break;
+                        }
+
+                        var result = new Float32Array(count);
+                        if (v.length) {
+                            for (
+                                var j = 0;
+                                j < v.length && j < result.length;
+                                j++
+                            ) {
+                                result[j] = v[j];
+                            }
+                        } else {
+                            result[0] = parseFloat(v);
+                        }
+                        break;
+                }
+                this.setOutputData(i, result);
+            }
+        }
+    };
+
+    Converter.prototype.onGetOutputs = function() {
+        return [
+            ["number", "number"],
+            ["vec2", "vec2"],
+            ["vec3", "vec3"],
+            ["vec4", "vec4"]
+        ];
+    };
+
+    LiteGraph.registerNodeType("math/converter", Converter);
+
+    //Bypass
+    function Bypass() {
+        this.addInput("in");
+        this.addOutput("out");
+        this.size = [80, 30];
+    }
+
+    Bypass.title = "Bypass";
+    Bypass.desc = "removes the type";
+
+    Bypass.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        this.setOutputData(0, v);
+    };
+
+    LiteGraph.registerNodeType("math/bypass", Bypass);
+
+    function ToNumber() {
+        this.addInput("in");
+        this.addOutput("out");
+    }
+
+    ToNumber.title = "to Number";
+    ToNumber.desc = "Cast to number";
+
+    ToNumber.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        this.setOutputData(0, Number(v));
+    };
+
+    LiteGraph.registerNodeType("math/to_number", ToNumber);
+
+    function MathRange() {
+        this.addInput("in", "number", { locked: true });
+        this.addOutput("out", "number", { locked: true });
+        this.addOutput("clamped", "number", { locked: true });
+
+        this.addProperty("in", 0);
+        this.addProperty("in_min", 0);
+        this.addProperty("in_max", 1);
+        this.addProperty("out_min", 0);
+        this.addProperty("out_max", 1);
+
+        this.size = [120, 50];
+    }
+
+    MathRange.title = "Range";
+    MathRange.desc = "Convert a number from one range to another";
+
+    MathRange.prototype.getTitle = function() {
+        if (this.flags.collapsed) {
+            return (this._last_v || 0).toFixed(2);
+        }
+        return this.title;
+    };
+
+    MathRange.prototype.onExecute = function() {
+        if (this.inputs) {
+            for (var i = 0; i < this.inputs.length; i++) {
+                var input = this.inputs[i];
+                var v = this.getInputData(i);
+                if (v === undefined) {
+                    continue;
+                }
+                this.properties[input.name] = v;
+            }
+        }
+
+        var v = this.properties["in"];
+        if (v === undefined || v === null || v.constructor !== Number) {
+            v = 0;
+        }
+
+        var in_min = this.properties.in_min;
+        var in_max = this.properties.in_max;
+        var out_min = this.properties.out_min;
+        var out_max = this.properties.out_max;
+		/*
+		if( in_min > in_max )
+		{
+			in_min = in_max;
+			in_max = this.properties.in_min;
+		}
+		if( out_min > out_max )
+		{
+			out_min = out_max;
+			out_max = this.properties.out_min;
+		}
+		*/
+
+        this._last_v = ((v - in_min) / (in_max - in_min)) * (out_max - out_min) + out_min;
+        this.setOutputData(0, this._last_v);
+        this.setOutputData(1, Math.clamp( this._last_v, out_min, out_max ));
+    };
+
+    MathRange.prototype.onDrawBackground = function(ctx) {
+        //show the current value
+        if (this._last_v) {
+            this.outputs[0].label = this._last_v.toFixed(3);
+        } else {
+            this.outputs[0].label = "?";
+        }
+    };
+
+    MathRange.prototype.onGetInputs = function() {
+        return [
+            ["in_min", "number"],
+            ["in_max", "number"],
+            ["out_min", "number"],
+            ["out_max", "number"]
+        ];
+    };
+
+    LiteGraph.registerNodeType("math/range", MathRange);
+
+    function MathRand() {
+        this.addOutput("value", "number");
+        this.addProperty("min", 0);
+        this.addProperty("max", 1);
+        this.size = [80, 30];
+    }
+
+    MathRand.title = "Rand";
+    MathRand.desc = "Random number";
+
+    MathRand.prototype.onExecute = function() {
+        if (this.inputs) {
+            for (var i = 0; i < this.inputs.length; i++) {
+                var input = this.inputs[i];
+                var v = this.getInputData(i);
+                if (v === undefined) {
+                    continue;
+                }
+                this.properties[input.name] = v;
+            }
+        }
+
+        var min = this.properties.min;
+        var max = this.properties.max;
+        this._last_v = Math.random() * (max - min) + min;
+        this.setOutputData(0, this._last_v);
+    };
+
+    MathRand.prototype.onDrawBackground = function(ctx) {
+        //show the current value
+        this.outputs[0].label = (this._last_v || 0).toFixed(3);
+    };
+
+    MathRand.prototype.onGetInputs = function() {
+        return [["min", "number"], ["max", "number"]];
+    };
+
+    LiteGraph.registerNodeType("math/rand", MathRand);
+
+    //basic continuous noise
+    function MathNoise() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.addProperty("min", 0);
+        this.addProperty("max", 1);
+        this.addProperty("smooth", true);
+        this.addProperty("seed", 0);
+        this.addProperty("octaves", 1);
+        this.addProperty("persistence", 0.8);
+        this.addProperty("speed", 1);
+        this.size = [90, 30];
+    }
+
+    MathNoise.title = "Noise";
+    MathNoise.desc = "Random number with temporal continuity";
+    MathNoise.data = null;
+
+    MathNoise.getValue = function(f, smooth) {
+        if (!MathNoise.data) {
+            MathNoise.data = new Float32Array(1024);
+            for (var i = 0; i < MathNoise.data.length; ++i) {
+                MathNoise.data[i] = Math.random();
+            }
+        }
+        f = f % 1024;
+        if (f < 0) {
+            f += 1024;
+        }
+        var f_min = Math.floor(f);
+        var f = f - f_min;
+        var r1 = MathNoise.data[f_min];
+        var r2 = MathNoise.data[f_min == 1023 ? 0 : f_min + 1];
+        if (smooth) {
+            f = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+        }
+        return r1 * (1 - f) + r2 * f;
+    };
+
+    MathNoise.prototype.onExecute = function() {
+        var f = this.getInputData(0) || 0;
+		var iterations = this.properties.octaves || 1;
+		var r = 0;
+		var amp = 1;
+		var seed = this.properties.seed || 0;
+		f += seed;
+		var speed = this.properties.speed || 1;
+		var total_amp = 0;
+		for(var i = 0; i < iterations; ++i)
+		{
+			r += MathNoise.getValue(f * (1+i) * speed, this.properties.smooth) * amp;
+			total_amp += amp;
+			amp *= this.properties.persistence;
+			if(amp < 0.001)
+				break;
+		}
+		r /= total_amp;
+        var min = this.properties.min;
+        var max = this.properties.max;
+        this._last_v = r * (max - min) + min;
+        this.setOutputData(0, this._last_v);
+    };
+
+    MathNoise.prototype.onDrawBackground = function(ctx) {
+        //show the current value
+        this.outputs[0].label = (this._last_v || 0).toFixed(3);
+    };
+
+    LiteGraph.registerNodeType("math/noise", MathNoise);
+
+    //generates spikes every random time
+    function MathSpikes() {
+        this.addOutput("out", "number");
+        this.addProperty("min_time", 1);
+        this.addProperty("max_time", 2);
+        this.addProperty("duration", 0.2);
+        this.size = [90, 30];
+        this._remaining_time = 0;
+        this._blink_time = 0;
+    }
+
+    MathSpikes.title = "Spikes";
+    MathSpikes.desc = "spike every random time";
+
+    MathSpikes.prototype.onExecute = function() {
+        var dt = this.graph.elapsed_time; //in secs
+
+        this._remaining_time -= dt;
+        this._blink_time -= dt;
+
+        var v = 0;
+        if (this._blink_time > 0) {
+            var f = this._blink_time / this.properties.duration;
+            v = 1 / (Math.pow(f * 8 - 4, 4) + 1);
+        }
+
+        if (this._remaining_time < 0) {
+            this._remaining_time =
+                Math.random() *
+                    (this.properties.max_time - this.properties.min_time) +
+                this.properties.min_time;
+            this._blink_time = this.properties.duration;
+            this.boxcolor = "#FFF";
+        } else {
+            this.boxcolor = "#000";
+        }
+        this.setOutputData(0, v);
+    };
+
+    LiteGraph.registerNodeType("math/spikes", MathSpikes);
+
+    //Math clamp
+    function MathClamp() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.size = [80, 30];
+        this.addProperty("min", 0);
+        this.addProperty("max", 1);
+    }
+
+    MathClamp.title = "Clamp";
+    MathClamp.desc = "Clamp number between min and max";
+    //MathClamp.filter = "shader";
+
+    MathClamp.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+        v = Math.max(this.properties.min, v);
+        v = Math.min(this.properties.max, v);
+        this.setOutputData(0, v);
+    };
+
+    MathClamp.prototype.getCode = function(lang) {
+        var code = "";
+        if (this.isInputConnected(0)) {
+            code +=
+                "clamp({{0}}," +
+                this.properties.min +
+                "," +
+                this.properties.max +
+                ")";
+        }
+        return code;
+    };
+
+    LiteGraph.registerNodeType("math/clamp", MathClamp);
+
+    //Math ABS
+    function MathLerp() {
+        this.properties = { f: 0.5 };
+        this.addInput("A", "number");
+        this.addInput("B", "number");
+
+        this.addOutput("out", "number");
+    }
+
+    MathLerp.title = "Lerp";
+    MathLerp.desc = "Linear Interpolation";
+
+    MathLerp.prototype.onExecute = function() {
+        var v1 = this.getInputData(0);
+        if (v1 == null) {
+            v1 = 0;
+        }
+        var v2 = this.getInputData(1);
+        if (v2 == null) {
+            v2 = 0;
+        }
+
+        var f = this.properties.f;
+
+        var _f = this.getInputData(2);
+        if (_f !== undefined) {
+            f = _f;
+        }
+
+        this.setOutputData(0, v1 * (1 - f) + v2 * f);
+    };
+
+    MathLerp.prototype.onGetInputs = function() {
+        return [["f", "number"]];
+    };
+
+    LiteGraph.registerNodeType("math/lerp", MathLerp);
+
+    //Math ABS
+    function MathAbs() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.size = [80, 30];
+    }
+
+    MathAbs.title = "Abs";
+    MathAbs.desc = "Absolute";
+
+    MathAbs.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+        this.setOutputData(0, Math.abs(v));
+    };
+
+    LiteGraph.registerNodeType("math/abs", MathAbs);
+
+    //Math Floor
+    function MathFloor() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.size = [80, 30];
+    }
+
+    MathFloor.title = "Floor";
+    MathFloor.desc = "Floor number to remove fractional part";
+
+    MathFloor.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+        this.setOutputData(0, Math.floor(v));
+    };
+
+    LiteGraph.registerNodeType("math/floor", MathFloor);
+
+    //Math frac
+    function MathFrac() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.size = [80, 30];
+    }
+
+    MathFrac.title = "Frac";
+    MathFrac.desc = "Returns fractional part";
+
+    MathFrac.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+        this.setOutputData(0, v % 1);
+    };
+
+    LiteGraph.registerNodeType("math/frac", MathFrac);
+
+    //Math Floor
+    function MathSmoothStep() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.size = [80, 30];
+        this.properties = { A: 0, B: 1 };
+    }
+
+    MathSmoothStep.title = "Smoothstep";
+    MathSmoothStep.desc = "Smoothstep";
+
+    MathSmoothStep.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v === undefined) {
+            return;
+        }
+
+        var edge0 = this.properties.A;
+        var edge1 = this.properties.B;
+
+        // Scale, bias and saturate x to 0..1 range
+        v = Math.clamp((v - edge0) / (edge1 - edge0), 0.0, 1.0);
+        // Evaluate polynomial
+        v = v * v * (3 - 2 * v);
+
+        this.setOutputData(0, v);
+    };
+
+    LiteGraph.registerNodeType("math/smoothstep", MathSmoothStep);
+
+    //Math scale
+    function MathScale() {
+        this.addInput("in", "number", { label: "" });
+        this.addOutput("out", "number", { label: "" });
+        this.size = [80, 30];
+        this.addProperty("factor", 1);
+    }
+
+    MathScale.title = "Scale";
+    MathScale.desc = "v * factor";
+
+    MathScale.prototype.onExecute = function() {
+        var value = this.getInputData(0);
+        if (value != null) {
+            this.setOutputData(0, value * this.properties.factor);
+        }
+    };
+
+    LiteGraph.registerNodeType("math/scale", MathScale);
+
+	//Gate
+	function Gate() {
+		this.addInput("v","boolean");
+		this.addInput("A");
+		this.addInput("B");
+		this.addOutput("out");
+	}
+
+	Gate.title = "Gate";
+	Gate.desc = "if v is true, then outputs A, otherwise B";
+
+	Gate.prototype.onExecute = function() {
+		var v = this.getInputData(0);
+		this.setOutputData(0, this.getInputData( v ? 1 : 2 ));
+	};
+    
+	LiteGraph.registerNodeType("math/gate", Gate);
+
+
+    //Math Average
+    function MathAverageFilter() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.size = [80, 30];
+        this.addProperty("samples", 10);
+        this._values = new Float32Array(10);
+        this._current = 0;
+    }
+
+    MathAverageFilter.title = "Average";
+    MathAverageFilter.desc = "Average Filter";
+
+    MathAverageFilter.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            v = 0;
+        }
+
+        var num_samples = this._values.length;
+
+        this._values[this._current % num_samples] = v;
+        this._current += 1;
+        if (this._current > num_samples) {
+            this._current = 0;
+        }
+
+        var avr = 0;
+        for (var i = 0; i < num_samples; ++i) {
+            avr += this._values[i];
+        }
+
+        this.setOutputData(0, avr / num_samples);
+    };
+
+    MathAverageFilter.prototype.onPropertyChanged = function(name, value) {
+        if (value < 1) {
+            value = 1;
+        }
+        this.properties.samples = Math.round(value);
+        var old = this._values;
+
+        this._values = new Float32Array(this.properties.samples);
+        if (old.length <= this._values.length) {
+            this._values.set(old);
+        } else {
+            this._values.set(old.subarray(0, this._values.length));
+        }
+    };
+
+    LiteGraph.registerNodeType("math/average", MathAverageFilter);
+
+    //Math
+    function MathTendTo() {
+        this.addInput("in", "number");
+        this.addOutput("out", "number");
+        this.addProperty("factor", 0.1);
+        this.size = [80, 30];
+        this._value = null;
+    }
+
+    MathTendTo.title = "TendTo";
+    MathTendTo.desc = "moves the output value always closer to the input";
+
+    MathTendTo.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            v = 0;
+        }
+        var f = this.properties.factor;
+        if (this._value == null) {
+            this._value = v;
+        } else {
+            this._value = this._value * (1 - f) + v * f;
+        }
+        this.setOutputData(0, this._value);
+    };
+
+    LiteGraph.registerNodeType("math/tendTo", MathTendTo);
+
+    //Math operation
+    function MathOperation() {
+        this.addInput("A", "number,array,object");
+        this.addInput("B", "number");
+        this.addOutput("=", "number");
+        this.addProperty("A", 1);
+        this.addProperty("B", 1);
+        this.addProperty("OP", "+", "enum", { values: MathOperation.values });
+		this._func = function(A,B) { return A + B; };
+		this._result = []; //only used for arrays
+    }
+
+    MathOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
+
+	MathOperation.title = "Operation";
+    MathOperation.desc = "Easy math operators";
+    MathOperation["@OP"] = {
+        type: "enum",
+        title: "operation",
+        values: MathOperation.values
+    };
+    MathOperation.size = [100, 60];
+
+    MathOperation.prototype.getTitle = function() {
+		if(this.properties.OP == "max" || this.properties.OP == "min")
+			return this.properties.OP + "(A,B)";
+        return "A " + this.properties.OP + " B";
+    };
+
+    MathOperation.prototype.setValue = function(v) {
+        if (typeof v == "string") {
+            v = parseFloat(v);
+        }
+        this.properties["value"] = v;
+    };
+
+    MathOperation.prototype.onPropertyChanged = function(name, value)
+	{
+		if (name != "OP")
+			return;
+        switch (this.properties.OP) {
+            case "+": this._func = function(A,B) { return A + B; }; break;
+            case "-": this._func = function(A,B) { return A - B; }; break;
+            case "x":
+            case "X":
+            case "*": this._func = function(A,B) { return A * B; }; break;
+            case "/": this._func = function(A,B) { return A / B; }; break;
+            case "%": this._func = function(A,B) { return A % B; }; break;
+            case "^": this._func = function(A,B) { return Math.pow(A, B); }; break;
+            case "max": this._func = function(A,B) { return Math.max(A, B); }; break;
+            case "min": this._func = function(A,B) { return Math.min(A, B); }; break;
+			default: 
+				console.warn("Unknown operation: " + this.properties.OP);
+				this._func = function(A) { return A; };
+				break;
+        }
+	}
+
+    MathOperation.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        var B = this.getInputData(1);
+        if ( A != null ) {
+			if( A.constructor === Number )
+	            this.properties["A"] = A;
+        } else {
+            A = this.properties["A"];
+        }
+
+        if (B != null) {
+            this.properties["B"] = B;
+        } else {
+            B = this.properties["B"];
+        }
+
+		var result;
+		if(A.constructor === Number)
+		{
+	        result = 0;
+			result = this._func(A,B);
+		}
+		else if(A.constructor === Array)
+		{
+			result = this._result;
+			result.length = A.length;
+			for(var i = 0; i < A.length; ++i)
+				result[i] = this._func(A[i],B);
+		}
+		else
+		{
+			result = {};
+			for(var i in A)
+				result[i] = this._func(A[i],B);
+		}
+	    this.setOutputData(0, result);
+    };
+
+    MathOperation.prototype.onDrawBackground = function(ctx) {
+        if (this.flags.collapsed) {
+            return;
+        }
+
+        ctx.font = "40px Arial";
+        ctx.fillStyle = "#666";
+        ctx.textAlign = "center";
+        ctx.fillText(
+            this.properties.OP,
+            this.size[0] * 0.5,
+            (this.size[1] + LiteGraph.NODE_TITLE_HEIGHT) * 0.5
+        );
+        ctx.textAlign = "left";
+    };
+
+    LiteGraph.registerNodeType("math/operation", MathOperation);
+
+    LiteGraph.registerSearchboxExtra("math/operation", "MAX", {
+        properties: {OP:"max"},
+        title: "MAX()"
+    });
+
+    LiteGraph.registerSearchboxExtra("math/operation", "MIN", {
+        properties: {OP:"min"},
+        title: "MIN()"
+    });
+
+
+    //Math compare
+    function MathCompare() {
+        this.addInput("A", "number");
+        this.addInput("B", "number");
+        this.addOutput("A==B", "boolean");
+        this.addOutput("A!=B", "boolean");
+        this.addProperty("A", 0);
+        this.addProperty("B", 0);
+    }
+
+    MathCompare.title = "Compare";
+    MathCompare.desc = "compares between two values";
+
+    MathCompare.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        var B = this.getInputData(1);
+        if (A !== undefined) {
+            this.properties["A"] = A;
+        } else {
+            A = this.properties["A"];
+        }
+
+        if (B !== undefined) {
+            this.properties["B"] = B;
+        } else {
+            B = this.properties["B"];
+        }
+
+        for (var i = 0, l = this.outputs.length; i < l; ++i) {
+            var output = this.outputs[i];
+            if (!output.links || !output.links.length) {
+                continue;
+            }
+            var value;
+            switch (output.name) {
+                case "A==B":
+                    value = A == B;
+                    break;
+                case "A!=B":
+                    value = A != B;
+                    break;
+                case "A>B":
+                    value = A > B;
+                    break;
+                case "A<B":
+                    value = A < B;
+                    break;
+                case "A<=B":
+                    value = A <= B;
+                    break;
+                case "A>=B":
+                    value = A >= B;
+                    break;
+            }
+            this.setOutputData(i, value);
+        }
+    };
+
+    MathCompare.prototype.onGetOutputs = function() {
+        return [
+            ["A==B", "boolean"],
+            ["A!=B", "boolean"],
+            ["A>B", "boolean"],
+            ["A<B", "boolean"],
+            ["A>=B", "boolean"],
+            ["A<=B", "boolean"]
+        ];
+    };
+
+    LiteGraph.registerNodeType("math/compare", MathCompare);
+
+    LiteGraph.registerSearchboxExtra("math/compare", "==", {
+        outputs: [["A==B", "boolean"]],
+        title: "A==B"
+    });
+    LiteGraph.registerSearchboxExtra("math/compare", "!=", {
+        outputs: [["A!=B", "boolean"]],
+        title: "A!=B"
+    });
+    LiteGraph.registerSearchboxExtra("math/compare", ">", {
+        outputs: [["A>B", "boolean"]],
+        title: "A>B"
+    });
+    LiteGraph.registerSearchboxExtra("math/compare", "<", {
+        outputs: [["A<B", "boolean"]],
+        title: "A<B"
+    });
+    LiteGraph.registerSearchboxExtra("math/compare", ">=", {
+        outputs: [["A>=B", "boolean"]],
+        title: "A>=B"
+    });
+    LiteGraph.registerSearchboxExtra("math/compare", "<=", {
+        outputs: [["A<=B", "boolean"]],
+        title: "A<=B"
+    });
+
+    function MathCondition() {
+        this.addInput("A", "number");
+        this.addInput("B", "number");
+        this.addOutput("true", "boolean");
+        this.addOutput("false", "boolean");
+        this.addProperty("A", 1);
+        this.addProperty("B", 1);
+        this.addProperty("OP", ">", "enum", { values: MathCondition.values });
+		this.addWidget("combo","Cond.",this.properties.OP,{ property: "OP", values: MathCondition.values } );
+
+        this.size = [80, 60];
+    }
+
+    MathCondition.values = [">", "<", "==", "!=", "<=", ">=", "||", "&&" ];
+    MathCondition["@OP"] = {
+        type: "enum",
+        title: "operation",
+        values: MathCondition.values
+    };
+
+    MathCondition.title = "Condition";
+    MathCondition.desc = "evaluates condition between A and B";
+
+    MathCondition.prototype.getTitle = function() {
+        return "A " + this.properties.OP + " B";
+    };
+
+    MathCondition.prototype.onExecute = function() {
+        var A = this.getInputData(0);
+        if (A === undefined) {
+            A = this.properties.A;
+        } else {
+            this.properties.A = A;
+        }
+
+        var B = this.getInputData(1);
+        if (B === undefined) {
+            B = this.properties.B;
+        } else {
+            this.properties.B = B;
+        }
+
+        var result = true;
+        switch (this.properties.OP) {
+            case ">":
+                result = A > B;
+                break;
+            case "<":
+                result = A < B;
+                break;
+            case "==":
+                result = A == B;
+                break;
+            case "!=":
+                result = A != B;
+                break;
+            case "<=":
+                result = A <= B;
+                break;
+            case ">=":
+                result = A >= B;
+                break;
+            case "||":
+                result = A || B;
+                break;
+            case "&&":
+                result = A && B;
+                break;
+        }
+
+        this.setOutputData(0, result);
+        this.setOutputData(1, !result);
+    };
+
+    LiteGraph.registerNodeType("math/condition", MathCondition);
+
+
+    function MathBranch() {
+        this.addInput("in", 0);
+        this.addInput("cond", "boolean");
+        this.addOutput("true", 0);
+        this.addOutput("false", 0);
+        this.size = [80, 60];
+    }
+
+    MathBranch.title = "Branch";
+    MathBranch.desc = "If condition is true, outputs IN in true, otherwise in false";
+
+    MathBranch.prototype.onExecute = function() {
+        var V = this.getInputData(0);
+        var cond = this.getInputData(1);
+
+		if(cond)
+		{
+			this.setOutputData(0, V);
+			this.setOutputData(1, null);
+		}
+		else
+		{
+			this.setOutputData(0, null);
+			this.setOutputData(1, V);
+		}
+	}
+
+    LiteGraph.registerNodeType("math/branch", MathBranch);
+
+
+    function MathAccumulate() {
+        this.addInput("inc", "number");
+        this.addOutput("total", "number");
+        this.addProperty("increment", 1);
+        this.addProperty("value", 0);
+    }
+
+    MathAccumulate.title = "Accumulate";
+    MathAccumulate.desc = "Increments a value every time";
+
+    MathAccumulate.prototype.onExecute = function() {
+        if (this.properties.value === null) {
+            this.properties.value = 0;
+        }
+
+        var inc = this.getInputData(0);
+        if (inc !== null) {
+            this.properties.value += inc;
+        } else {
+            this.properties.value += this.properties.increment;
+        }
+        this.setOutputData(0, this.properties.value);
+    };
+
+    LiteGraph.registerNodeType("math/accumulate", MathAccumulate);
+
+    //Math Trigonometry
+    function MathTrigonometry() {
+        this.addInput("v", "number");
+        this.addOutput("sin", "number");
+
+        this.addProperty("amplitude", 1);
+        this.addProperty("offset", 0);
+        this.bgImageUrl = "nodes/imgs/icon-sin.png";
+    }
+
+    MathTrigonometry.title = "Trigonometry";
+    MathTrigonometry.desc = "Sin Cos Tan";
+    //MathTrigonometry.filter = "shader";
+
+    MathTrigonometry.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            v = 0;
+        }
+        var amplitude = this.properties["amplitude"];
+        var slot = this.findInputSlot("amplitude");
+        if (slot != -1) {
+            amplitude = this.getInputData(slot);
+        }
+        var offset = this.properties["offset"];
+        slot = this.findInputSlot("offset");
+        if (slot != -1) {
+            offset = this.getInputData(slot);
+        }
+
+        for (var i = 0, l = this.outputs.length; i < l; ++i) {
+            var output = this.outputs[i];
+            var value;
+            switch (output.name) {
+                case "sin":
+                    value = Math.sin(v);
+                    break;
+                case "cos":
+                    value = Math.cos(v);
+                    break;
+                case "tan":
+                    value = Math.tan(v);
+                    break;
+                case "asin":
+                    value = Math.asin(v);
+                    break;
+                case "acos":
+                    value = Math.acos(v);
+                    break;
+                case "atan":
+                    value = Math.atan(v);
+                    break;
+            }
+            this.setOutputData(i, amplitude * value + offset);
+        }
+    };
+
+    MathTrigonometry.prototype.onGetInputs = function() {
+        return [["v", "number"], ["amplitude", "number"], ["offset", "number"]];
+    };
+
+    MathTrigonometry.prototype.onGetOutputs = function() {
+        return [
+            ["sin", "number"],
+            ["cos", "number"],
+            ["tan", "number"],
+            ["asin", "number"],
+            ["acos", "number"],
+            ["atan", "number"]
+        ];
+    };
+
+    LiteGraph.registerNodeType("math/trigonometry", MathTrigonometry);
+
+    LiteGraph.registerSearchboxExtra("math/trigonometry", "SIN()", {
+        outputs: [["sin", "number"]],
+        title: "SIN()"
+    });
+    LiteGraph.registerSearchboxExtra("math/trigonometry", "COS()", {
+        outputs: [["cos", "number"]],
+        title: "COS()"
+    });
+    LiteGraph.registerSearchboxExtra("math/trigonometry", "TAN()", {
+        outputs: [["tan", "number"]],
+        title: "TAN()"
+    });
+
+    //math library for safe math operations without eval
+    function MathFormula() {
+        this.addInput("x", "number");
+        this.addInput("y", "number");
+        this.addOutput("", "number");
+        this.properties = { x: 1.0, y: 1.0, formula: "x+y" };
+        this.code_widget = this.addWidget(
+            "text",
+            "F(x,y)",
+            this.properties.formula,
+            function(v, canvas, node) {
+                node.properties.formula = v;
+            }
+        );
+        this.addWidget("toggle", "allow", LiteGraph.allow_scripts, function(v) {
+            LiteGraph.allow_scripts = v;
+        });
+        this._func = null;
+    }
+
+    MathFormula.title = "Formula";
+    MathFormula.desc = "Compute formula";
+    MathFormula.size = [160, 100];
+
+    MathAverageFilter.prototype.onPropertyChanged = function(name, value) {
+        if (name == "formula") {
+            this.code_widget.value = value;
+        }
+    };
+
+    MathFormula.prototype.onExecute = function() {
+        if (!LiteGraph.allow_scripts) {
+            return;
+        }
+
+        var x = this.getInputData(0);
+        var y = this.getInputData(1);
+        if (x != null) {
+            this.properties["x"] = x;
+        } else {
+            x = this.properties["x"];
+        }
+
+        if (y != null) {
+            this.properties["y"] = y;
+        } else {
+            y = this.properties["y"];
+        }
+
+        var f = this.properties["formula"];
+
+        var value;
+        try {
+            if (!this._func || this._func_code != this.properties.formula) {
+                this._func = new Function(
+                    "x",
+                    "y",
+                    "TIME",
+                    "return " + this.properties.formula
+                );
+                this._func_code = this.properties.formula;
+            }
+            value = this._func(x, y, this.graph.globaltime);
+            this.boxcolor = null;
+        } catch (err) {
+            this.boxcolor = "red";
+        }
+        this.setOutputData(0, value);
+    };
+
+    MathFormula.prototype.getTitle = function() {
+        return this._func_code || "Formula";
+    };
+
+    MathFormula.prototype.onDrawBackground = function() {
+        var f = this.properties["formula"];
+        if (this.outputs && this.outputs.length) {
+            this.outputs[0].label = f;
+        }
+    };
+
+    LiteGraph.registerNodeType("math/formula", MathFormula);
+
+    function Math3DVec2ToXY() {
+        this.addInput("vec2", "vec2");
+        this.addOutput("x", "number");
+        this.addOutput("y", "number");
+    }
+
+    Math3DVec2ToXY.title = "Vec2->XY";
+    Math3DVec2ToXY.desc = "vector 2 to components";
+
+    Math3DVec2ToXY.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+
+        this.setOutputData(0, v[0]);
+        this.setOutputData(1, v[1]);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec2-to-xy", Math3DVec2ToXY);
+
+    function Math3DXYToVec2() {
+        this.addInputs([["x", "number"], ["y", "number"]]);
+        this.addOutput("vec2", "vec2");
+        this.properties = { x: 0, y: 0 };
+        this._data = new Float32Array(2);
+    }
+
+    Math3DXYToVec2.title = "XY->Vec2";
+    Math3DXYToVec2.desc = "components to vector2";
+
+    Math3DXYToVec2.prototype.onExecute = function() {
+        var x = this.getInputData(0);
+        if (x == null) {
+            x = this.properties.x;
+        }
+        var y = this.getInputData(1);
+        if (y == null) {
+            y = this.properties.y;
+        }
+
+        var data = this._data;
+        data[0] = x;
+        data[1] = y;
+
+        this.setOutputData(0, data);
+    };
+
+    LiteGraph.registerNodeType("math3d/xy-to-vec2", Math3DXYToVec2);
+
+    function Math3DVec3ToXYZ() {
+        this.addInput("vec3", "vec3");
+        this.addOutput("x", "number");
+        this.addOutput("y", "number");
+        this.addOutput("z", "number");
+    }
+
+    Math3DVec3ToXYZ.title = "Vec3->XYZ";
+    Math3DVec3ToXYZ.desc = "vector 3 to components";
+
+    Math3DVec3ToXYZ.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+
+        this.setOutputData(0, v[0]);
+        this.setOutputData(1, v[1]);
+        this.setOutputData(2, v[2]);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec3-to-xyz", Math3DVec3ToXYZ);
+
+    function Math3DXYZToVec3() {
+        this.addInputs([["x", "number"], ["y", "number"], ["z", "number"]]);
+        this.addOutput("vec3", "vec3");
+        this.properties = { x: 0, y: 0, z: 0 };
+        this._data = new Float32Array(3);
+    }
+
+    Math3DXYZToVec3.title = "XYZ->Vec3";
+    Math3DXYZToVec3.desc = "components to vector3";
+
+    Math3DXYZToVec3.prototype.onExecute = function() {
+        var x = this.getInputData(0);
+        if (x == null) {
+            x = this.properties.x;
+        }
+        var y = this.getInputData(1);
+        if (y == null) {
+            y = this.properties.y;
+        }
+        var z = this.getInputData(2);
+        if (z == null) {
+            z = this.properties.z;
+        }
+
+        var data = this._data;
+        data[0] = x;
+        data[1] = y;
+        data[2] = z;
+
+        this.setOutputData(0, data);
+    };
+
+    LiteGraph.registerNodeType("math3d/xyz-to-vec3", Math3DXYZToVec3);
+
+    function Math3DVec4ToXYZW() {
+        this.addInput("vec4", "vec4");
+        this.addOutput("x", "number");
+        this.addOutput("y", "number");
+        this.addOutput("z", "number");
+        this.addOutput("w", "number");
+    }
+
+    Math3DVec4ToXYZW.title = "Vec4->XYZW";
+    Math3DVec4ToXYZW.desc = "vector 4 to components";
+
+    Math3DVec4ToXYZW.prototype.onExecute = function() {
+        var v = this.getInputData(0);
+        if (v == null) {
+            return;
+        }
+
+        this.setOutputData(0, v[0]);
+        this.setOutputData(1, v[1]);
+        this.setOutputData(2, v[2]);
+        this.setOutputData(3, v[3]);
+    };
+
+    LiteGraph.registerNodeType("math3d/vec4-to-xyzw", Math3DVec4ToXYZW);
+
+    function Math3DXYZWToVec4() {
+        this.addInputs([
+            ["x", "number"],
+            ["y", "number"],
+            ["z", "number"],
+            ["w", "number"]
+        ]);
+        this.addOutput("vec4", "vec4");
+        this.properties = { x: 0, y: 0, z: 0, w: 0 };
+        this._data = new Float32Array(4);
+    }
+
+    Math3DXYZWToVec4.title = "XYZW->Vec4";
+    Math3DXYZWToVec4.desc = "components to vector4";
+
+    Math3DXYZWToVec4.prototype.onExecute = function() {
+        var x = this.getInputData(0);
+        if (x == null) {
+            x = this.properties.x;
+        }
+        var y = this.getInputData(1);
+        if (y == null) {
+            y = this.properties.y;
+        }
+        var z = this.getInputData(2);
+        if (z == null) {
+            z = this.properties.z;
+        }
+        var w = this.getInputData(3);
+        if (w == null) {
+            w = this.properties.w;
+        }
+
+        var data = this._data;
+        data[0] = x;
+        data[1] = y;
+        data[2] = z;
+        data[3] = w;
+
+        this.setOutputData(0, data);
+    };
+
+    LiteGraph.registerNodeType("math3d/xyzw-to-vec4", Math3DXYZWToVec4);
 
 })(this);
 
@@ -33627,369 +35783,9 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     LiteGraph.registerNodeType("audio/destination", LGAudioDestination);
 })(this);
 
-//event related nodes
-(function(global) {
-    var LiteGraph = global.LiteGraph;
-
-    function LGWebSocket() {
-        this.size = [60, 20];
-        this.addInput("send", LiteGraph.ACTION);
-        this.addOutput("received", LiteGraph.EVENT);
-        this.addInput("in", 0);
-        this.addOutput("out", 0);
-        this.properties = {
-            url: "",
-            room: "lgraph", //allows to filter messages,
-            only_send_changes: true
+        LGraphFXLens.title = "Lens";
+        LGraphFXLens.desc = "Camera Lens distortion";
+        LGraphFXLens.widgets_info = {
+            precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
         };
-        this._ws = null;
-        this._last_sent_data = [];
-        this._last_received_data = [];
-    }
-
-    LGWebSocket.title = "WebSocket";
-    LGWebSocket.desc = "Send data through a websocket";
-
-    LGWebSocket.prototype.onPropertyChanged = function(name, value) {
-        if (name == "url") {
-            this.connectSocket();
-        }
-    };
-
-    LGWebSocket.prototype.onExecute = function() {
-        if (!this._ws && this.properties.url) {
-            this.connectSocket();
-        }
-
-        if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
-            return;
-        }
-
-        var room = this.properties.room;
-        var only_changes = this.properties.only_send_changes;
-
-        for (var i = 1; i < this.inputs.length; ++i) {
-            var data = this.getInputData(i);
-            if (data == null) {
-                continue;
-            }
-            var json;
-            try {
-                json = JSON.stringify({
-                    type: 0,
-                    room: room,
-                    channel: i,
-                    data: data
-                });
-            } catch (err) {
-                continue;
-            }
-            if (only_changes && this._last_sent_data[i] == json) {
-                continue;
-            }
-
-            this._last_sent_data[i] = json;
-            this._ws.send(json);
-        }
-
-        for (var i = 1; i < this.outputs.length; ++i) {
-            this.setOutputData(i, this._last_received_data[i]);
-        }
-
-        if (this.boxcolor == "#AFA") {
-            this.boxcolor = "#6C6";
-        }
-    };
-
-    LGWebSocket.prototype.connectSocket = function() {
-        var that = this;
-        var url = this.properties.url;
-        if (url.substr(0, 2) != "ws") {
-            url = "ws://" + url;
-        }
-        this._ws = new WebSocket(url);
-        this._ws.onopen = function() {
-            console.log("ready");
-            that.boxcolor = "#6C6";
-        };
-        this._ws.onmessage = function(e) {
-            that.boxcolor = "#AFA";
-            var data = JSON.parse(e.data);
-            if (data.room && data.room != that.properties.room) {
-                return;
-            }
-            if (data.type == 1) {
-                if (
-                    data.data.object_class &&
-                    LiteGraph[data.data.object_class]
-                ) {
-                    var obj = null;
-                    try {
-                        obj = new LiteGraph[data.data.object_class](data.data);
-                        that.triggerSlot(0, obj);
-                    } catch (err) {
-                        return;
-                    }
-                } else {
-                    that.triggerSlot(0, data.data);
-                }
-            } else {
-                that._last_received_data[data.channel || 0] = data.data;
-            }
-        };
-        this._ws.onerror = function(e) {
-            console.log("couldnt connect to websocket");
-            that.boxcolor = "#E88";
-        };
-        this._ws.onclose = function(e) {
-            console.log("connection closed");
-            that.boxcolor = "#000";
-        };
-    };
-
-    LGWebSocket.prototype.send = function(data) {
-        if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
-            return;
-        }
-        this._ws.send(JSON.stringify({ type: 1, msg: data }));
-    };
-
-    LGWebSocket.prototype.onAction = function(action, param) {
-        if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
-            return;
-        }
-        this._ws.send({
-            type: 1,
-            room: this.properties.room,
-            action: action,
-            data: param
-        });
-    };
-
-    LGWebSocket.prototype.onGetInputs = function() {
-        return [["in", 0]];
-    };
-
-    LGWebSocket.prototype.onGetOutputs = function() {
-        return [["out", 0]];
-    };
-
-    LiteGraph.registerNodeType("network/websocket", LGWebSocket);
-
-    //It is like a websocket but using the SillyServer.js server that bounces packets back to all clients connected:
-    //For more information: https://github.com/jagenjo/SillyServer.js
-
-    function LGSillyClient() {
-        //this.size = [60,20];
-        this.room_widget = this.addWidget(
-            "text",
-            "Room",
-            "lgraph",
-            this.setRoom.bind(this)
-        );
-        this.addWidget(
-            "button",
-            "Reconnect",
-            null,
-            this.connectSocket.bind(this)
-        );
-
-        this.addInput("send", LiteGraph.ACTION);
-        this.addOutput("received", LiteGraph.EVENT);
-        this.addInput("in", 0);
-        this.addOutput("out", 0);
-        this.properties = {
-            url: "tamats.com:55000",
-            room: "lgraph",
-            only_send_changes: true
-        };
-
-        this._server = null;
-        this.connectSocket();
-        this._last_sent_data = [];
-        this._last_received_data = [];
-
-		if(typeof(SillyClient) == "undefined")
-			console.warn("remember to add SillyClient.js to your project: https://tamats.com/projects/sillyserver/src/sillyclient.js");
-    }
-
-    LGSillyClient.title = "SillyClient";
-    LGSillyClient.desc = "Connects to SillyServer to broadcast messages";
-
-    LGSillyClient.prototype.onPropertyChanged = function(name, value) {
-        if (name == "room") {
-            this.room_widget.value = value;
-        }
-        this.connectSocket();
-    };
-
-    LGSillyClient.prototype.setRoom = function(room_name) {
-        this.properties.room = room_name;
-        this.room_widget.value = room_name;
-        this.connectSocket();
-    };
-
-    //force label names
-    LGSillyClient.prototype.onDrawForeground = function() {
-        for (var i = 1; i < this.inputs.length; ++i) {
-            var slot = this.inputs[i];
-            slot.label = "in_" + i;
-        }
-        for (var i = 1; i < this.outputs.length; ++i) {
-            var slot = this.outputs[i];
-            slot.label = "out_" + i;
-        }
-    };
-
-    LGSillyClient.prototype.onExecute = function() {
-        if (!this._server || !this._server.is_connected) {
-            return;
-        }
-
-        var only_send_changes = this.properties.only_send_changes;
-
-        for (var i = 1; i < this.inputs.length; ++i) {
-            var data = this.getInputData(i);
-			var prev_data = this._last_sent_data[i];
-            if (data != null) {
-                if (only_send_changes)
-				{	
-					var is_equal = true;
-					if( data && data.length && prev_data && prev_data.length == data.length && data.constructor !== String)
-					{
-						for(var j = 0; j < data.length; ++j)
-							if( prev_data[j] != data[j] )
-							{
-								is_equal = false;
-								break;
-							}
-					}
-					else if(this._last_sent_data[i] != data)
-						is_equal = false;
-					if(is_equal)
-							continue;
-                }
-                this._server.sendMessage({ type: 0, channel: i, data: data });
-				if( data.length && data.constructor !== String )
-				{
-					if( this._last_sent_data[i] )
-					{
-						this._last_sent_data[i].length = data.length;
-						for(var j = 0; j < data.length; ++j)
-							this._last_sent_data[i][j] = data[j];
-					}
-					else //create
-					{
-						if(data.constructor === Array)
-							this._last_sent_data[i] = data.concat();
-						else
-							this._last_sent_data[i] = new data.constructor( data );
-					}
-				}
-				else
-	                this._last_sent_data[i] = data; //should be cloned
-            }
-        }
-
-        for (var i = 1; i < this.outputs.length; ++i) {
-            this.setOutputData(i, this._last_received_data[i]);
-        }
-
-        if (this.boxcolor == "#AFA") {
-            this.boxcolor = "#6C6";
-        }
-    };
-
-    LGSillyClient.prototype.connectSocket = function() {
-        var that = this;
-        if (typeof SillyClient == "undefined") {
-            if (!this._error) {
-                console.error(
-                    "SillyClient node cannot be used, you must include SillyServer.js"
-                );
-            }
-            this._error = true;
-            return;
-        }
-
-        this._server = new SillyClient();
-        this._server.on_ready = function() {
-            console.log("ready");
-            that.boxcolor = "#6C6";
-        };
-        this._server.on_message = function(id, msg) {
-            var data = null;
-            try {
-                data = JSON.parse(msg);
-            } catch (err) {
-                return;
-            }
-
-            if (data.type == 1) {
-                //EVENT slot
-                if (
-                    data.data.object_class &&
-                    LiteGraph[data.data.object_class]
-                ) {
-                    var obj = null;
-                    try {
-                        obj = new LiteGraph[data.data.object_class](data.data);
-                        that.triggerSlot(0, obj);
-                    } catch (err) {
-                        return;
-                    }
-                } else {
-                    that.triggerSlot(0, data.data);
-                }
-            } //for FLOW slots
-            else {
-                that._last_received_data[data.channel || 0] = data.data;
-            }
-            that.boxcolor = "#AFA";
-        };
-        this._server.on_error = function(e) {
-            console.log("couldnt connect to websocket");
-            that.boxcolor = "#E88";
-        };
-        this._server.on_close = function(e) {
-            console.log("connection closed");
-            that.boxcolor = "#000";
-        };
-
-        if (this.properties.url && this.properties.room) {
-            try {
-                this._server.connect(this.properties.url, this.properties.room);
-            } catch (err) {
-                console.error("SillyServer error: " + err);
-                this._server = null;
-                return;
-            }
-            this._final_url = this.properties.url + "/" + this.properties.room;
-        }
-    };
-
-    LGSillyClient.prototype.send = function(data) {
-        if (!this._server || !this._server.is_connected) {
-            return;
-        }
-        this._server.sendMessage({ type: 1, data: data });
-    };
-
-    LGSillyClient.prototype.onAction = function(action, param) {
-        if (!this._server || !this._server.is_connected) {
-            return;
-        }
-        this._server.sendMessage({ type: 1, action: action, data: param });
-    };
-
-    LGSillyClient.prototype.onGetInputs = function() {
-        return [["in", 0]];
-    };
-
-    LGSillyClient.prototype.onGetOutputs = function() {
-        return [["out", 0]];
-    };
-
-    LiteGraph.registerNodeType("network/sillyclient", LGSillyClient);
-})(this);
 

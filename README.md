@@ -1,4 +1,59 @@
-# litegraph.js
+# EXPERIMENTS WITH litegraph.js
+
+A fork of the ecceptional litegraph.js library. This is unofficial and unsupported.
+
+Here there are pushed a couple experiments, nothing serious, take it for what is it. Don't use it at others risk.
+
+MODS
+
+
+- auto connect
+  - drag into node
+  - auto select first available slot by type
+  - drag from IN to OUT)
+  - drag to create a new node
+  
+- [use with SHIFT when releasing connection to SEARCH!], or double click anywhere
+
+- filter nodes in search by types (filtering/proposing current type, or generic types, and 'wrong' types)
+
+- ContrlZ, ControlY and history basics
+
+- added "on request" mode: executed when an action or a trigger is executed
+
+- BIG MOD:
+  - ancestors calculation and execution: every node exeution check if his ancestors are "updated" (action lines are not considered)
+  - every action generate an ID that is stored by each node executed by it (and every frame is an action too)
+  - some event node creates new "IDs" when needed (when we want a behaviour that updates future nodes ancestors)
+
+
+- generic fixes
+
+- script node fix (code widget)
+
+- fix auto create oin-trigger slot
+
+- dialogs hide on mouseleave fix
+
+- "boxcolor" color on execute and action, applied to all nodes (like the lovely timer node does)
+
+- close node property panel with Esc
+
+- edit title, color and mode in node property panel
+
+- allow multiline in textarea by shift-enter
+
+- new logic nodes (and, or, not), new generic compare node (num, string, obj)
+
+- basics of Html, cdnLibraries, openCv, and test nodes
+
+
+
+-----------------------------------------
+Original README.md
+-----------------------------------------
+
+# [litegraph.js](https://github.com/jagenjo/litegraph.js)
 
 A library in Javascript to create graphs in the browser similar to Unreal Blueprints. Nodes can be programmed easily and it includes an editor to construct and tests the graphs.
 
