@@ -3,7 +3,8 @@
 
     //Converter
     function Converter() {
-        this.addInput("in", "*");
+        this.addInput("in", 0);
+		this.addOutput("out", 0);
         this.size = [80, 30];
     }
 
@@ -541,7 +542,7 @@
 		var v = this.getInputData(0);
 		this.setOutputData(0, this.getInputData( v ? 1 : 2 ));
 	};
-    
+
 	LiteGraph.registerNodeType("math/gate", Gate);
 
 

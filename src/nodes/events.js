@@ -24,7 +24,7 @@
         this.addOutput("true", LiteGraph.EVENT);
         this.addOutput("change", LiteGraph.EVENT);
         this.addOutput("false", LiteGraph.EVENT);
-		this.properties = { only_on_change: true };
+		this.properties = { only_on_change: true, tooltip:"Triggers event if input evaluates to true" };
 		this.prev = 0;
     }
 
@@ -48,36 +48,114 @@
 
     LiteGraph.registerNodeType("events/trigger", TriggerEvent);
 
-    //Sequencer for events
-    function Sequencer() {
+    //Sequence of events
+    function Sequence() {
+		var that = this;
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addInput("", LiteGraph.ACTION);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", LiteGraph.EVENT);
-        this.size = [120, 30];
+        this.addWidget("button","+",null,function(){
+	        that.addInput("", LiteGraph.ACTION);
+	        that.addOutput("", LiteGraph.EVENT);
+        });
+        this.size = [90, 70];
         this.flags = { horizontal: true, render_box: false };
     }
 
-    Sequencer.title = "Sequencer";
-    Sequencer.desc = "Trigger events when an event arrives";
+    Sequence.title = "Sequence";
+    Sequence.desc = "Triggers a sequence of events when an event arrives";
 
-    Sequencer.prototype.getTitle = function() {
+    Sequence.prototype.getTitle = function() {
         return "";
     };
 
-    Sequencer.prototype.onAction = function(action, param, options) {
+    Sequence.prototype.onAction = function(action, param, options) {
         if (this.outputs) {
             options = options || {};
             for (var i = 0; i < this.outputs.length; ++i) {
-                options.action_call = options.action_call?options.action_call+"_seq_"+i:this.id+"_"+(action?action:"action")+"_seq_"+i+"_"+Math.floor(Math.random()*9999);
+				var output = this.outputs[i];
+				//needs more info about this...
+				if( options.action_call ) // CREATE A NEW ID FOR THE ACTION
+	                options.action_call = options.action_call + "_seq_" + i;
+				else
+					options.action_call = this.id + "_" + (action ? action : "action")+"_seq_"+i+"_"+Math.floor(Math.random()*9999);
                 this.triggerSlot(i, param, null, options);
             }
         }
     };
 
-    LiteGraph.registerNodeType("events/sequencer", Sequencer);
+    LiteGraph.registerNodeType("events/sequence", Sequence);
+
+
+    //Sequencer for events
+    function Stepper() {
+		var that = this;
+		this.properties = { index: 0 };
+        this.addInput("index", "number");
+        this.addInput("step", LiteGraph.ACTION);
+        this.addInput("reset", LiteGraph.ACTION);
+        this.addOutput("index", "number");
+        this.addOutput("", LiteGraph.EVENT);
+        this.addOutput("", LiteGraph.EVENT);
+        this.addOutput("", LiteGraph.EVENT,{removable:true});
+        this.addWidget("button","+",null,function(){
+	        that.addOutput("", LiteGraph.EVENT, {removable:true});
+        });
+        this.size = [120, 120];
+        this.flags = { render_box: false };
+    }
+
+    Stepper.title = "Stepper";
+    Stepper.desc = "Trigger events sequentially when an tick arrives";
+
+	Stepper.prototype.onDrawBackground = function(ctx)
+	{
+        if (this.flags.collapsed) {
+            return;
+        }
+		var index = this.properties.index || 0;
+        ctx.fillStyle = "#AFB";
+		var w = this.size[0];
+        var y = (index + 1)* LiteGraph.NODE_SLOT_HEIGHT + 4;
+        ctx.beginPath();
+        ctx.moveTo(w - 30, y);
+        ctx.lineTo(w - 30, y + LiteGraph.NODE_SLOT_HEIGHT);
+        ctx.lineTo(w - 15, y + LiteGraph.NODE_SLOT_HEIGHT * 0.5);
+        ctx.fill();
+	}
+
+	Stepper.prototype.onExecute = function()
+	{
+		var index = this.getInputData(0);
+		if(index != null)
+		{
+			index = Math.floor(index);
+			index = Math.clamp( index, 0, this.outputs ? (this.outputs.length - 2) : 0 );
+			if( index != this.properties.index )
+			{
+				this.properties.index = index;
+			    this.triggerSlot( index+1 );
+			}
+		}
+
+		this.setOutputData(0, this.properties.index );
+	}
+
+    Stepper.prototype.onAction = function(action, param) {
+		if(action == "reset")
+			this.properties.index = 0;
+		else if(action == "step")
+		{
+            this.triggerSlot(this.properties.index+1, param);
+			var n = this.outputs ? this.outputs.length - 1 : 0;
+			this.properties.index = (this.properties.index + 1) % n;
+        }
+    };
+
+    LiteGraph.registerNodeType("events/stepper", Stepper);
 
     //Filter events
     function FilterEvent() {
@@ -322,6 +400,45 @@
 
     LiteGraph.registerNodeType("events/timer", TimerEvent);
 
+
+
+    function SemaphoreEvent() {
+        this.addInput("go", LiteGraph.ACTION );
+        this.addInput("green", LiteGraph.ACTION );
+        this.addInput("red", LiteGraph.ACTION );
+        this.addOutput("continue", LiteGraph.EVENT );
+        this.addOutput("blocked", LiteGraph.EVENT );
+        this.addOutput("is_green", "boolean" );
+		this._ready = false;
+		this.properties = {};
+		var that = this;
+		this.addWidget("button","reset","",function(){
+			that._ready = false;
+		});
+    }
+
+    SemaphoreEvent.title = "Semaphore Event";
+    SemaphoreEvent.desc = "Until both events are not triggered, it doesnt continue.";
+
+	SemaphoreEvent.prototype.onExecute = function()
+	{
+		this.setOutputData(1,this._ready);
+		this.boxcolor = this._ready ? "#9F9" : "#FA5";
+	}
+
+    SemaphoreEvent.prototype.onAction = function(action, param) {
+		if( action == "go" )
+			this.triggerSlot( this._ready ? 0 : 1 );
+		else if( action == "green" )
+			this._ready = true;
+		else if( action == "red" )
+			this._ready = false;
+    };
+
+    LiteGraph.registerNodeType("events/semaphore", SemaphoreEvent);
+
+
+
     function DataStore() {
         this.addInput("data", 0);
         this.addInput("assign", LiteGraph.ACTION);
@@ -356,4 +473,7 @@
 	}
 
     LiteGraph.registerNodeType("basic/data_store", DataStore);
+
+
+
 })(this);

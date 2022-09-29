@@ -1,6 +1,7 @@
 var webgl_canvas = null;
 
 LiteGraph.node_images_path = "../nodes_data/";
+
 var editor = new LiteGraph.Editor("main",{miniwindow:false});
 window.graphcanvas = editor.graphcanvas;
 window.graph = editor.graph;
@@ -14,10 +15,15 @@ window.onbeforeunload = function(){
 //enable scripting
 LiteGraph.allow_scripts = true;
 
+//test
+//editor.graphcanvas.viewport = [200,200,400,400];
+
 //create scene selector
 var elem = document.createElement("span");
+elem.id = "LGEditorTopBarSelector";
 elem.className = "selector";
-elem.innerHTML = "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button> <button class='btn' id='multiview'>Multiview</button>";
+elem.innerHTML = "";
+elem.innerHTML += "Demo <select><option>Empty</option></select> <button class='btn' id='save'>Save</button><button class='btn' id='load'>Load</button><button class='btn' id='download'>Download</button> | <button class='btn' id='webgl'>WebGL</button> <button class='btn' id='multiview'>Multiview</button>";
 editor.tools.appendChild(elem);
 var select = elem.querySelector("select");
 select.addEventListener("change", function(e){
@@ -35,15 +41,12 @@ select.addEventListener("change", function(e){
 elem.querySelector("#save").addEventListener("click",function(){
 	console.log("saved");
 	localStorage.setItem( "graphdemo_save", JSON.stringify( graph.serialize() ) );
-    graph.onGraphSaved();
 });
 
 elem.querySelector("#load").addEventListener("click",function(){
 	var data = localStorage.getItem( "graphdemo_save" );
-	if(data){
+	if(data)
 		graph.configure( JSON.parse( data ) );
-        graph.onGraphLoaded();
-    }
 	console.log("loaded");
 });
 

@@ -640,7 +640,6 @@
             glowSize: 0,
             decimals: 1
         };
-        // not optimal in this case: // this.txtValue = this.addWidget("text","value", "multiline", "value", { multiline:true } );
     }
 
     WidgetText.title = "Text";

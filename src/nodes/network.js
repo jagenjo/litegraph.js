@@ -170,7 +170,7 @@
         this.addInput("in", 0);
         this.addOutput("out", 0);
         this.properties = {
-            url: "", // "tamats.com:55000",
+            url: "tamats.com:55000",
             room: "lgraph",
             only_send_changes: true
         };
