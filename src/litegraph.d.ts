@@ -666,6 +666,8 @@ export declare class LGraphNode {
     toString(): string;
     /** get the title string */
     getTitle(): string;
+    /** sets the value of a property */
+    setProperty(name: string, value: any): void;
     /** sets the output data */
     setOutputData(slot: number, data: any): void;
     /** sets the output data */
