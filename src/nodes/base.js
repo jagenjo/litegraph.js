@@ -1480,7 +1480,7 @@
     };
 
     NodeScript.title = "Script";
-    NodeScript.desc = "executes a code (max 100 characters)";
+    NodeScript.desc = "executes a code (max 256 characters)";
 
     NodeScript.widgets_info = {
         onExecute: { type: "code" }
