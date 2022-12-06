@@ -6053,9 +6053,7 @@ LGraphNode.prototype.executeAction = function(action)
 							this.graph.beforeChange();
                             this.node_dragged = node;
                         }
-                        if (!this.selected_nodes[node.id]) {
-                            this.processNodeSelected(node, e);
-                        }
+                        this.processNodeSelected(node, e);
                     }
 
                     this.dirty_canvas = true;
@@ -7316,6 +7314,7 @@ LGraphNode.prototype.executeAction = function(action)
         for (var i in nodes) {
             var node = nodes[i];
             if (node.is_selected) {
+                this.deselectNode(node);
                 continue;
             }
 
