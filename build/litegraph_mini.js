@@ -1288,11 +1288,11 @@
                 var node = column[j];
                 node.pos[0] = (layout == LiteGraph.VERTICAL_LAYOUT) ? y : x;
                 node.pos[1] = (layout == LiteGraph.VERTICAL_LAYOUT) ? x : y;
-                max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
+                var max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
                 if (node.size[max_size_index] > max_size) {
                     max_size = node.size[max_size_index];
                 }
-                node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
+                var node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
                 y += node.size[node_size_index] + margin + LiteGraph.NODE_TITLE_HEIGHT;
             }
             x += max_size + margin;
@@ -3193,6 +3193,15 @@
         if (!this.outputs) {
             return;
         }
+
+		if(slot == null)
+		{
+			console.error("slot must be a number");
+			return;
+		}
+
+		if(slot.constructor !== Number)
+			console.warn("slot must be a number, use node.trigger('name') if you want to use a string");
 
         var output = this.outputs[slot];
         if (!output) {
@@ -7483,8 +7492,8 @@ LGraphNode.prototype.executeAction = function(action)
         	clientY_rel = e.clientY;
         }
     	
-        e.deltaX = clientX_rel - this.last_mouse_position[0];
-        e.deltaY = clientY_rel- this.last_mouse_position[1];
+        // e.deltaX = clientX_rel - this.last_mouse_position[0];
+        // e.deltaY = clientY_rel- this.last_mouse_position[1];
 
         this.last_mouse_position[0] = clientX_rel;
         this.last_mouse_position[1] = clientY_rel;
@@ -9921,7 +9930,8 @@ LGraphNode.prototype.executeAction = function(action)
 				case "combo":
 					var old_value = w.value;
 					if (event.type == LiteGraph.pointerevents_method+"move" && w.type == "number") {
-						w.value += event.deltaX * 0.1 * (w.options.step || 1);
+                        if(event.deltaX)
+						    w.value += event.deltaX * 0.1 * (w.options.step || 1);
 						if ( w.options.min != null && w.value < w.options.min ) {
 							w.value = w.options.min;
 						}
@@ -11987,7 +11997,8 @@ LGraphNode.prototype.executeAction = function(action)
 		    if (root.onClose && typeof root.onClose == "function"){
 		        root.onClose();
 		    }
-		    root.parentNode.removeChild(root);
+            if(root.parentNode)
+		        root.parentNode.removeChild(root);
 		    /* XXX CHECK THIS */
 		    if(this.parentNode){
 		    	this.parentNode.removeChild(this);
@@ -15606,7 +15617,7 @@ if (typeof exports != "undefined") {
     };
 
     NodeScript.title = "Script";
-    NodeScript.desc = "executes a code (max 100 characters)";
+    NodeScript.desc = "executes a code (max 256 characters)";
 
     NodeScript.widgets_info = {
         onExecute: { type: "code" }
@@ -16208,7 +16219,32 @@ if (typeof exports != "undefined") {
 
     LiteGraph.registerNodeType("events/semaphore", SemaphoreEvent);
 
+    function OnceEvent() {
+        this.addInput("in", LiteGraph.ACTION );
+        this.addInput("reset", LiteGraph.ACTION );
+        this.addOutput("out", LiteGraph.EVENT );
+		this._once = false;
+		this.properties = {};
+		var that = this;
+		this.addWidget("button","reset","",function(){
+			that._once = false;
+		});
+    }
 
+    OnceEvent.title = "Once";
+    OnceEvent.desc = "Only passes an event once, then gets locked";
+
+    OnceEvent.prototype.onAction = function(action, param) {
+		if( action == "in" && !this._once )
+		{
+			this._once = true;
+			this.triggerSlot( 0, param );
+		}
+		else if( action == "reset" )
+			this._once = false;
+    };
+
+    LiteGraph.registerNodeType("events/once", OnceEvent);
 
     function DataStore() {
         this.addInput("data", 0);
