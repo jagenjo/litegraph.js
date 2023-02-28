@@ -195,7 +195,7 @@ This is the list of supported widgets:
   
   or if you want to use objects:
   
-  ```this.addWidget("combo","Combo", value1, callback, { values: { "title1":value1, "title2":value2 } );```
+  ```this.addWidget("combo","Combo", value1, callback, { values: { "title1":value1, "title2":value2 } } );```
   
 * **"text"** to edit a short string
 * **"toggle"** like a checkbox

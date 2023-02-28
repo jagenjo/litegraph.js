@@ -1286,11 +1286,11 @@
                 var node = column[j];
                 node.pos[0] = (layout == LiteGraph.VERTICAL_LAYOUT) ? y : x;
                 node.pos[1] = (layout == LiteGraph.VERTICAL_LAYOUT) ? x : y;
-                max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
+                var max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
                 if (node.size[max_size_index] > max_size) {
                     max_size = node.size[max_size_index];
                 }
-                node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
+                var node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
                 y += node.size[node_size_index] + margin + LiteGraph.NODE_TITLE_HEIGHT;
             }
             x += max_size + margin;
@@ -7490,8 +7490,8 @@ LGraphNode.prototype.executeAction = function(action)
         	clientY_rel = e.clientY;
         }
     	
-        e.deltaX = clientX_rel - this.last_mouse_position[0];
-        e.deltaY = clientY_rel- this.last_mouse_position[1];
+        // e.deltaX = clientX_rel - this.last_mouse_position[0];
+        // e.deltaY = clientY_rel- this.last_mouse_position[1];
 
         this.last_mouse_position[0] = clientX_rel;
         this.last_mouse_position[1] = clientY_rel;
