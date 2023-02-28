@@ -437,7 +437,32 @@
 
     LiteGraph.registerNodeType("events/semaphore", SemaphoreEvent);
 
+    function OnceEvent() {
+        this.addInput("in", LiteGraph.ACTION );
+        this.addInput("reset", LiteGraph.ACTION );
+        this.addOutput("out", LiteGraph.EVENT );
+		this._once = false;
+		this.properties = {};
+		var that = this;
+		this.addWidget("button","reset","",function(){
+			that._once = false;
+		});
+    }
 
+    OnceEvent.title = "Once";
+    OnceEvent.desc = "Only passes an event once, then gets locked";
+
+    OnceEvent.prototype.onAction = function(action, param) {
+		if( action == "in" && !this._once )
+		{
+			this._once = true;
+			this.triggerSlot( 0, param );
+		}
+		else if( action == "reset" )
+			this._once = false;
+    };
+
+    LiteGraph.registerNodeType("events/once", OnceEvent);
 
     function DataStore() {
         this.addInput("data", 0);

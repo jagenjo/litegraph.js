@@ -3192,6 +3192,15 @@
             return;
         }
 
+		if(slot == null)
+		{
+			console.error("slot must be a number");
+			return;
+		}
+
+		if(slot.constructor !== Number)
+			console.warn("slot must be a number, use node.trigger('name') if you want to use a string");
+
         var output = this.outputs[slot];
         if (!output) {
             return;
