@@ -264,7 +264,7 @@
     };
 
     Subgraph.prototype.onSubgraphRemovedOutput = function(name) {
-        var slot = this.findInputSlot(name);
+        var slot = this.findOutputSlot(name);
         if (slot == -1) {
             return;
         }
