@@ -5211,6 +5211,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_dragcanvas = true;
         this.allow_dragnodes = true;
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
+        this.multi_select = false; //allow selecting multi nodes without pressing extra keys
         this.allow_searchbox = true;
         this.allow_reconnect_links = true; //allows to change a connection with having to redo it again
 		this.align_to_grid = false; //snap to grid
@@ -6061,9 +6062,7 @@ LGraphNode.prototype.executeAction = function(action)
 							this.graph.beforeChange();
                             this.node_dragged = node;
                         }
-                        if (!this.selected_nodes[node.id]) {
-                            this.processNodeSelected(node, e);
-                        }
+                        this.processNodeSelected(node, e);
                     }
 
                     this.dirty_canvas = true;
@@ -7288,7 +7287,7 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LGraphCanvas.prototype.processNodeSelected = function(node, e) {
-        this.selectNode(node, e && (e.shiftKey||e.ctrlKey));
+        this.selectNode(node, e && (e.shiftKey || e.ctrlKey || this.multi_select));
         if (this.onNodeSelected) {
             this.onNodeSelected(node);
         }
@@ -7324,6 +7323,7 @@ LGraphNode.prototype.executeAction = function(action)
         for (var i in nodes) {
             var node = nodes[i];
             if (node.is_selected) {
+                this.deselectNode(node);
                 continue;
             }
 
