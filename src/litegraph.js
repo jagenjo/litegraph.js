@@ -6063,6 +6063,12 @@ LGraphNode.prototype.executeAction = function(action)
                             this.node_dragged = node;
                         }
                         this.processNodeSelected(node, e);
+                    } else { // double-click
+                        /**
+                         * Don't call the function if the block is already selected.
+                         * Otherwise, it could cause the block to be unselected while its panel is open.
+                         */
+                        if (!node.is_selected) this.processNodeSelected(node, e);
                     }
 
                     this.dirty_canvas = true;
