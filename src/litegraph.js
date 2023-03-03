@@ -6480,6 +6480,10 @@ LGraphNode.prototype.executeAction = function(action)
                     var n = this.selected_nodes[i];
                     n.pos[0] += delta[0] / this.ds.scale;
                     n.pos[1] += delta[1] / this.ds.scale;
+                    if (!n.is_selected) this.processNodeSelected(n, e); /*
+                     * Don't call the function if the block is already selected.
+                     * Otherwise, it could cause the block to be unselected while dragging.
+                     */
                 }
 
                 this.dirty_canvas = true;
