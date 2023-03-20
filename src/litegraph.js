@@ -1262,35 +1262,35 @@
     LGraph.prototype.arrange = function (margin, layout) {
         margin = margin || 100;
 
-        var nodes = this.computeExecutionOrder(false, true);
-        var columns = [];
-        for (var i = 0; i < nodes.length; ++i) {
-            var node = nodes[i];
-            var col = node._level || 1;
+        const nodes = this.computeExecutionOrder(false, true);
+        const columns = [];
+        for (let i = 0; i < nodes.length; ++i) {
+            const node = nodes[i];
+            const col = node._level || 1;
             if (!columns[col]) {
                 columns[col] = [];
             }
             columns[col].push(node);
         }
 
-        var x = margin;
+        let x = margin;
 
-        for (var i = 0; i < columns.length; ++i) {
-            var column = columns[i];
+        for (let i = 0; i < columns.length; ++i) {
+            const column = columns[i];
             if (!column) {
                 continue;
             }
-            var max_size = 100;
-            var y = margin + LiteGraph.NODE_TITLE_HEIGHT;
-            for (var j = 0; j < column.length; ++j) {
-                var node = column[j];
+            let max_size = 100;
+            let y = margin + LiteGraph.NODE_TITLE_HEIGHT;
+            for (let j = 0; j < column.length; ++j) {
+                const node = column[j];
                 node.pos[0] = (layout == LiteGraph.VERTICAL_LAYOUT) ? y : x;
                 node.pos[1] = (layout == LiteGraph.VERTICAL_LAYOUT) ? x : y;
-                var max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
+                const max_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 1 : 0;
                 if (node.size[max_size_index] > max_size) {
                     max_size = node.size[max_size_index];
                 }
-                var node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
+                const node_size_index = (layout == LiteGraph.VERTICAL_LAYOUT) ? 0 : 1;
                 y += node.size[node_size_index] + margin + LiteGraph.NODE_TITLE_HEIGHT;
             }
             x += max_size + margin;
