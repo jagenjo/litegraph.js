@@ -11177,7 +11177,7 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.search_limit = -1;
     LGraphCanvas.prototype.showSearchBox = function(event, options) {
         // proposed defaults
-        def_options = { slot_from: null
+        var def_options = { slot_from: null
                         ,node_from: null
                         ,node_to: null
                         ,do_type_filter: LiteGraph.search_filter_enabled // TODO check for registered_slot_[in/out]_types not empty // this will be checked for functionality enabled : filter on slot type, in and out
@@ -11875,7 +11875,7 @@ LGraphNode.prototype.executeAction = function(action)
 
     // TODO refactor, theer are different dialog, some uses createDialog, some dont
     LGraphCanvas.prototype.createDialog = function(html, options) {
-        def_options = { checkForInput: false, closeOnLeave: true, closeOnLeave_checkModified: true };
+        var def_options = { checkForInput: false, closeOnLeave: true, closeOnLeave_checkModified: true };
         options = Object.assign(def_options, options || {});
 
         var dialog = document.createElement("div");
