@@ -12298,7 +12298,7 @@ LGraphNode.prototype.executeAction = function(action)
 		var ref_window = this.getCanvasWindow();
         var that = this;
 		var graphcanvas = this;
-		panel = this.createPanel(node.title || "",{
+		var panel = this.createPanel(node.title || "",{
                                                     closable: true
                                                     ,window: ref_window
                                                     ,onOpen: function(){
