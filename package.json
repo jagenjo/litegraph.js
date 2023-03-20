@@ -12,7 +12,7 @@
         "prebuild": "rimraf build",
         "build": "grunt build",
         "start": "nodemon utils/server.js",
-        "test": "echo \"Error: no test specified\" && exit 1",
+        "test": "jest",
         "prettier": "npx prettier --write src/**/*.* css/**/*.*",
         "lint": "npx eslint src",
         "lint:fix": "npx eslint --fix src"
@@ -39,6 +39,7 @@
         "grunt-cli": "^1.2.0",
         "grunt-closure-tools": "^1.0.0",
         "grunt-contrib-concat": "^1.0.1",
+        "jest": "^29.5.0",
         "nodemon": "^1.19.4",
         "rimraf": "^2.7.1"
     }

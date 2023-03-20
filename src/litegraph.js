@@ -157,16 +157,14 @@
                 console.log("Node registered: " + type);
             }
 
-            var categories = type.split("/");
-            var classname = base_class.name;
+            const classname = base_class.name;
 
-            var pos = type.lastIndexOf("/");
+            const pos = type.lastIndexOf("/");
             base_class.category = type.substr(0, pos);
 
             if (!base_class.title) {
                 base_class.title = classname;
             }
-            //info.name = name.substr(pos+1,name.length - pos);
 
             //extend class
             if (base_class.prototype) {
@@ -178,59 +176,60 @@
                 }
             }
 
-            var prev = this.registered_node_types[type];
-			if(prev)
-				console.log("replacing node type: " + type);
-			else
-			{
-				if( !Object.hasOwnProperty( base_class.prototype, "shape") )
-				Object.defineProperty(base_class.prototype, "shape", {
-					set: function(v) {
-						switch (v) {
-							case "default":
-								delete this._shape;
-								break;
-							case "box":
-								this._shape = LiteGraph.BOX_SHAPE;
-								break;
-							case "round":
-								this._shape = LiteGraph.ROUND_SHAPE;
-								break;
-							case "circle":
-								this._shape = LiteGraph.CIRCLE_SHAPE;
-								break;
-							case "card":
-								this._shape = LiteGraph.CARD_SHAPE;
-								break;
-							default:
-								this._shape = v;
-						}
-					},
-					get: function(v) {
-						return this._shape;
-					},
-					enumerable: true,
-					configurable: true
-				});
+            const prev = this.registered_node_types[type];
+            if(prev) {
+                console.log("replacing node type: " + type);
+            } else {
+                if( !Object.prototype.hasOwnProperty.call( base_class.prototype, "shape") ) {
+                    Object.defineProperty(base_class.prototype, "shape", {
+                        set: function(v) {
+                            switch (v) {
+                                case "default":
+                                    delete this._shape;
+                                    break;
+                                case "box":
+                                    this._shape = LiteGraph.BOX_SHAPE;
+                                    break;
+                                case "round":
+                                    this._shape = LiteGraph.ROUND_SHAPE;
+                                    break;
+                                case "circle":
+                                    this._shape = LiteGraph.CIRCLE_SHAPE;
+                                    break;
+                                case "card":
+                                    this._shape = LiteGraph.CARD_SHAPE;
+                                    break;
+                                default:
+                                    this._shape = v;
+                            }
+                        },
+                        get: function() {
+                            return this._shape;
+                        },
+                        enumerable: true,
+                        configurable: true
+                    });
+                }
 
-				//warnings
-				if (base_class.prototype.onPropertyChange) {
-					console.warn(
-						"LiteGraph node class " +
-							type +
-							" has onPropertyChange method, it must be called onPropertyChanged with d at the end"
-					);
-				}
+                //warnings
+                if (base_class.prototype.onPropertyChange) {
+                    console.warn(
+                        "LiteGraph node class " +
+                            type +
+                            " has onPropertyChange method, it must be called onPropertyChanged with d at the end"
+                    );
+                }
 
-				//used to know which nodes create when dragging files to the canvas
-				if (base_class.supported_extensions) {
-					for (var i in base_class.supported_extensions) {
-						var ext = base_class.supported_extensions[i];
-						if(ext && ext.constructor === String)
-							this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
-					}
-				}
-			}
+                //used to know which nodes create when dragging files to the canvas
+                if (base_class.supported_extensions) {
+                    for (let i in base_class.supported_extensions) {
+                        const ext = base_class.supported_extensions[i];
+                        if(ext && ext.constructor === String) {
+                            this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
+                        }
+                    }
+                }
+            }
 
             this.registered_node_types[type] = base_class;
             if (base_class.constructor.name) {
@@ -252,18 +251,20 @@
                 );
             }
 
-			//used to know which nodes create when dragging files to the canvas
+            //used to know which nodes create when dragging files to the canvas
             if (base_class.supported_extensions) {
-                for (var i=0; i < base_class.supported_extensions.length; i++) {
-					var ext = base_class.supported_extensions[i];
-					if(ext && ext.constructor === String)
-	                    this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
+                for (let i=0; i < base_class.supported_extensions.length; i++) {
+                    var ext = base_class.supported_extensions[i];
+                    if(ext && ext.constructor === String) {
+                        this.node_types_by_file_extension[ ext.toLowerCase() ] = base_class;
+                    }
                 }
             }
             
             // TODO one would want to know input and ouput :: this would allow trought registerNodeAndSlotType to get all the slots types
-            //console.debug("Registering "+type);
-            if (this.auto_load_slot_types) nodeTmp = new base_class(base_class.title || "tmpnode");
+            if (this.auto_load_slot_types) {
+                new base_class(base_class.title || "tmpnode");
+            }
         },
 
         /**
