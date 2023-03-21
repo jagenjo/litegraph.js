@@ -160,7 +160,7 @@
             const classname = base_class.name;
 
             const pos = type.lastIndexOf("/");
-            base_class.category = type.substr(0, pos);
+            base_class.category = type.substring(0, pos);
 
             if (!base_class.title) {
                 base_class.title = classname;
