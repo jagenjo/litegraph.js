@@ -3,7 +3,7 @@ node_modules/*
 npm-debug.log
 temp/
 temp/*
-coverage/*
+coverage/
 
 # Editors
 /.vscode/*

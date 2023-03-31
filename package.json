@@ -33,6 +33,9 @@
     },
     "homepage": "https://github.com/jagenjo/litegraph.js#readme",
     "devDependencies": {
+        "@types/jest": "^29.5.0",
+        "eslint": "^8.37.0 ",
+        "eslint-plugin-jest": "^27.2.1",
         "express": "^4.17.1",
         "google-closure-compiler": "^20171112.0.0",
         "grunt": "^1.1.0",
