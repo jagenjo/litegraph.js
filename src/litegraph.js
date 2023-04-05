@@ -9985,8 +9985,7 @@ LGraphNode.prototype.executeAction = function(action)
 						var delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
 						if (event.click_time < 200 && delta == 0) {
 							this.prompt("Value",w.value,function(v) {
-									this.value = Number(v);
-									inner_value_change(this, this.value);
+                                inner_value_change(this, this.value);
 								}.bind(w),
 								event);
 						}
@@ -10013,7 +10012,6 @@ LGraphNode.prototype.executeAction = function(action)
 				case "text":
 					if (event.type == LiteGraph.pointerevents_method+"down") {
 						this.prompt("Value",w.value,function(v) {
-								this.value = v;
 								inner_value_change(this, v);
 							}.bind(w),
 							event,w.options ? w.options.multiline : false );
@@ -10038,6 +10036,9 @@ LGraphNode.prototype.executeAction = function(action)
         }//end for
 
         function inner_value_change(widget, value) {
+            if(widget.type == "number"){
+                value = Number(value);
+            }
             widget.value = value;
             if ( widget.options && widget.options.property && node.properties[widget.options.property] !== undefined ) {
                 node.setProperty( widget.options.property, value );
