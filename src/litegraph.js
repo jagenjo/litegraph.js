@@ -9734,13 +9734,13 @@ LGraphNode.prototype.executeAction = function(action)
                     var nvalue = (w.value - w.options.min) / range;
 					if(nvalue < 0.0) nvalue = 0.0;
 					if(nvalue > 1.0) nvalue = 1.0;
-                    ctx.fillStyle = active_widget == w ? "#89A" : "#678";
+                    ctx.fillStyle = w.hasOwnProperty("slider_color") ? w.slider_color : (active_widget == w ? "#89A" : "#678");
                     ctx.fillRect(margin, y, nvalue * (widget_width - margin * 2), H);
 					if(show_text && !w.disabled)
 	                    ctx.strokeRect(margin, y, widget_width - margin * 2, H);
                     if (w.marker) {
                         var marker_nvalue = (w.marker - w.options.min) / range;
-                        ctx.fillStyle = "#AA9";
+                        ctx.fillStyle = w.hasOwnProperty("marker_color") ? w.marker_color : "#AA9";
                         ctx.fillRect( margin + marker_nvalue * (widget_width - margin * 2), y, 2, H );
                     }
                     if (show_text) {
