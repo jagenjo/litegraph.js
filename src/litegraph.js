@@ -9740,6 +9740,8 @@ LGraphNode.prototype.executeAction = function(action)
 	                    ctx.strokeRect(margin, y, widget_width - margin * 2, H);
                     if (w.marker) {
                         var marker_nvalue = (w.marker - w.options.min) / range;
+						if(marker_nvalue < 0.0) marker_nvalue = 0.0;
+						if(marker_nvalue > 1.0) marker_nvalue = 1.0;
                         ctx.fillStyle = w.hasOwnProperty("marker_color") ? w.marker_color : "#AA9";
                         ctx.fillRect( margin + marker_nvalue * (widget_width - margin * 2), y, 2, H );
                     }
