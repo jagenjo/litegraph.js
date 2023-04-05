@@ -9985,7 +9985,6 @@ LGraphNode.prototype.executeAction = function(action)
 						var delta = x < 40 ? -1 : x > widget_width - 40 ? 1 : 0;
 						if (event.click_time < 200 && delta == 0) {
 							this.prompt("Value",w.value,function(v) {
-							this.prompt("Value",w.value,function(v) {
 									// check if v is a valid equation or a number
 									  if (/^[0-9+\-*/()\s]+$/.test(v)) {
 										try {//solve the equation if possible
