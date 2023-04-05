@@ -9734,7 +9734,7 @@ LGraphNode.prototype.executeAction = function(action)
                     var nvalue = (w.value - w.options.min) / range;
 					if(nvalue < 0.0) nvalue = 0.0;
 					if(nvalue > 1.0) nvalue = 1.0;
-                    ctx.fillStyle = w.options.hasOwnProperty("slider_color") ? w.slider_color : (active_widget == w ? "#89A" : "#678");
+                    ctx.fillStyle = w.options.hasOwnProperty("slider_color") ? w.options.slider_color : (active_widget == w ? "#89A" : "#678");
                     ctx.fillRect(margin, y, nvalue * (widget_width - margin * 2), H);
 					if(show_text && !w.disabled)
 	                    ctx.strokeRect(margin, y, widget_width - margin * 2, H);
@@ -9742,7 +9742,7 @@ LGraphNode.prototype.executeAction = function(action)
                         var marker_nvalue = (w.marker - w.options.min) / range;
 						if(marker_nvalue < 0.0) marker_nvalue = 0.0;
 						if(marker_nvalue > 1.0) marker_nvalue = 1.0;
-                        ctx.fillStyle = w.options.hasOwnProperty("marker_color") ? w.marker_color : "#AA9";
+                        ctx.fillStyle = w.options.hasOwnProperty("marker_color") ? w.options.marker_color : "#AA9";
                         ctx.fillRect( margin + marker_nvalue * (widget_width - margin * 2), y, 2, H );
                     }
                     if (show_text) {
