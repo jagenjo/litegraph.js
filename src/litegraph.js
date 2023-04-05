@@ -9909,6 +9909,7 @@ LGraphNode.prototype.executeAction = function(action)
 				case "slider":
 					var range = w.options.max - w.options.min;
 					var nvalue = Math.clamp((x - 15) / (widget_width - 30), 0, 1);
+					if(w.readonly) break;
 					w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
 					if (w.callback) {
 						setTimeout(function() {
