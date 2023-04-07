@@ -3965,8 +3965,8 @@
             var aSource = (type+"").toLowerCase().split(",");
             var aDest = aSlots[i].type=="0"||aSlots[i].type=="*"?"0":aSlots[i].type;
 			aDest = (aDest+"").toLowerCase().split(",");
-            for(sI=0;sI<aSource.length;sI++){
-                for(dI=0;dI<aDest.length;dI++){
+            for(var sI=0;sI<aSource.length;sI++){
+                for(var dI=0;dI<aDest.length;dI++){
 					if (aSource[sI]=="_event_") aSource[sI] = LiteGraph.EVENT;
 					if (aDest[sI]=="_event_") aDest[sI] = LiteGraph.EVENT;
 					if (aSource[sI]=="*") aSource[sI] = 0;
@@ -3985,8 +3985,8 @@
                 var aSource = (type+"").toLowerCase().split(",");
                 var aDest = aSlots[i].type=="0"||aSlots[i].type=="*"?"0":aSlots[i].type;
 				aDest = (aDest+"").toLowerCase().split(",");
-                for(sI=0;sI<aSource.length;sI++){
-                    for(dI=0;dI<aDest.length;dI++){
+                for(var sI=0;sI<aSource.length;sI++){
+                    for(var dI=0;dI<aDest.length;dI++){
 						if (aSource[sI]=="*") aSource[sI] = 0;
 						if (aDest[sI]=="*") aDest[sI] = 0;
                         if (aSource[sI] == aDest[dI]) {
@@ -4017,7 +4017,7 @@
         if (target_node && target_node.constructor === Number) {
             target_node = this.graph.getNodeById(target_node);
         }
-        target_slot = target_node.findInputSlotByType(target_slotType, false, true);
+        var target_slot = target_node.findInputSlotByType(target_slotType, false, true);
         if (target_slot >= 0 && target_slot !== null){
             //console.debug("CONNbyTYPE type "+target_slotType+" for "+target_slot)
             return this.connect(slot, target_node, target_slot);
@@ -4070,7 +4070,7 @@
         if (source_node && source_node.constructor === Number) {
             source_node = this.graph.getNodeById(source_node);
         }
-        source_slot = source_node.findOutputSlotByType(source_slotType, false, true);
+        var source_slot = source_node.findOutputSlotByType(source_slotType, false, true);
         if (source_slot >= 0 && source_slot !== null){
             //console.debug("CONNbyTYPE OUT! type "+source_slotType+" for "+source_slot)
             return source_node.connect(source_slot, this, slot);
@@ -12265,7 +12265,7 @@ LGraphNode.prototype.executeAction = function(action)
             
             var aProps = LiteGraph.availableCanvasOptions;
             aProps.sort();
-            for(pI in aProps){
+            for(var pI in aProps){
                 var pX = aProps[pI];
                 panel.addWidget( "boolean", pX, graphcanvas[pX], {key: pX, on: "True", off: "False"}, fUpdate);
             }
