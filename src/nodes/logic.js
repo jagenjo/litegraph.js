@@ -94,7 +94,7 @@
     logicAnd.desc = "Return true if all inputs are true";
     logicAnd.prototype.onExecute = function() {
         var ret = true;
-        for (inX in this.inputs){
+        for (var inX in this.inputs){
             if (!this.getInputData(inX)){
                 var ret = false;
                 break;
@@ -120,7 +120,7 @@
     logicOr.desc = "Return true if at least one input is true";
     logicOr.prototype.onExecute = function() {
         var ret = false;
-        for (inX in this.inputs){
+        for (var inX in this.inputs){
             if (this.getInputData(inX)){
                 ret = true;
                 break;
@@ -161,7 +161,7 @@
     logicCompare.prototype.onExecute = function() {
         var last = null;
         var ret = true;
-        for (inX in this.inputs){
+        for (var inX in this.inputs){
             if (last === null) last = this.getInputData(inX);
             else
                 if (last != this.getInputData(inX)){
