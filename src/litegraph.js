@@ -6992,9 +6992,9 @@ LGraphNode.prototype.executeAction = function(action)
                 }
             }
 
-            if (e.code == "KeyV" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+            if (e.code == "KeyV" && (e.metaKey || e.ctrlKey)) {
                 //paste
-                this.pasteFromClipboard();
+                this.pasteFromClipboard(e.shiftKey);
             }
 
             //delete or backspace
@@ -7079,15 +7079,15 @@ LGraphNode.prototype.executeAction = function(action)
                     var target_node = this.graph.getNodeById(
                         link_info.origin_id
                     );
-                    if (!target_node || !this.selected_nodes[target_node.id]) {
-                        //improve this by allowing connections to non-selected nodes
+                    if (!target_node) {
                         continue;
-                    } //not selected
+                    }
                     clipboard_info.links.push([
                         target_node._relative_id,
                         link_info.origin_slot, //j,
                         node._relative_id,
-                        link_info.target_slot
+                        link_info.target_slot,
+                        target_node.id
                     ]);
                 }
             }
@@ -7098,7 +7098,7 @@ LGraphNode.prototype.executeAction = function(action)
         );
     };
 
-    LGraphCanvas.prototype.pasteFromClipboard = function() {
+    LGraphCanvas.prototype.pasteFromClipboard = function(isConnectUnselected = false) {
         var data = localStorage.getItem("litegrapheditor_clipboard");
         if (!data) {
             return;
@@ -7147,7 +7147,16 @@ LGraphNode.prototype.executeAction = function(action)
         //create links
         for (var i = 0; i < clipboard_info.links.length; ++i) {
             var link_info = clipboard_info.links[i];
-            var origin_node = nodes[link_info[0]];
+            var origin_node;
+            var origin_node_relative_id = link_info[0];
+            if (origin_node_relative_id != null) {
+                origin_node = nodes[origin_node_relative_id];
+            } else if (isConnectUnselected) {
+                var origin_node_id = link_info[4];
+                if (origin_node_id) {
+                    origin_node = this.graph.getNodeById(origin_node_id);
+                }
+            }
             var target_node = nodes[link_info[2]];
 			if( origin_node && target_node )
 	            origin_node.connect(link_info[1], target_node, link_info[3]);
