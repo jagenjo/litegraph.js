@@ -43,6 +43,51 @@ function multiConnection()
 	node_math.connect(0,node_watch2,0 );
 }
 
+function CopyPasteWithConnectionToUnselectedOutputTest()
+{
+	// number
+	var nodeConstA = LiteGraph.createNode("basic/const");
+	nodeConstA.pos = [200,200];
+	graph.add(nodeConstA);
+	nodeConstA.setValue(4.5);
+
+	// number
+	var nodeConstB = LiteGraph.createNode("basic/const");
+	nodeConstB.pos = [200,300];
+	graph.add(nodeConstB);
+	nodeConstB.setValue(10);
+
+	// math
+	var nodeMath = LiteGraph.createNode("math/operation");
+	nodeMath.pos = [400,200];
+	graph.add(nodeMath);
+
+	// connection
+	nodeConstA.connect(0,nodeMath,0 );
+	nodeConstB.connect(0,nodeMath,1 );
+
+	// copy with unselected nodes connected
+	graphcanvas.selectNodes([nodeMath]);
+	graphcanvas.copyToClipboard();
+	graphcanvas.pasteFromClipboard(true);
+
+	var count = 1;
+	var lastNode = null;
+	for (const [key, element] of Object.entries(graphcanvas.selected_nodes)) {
+		element.pos = [nodeMath.pos[0], nodeMath.pos[1] + 100 * count];
+		lastNode = element
+		count++;
+	}
+
+	// copy with unselected nodes unconnected
+	graphcanvas.pasteFromClipboard(false);
+	var count = 1;
+	for (const [key, element] of Object.entries(graphcanvas.selected_nodes)) {
+		element.pos = [nodeMath.pos[0], lastNode.pos[1] + 100 * count];
+		count++;
+	}
+}
+
 function sortTest()
 {
 	var rand = LiteGraph.createNode("math/rand",null, {pos: [10,100] });
@@ -226,4 +271,37 @@ TestPropertyEditorsNode.title = "Properties";
 
 
 LiteGraph.registerNodeType("features/properties_editor", TestPropertyEditorsNode );
+
+
+
+//Show value inside the debug console
+function LargeInputNode()
+{
+	this.addInput("in 1","number");
+	this.addInput("in 2","number");
+	this.addInput("in 3","number");
+	this.addInput("in 4","number");
+	this.addInput("in 5","number");
+	this.addInput("in 6","number");
+	this.addInput("in 7","number");
+	this.addInput("in 8","number");
+	this.addInput("in 9","number");
+	this.addInput("in 10","number");
+	this.addInput("in 11","number");
+	this.addInput("in 12","number");
+	this.addInput("in 13","number");
+	this.addInput("in 14","number");
+	this.addInput("in 15","number");
+	this.addInput("in 16","number");
+	this.addInput("in 17","number");
+	this.addInput("in 18","number");
+	this.addInput("in 19","number");
+	this.addInput("in 20","number");
+	this.size = [200,410];
+}
+
+LargeInputNode.title = "Large Input Node";
+
+
+LiteGraph.registerNodeType("features/largeinput_editor", LargeInputNode);
 

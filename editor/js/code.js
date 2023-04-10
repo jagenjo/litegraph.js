@@ -104,6 +104,7 @@ addDemo("Audio", "examples/audio.json");
 addDemo("Audio Delay", "examples/audio_delay.json");
 addDemo("Audio Reverb", "examples/audio_reverb.json");
 addDemo("MIDI Generation", "examples/midi_generation.json");
+addDemo("Copy Paste", "examples/copypaste.json");
 addDemo("autobackup", function(){
 	var data = localStorage.getItem("litegraphg demo backup");
 	if(!data)
@@ -188,3 +189,7 @@ function enableWebGL()
 		}
 	}
 }
+
+// Tests
+// CopyPasteWithConnectionToUnselectedOutputTest();
+// demo();
