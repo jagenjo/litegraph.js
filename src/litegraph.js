@@ -140,6 +140,8 @@
         pointerevents_method: "mouse", // "mouse"|"pointer" use mouse for retrocompatibility issues? (none found @ now)
         // TODO implement pointercancel, gotpointercapture, lostpointercapture, (pointerover, pointerout if necessary)
 
+        ctrl_shift_v_paste_connect_unselected_outputs: false, //[true!] allows ctrl + shift + v to paste nodes with the outputs of the unselected nodes connected with the inputs of the newly pasted nodes
+
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -7115,6 +7117,10 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     LGraphCanvas.prototype.pasteFromClipboard = function(isConnectUnselected = false) {
+        // if ctrl + shift + v is off, return when isConnectUnselected is true (shift is pressed) to maintain old behavior
+        if (!LiteGraph.ctrl_shift_v_paste_connect_unselected_outputs && isConnectUnselected) {
+            return;
+        }
         var data = localStorage.getItem("litegrapheditor_clipboard");
         if (!data) {
             return;
@@ -7167,7 +7173,7 @@ LGraphNode.prototype.executeAction = function(action)
             var origin_node_relative_id = link_info[0];
             if (origin_node_relative_id != null) {
                 origin_node = nodes[origin_node_relative_id];
-            } else if (isConnectUnselected) {
+            } else if (LiteGraph.ctrl_shift_v_paste_connect_unselected_outputs && isConnectUnselected) {
                 var origin_node_id = link_info[4];
                 if (origin_node_id) {
                     origin_node = this.graph.getNodeById(origin_node_id);
