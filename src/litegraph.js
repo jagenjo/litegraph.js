@@ -251,13 +251,18 @@
          * @param {String|Object} type name of the node or the node constructor itself
          */
         unregisterNodeType: function(type) {
-			var base_class = type.constructor === String ? this.registered_node_types[type] : type;
-			if(!base_class)
-				throw("node type not found: " + type );
-			delete this.registered_node_types[base_class.type];
-			if(base_class.constructor.name)
-				delete this.Nodes[base_class.constructor.name];
-		},
+            const base_class =
+                type.constructor === String
+                    ? this.registered_node_types[type]
+                    : type;
+            if (!base_class) {
+                throw "node type not found: " + type;
+            }
+            delete this.registered_node_types[base_class.type];
+            if (base_class.constructor.name) {
+                delete this.Nodes[base_class.constructor.name];
+            }
+        },
 
         /**
         * Save a slot type and his node
@@ -265,38 +270,49 @@
         * @param {String|Object} type name of the node or the node constructor itself
         * @param {String} slot_type name of the slot type (variable type), eg. string, number, array, boolean, ..
         */
-        registerNodeAndSlotType: function(type,slot_type,out){
+        registerNodeAndSlotType: function(type, slot_type, out){
             out = out || false;
-            var base_class = type.constructor === String && this.registered_node_types[type] !== "anonymous" ? this.registered_node_types[type] : type;
-            
-            var sCN = base_class.constructor.type;
-            
-            if (typeof slot_type == "string"){
-                var aTypes = slot_type.split(",");
-            }else if (slot_type == this.EVENT || slot_type == this.ACTION){
-                var aTypes = ["_event_"];
-            }else{
-                var aTypes = ["*"];
+            const base_class =
+                type.constructor === String &&
+                this.registered_node_types[type] !== "anonymous"
+                    ? this.registered_node_types[type]
+                    : type;
+
+            const class_type = base_class.constructor.type;
+
+            let allTypes = [];
+            if (typeof slot_type === "string") {
+                allTypes = slot_type.split(",");
+            } else if (slot_type == this.EVENT || slot_type == this.ACTION) {
+                allTypes = ["_event_"];
+            } else {
+                allTypes = ["*"];
             }
 
-            for (var i = 0; i < aTypes.length; ++i) {
-                var sT = aTypes[i]; //.toLowerCase();
-                if (sT === ""){
-                    sT = "*";
+            for (let i = 0; i < allTypes.length; ++i) {
+                let slotType = allTypes[i];
+                if (slotType === "") {
+                    slotType = "*";
                 }
-                var registerTo = out ? "registered_slot_out_types" : "registered_slot_in_types";
-                if (typeof this[registerTo][sT] == "undefined") this[registerTo][sT] = {nodes: []};
-                this[registerTo][sT].nodes.push(sCN);
-                
+                const registerTo = out
+                    ? "registered_slot_out_types"
+                    : "registered_slot_in_types";
+                if (this[registerTo][slotType] === undefined) {
+                    this[registerTo][slotType] = { nodes: [] };
+                }
+                if (!this[registerTo][slotType].nodes.includes(class_type)) {
+                    this[registerTo][slotType].nodes.push(class_type);
+                }
+
                 // check if is a new type
-                if (!out){
-                    if (!this.slot_types_in.includes(sT.toLowerCase())){
-                        this.slot_types_in.push(sT.toLowerCase());
+                if (!out) {
+                    if (!this.slot_types_in.includes(slotType.toLowerCase())) {
+                        this.slot_types_in.push(slotType.toLowerCase());
                         this.slot_types_in.sort();
                     }
-                }else{
-                    if (!this.slot_types_out.includes(sT.toLowerCase())){
-                        this.slot_types_out.push(sT.toLowerCase());
+                } else {
+                    if (!this.slot_types_out.includes(slotType.toLowerCase())) {
+                        this.slot_types_out.push(slotType.toLowerCase());
                         this.slot_types_out.sort();
                     }
                 }
