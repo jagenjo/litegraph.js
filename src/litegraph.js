@@ -5198,6 +5198,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.editor_alpha = 1; //used for transition
         this.pause_rendering = false;
         this.clear_background = true;
+        this.clear_background_color = "#222";
 
 		this.read_only = false; //if set to true users cannot modify the graph
         this.render_only_selected = true;
@@ -8235,6 +8236,17 @@ LGraphNode.prototype.executeAction = function(action)
             this.ds.toCanvasContext(ctx);
 
             //render BG
+            if ( this.ds.scale < 1.5 && !bg_already_painted && this.clear_background_color )
+            {
+                ctx.fillStyle = this.clear_background_color;
+                ctx.fillRect(
+                    this.visible_area[0],
+                    this.visible_area[1],
+                    this.visible_area[2],
+                    this.visible_area[3]
+                );
+            }
+
             if (
                 this.background_image &&
                 this.ds.scale > 0.5 &&
