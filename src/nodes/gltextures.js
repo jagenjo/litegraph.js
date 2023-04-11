@@ -5338,7 +5338,7 @@ void main(void){\n\
 				}
 				gl.finish2D();
 			});
-		else //rendering to offscren canvas and uploading to texture
+		else //rendering to offscreen canvas and uploading to texture
 		{
 			if(properties.clear)
 				ctx.clearRect(0,0,canvas.width,canvas.height);

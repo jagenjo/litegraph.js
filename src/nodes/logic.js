@@ -93,10 +93,10 @@
     logicAnd.title = "AND";
     logicAnd.desc = "Return true if all inputs are true";
     logicAnd.prototype.onExecute = function() {
-        ret = true;
-        for (inX in this.inputs){
+        var ret = true;
+        for (var inX in this.inputs){
             if (!this.getInputData(inX)){
-                ret = false;
+                var ret = false;
                 break;
             }
         }
@@ -119,8 +119,8 @@
     logicOr.title = "OR";
     logicOr.desc = "Return true if at least one input is true";
     logicOr.prototype.onExecute = function() {
-        ret = false;
-        for (inX in this.inputs){
+        var ret = false;
+        for (var inX in this.inputs){
             if (this.getInputData(inX)){
                 ret = true;
                 break;
@@ -159,9 +159,9 @@
     logicCompare.title = "bool == bool";
     logicCompare.desc = "Compare for logical equality";
     logicCompare.prototype.onExecute = function() {
-        last = null;
-        ret = true;
-        for (inX in this.inputs){
+        var last = null;
+        var ret = true;
+        for (var inX in this.inputs){
             if (last === null) last = this.getInputData(inX);
             else
                 if (last != this.getInputData(inX)){

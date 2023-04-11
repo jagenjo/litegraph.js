@@ -1,12 +1,18 @@
-{
-    "extends": "eslint:recommended",
-    "parserOptions": {
-        "ecmaVersion": 5
-    },
+module.exports = {
     "env": {
         "browser": true,
-        "node": true
+        "es2021": true,
+        "node": true,
+        "jest/globals": true
     },
+    "extends": "eslint:recommended",
+    "overrides": [
+    ],
+    "parserOptions": {
+        "ecmaVersion": "latest",
+        "sourceType": "module"
+    },
+    "plugins": ["jest"],
     "globals": {
         "gl": true,
         "GL": true,
