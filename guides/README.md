@@ -110,7 +110,7 @@ Slots have the next information:
  * **dir**: optional, could be LiteGraph.UP, LiteGraph.RIGHT, LiteGraph.DOWN, LiteGraph.LEFT
  * **color_on**: color to render when it is connected
  * **color_off**: color to render when it is not connected
-  
+
  To retrieve the data traveling through a link you can call ```node.getInputData``` or ```node.getOutputData```
 
 ### Define your Graph Node
@@ -151,7 +151,7 @@ node.onDrawForeground = function(ctx, graphcanvas)
 }
 ```
 
-### Custom Node Behaviour 
+### Custom Node Behaviour
 
 You can also grab events from the mouse in case your node has some sort of special interactivity.
 
@@ -192,11 +192,11 @@ This is the list of supported widgets:
 * **"combo"** to select between multiple choices, the syntax is:
 
   ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```
-  
+
   or if you want to use objects:
-  
+
   ```this.addWidget("combo","Combo", value1, callback, { values: { "title1":value1, "title2":value2 } } );```
-  
+
 * **"text"** to edit a short string
 * **"toggle"** like a checkbox
 * **"button"**
@@ -223,11 +223,18 @@ Or if you want to associate a widget with a property of the node, then specify i
 function MyNode()
 {
   this.properties = { surname: "smith" };
-  this.addWidget("text","Surname","", { property: "surname"}); //this will modify the node.properties 
+  this.addWidget("text","Surname","", { property: "surname"}); //this will modify the node.properties
 }
 ```
 ## LGraphCanvas
 LGraphCanvas is the class in charge of rendering/interaction with the nodes inside the browser.
+
+## LGraphCanvas settings
+There are graph canvas settings that could be defined or modified to change behaviour:
+
+* **allow_interaction**: when set to `false` disable interaction with the canvas
+* **drag_mode**: when set to `true` and `allow_interaction` is `false`, allow individual nodes with `flags.allow_interaction` set to `true` to be interacted with
+
 ### Canvas Shortcuts
 * Space - Holding space key while moving the cursor moves the canvas around. It works when holding the mouse button down so it is easier to connect different nodes when the canvas gets too large.
 * Ctrl/Shift + Click - Add clicked node to selection.
@@ -277,7 +284,7 @@ To define slots for nodes you must use the type LiteGraph.ACTION for inputs, and
 function MyNode()
 {
   this.addInput("play", LiteGraph.ACTION );
-  this.addInput("onFinish", LiteGraph.EVENT );  
+  this.addInput("onFinish", LiteGraph.EVENT );
 }
 ```
 
