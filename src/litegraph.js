@@ -7003,7 +7003,7 @@ LGraphNode.prototype.executeAction = function(action)
                 block_default = true;
             }
 
-            if (e.code == "KeyC" && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
+            if ((e.keyCode === 67) && (e.metaKey || e.ctrlKey) && !e.shiftKey) {
                 //copy
                 if (this.selected_nodes) {
                     this.copyToClipboard();
@@ -7011,7 +7011,7 @@ LGraphNode.prototype.executeAction = function(action)
                 }
             }
 
-            if (e.code == "KeyV" && (e.metaKey || e.ctrlKey)) {
+            if ((e.keyCode === 86) && (e.metaKey || e.ctrlKey)) {
                 //paste
                 this.pasteFromClipboard(e.shiftKey);
             }
