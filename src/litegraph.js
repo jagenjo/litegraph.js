@@ -10034,7 +10034,7 @@ LGraphNode.prototype.executeAction = function(action)
 						if (event.click_time < 200 && delta == 0) {
 							this.prompt("Value",w.value,function(v) {
 									// check if v is a valid equation or a number
-									  if (/^[0-9+\-*/()\s]+$/.test(v)) {
+									  if (/^[0-9+\-*/()\s]+|\d+\.\d+$/.test(v)) {
 										try {//solve the equation if possible
 									    		v = eval(v);
 										} catch (e) { }
