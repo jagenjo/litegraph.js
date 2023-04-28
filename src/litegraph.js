@@ -5214,7 +5214,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_reconnect_links = true; //allows to change a connection with having to redo it again
 		this.align_to_grid = false; //snap to grid
 
-        this.drag_mode = false;
+        this.drag_mode = false; // allow dragging when interactions are disabled
         this.dragging_rectangle = null;
 
         this.filter = null; //allows to filter to only accept some type of nodes in a graph
@@ -5865,13 +5865,13 @@ LGraphNode.prototype.executeAction = function(action)
 
             //when clicked on top of a node
             //and it is not interactive
-            if (node && this.allow_interaction && !skip_action && !this.read_only) {
+            if (node && (this.allow_interaction || (!this.allow_interaction && node.flags.allow_interaction)) && !skip_action && !this.read_only) {
                 if (!this.live_mode && !node.flags.pinned) {
                     this.bringToFront(node);
                 } //if it wasn't selected?
 
                 //not dragging mouse to connect two slots
-                if ( !this.connecting_node && !node.flags.collapsed && !this.live_mode ) {
+                if ( this.allow_interaction && !this.connecting_node && !node.flags.collapsed && !this.live_mode ) {
                     //Search for corner for resize
                     if ( !skip_action &&
                         node.resizable !== false &&
@@ -6025,7 +6025,7 @@ LGraphNode.prototype.executeAction = function(action)
                     }
 
                     //double clicking
-                    if (is_double_click && this.selected_nodes[node.id]) {
+                    if (this.allow_interaction && is_double_click && this.selected_nodes[node.id]) {
                         //double click node
                         if (node.onDblClick) {
                             node.onDblClick( e, pos, this );
@@ -6328,7 +6328,7 @@ LGraphNode.prototype.executeAction = function(action)
             this.ds.offset[1] += delta[1] / this.ds.scale;
             this.dirty_canvas = true;
             this.dirty_bgcanvas = true;
-        } else if (this.allow_interaction && !this.read_only) {
+        } else if ((this.allow_interaction || (!this.allow_interaction && this.drag_mode)) && !this.read_only) {
             if (this.connecting_node) {
                 this.dirty_canvas = true;
             }
@@ -9912,7 +9912,7 @@ LGraphNode.prototype.executeAction = function(action)
         event,
         active_widget
     ) {
-        if (!node.widgets || !node.widgets.length) {
+        if (!node.widgets || !node.widgets.length || (!this.allow_interaction && !node.flags.allow_interaction)) {
             return null;
         }
 
