@@ -5214,7 +5214,7 @@ LGraphNode.prototype.executeAction = function(action)
         this.allow_reconnect_links = true; //allows to change a connection with having to redo it again
 		this.align_to_grid = false; //snap to grid
 
-        this.drag_mode = false; // allow dragging when interactions are disabled
+        this.drag_mode = false;
         this.dragging_rectangle = null;
 
         this.filter = null; //allows to filter to only accept some type of nodes in a graph
@@ -5865,7 +5865,7 @@ LGraphNode.prototype.executeAction = function(action)
 
             //when clicked on top of a node
             //and it is not interactive
-            if (node && (this.allow_interaction || (!this.allow_interaction && node.flags.allow_interaction)) && !skip_action && !this.read_only) {
+            if (node && (this.allow_interaction || node.flags.allow_interaction) && !skip_action && !this.read_only) {
                 if (!this.live_mode && !node.flags.pinned) {
                     this.bringToFront(node);
                 } //if it wasn't selected?
@@ -6299,6 +6299,9 @@ LGraphNode.prototype.executeAction = function(action)
             this.dirty_canvas = true;
         }
 
+        //get node over
+        var node = this.graph.getNodeOnPos(e.canvasX,e.canvasY,this.visible_nodes);
+
         if (this.dragging_rectangle)
 		{
             this.dragging_rectangle[2] = e.canvasX - this.dragging_rectangle[0];
@@ -6328,13 +6331,10 @@ LGraphNode.prototype.executeAction = function(action)
             this.ds.offset[1] += delta[1] / this.ds.scale;
             this.dirty_canvas = true;
             this.dirty_bgcanvas = true;
-        } else if ((this.allow_interaction || (!this.allow_interaction && this.drag_mode)) && !this.read_only) {
+        } else if ((this.allow_interaction || (node && node.flags.allow_interaction)) && !this.read_only) {
             if (this.connecting_node) {
                 this.dirty_canvas = true;
             }
-
-            //get node over
-            var node = this.graph.getNodeOnPos(e.canvasX,e.canvasY,this.visible_nodes);
 
             //remove mouseover flag
             for (var i = 0, l = this.graph._nodes.length; i < l; ++i) {
