@@ -12977,13 +12977,20 @@ LGraphNode.prototype.executeAction = function(action)
                     callback: LGraphCanvas.onMenuAdd
                 },
                 { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
-                { content: "Align", has_submenu: true,  callback: LGraphCanvas.onGroupAlign },
 				//{ content: "Arrange", callback: that.graph.arrange },
                 //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
             ];
             /*if (LiteGraph.showCanvasOptions){
                 options.push({ content: "Options", callback: that.showShowGraphOptionsPanel });
             }*/
+
+            if (Object.keys(this.selected_nodes).length > 1) {
+                options.push({
+                    content: "Align",
+                    has_submenu: true,
+                    callback: LGraphCanvas.onGroupAlign,
+                })
+            }
 
             if (this._graph_stack && this._graph_stack.length > 0) {
                 options.push(null, {
