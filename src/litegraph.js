@@ -10342,14 +10342,25 @@ LGraphNode.prototype.executeAction = function(action)
      *
      * @param {LGraphNode[]} nodes a list of nodes
      * @param {"top"|"bottom"|"left"|"right"} direction Direction to align the nodes
+     * @param {LGraphNode?} align_to Node to align to (if null, align to the furthest node in the given direction)
      */
-    LGraphCanvas.alignNodes = function (nodes, direction) {
+    LGraphCanvas.alignNodes = function (nodes, direction, align_to) {
         if (!nodes) {
             return;
         }
 
         const canvas = LGraphCanvas.active_canvas;
-        const boundaryNodes = LGraphCanvas.getBoundaryNodes(nodes)
+        let boundaryNodes = []
+        if (align_to === undefined) {
+            boundaryNodes = LGraphCanvas.getBoundaryNodes(nodes)
+        } else {
+            boundaryNodes = {
+                "top": align_to,
+                "right": align_to,
+                "bottom": align_to,
+                "left": align_to
+            }
+        }
 
         for (const [_, node] of Object.entries(canvas.selected_nodes)) {
             switch (direction) {
@@ -10371,6 +10382,18 @@ LGraphNode.prototype.executeAction = function(action)
         canvas.dirty_canvas = true;
         canvas.dirty_bgcanvas = true;
     };
+
+    LGraphCanvas.onNodeAlign = function(value, options, event, prev_menu, node) {
+        new LiteGraph.ContextMenu(["Top", "Bottom", "Left", "Right"], {
+            event: event,
+            callback: inner_clicked,
+            parentMenu: prev_menu,
+        });
+
+        function inner_clicked(value) {
+            LGraphCanvas.alignNodes(LGraphCanvas.active_canvas.selected_nodes, value.toLowerCase(), node);
+        }
+    }
 
     LGraphCanvas.onGroupAlign = function(value, options, event, prev_menu) {
         new LiteGraph.ContextMenu(["Top", "Bottom", "Left", "Right"], {
@@ -13105,6 +13128,14 @@ LGraphNode.prototype.executeAction = function(action)
 			content: "To Subgraph",
 			callback: LGraphCanvas.onMenuNodeToSubgraph
 		});
+
+        if (Object.keys(this.selected_nodes).length > 1) {
+            options.push({
+                content: "Align Selected To",
+                has_submenu: true,
+                callback: LGraphCanvas.onNodeAlign,
+            })
+        }
 
 		options.push(null, {
 			content: "Remove",
