@@ -10294,6 +10294,96 @@ LGraphNode.prototype.executeAction = function(action)
         canvas.graph.add(group);
     };
 
+    /**
+     * Determines the furthest nodes in each direction
+     * @param nodes {LGraphNode[]} the nodes to from which boundary nodes will be extracted
+     * @return {{left: LGraphNode, top: LGraphNode, right: LGraphNode, bottom: LGraphNode}}
+     */
+    LGraphCanvas.getBoundaryNodes = function(nodes) {
+        let top = null;
+        let right = null;
+        let bottom = null;
+        let left = null;
+        for (const nID in nodes) {
+            const node = nodes[nID];
+            const [x, y] = node.pos;
+            const [width, height] = node.size;
+
+            if (top === null || y < top.pos[1]) {
+                top = node;
+            }
+            if (right === null || x + width > right.pos[0] + right.size[0]) {
+                right = node;
+            }
+            if (bottom === null || y + height > bottom.pos[1] + bottom.size[1]) {
+                bottom = node;
+            }
+            if (left === null || x < left.pos[0]) {
+                left = node;
+            }
+        }
+
+        return {
+            "top": top,
+            "right": right,
+            "bottom": bottom,
+            "left": left
+        };
+    }
+    /**
+     * Determines the furthest nodes in each direction for the currently selected nodes
+     * @return {{left: LGraphNode, top: LGraphNode, right: LGraphNode, bottom: LGraphNode}}
+     */
+    LGraphCanvas.prototype.boundaryNodesForSelection = function() {
+        return LGraphCanvas.getBoundaryNodes(Object.values(this.selected_nodes));
+    }
+
+    /**
+     *
+     * @param {LGraphNode[]} nodes a list of nodes
+     * @param {"top"|"bottom"|"left"|"right"} direction Direction to align the nodes
+     */
+    LGraphCanvas.alignNodes = function (nodes, direction) {
+        if (!nodes) {
+            return;
+        }
+
+        const canvas = LGraphCanvas.active_canvas;
+        const boundaryNodes = LGraphCanvas.getBoundaryNodes(nodes)
+
+        for (const [_, node] of Object.entries(canvas.selected_nodes)) {
+            switch (direction) {
+                case "right":
+                    node.pos[0] = boundaryNodes["right"].pos[0] + boundaryNodes["right"].size[0] - node.size[0];
+                    break;
+                case "left":
+                    node.pos[0] = boundaryNodes["left"].pos[0];
+                    break;
+                case "top":
+                    node.pos[1] = boundaryNodes["top"].pos[1];
+                    break;
+                case "bottom":
+                    node.pos[1] = boundaryNodes["bottom"].pos[1] + boundaryNodes["bottom"].size[1] - node.size[1];
+                    break;
+            }
+        }
+
+        canvas.dirty_canvas = true;
+        canvas.dirty_bgcanvas = true;
+    };
+
+    LGraphCanvas.onGroupAlign = function(value, options, event, prev_menu) {
+        new LiteGraph.ContextMenu(["Top", "Bottom", "Left", "Right"], {
+            event: event,
+            callback: inner_clicked,
+            parentMenu: prev_menu,
+        });
+
+        function inner_clicked(value) {
+            LGraphCanvas.alignNodes(LGraphCanvas.active_canvas.selected_nodes, value.toLowerCase());
+        }
+    }
+
     LGraphCanvas.onMenuAdd = function (node, options, e, prev_menu, callback) {
 
         var canvas = LGraphCanvas.active_canvas;
@@ -12887,6 +12977,7 @@ LGraphNode.prototype.executeAction = function(action)
                     callback: LGraphCanvas.onMenuAdd
                 },
                 { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
+                { content: "Align", has_submenu: true,  callback: LGraphCanvas.onGroupAlign },
 				//{ content: "Arrange", callback: that.graph.arrange },
                 //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
             ];
