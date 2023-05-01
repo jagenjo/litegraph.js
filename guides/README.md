@@ -233,8 +233,7 @@ LGraphCanvas is the class in charge of rendering/interaction with the nodes insi
 ## LGraphCanvas settings
 There are graph canvas settings that could be defined or modified to change behaviour:
 
-* **allow_interaction**: when set to `false` disable interaction with the canvas
-* **drag_mode**: when set to `true` and `allow_interaction` is `false`, allow individual nodes with `flags.allow_interaction` set to `true` to be interacted with
+* **allow_interaction**: when set to `false` disable interaction with the canvas (`flags.allow_interaction` on node can be used to override graph canvas setting)
 
 ### Canvas Shortcuts
 * Space - Holding space key while moving the cursor moves the canvas around. It works when holding the mouse button down so it is easier to connect different nodes when the canvas gets too large.
