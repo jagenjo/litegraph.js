@@ -5831,7 +5831,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
 		//left button mouse / single finger
-        if (e.which == 1 && !this.pointer_is_double && !node.flags.pinned)
+        if (e.which == 1 && !this.pointer_is_double && (!node || !node.flags || !node.flags.pinned))
 		{
             if (e.ctrlKey)
 			{
