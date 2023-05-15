@@ -110,7 +110,7 @@ Slots have the next information:
  * **dir**: optional, could be LiteGraph.UP, LiteGraph.RIGHT, LiteGraph.DOWN, LiteGraph.LEFT
  * **color_on**: color to render when it is connected
  * **color_off**: color to render when it is not connected
-  
+
  To retrieve the data traveling through a link you can call ```node.getInputData``` or ```node.getOutputData```
 
 ### Define your Graph Node
@@ -151,7 +151,7 @@ node.onDrawForeground = function(ctx, graphcanvas)
 }
 ```
 
-### Custom Node Behaviour 
+### Custom Node Behaviour
 
 You can also grab events from the mouse in case your node has some sort of special interactivity.
 
@@ -187,16 +187,16 @@ function MyNodeType()
 ```
 
 This is the list of supported widgets:
-* **"number"** to change a value of a number, the syntax is ```this.addWidget("number","Number", current_value, callback, { min: 0, max: 100, step: 1} );```
+* **"number"** to change a value of a number, the syntax is ```this.addWidget("number","Number", current_value, callback, { min: 0, max: 100, step: 1, precision: 3 } );```
 * **"slider"** to change a number by dragging the mouse, the syntax is the same as number.
 * **"combo"** to select between multiple choices, the syntax is:
 
   ```this.addWidget("combo","Combo", "red", callback, { values:["red","green","blue"]} );```
-  
+
   or if you want to use objects:
-  
+
   ```this.addWidget("combo","Combo", value1, callback, { values: { "title1":value1, "title2":value2 } } );```
-  
+
 * **"text"** to edit a short string
 * **"toggle"** like a checkbox
 * **"button"**
@@ -205,6 +205,7 @@ The fourth optional parameter could be options for the widget, the parameters ac
 * **property**: specifies the name of a property to modify when the widget changes
 * **min**: min value
 * **max**: max value
+* **precision**: set the number of digits after decimal point
 * **callback**: function to call when the value changes.
 
 Widget's value is not serialized by default when storing the node state, but if you want to store the value of widgets just set serialize_widgets to true:
@@ -223,11 +224,17 @@ Or if you want to associate a widget with a property of the node, then specify i
 function MyNode()
 {
   this.properties = { surname: "smith" };
-  this.addWidget("text","Surname","", { property: "surname"}); //this will modify the node.properties 
+  this.addWidget("text","Surname","", { property: "surname"}); //this will modify the node.properties
 }
 ```
 ## LGraphCanvas
 LGraphCanvas is the class in charge of rendering/interaction with the nodes inside the browser.
+
+## LGraphCanvas settings
+There are graph canvas settings that could be defined or modified to change behaviour:
+
+* **allow_interaction**: when set to `false` disable interaction with the canvas (`flags.allow_interaction` on node can be used to override graph canvas setting)
+
 ### Canvas Shortcuts
 * Space - Holding space key while moving the cursor moves the canvas around. It works when holding the mouse button down so it is easier to connect different nodes when the canvas gets too large.
 * Ctrl/Shift + Click - Add clicked node to selection.
@@ -277,7 +284,7 @@ To define slots for nodes you must use the type LiteGraph.ACTION for inputs, and
 function MyNode()
 {
   this.addInput("play", LiteGraph.ACTION );
-  this.addInput("onFinish", LiteGraph.EVENT );  
+  this.addInput("onFinish", LiteGraph.EVENT );
 }
 ```
 
