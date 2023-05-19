@@ -8102,7 +8102,7 @@ LGraphNode.prototype.executeAction = function(action)
 		textcolor = textcolor || LiteGraph.NODE_TEXT_COLOR;
 		var pos = this.ds.convertOffsetToCanvas(this.graph_mouse);
 		var hover = LiteGraph.isInsideRectangle( pos[0], pos[1], x,y,w,h );
-		pos = this.last_click_position;
+		pos = this.last_click_position ? [this.last_click_position[0], this.last_click_position[1]] : null;
         if(pos) {
             var rect = this.canvas.getBoundingClientRect();
             pos[0] -= rect.left;
