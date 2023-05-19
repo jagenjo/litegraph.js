@@ -8103,6 +8103,11 @@ LGraphNode.prototype.executeAction = function(action)
 		var pos = this.ds.convertOffsetToCanvas(this.graph_mouse);
 		var hover = LiteGraph.isInsideRectangle( pos[0], pos[1], x,y,w,h );
 		pos = this.last_click_position;
+        if(pos) {
+            var rect = this.canvas.getBoundingClientRect();
+            pos[0] -= rect.left;
+            pos[1] -= rect.top;
+        }
 		var clicked = pos && LiteGraph.isInsideRectangle( pos[0], pos[1], x,y,w,h );
 
 		ctx.fillStyle = hover ? hovercolor : bgcolor;
