@@ -5806,7 +5806,7 @@ LGraphNode.prototype.executeAction = function(action)
 		this.mouse[1] = e.clientY;
         this.graph_mouse[0] = e.canvasX;
         this.graph_mouse[1] = e.canvasY;
-		this.last_click_position = [this.graph_mouse[0],this.graph_mouse[1]];
+		this.last_click_position = [this.mouse[0],this.mouse[1]];
 	  	
 	  	if (this.pointer_is_down && is_primary ){
 		  this.pointer_is_double = true;
@@ -8100,7 +8100,7 @@ LGraphNode.prototype.executeAction = function(action)
 		bgcolor = bgcolor || LiteGraph.NODE_DEFAULT_COLOR;
 		hovercolor = hovercolor || "#555";
 		textcolor = textcolor || LiteGraph.NODE_TEXT_COLOR;
-		var pos = this.graph_mouse;
+		var pos = this.ds.convertOffsetToCanvas(this.graph_mouse);
 		var hover = LiteGraph.isInsideRectangle( pos[0], pos[1], x,y,w,h );
 		pos = this.last_click_position;
 		var clicked = pos && LiteGraph.isInsideRectangle( pos[0], pos[1], x,y,w,h );
