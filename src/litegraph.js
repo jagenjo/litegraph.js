@@ -12985,7 +12985,7 @@ LGraphNode.prototype.executeAction = function(action)
 		var newSelected = {};
 		
 		var fApplyMultiNode = function(node){
-			if (node.clonable == false) {
+			if (node.clonable === false) {
 				return;
 			}
 			var newnode = node.clone();
