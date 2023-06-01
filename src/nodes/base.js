@@ -341,20 +341,20 @@
 
         // Reconnect links
         for (const node of graph.nodes) {
-			if (node.inputs) {
-				for (const input of node.inputs) {
-					if (input.link) {
-						input.link = idMap.linkIDs[input.link]
-					}
-				}
-			}
-			if (node.outputs) {
-				for (const output of node.outputs) {
-					if (output.links) {
-						output.links = output.links.map(l => idMap.linkIDs[l]);
-					}
-				}
-			}
+            if (node.inputs) {
+                for (const input of node.inputs) {
+                    if (input.link) {
+                        input.link = idMap.linkIDs[input.link]
+                    }
+                }
+            }
+            if (node.outputs) {
+                for (const output of node.outputs) {
+                    if (output.links) {
+                        output.links = output.links.map(l => idMap.linkIDs[l]);
+                    }
+                }
+            }
         }
 
         // Recurse!
@@ -529,7 +529,7 @@
     GraphInput.title = "Input";
     GraphInput.desc = "Input of the graph";
 
-	GraphInput.prototype.onConfigure = function()
+	GraphInput.prototype.onConfigure = function()
 	{
 		this.updateType();
 	}

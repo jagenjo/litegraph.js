@@ -7109,8 +7109,8 @@ LGraphNode.prototype.executeAction = function(action)
         var selected_nodes_array = [];
         for (var i in this.selected_nodes) {
             var node = this.selected_nodes[i];
-			if (node.clonable === false)
-				continue;
+            if (node.clonable === false)
+                continue;
             node._relative_id = index;
             selected_nodes_array.push(node);
             index += 1;
@@ -7118,12 +7118,12 @@ LGraphNode.prototype.executeAction = function(action)
 
         for (var i = 0; i < selected_nodes_array.length; ++i) {
             var node = selected_nodes_array[i];
-			var cloned = node.clone();
-			if(!cloned)
-			{
-				console.warn("node type not found: " + node.type );
-				continue;
-			}
+            var cloned = node.clone();
+            if(!cloned)
+            {
+                console.warn("node type not found: " + node.type );
+                continue;
+            }
             clipboard_info.nodes.push(cloned.serialize());
             if (node.inputs && node.inputs.length) {
                 for (var j = 0; j < node.inputs.length; ++j) {
