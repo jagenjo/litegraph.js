@@ -14350,5 +14350,12 @@ LGraphNode.prototype.executeAction = function(action)
 
 if (typeof exports != "undefined") {
     exports.LiteGraph = this.LiteGraph;
+    exports.LGraph = this.LGraph;
+    exports.LLink = this.LLink;
+    exports.LGraphNode = this.LGraphNode;
+    exports.LGraphGroup = this.LGraphGroup;
+    exports.DragAndScale = this.DragAndScale;
+    exports.LGraphCanvas = this.LGraphCanvas;
+    exports.ContextMenu = this.ContextMenu;
 }
 
