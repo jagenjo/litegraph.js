@@ -544,7 +544,7 @@
 			for(var i = 0; i < 3; ++i)
 			{
 				var r = range_max[i] - range_min[i];
-				this._clamped[i] = Math.clamp( this._value[i], range_min[i], range_max[i] );
+				this._clamped[i] = clamp( this._value[i], range_min[i], range_max[i] );
 				if(r == 0)
 				{
 					this._value[i] = (target_min[i] + target_max[i]) * 0.5;
@@ -553,7 +553,7 @@
 
 				var n = (this._value[i] - range_min[i]) / r;
 				if(this.properties.clamp)
-					n = Math.clamp(n,0,1);
+					n = clamp(n,0,1);
 				var t = target_max[i] - target_min[i];
 				this._value[i] = target_min[i] + n * t;
 			}

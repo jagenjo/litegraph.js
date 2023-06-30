@@ -244,7 +244,7 @@
         this._remainder = steps % 1;
         steps = steps | 0;
 
-        var v = Math.clamp(
+        var v = clamp(
             this.properties.value + steps * this.properties.step,
             this.properties.min,
             this.properties.max
@@ -257,7 +257,7 @@
     WidgetNumber.prototype.onMouseUp = function(e, pos) {
         if (e.click_time < 200) {
             var steps = pos[1] > this.size[1] * 0.5 ? -1 : 1;
-            this.properties.value = Math.clamp(
+            this.properties.value = clamp(
                 this.properties.value + steps * this.properties.step,
                 this.properties.min,
                 this.properties.max

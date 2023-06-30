@@ -698,6 +698,8 @@ export declare class LGraphNode {
     getInputInfo(
         slot: number
     ): { link: number; name: string; type: string | 0 } | null;
+    /** Returns the link info in the connection of an input slot */
+    getInputLink(slot: number): LLink | null;
     /** returns the node connected in the input slot */
     getInputNode(slot: number): LGraphNode | null;
     /** returns the value of an input with this name, otherwise checks if there is a property with that name */
@@ -729,6 +731,8 @@ export declare class LGraphNode {
      * @param link_id in case you want to trigger and specific output link in a slot
      */
     clearTriggeredSlot(slot: number, link_id?: number): void;
+    /** changes node size and triggers callback */
+    setSize(size: Vector2): void;
     /**
      * add a new property to this node
      * @param name
@@ -801,9 +805,10 @@ export declare class LGraphNode {
         direction: string;
         links: null;
     };
-    setValue(v: any): void;
-    /** computes the size of a node according to its inputs and output slots */
-    computeSize(): [number, number];
+    /** computes the minimum size of a node according to its inputs and output slots */
+    computeSize(minHeight?: Vector2): Vector2;
+    /** returns all the info available about a property of this node */
+    getPropertyInfo(property: string): object;
     /**
      * https://github.com/jagenjo/litegraph.js/blob/master/guides/README.md#node-widgets
      * @return created widget
@@ -1487,20 +1492,4 @@ declare class ContextMenu {
     getFirstEvent(): void;
 }
 
-declare global {
-    interface CanvasRenderingContext2D {
-        /** like rect but rounded corners */
-        roundRect(
-            x: number,
-            y: number,
-            width: number,
-            height: number,
-            radius: number,
-            radiusLow: number
-        ): void;
-    }
-
-    interface Math {
-        clamp(v: number, min: number, max: number): number;
-    }
-}
+declare function clamp(v: number, min: number, max: number): number;
