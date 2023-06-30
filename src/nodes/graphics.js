@@ -63,10 +63,10 @@
                 ctx.strokeStyle = colors[i];
                 ctx.beginPath();
                 var v = values[0] * scale * -1 + offset;
-                ctx.moveTo(0, Math.clamp(v, 0, size[1]));
+                ctx.moveTo(0, clamp(v, 0, size[1]));
                 for (var j = 1; j < values.length && j < size[0]; ++j) {
                     var v = values[j] * scale * -1 + offset;
-                    ctx.lineTo(j, Math.clamp(v, 0, size[1]));
+                    ctx.lineTo(j, clamp(v, 0, size[1]));
                 }
                 ctx.stroke();
             }

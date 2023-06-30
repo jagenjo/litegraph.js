@@ -2077,7 +2077,7 @@ void main() {\n\
 			LGraphTextureLinearAvgSmooth._shader_avg = new GL.Shader( GL.Shader.SCREEN_VERTEX_SHADER, LGraphTextureLinearAvgSmooth.pixel_shader_avg );
 		}
 
-		var samples = Math.clamp(this.properties.samples,0,64);
+		var samples = clamp(this.properties.samples,0,64);
 		var frame = this.frame;
 		var interval = this.properties.frames_interval;
 
@@ -2708,11 +2708,11 @@ void main() {\n\
 		var c = this.properties.color;
 		ctx.fillStyle =
 			"rgb(" +
-			Math.floor(Math.clamp(c[0], 0, 1) * 255) +
+			Math.floor(clamp(c[0], 0, 1) * 255) +
 			"," +
-			Math.floor(Math.clamp(c[1], 0, 1) * 255) +
+			Math.floor(clamp(c[1], 0, 1) * 255) +
 			"," +
-			Math.floor(Math.clamp(c[2], 0, 1) * 255) +
+			Math.floor(clamp(c[2], 0, 1) * 255) +
 			")";
 		if (this.flags.collapsed) {
 			this.boxcolor = ctx.fillStyle;
@@ -3540,7 +3540,7 @@ LGraphTextureBlur.pixel_shader = "precision highp float;\n\
 		var currentSource = currentDestination;
 
 		var iterations = this.iterations;
-		iterations = Math.clamp(iterations, 1, 16) | 0;
+		iterations = clamp(iterations, 1, 16) | 0;
 		var texel_size = uniforms.u_texel_size;
 		var intensity = this.intensity;
 
@@ -4678,14 +4678,14 @@ void main(void){\n\
 		{
 			if(split)
 			{
-				values[i*4] = Math.clamp( this.sampleCurve(i/num,this._points.R)*255,0,255);
-				values[i*4+1] = Math.clamp( this.sampleCurve(i/num,this._points.G)*255,0,255);
-				values[i*4+2] = Math.clamp( this.sampleCurve(i/num,this._points.B)*255,0,255);
+				values[i*4] = clamp( this.sampleCurve(i/num,this._points.R)*255,0,255);
+				values[i*4+1] = clamp( this.sampleCurve(i/num,this._points.G)*255,0,255);
+				values[i*4+2] = clamp( this.sampleCurve(i/num,this._points.B)*255,0,255);
 			}
 			else
 			{
 				var v = this.sampleCurve(i/num);//sample curve
-				values[i*4] = values[i*4+1] = values[i*4+2] = Math.clamp(v*255,0,255);
+				values[i*4] = values[i*4+1] = values[i*4+2] = clamp(v*255,0,255);
 			}
 			values[i*4+3] = 255; //alpha fixed
 		}

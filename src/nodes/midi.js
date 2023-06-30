@@ -891,13 +891,13 @@
                     case "value1":
                         var v = this.getInputData(i);
                         if (v != null) {
-                            this.properties.value1 = Math.clamp(v|0,0,127);
+                            this.properties.value1 = clamp(v|0,0,127);
                         }
                         break;
                     case "value2":
                         var v = this.getInputData(i);
                         if (v != null) {
-                            this.properties.value2 = Math.clamp(v|0,0,127);
+                            this.properties.value2 = clamp(v|0,0,127);
                         }
                         break;
                 }

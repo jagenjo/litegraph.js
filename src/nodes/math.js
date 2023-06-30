@@ -168,7 +168,7 @@
 
         this._last_v = ((v - in_min) / (in_max - in_min)) * (out_max - out_min) + out_min;
         this.setOutputData(0, this._last_v);
-        this.setOutputData(1, Math.clamp( this._last_v, out_min, out_max ));
+        this.setOutputData(1, clamp( this._last_v, out_min, out_max ));
     };
 
     MathRange.prototype.onDrawBackground = function(ctx) {
@@ -498,7 +498,7 @@
         var edge1 = this.properties.B;
 
         // Scale, bias and saturate x to 0..1 range
-        v = Math.clamp((v - edge0) / (edge1 - edge0), 0.0, 1.0);
+        v = clamp((v - edge0) / (edge1 - edge0), 0.0, 1.0);
         // Evaluate polynomial
         v = v * v * (3 - 2 * v);
 

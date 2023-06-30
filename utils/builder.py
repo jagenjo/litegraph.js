@@ -4,7 +4,7 @@ import re, os, sys, time, tempfile, shutil
 import argparse
 from datetime import date
 
-compiler_path = "../node_modules/google-closure-compiler/compiler.jar"
+compiler_path = "../node_modules/google-closure-compiler-java/compiler.jar"
 root_path = "./"
 
 #arguments

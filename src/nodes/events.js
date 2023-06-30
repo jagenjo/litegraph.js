@@ -133,7 +133,7 @@
 		if(index != null)
 		{
 			index = Math.floor(index);
-			index = Math.clamp( index, 0, this.outputs ? (this.outputs.length - 2) : 0 );
+			index = clamp( index, 0, this.outputs ? (this.outputs.length - 2) : 0 );
 			if( index != this.properties.index )
 			{
 				this.properties.index = index;
