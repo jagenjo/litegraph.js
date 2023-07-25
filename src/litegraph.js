@@ -2590,12 +2590,16 @@
         }
 
         if (this.widgets && this.serialize_widgets) {
+            o.widgets_names = [];
             o.widgets_values = [];
             for (var i = 0; i < this.widgets.length; ++i) {
-				if(this.widgets[i])
-	                o.widgets_values[i] = this.widgets[i].value;
-				else
-					o.widgets_values[i] = null;
+                if (this.widgets[i]) {
+                    o.widgets_names[i] = this.widgets[i].name;
+                    o.widgets_values[i] = this.widgets[i].value;
+		} else {
+                    o.widgets_names[i] = null;
+                    o.widgets_values[i] = null;
+		}
             }
         }
 
