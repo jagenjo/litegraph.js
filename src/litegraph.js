@@ -3773,16 +3773,35 @@
 
     /**
      * returns the bounding of the object, used for rendering purposes
-     * bounding is: [topleft_cornerx, topleft_cornery, width, height]
      * @method getBounding
-     * @return {Float32Array[4]} the total size
+     * @param out {Float32Array[4]?} [optional] a place to store the output, to free garbage
+     * @param compute_outer {boolean?} [optional] set to true to include the shadow and connection points in the bounding calculation
+     * @return {Float32Array[4]} the bounding box in format of [topleft_cornerx, topleft_cornery, width, height]
      */
-    LGraphNode.prototype.getBounding = function(out) {
+    LGraphNode.prototype.getBounding = function(out, compute_outer) {
         out = out || new Float32Array(4);
-        out[0] = this.pos[0] - 4;
-        out[1] = this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT;
-        out[2] = this.size[0] + 4;
-        out[3] = this.flags.collapsed ? LiteGraph.NODE_TITLE_HEIGHT : this.size[1] + LiteGraph.NODE_TITLE_HEIGHT;
+        const nodePos = this.pos;
+        const nodeFlags = this.flags;
+        const nodeSize = this.size;
+        
+        // 4 offset for collapsed node connection points
+        const left_offset = compute_outer ? 4 : 0;
+        // 6 offset for right shadow and collapsed node connection points, 1 offset due to how nodes are rendered
+        const right_offset = compute_outer ? 6 + left_offset : 1 ;
+        // 4 offset for collapsed nodes top connection points
+        const top_offset = compute_outer ? 4 : 0;
+        // 5 offset for bottom shadow and collapsed node connection points
+        const bottom_offset = compute_outer ? 5 + top_offset : 0;
+        
+        
+        out[0] = nodePos[0] - left_offset;
+        out[1] = nodePos[1] - LiteGraph.NODE_TITLE_HEIGHT - top_offset;
+        out[2] = nodeFlags.collapsed ?
+            (this._collapsed_width || LiteGraph.NODE_COLLAPSED_WIDTH) + right_offset :
+            nodeSize[0] + right_offset;
+        out[3] = nodeFlags.collapsed ?
+            LiteGraph.NODE_TITLE_HEIGHT + bottom_offset :
+            nodeSize[1] + LiteGraph.NODE_TITLE_HEIGHT + bottom_offset;
 
         if (this.onBounding) {
             this.onBounding(out);
@@ -7667,7 +7686,7 @@ LGraphNode.prototype.executeAction = function(action)
                 continue;
             }
 
-            if (!overlapBounding(this.visible_area, n.getBounding(temp))) {
+            if (!overlapBounding(this.visible_area, n.getBounding(temp, true))) {
                 continue;
             } //out of the visible area
 
