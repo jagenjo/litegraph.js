@@ -3781,25 +3781,32 @@
     LGraphNode.prototype.getBounding = function(out, compute_outer) {
         out = out || new Float32Array(4);
         const nodePos = this.pos;
-        const nodeFlags = this.flags;
+        const isCollapsed = this.flags.collapsed;
         const nodeSize = this.size;
         
-        // 4 offset for collapsed node connection points
-        const left_offset = compute_outer ? 4 : 0;
-        // 6 offset for right shadow and collapsed node connection points, 1 offset due to how nodes are rendered
-        const right_offset = compute_outer ? 6 + left_offset : 1 ;
-        // 4 offset for collapsed nodes top connection points
-        const top_offset = compute_outer ? 4 : 0;
-        // 5 offset for bottom shadow and collapsed node connection points
-        const bottom_offset = compute_outer ? 5 + top_offset : 0;
+        let left_offset = 0;
+        // 1 offset due to how nodes are rendered
+        let right_offset =  1 ;
+        let top_offset = 0;
+        let bottom_offset = 0;
         
+        if (compute_outer) {
+            // 4 offset for collapsed node connection points
+            left_offset = 4;
+            // 6 offset for right shadow and collapsed node connection points
+            right_offset = 6 + left_offset;
+            // 4 offset for collapsed nodes top connection points
+            top_offset = 4;
+            // 5 offset for bottom shadow and collapsed node connection points
+            bottom_offset = 5 + top_offset;
+        }
         
         out[0] = nodePos[0] - left_offset;
         out[1] = nodePos[1] - LiteGraph.NODE_TITLE_HEIGHT - top_offset;
-        out[2] = nodeFlags.collapsed ?
+        out[2] = isCollapsed ?
             (this._collapsed_width || LiteGraph.NODE_COLLAPSED_WIDTH) + right_offset :
             nodeSize[0] + right_offset;
-        out[3] = nodeFlags.collapsed ?
+        out[3] = isCollapsed ?
             LiteGraph.NODE_TITLE_HEIGHT + bottom_offset :
             nodeSize[1] + LiteGraph.NODE_TITLE_HEIGHT + bottom_offset;
 
