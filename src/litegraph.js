@@ -163,6 +163,45 @@
         ensureNodeSingleAction: false, // this will prevent nodes to be executed more than once for action call!
         preventAncestorRecalculation: false, // when calculating the ancestors, set a flag to prevent recalculate the subtree*/
         
+        showCanvasOptions: true, // [false!] use with custom implementation
+        availableCanvasOptions: [
+            "highquality_render",
+            "use_gradients", //set to true to render titlebar with gradients
+            //",editor_alpha = 1; //used for transition
+            "pause_rendering",
+            "clear_background",
+
+            "read_only", //if set to true users cannot modify the graph
+            //",render_only_selected // refactor: not implemented
+            "live_mode",
+            "show_info",
+            "allow_dragcanvas",
+            "allow_dragnodes",
+            "allow_interaction", //allow to control widgets, buttons, collapse, etc
+            "allow_searchbox",
+            "move_destination_link_without_shift",  //old: allow_reconnect_links //allows to change a connection, no need to hold shift
+            "set_canvas_dirty_on_mouse_event", //forces to redraw the canvas if the mouse does anything
+            "always_render_background",
+            "render_shadows",
+            "render_canvas_border",
+            "render_connections_shadows", //too much cpu
+            "render_connections_border",
+            "render_curved_connections",
+            "render_connection_arrows",
+            "render_collapsed_slots",
+            "render_execution_order",
+            "render_title_colored",
+            "render_link_tooltip",
+
+            //"links_render_mode", //= LiteGraph.SPLINE_LINK;
+            
+            // TODO refactor: options object do need refactoring .. all the options are actually outside of it
+            "autoresize", //= options.autoresize;
+            "skip_render", //= options.skip_render;
+            "clip_all_nodes", //= options.clip_all_nodes;
+            "free_resize"
+        ],
+
         /**
          * Register a node class so it can be listed when the user wants to create a new one
          * @method registerNodeType
@@ -10682,8 +10721,8 @@ LGraphNode.prototype.executeAction = function(action)
 					}
 					break;
 				default:
-					if (w.mouse) {
-						this.dirty_canvas = w.mouse(event, [x, y], node);
+					if (w.mouse) { // could have a better name this widget callback, right?
+						this.dirty_canvas = w.mouse(event, [x, y], node); // should update only with true right? (false would eventually not make it dirty?)
 					}
 					break;
 			} //end switch
@@ -13513,12 +13552,12 @@ LGraphNode.prototype.executeAction = function(action)
                     callback: LGraphCanvas.onMenuAdd
                 },
                 { content: "Add Group", callback: LGraphCanvas.onGroupAdd },
-				//{ content: "Arrange", callback: that.graph.arrange },
-                //{content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
+				{ content: "Arrange", callback: that.graph.arrange },
+                {content:"Collapse All", callback: LGraphCanvas.onMenuCollapseAll }
             ];
-            /*if (LiteGraph.showCanvasOptions){
+            /*atlasan*/if (LiteGraph.showCanvasOptions){
                 options.push({ content: "Options", callback: that.showShowGraphOptionsPanel });
-            }*/
+            }/**/
 
             if (this._graph_stack && this._graph_stack.length > 0) {
                 options.push(null, {
@@ -14103,6 +14142,8 @@ LGraphNode.prototype.executeAction = function(action)
         this.options = options;
         var that = this;
 
+		this.menu_elements = [];
+
         //to link a menu with its parent
         if (options.parentMenu) {
             if (options.parentMenu.constructor !== this.constructor) {
@@ -14163,7 +14204,6 @@ LGraphNode.prototype.executeAction = function(action)
             },
             true
         );
-
         LiteGraph.pointerListenerAdd(root,"down",
             function(e) {
 			  	//console.log("pointerevents: ContextMenu down");
@@ -14209,7 +14249,7 @@ LGraphNode.prototype.executeAction = function(action)
                 name = name.content === undefined ? String(name) : name.content;
             }
             var value = values[i];
-            this.addItem(name, value, options);
+            this.menu_elements.push(this.addItem(name, value, options));
             num++;
         }
 
@@ -14243,6 +14283,78 @@ LGraphNode.prototype.executeAction = function(action)
             root_document = document;
         }
 
+
+        if(root_document){
+            root_document.addEventListener(
+                "keydown",
+                function(e) {
+                    // console.debug("keyPressInsideContext",e,that,this,options);
+                    // if(options.keyfilter){
+                        if(!that.allOptions){
+                            that.allOptions = that.menu_elements; //combo_options;
+							that.currentOptions = [];
+                        }
+						if(!that.filteringText){
+							that.filteringText = "";
+						}
+                        if(e.key){
+							var kdone = false;
+                            switch(e.key){
+								case "Backspace":
+								if(that.filteringText.length){
+									that.filteringText = that.filteringText.substring(0,that.filteringText.length-1);
+									kdone = true;
+								}
+								break;
+                            }
+							if(!kdone && e.key.length == 1){
+								that.filteringText += e.key;
+							}
+                        }
+						if(that.filteringText && that.filteringText!==""){
+							var aFilteredOpts = [];
+							for(var iO in that.allOptions){
+								if(that.allOptions[iO].textContent){ //.startWith(that.filteringText)){
+									if(that.allOptions[iO].textContent.startsWith(that.filteringText)){
+										aFilteredOpts.push(that.allOptions[iO]);
+										that.allOptions[iO].style.display = "block";
+									// }else if(that.allOptions[iO].textContent.includes(that.filteringText)){
+										// aFilteredOpts.push(that.allOptions[iO]);
+										// that.allOptions[iO].style.fontStyle = "italic";
+									}else{
+										that.allOptions[iO].style.display = "none";
+									}
+								}
+							}
+						}else{
+							aFilteredOpts = that.allOptions; //combo_options
+							for(var iO in that.allOptions){
+								that.allOptions[iO].style.display = "block";
+								that.allOptions[iO].style.fontStyle = "";
+							}
+						}
+						// height reset
+						
+						var body_rect = document.body.getBoundingClientRect();
+						var root_rect = root.getBoundingClientRect();
+						root.style.top = that.top_original + "px";
+						// if (body_rect.height && top > body_rect.height - root_rect.height - 10) {
+							// var new_top = body_rect.height - root_rect.height - 10;
+							// root.style.top = this.top_original + "px";
+						// }
+						
+						console.debug("filtered for ",that.filteringText);
+                        //e.preventDefault();
+                        //return false;
+                    // }
+                },
+                true
+            );
+        }else{
+            console.warning("NO root_document to add context menu and event",root_document,options);
+        }
+
+
 		if( root_document.fullscreenElement )
 	        root_document.fullscreenElement.appendChild(root);
 		else
@@ -14251,12 +14363,14 @@ LGraphNode.prototype.executeAction = function(action)
         //compute best position
         var left = options.left || 0;
         var top = options.top || 0;
+		this.top_original = top;
         if (options.event) {
             left = options.event.clientX - 10;
             top = options.event.clientY - 10;
             if (options.title) {
                 top -= 20;
             }
+			this.top_original = top;
 
             if (options.parentMenu) {
                 var rect = options.parentMenu.root.getBoundingClientRect();
