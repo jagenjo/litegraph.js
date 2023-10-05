@@ -634,11 +634,23 @@
         this.addProperty("A", 1);
         this.addProperty("B", 1);
         this.addProperty("OP", "+", "enum", { values: MathOperation.values });
-		this._func = function(A,B) { return A + B; };
+		this._func = MathOperation.funcs[this.properties.OP];
 		this._result = []; //only used for arrays
     }
 
     MathOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
+    MathOperation.funcs = {
+        "+": function(A,B) { return A + B; },
+        "-": function(A,B) { return A - B; },
+        "x": function(A,B) { return A * B; },
+        "X": function(A,B) { return A * B; },
+        "*": function(A,B) { return A * B; },
+        "/": function(A,B) { return A / B; },
+        "%": function(A,B) { return A % B; },
+        "^": function(A,B) { return Math.pow(A, B); },
+        "max": function(A,B) { return Math.max(A, B); },
+        "min": function(A,B) { return Math.min(A, B); }
+    };
 
 	MathOperation.title = "Operation";
     MathOperation.desc = "Easy math operators";
@@ -666,21 +678,11 @@
 	{
 		if (name != "OP")
 			return;
-        switch (this.properties.OP) {
-            case "+": this._func = function(A,B) { return A + B; }; break;
-            case "-": this._func = function(A,B) { return A - B; }; break;
-            case "x":
-            case "X":
-            case "*": this._func = function(A,B) { return A * B; }; break;
-            case "/": this._func = function(A,B) { return A / B; }; break;
-            case "%": this._func = function(A,B) { return A % B; }; break;
-            case "^": this._func = function(A,B) { return Math.pow(A, B); }; break;
-            case "max": this._func = function(A,B) { return Math.max(A, B); }; break;
-            case "min": this._func = function(A,B) { return Math.min(A, B); }; break;
-			default: 
-				console.warn("Unknown operation: " + this.properties.OP);
-				this._func = function(A) { return A; };
-				break;
+        this._func = MathOperation.funcs[this.properties.OP];
+        if(!this._func)
+        {
+            console.warn("Unknown operation: " + this.properties.OP);
+            this._func = function(A) { return A; };
         }
 	}
 
@@ -700,24 +702,26 @@
             B = this.properties["B"];
         }
 
+        var func = MathOperation.funcs[this.properties.OP];
+
 		var result;
 		if(A.constructor === Number)
 		{
 	        result = 0;
-			result = this._func(A,B);
+			result = func(A,B);
 		}
 		else if(A.constructor === Array)
 		{
 			result = this._result;
 			result.length = A.length;
 			for(var i = 0; i < A.length; ++i)
-				result[i] = this._func(A[i],B);
+				result[i] = func(A[i],B);
 		}
 		else
 		{
 			result = {};
 			for(var i in A)
-				result[i] = this._func(A[i],B);
+				result[i] = func(A[i],B);
 		}
 	    this.setOutputData(0, result);
     };
