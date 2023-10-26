@@ -365,11 +365,13 @@
 
 //HTTP Request
 function HTTPRequestNode() {
+	var that = this;
 	this.addInput("request", LiteGraph.ACTION);
 	this.addInput("url", "string");
-	this.addProperty("url", "string");
+	this.addProperty("url", "");
 	this.addOutput("ready", LiteGraph.EVENT);
     this.addOutput("data", "string");
+	this.addWidget("button", "Fetch", null, this.fetch.bind(this));
 	this._data = null;
 	this._fetching = null;
 }
@@ -379,6 +381,10 @@ HTTPRequestNode.desc = "Fetch data through HTTP";
 
 HTTPRequestNode.prototype.fetch = function()
 {
+	var url = this.properties.url;
+	if(!url)
+		return;
+
 	this.boxcolor = "#FF0";
 	var that = this;
 	this._fetching = fetch(url)
