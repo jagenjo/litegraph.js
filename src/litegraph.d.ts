@@ -825,9 +825,12 @@ export declare class LGraphNode {
 
     /**
      * returns the bounding of the object, used for rendering purposes
-     * @return [x, y, width, height]
+     * @method getBounding
+     * @param out [optional] a place to store the output, to free garbage
+     * @param compute_outer [optional] set to true to include the shadow and connection points in the bounding calculation
+     * @return the bounding box in format of [topleft_cornerx, topleft_cornery, width, height]
      */
-    getBounding(): Vector4;
+    getBounding(out?: Vector4, compute_outer?: boolean): Vector4;
     /** checks if a point is inside the shape of a node */
     isPointInside(
         x: number,
