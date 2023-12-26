@@ -93,6 +93,7 @@
         node_images_path: "",
 
         debug: false,
+        show_info: true,
         catch_exceptions: true,
         throw_errors: true,
         allow_scripts: false, //if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration), which could lead to exploits
@@ -5269,7 +5270,7 @@ LGraphNode.prototype.executeAction = function(action)
 		this.read_only = false; //if set to true users cannot modify the graph
         this.render_only_selected = true;
         this.live_mode = false;
-        this.show_info = true;
+        this.show_info = LiteGraph.show_info;
         this.allow_dragcanvas = true;
         this.allow_dragnodes = true;
         this.allow_interaction = true; //allow to control widgets, buttons, collapse, etc
