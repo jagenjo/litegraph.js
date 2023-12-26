@@ -270,6 +270,19 @@ Editor.prototype.addMiniWindow = function(w, h) {
 Editor.prototype.addMultiview = function()
 {
 	var canvas = this.canvas;
+	if (this.graphcanvas2) {
+		this.graphcanvas2.setGraph(null, true);
+		this.graphcanvas2.viewport = null;
+		this.graphcanvas2 = null;
+		this.graphcanvas.viewport = null;
+		this.graphcanvas.setGraph(null, true);
+		this.graphcanvas = null;
+		var graphcanvas = new LGraphCanvas( canvas, this.graph );
+		graphcanvas.background_image = "imgs/grid.png";
+		this.graphcanvas = graphcanvas;
+		window.graphcanvas = this.graphcanvas;		
+		return;
+	}
 	this.graphcanvas.ctx.fillStyle = "black";
 	this.graphcanvas.ctx.fillRect(0,0,canvas.width,canvas.height);
 	this.graphcanvas.viewport = [0,0,canvas.width*0.5-2,canvas.height];
