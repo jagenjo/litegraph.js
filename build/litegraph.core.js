@@ -2532,7 +2532,7 @@
 				var w = this.widgets[i];
 				if(!w)
 					continue;
-				if(w.options && w.options.property && this.properties[ w.options.property ])
+				if(w.options && w.options.property && (this.properties[ w.options.property ] != undefined))
 					w.value = JSON.parse( JSON.stringify( this.properties[ w.options.property ] ) );
 			}
 			if (info.widgets_values) {
@@ -3775,16 +3775,42 @@
 
     /**
      * returns the bounding of the object, used for rendering purposes
-     * bounding is: [topleft_cornerx, topleft_cornery, width, height]
      * @method getBounding
-     * @return {Float32Array[4]} the total size
+     * @param out {Float32Array[4]?} [optional] a place to store the output, to free garbage
+     * @param compute_outer {boolean?} [optional] set to true to include the shadow and connection points in the bounding calculation
+     * @return {Float32Array[4]} the bounding box in format of [topleft_cornerx, topleft_cornery, width, height]
      */
-    LGraphNode.prototype.getBounding = function(out) {
+    LGraphNode.prototype.getBounding = function(out, compute_outer) {
         out = out || new Float32Array(4);
-        out[0] = this.pos[0] - 4;
-        out[1] = this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT;
-        out[2] = this.size[0] + 4;
-        out[3] = this.flags.collapsed ? LiteGraph.NODE_TITLE_HEIGHT : this.size[1] + LiteGraph.NODE_TITLE_HEIGHT;
+        const nodePos = this.pos;
+        const isCollapsed = this.flags.collapsed;
+        const nodeSize = this.size;
+        
+        let left_offset = 0;
+        // 1 offset due to how nodes are rendered
+        let right_offset =  1 ;
+        let top_offset = 0;
+        let bottom_offset = 0;
+        
+        if (compute_outer) {
+            // 4 offset for collapsed node connection points
+            left_offset = 4;
+            // 6 offset for right shadow and collapsed node connection points
+            right_offset = 6 + left_offset;
+            // 4 offset for collapsed nodes top connection points
+            top_offset = 4;
+            // 5 offset for bottom shadow and collapsed node connection points
+            bottom_offset = 5 + top_offset;
+        }
+        
+        out[0] = nodePos[0] - left_offset;
+        out[1] = nodePos[1] - LiteGraph.NODE_TITLE_HEIGHT - top_offset;
+        out[2] = isCollapsed ?
+            (this._collapsed_width || LiteGraph.NODE_COLLAPSED_WIDTH) + right_offset :
+            nodeSize[0] + right_offset;
+        out[3] = isCollapsed ?
+            LiteGraph.NODE_TITLE_HEIGHT + bottom_offset :
+            nodeSize[1] + LiteGraph.NODE_TITLE_HEIGHT + bottom_offset;
 
         if (this.onBounding) {
             this.onBounding(out);
@@ -7673,7 +7699,7 @@ LGraphNode.prototype.executeAction = function(action)
                 continue;
             }
 
-            if (!overlapBounding(this.visible_area, n.getBounding(temp))) {
+            if (!overlapBounding(this.visible_area, n.getBounding(temp, true))) {
                 continue;
             } //out of the visible area
 
@@ -9975,6 +10001,7 @@ LGraphNode.prototype.executeAction = function(action)
         var x = pos[0] - node.pos[0];
         var y = pos[1] - node.pos[1];
         var width = node.size[0];
+        var deltaX = event.deltaX || event.deltax || 0;
         var that = this;
         var ref_window = this.getCanvasWindow();
 
@@ -10021,8 +10048,8 @@ LGraphNode.prototype.executeAction = function(action)
 				case "combo":
 					var old_value = w.value;
 					if (event.type == LiteGraph.pointerevents_method+"move" && w.type == "number") {
-                        if(event.deltaX)
-						    w.value += event.deltaX * 0.1 * (w.options.step || 1);
+                        if(deltaX)
+						    w.value += deltaX * 0.1 * (w.options.step || 1);
 						if ( w.options.min != null && w.value < w.options.min ) {
 							w.value = w.options.min;
 						}
@@ -11499,7 +11526,8 @@ LGraphNode.prototype.executeAction = function(action)
         var input = dialog.querySelector("input");
         if (input) {
             input.addEventListener("blur", function(e) {
-                this.focus();
+                if(that.search_box)
+                    this.focus();
             });
             input.addEventListener("keydown", function(e) {
                 if (e.keyCode == 38) {
