@@ -529,7 +529,8 @@
     GraphInput.title = "Input";
     GraphInput.desc = "Input of the graph";
 
-	GraphInput.prototype.onConfigure = function()
+	GraphInput.prototype.onConfigure = function()
+
 	{
 		this.updateType();
 	}
@@ -982,6 +983,48 @@
 	}
 
     LiteGraph.registerNodeType("basic/file", ConstantFile);
+
+
+//to store json objects
+function JSONParse() {
+	this.addInput("parse", LiteGraph.ACTION);
+	this.addInput("json", "string");
+	this.addOutput("done", LiteGraph.EVENT);
+	this.addOutput("object", "object");
+	this.widget = this.addWidget("button","parse","",this.parse.bind(this));
+	this._str = null;
+	this._obj = null;
+}
+
+JSONParse.title = "JSON Parse";
+JSONParse.desc = "Parses JSON String into object";
+
+JSONParse.prototype.parse = function()
+{
+	if(!this._str)
+		return;
+
+	try {
+		this._str = this.getInputData(1);
+		this._obj = JSON.parse(this._str);
+		this.boxcolor = "#AEA";
+		this.triggerSlot(0);
+	} catch (err) {
+		this.boxcolor = "red";
+	}
+}
+
+JSONParse.prototype.onExecute = function() {
+	this._str = this.getInputData(1);
+	this.setOutputData(1, this._obj);
+};
+
+JSONParse.prototype.onAction = function(name) {
+	if(name == "parse")
+		this.parse();
+}
+
+LiteGraph.registerNodeType("basic/jsonparse", JSONParse);	
 
 	//to store json objects
     function ConstantData() {
