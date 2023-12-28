@@ -9973,6 +9973,7 @@ LGraphNode.prototype.executeAction = function(action)
         var x = pos[0] - node.pos[0];
         var y = pos[1] - node.pos[1];
         var width = node.size[0];
+        var deltaX = event.deltaX || event.deltax || 0;
         var that = this;
         var ref_window = this.getCanvasWindow();
 
@@ -10019,8 +10020,8 @@ LGraphNode.prototype.executeAction = function(action)
 				case "combo":
 					var old_value = w.value;
 					if (event.type == LiteGraph.pointerevents_method+"move" && w.type == "number") {
-                        if(event.deltaX)
-						    w.value += event.deltaX * 0.1 * (w.options.step || 1);
+                        if(deltaX)
+						    w.value += deltaX * 0.1 * (w.options.step || 1);
 						if ( w.options.min != null && w.value < w.options.min ) {
 							w.value = w.options.min;
 						}
@@ -11497,7 +11498,8 @@ LGraphNode.prototype.executeAction = function(action)
         var input = dialog.querySelector("input");
         if (input) {
             input.addEventListener("blur", function(e) {
-                this.focus();
+                if(that.search_box)
+                    this.focus();
             });
             input.addEventListener("keydown", function(e) {
                 if (e.keyCode == 38) {
