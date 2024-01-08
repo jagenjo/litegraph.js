@@ -1059,6 +1059,10 @@
         var start = LiteGraph.getTime();
         this.globaltime = 0.001 * (start - this.starttime);
 
+        //not optimal: executes possible pending actions in node, problem is it is not optimized
+        //it is done here as if it was done in the later loop it wont be called in the node missed the onExecute
+        
+        //from now on it will iterate only on executable nodes which is faster
         var nodes = this._nodes_executable
             ? this._nodes_executable
             : this._nodes;
@@ -1073,7 +1077,8 @@
             for (var i = 0; i < num; i++) {
                 for (var j = 0; j < limit; ++j) {
                     var node = nodes[j];
-                    node.executePendingActions();
+                    if(LiteGraph.use_deferred_actions && node._waiting_actions && node._waiting_actions.length)
+                        node.executePendingActions();
                     if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
                         //wrap node.onExecute();
 						node.doExecute();
@@ -1089,13 +1094,14 @@
             if (this.onAfterExecute) {
                 this.onAfterExecute();
             }
-        } else {
+        } else { //catch errors
             try {
                 //iterations
                 for (var i = 0; i < num; i++) {
                     for (var j = 0; j < limit; ++j) {
                         var node = nodes[j];
-                        node.executePendingActions();
+                        if(LiteGraph.use_deferred_actions && node._waiting_actions && node._waiting_actions.length)
+                            node.executePendingActions();
                         if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
                             node.onExecute();
                         }
@@ -3366,7 +3372,7 @@
                 var target_connection = node.inputs[link_info.target_slot];
 
                 //instead of executing them now, it will be executed in the next graph loop, to ensure data flow
-                if(LiteGraph.use_deferred_actions)
+                if(LiteGraph.use_deferred_actions && node.onExecute)
                 {
                     if(!node._waiting_actions)
                         node._waiting_actions = [];
