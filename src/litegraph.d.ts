@@ -249,6 +249,7 @@ export const LiteGraph: {
      * @param param_types an array containing the type of every parameter, otherwise parameters will accept any type
      * @param return_type string with the return type, otherwise it will be generic
      * @param properties properties to be configurable
+     * @return {LGraphNode}
      */
     wrapFunctionAsNode(
         name: string,
@@ -256,7 +257,7 @@ export const LiteGraph: {
         param_types?: string[],
         return_type?: string,
         properties?: object
-    ): void;
+    ): LGraphNode;
 
     /**
      * Adds this method to all node types, existing and to be created

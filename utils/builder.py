@@ -4,8 +4,14 @@ import re, os, sys, time, tempfile, shutil
 import argparse
 from datetime import date
 
-compiler_path = "../node_modules/google-closure-compiler/compiler.jar"
 root_path = "./"
+
+#compiler_path = "../node_modules/google-closure-compiler/cli.js"
+#compiler_path = "../node_modules/google-closure-compiler-java/compiler.jar"
+#compiler_path = "google-clouse-compiler"
+
+#compiler_path = "java -jar ../node_modules/google-closure-compiler-java/compiler.jar --js %s --js_output_file %s"
+compiler_path = "../node_modules/google-closure-compiler/cli.js --js %s --js_output_file %s"
 
 #arguments
 parser = argparse.ArgumentParser(description='Deploy a JS app creating a minifyed version checking for errors.')
@@ -55,7 +61,8 @@ def packJSCode(files):
             continue
         data += open(src_file).read() + "\n"
         if check_files_individually:
-              os.system("java -jar %s --js %s --js_output_file %s" % (compiler_path, src_file, "temp.js") )
+            os.system( compiler_path % ( src_file, "temp.js") )
+            #os.system( "java -jar %s --js %s --js_output_file %s" % (compiler_path, src_file, "temp.js") )
         sys.stderr.write('\033[92m' + "OK\n" + '\033[0m')
 
     os.write(f1,data)
@@ -69,10 +76,10 @@ def packJSCode(files):
 def compileAndMinify(input_path, output_path):
     print " + Compiling and minifying..."
     if output_path != None:
-        os.system("java -jar %s --js %s --js_output_file %s" % (compiler_path, input_path, output_path) )
+        os.system( compiler_path % ( input_path, output_path) )
         sys.stderr.write(" * Stored in " + output_path + "\n");
     else:
-        os.system("java -jar %s --js %s" % (compiler_path, input_path) )
+        os.system( compiler_path % ( input_path ) )
 
 #load project info
 if os.path.exists(args.input_file) == False:

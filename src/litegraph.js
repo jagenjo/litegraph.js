@@ -96,6 +96,7 @@
         catch_exceptions: true,
         throw_errors: true,
         allow_scripts: false, //if set to true some nodes like Formula would be allowed to evaluate code that comes from unsafe sources (like node configuration), which could lead to exploits
+        use_deferred_actions: true, //executes actions during the graph execution flow
         registered_node_types: {}, //nodetypes by string
         node_types_by_file_extension: {}, //used for dropping files in the canvas
         Nodes: {}, //node types by classname
@@ -326,6 +327,55 @@
         },
         
         /**
+         * Create a new nodetype by passing an object with some properties
+         * like onCreate, inputs:Array, outputs:Array, properties, onExecute
+         * @method buildNodeClassFromObject
+         * @param {String} name node name with namespace (p.e.: 'math/sum')
+         * @param {Object} object methods expected onCreate, inputs, outputs, properties, onExecute
+         */
+         buildNodeClassFromObject: function(
+            name,
+            object
+        ) {
+            var ctor_code = "";
+            if(object.inputs)
+            for(var i=0; i < object.inputs.length; ++i)
+            {
+                var _name = object.inputs[i][0];
+                var _type = object.inputs[i][1];
+                if(_type && _type.constructor === String)
+                    _type = '"'+_type+'"';
+                ctor_code += "this.addInput('"+_name+"',"+_type+");\n";
+            }
+            if(object.outputs)
+            for(var i=0; i < object.outputs.length; ++i)
+            {
+                var _name = object.outputs[i][0];
+                var _type = object.outputs[i][1];
+                if(_type && _type.constructor === String)
+                    _type = '"'+_type+'"';
+                ctor_code += "this.addOutput('"+_name+"',"+_type+");\n";
+            }
+            if(object.properties)
+            for(var i in object.properties)
+            {
+                var prop = object.properties[i];
+                if(prop && prop.constructor === String)
+                    prop = '"'+prop+'"';
+                ctor_code += "this.addProperty('"+i+"',"+prop+");\n";
+            }
+            ctor_code += "if(this.onCreate)this.onCreate()";
+            var classobj = Function(ctor_code);
+            for(var i in object)
+                if(i!="inputs" && i!="outputs" && i!="properties")
+                    classobj.prototype[i] = object[i];
+            classobj.title = object.title || name.split("/").pop();
+            classobj.desc = object.desc || "Generated from object";
+            this.registerNodeType(name, classobj);
+            return classobj;
+        },
+        
+        /**
          * Create a new nodetype by passing a function, it wraps it with a proper class and generates inputs according to the parameters of the function.
          * Useful to wrap simple methods that do not require properties, and that only process some input to generate an output.
          * @method wrapFunctionAsNode
@@ -344,20 +394,31 @@
         ) {
             var params = Array(func.length);
             var code = "";
-            var names = LiteGraph.getParameterNames(func);
-            for (var i = 0; i < names.length; ++i) {
-                code +=
-                    "this.addInput('" +
-                    names[i] +
-                    "'," +
-                    (param_types && param_types[i]
-                        ? "'" + param_types[i] + "'"
-                        : "0") +
-                    ");\n";
+            if(param_types !== null) //null means no inputs
+            {
+                var names = LiteGraph.getParameterNames(func);
+                for (var i = 0; i < names.length; ++i) {
+                    var type = 0;
+                    if(param_types)
+                    {
+                        //type = param_types[i] != null ? "'" + param_types[i] + "'" : "0";
+                        if( param_types[i] != null && param_types[i].constructor === String )
+                            type = "'" + param_types[i] + "'" ;
+                        else if( param_types[i] != null )
+                            type = param_types[i];
+                    } 
+                    code +=
+                        "this.addInput('" +
+                        names[i] +
+                        "'," +
+                        type +
+                        ");\n";
+                }
             }
+            if(return_type !== null) //null means no output
             code +=
                 "this.addOutput('out'," +
-                (return_type ? "'" + return_type + "'" : 0) +
+                (return_type != null ? (return_type.constructor === String ? "'" + return_type + "'" : return_type) : 0) +
                 ");\n";
             if (properties) {
                 code +=
@@ -374,6 +435,7 @@
                 this.setOutputData(0, r);
             };
             this.registerNodeType(name, classobj);
+            return classobj;
         },
 
         /**
@@ -3140,6 +3202,13 @@
             // enable this to give the event an ID
 			if (!options.action_call) options.action_call = this.id+"_exec_"+Math.floor(Math.random()*9999);
             
+            if(this._waiting_actions && this._waiting_actions.length)
+                for(var i = 0; i < this._waiting_actions.length;++i)
+                {
+                    var p = this._waiting_actions[i];
+                    this.onAction(p[0],p[1],p[2],p[3],p[4]);
+                }
+
             this.graph.nodes_executing[this.id] = true; //.push(this.id);
 
             this.onExecute(param, options);
@@ -3153,6 +3222,14 @@
                 this.graph.nodes_executedAction[this.id] = options.action_call;
             }
         }
+        else {
+            if(this._waiting_actions && this._waiting_actions.length)
+                for(var i = 0; i < this._waiting_actions.length;++i)
+                {
+                    var p = this._waiting_actions[i];
+                    this.onAction(p[0],p[1],p[2],p[3],p[4]);
+                }
+        }
         this.execute_triggered = 2; // the nFrames it will be used (-- each step), means "how old" is the event
         if(this.onAfterExecuteNode) this.onAfterExecuteNode(param, options); // callback
     };
@@ -3163,7 +3240,7 @@
      * @param {String} action name
      * @param {*} param
      */
-    LGraphNode.prototype.actionDo = function(action, param, options) {
+    LGraphNode.prototype.actionDo = function(action, param, options, action_slot ) {
         options = options || {};
         if (this.onAction){
             
@@ -3172,7 +3249,7 @@
             
             this.graph.nodes_actioning[this.id] = (action?action:"actioning"); //.push(this.id);
             
-            this.onAction(action, param, options);
+            this.onAction(action, param, options, action_slot);
             
             this.graph.nodes_actioning[this.id] = false; //.pop();
             
@@ -3280,8 +3357,19 @@
 				if (!options.action_call) options.action_call = this.id+"_act_"+Math.floor(Math.random()*9999);
                 //pass the action name
                 var target_connection = node.inputs[link_info.target_slot];
-				// wrap node.onAction(target_connection.name, param);
-                node.actionDo(target_connection.name, param, options);
+
+                //instead of executing them now, it will be executed in the next graph loop, to ensure data flow
+                if(LiteGraph.use_deferred_actions)
+                {
+                    if(!node._waiting_actions)
+                        node._waiting_actions = [];
+                    node._waiting_actions.push([target_connection.name, param, options, link_info.target_slot]);
+                }
+                else
+                {
+                    // wrap node.onAction(target_connection.name, param);
+                    node.actionDo( target_connection.name, param, options, link_info.target_slot );
+                }
             }
         }
     };
@@ -5644,7 +5732,7 @@ LGraphNode.prototype.executeAction = function(action)
 
         //Keyboard ******************
         this._key_callback = this.processKey.bind(this);
-
+        canvas.setAttribute("tabindex",1); //otherwise key events are ignored
         canvas.addEventListener("keydown", this._key_callback, true);
         document.addEventListener("keyup", this._key_callback, true); //in document, otherwise it doesn't fire keyup
 
@@ -7148,6 +7236,8 @@ LGraphNode.prototype.executeAction = function(action)
 
         for (var i = 0; i < selected_nodes_array.length; ++i) {
             var node = selected_nodes_array[i];
+            if(node.clonable === false)
+                continue;
             var cloned = node.clone();
             if(!cloned)
             {
@@ -11538,6 +11628,7 @@ LGraphNode.prototype.executeAction = function(action)
                     //ESC
                     dialog.close();
                 } else if (e.keyCode == 13) {
+                    refreshHelper();
                     if (selected) {
                         select(selected.innerHTML);
                     } else if (first) {
