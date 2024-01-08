@@ -1071,6 +1071,7 @@
             for (var i = 0; i < num; i++) {
                 for (var j = 0; j < limit; ++j) {
                     var node = nodes[j];
+                    node.executePendingActions();
                     if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
                         //wrap node.onExecute();
 						node.doExecute();
@@ -1092,6 +1093,7 @@
                 for (var i = 0; i < num; i++) {
                     for (var j = 0; j < limit; ++j) {
                         var node = nodes[j];
+                        node.executePendingActions();
                         if (node.mode == LiteGraph.ALWAYS && node.onExecute) {
                             node.onExecute();
                         }
@@ -3188,10 +3190,26 @@
         this.mode = modeTo;
         return true;
     };
+
+    /**
+     * Triggers the execution of actions that were deferred when the action was triggered
+     * @method executePendingActions
+     */    
+    LGraphNode.prototype.executePendingActions = function() {
+        if(!this._waiting_actions || !this._waiting_actions.length)
+            return;
+        for(var i = 0; i < this._waiting_actions.length;++i)
+        {
+            var p = this._waiting_actions[i];
+            this.onAction(p[0],p[1],p[2],p[3],p[4]);
+        }        
+        this._waiting_actions.length = 0;
+    }
+
     
     /**
      * Triggers the node code execution, place a boolean/counter to mark the node as being executed
-     * @method execute
+     * @method doExecute
      * @param {*} param
      * @param {*} options
      */
@@ -3202,13 +3220,6 @@
             // enable this to give the event an ID
 			if (!options.action_call) options.action_call = this.id+"_exec_"+Math.floor(Math.random()*9999);
             
-            if(this._waiting_actions && this._waiting_actions.length)
-                for(var i = 0; i < this._waiting_actions.length;++i)
-                {
-                    var p = this._waiting_actions[i];
-                    this.onAction(p[0],p[1],p[2],p[3],p[4]);
-                }
-
             this.graph.nodes_executing[this.id] = true; //.push(this.id);
 
             this.onExecute(param, options);
@@ -3223,12 +3234,6 @@
             }
         }
         else {
-            if(this._waiting_actions && this._waiting_actions.length)
-                for(var i = 0; i < this._waiting_actions.length;++i)
-                {
-                    var p = this._waiting_actions[i];
-                    this.onAction(p[0],p[1],p[2],p[3],p[4]);
-                }
         }
         this.execute_triggered = 2; // the nFrames it will be used (-- each step), means "how old" is the event
         if(this.onAfterExecuteNode) this.onAfterExecuteNode(param, options); // callback
