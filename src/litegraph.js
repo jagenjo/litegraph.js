@@ -6995,7 +6995,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
     
         const x = e.clientX;
-        const y = e.clientY;
+        const y = e.clientY - this.canvas.getBoundingClientRect().top;
         const is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 
         if(!is_inside) {
@@ -7029,7 +7029,7 @@ LGraphNode.prototype.executeAction = function(action)
             }
 
             //this.setZoom( scale, [ e.clientX, e.clientY ] );
-            this.ds.changeScale(scale, [e.clientX, e.clientY]);
+            this.ds.changeScale(scale, [x, y]);
         }
 
         this.graph.change();
