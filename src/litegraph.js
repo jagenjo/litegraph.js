@@ -6993,27 +6993,39 @@ LGraphNode.prototype.executeAction = function(action)
         if (!this.graph || !this.allow_dragcanvas) {
             return;
         }
+    
+        const x = e.clientX;
+        const y = e.clientY - this.canvas.getBoundingClientRect().top;
+        const is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
 
-        var delta = e.wheelDeltaY != null ? e.wheelDeltaY : e.detail * -60;
-
-        this.adjustMouseEvent(e);
-
-		var x = e.clientX;
-		var y = e.clientY;
-		var is_inside = !this.viewport || ( this.viewport && x >= this.viewport[0] && x < (this.viewport[0] + this.viewport[2]) && y >= this.viewport[1] && y < (this.viewport[1] + this.viewport[3]) );
-		if(!is_inside)
-			return;
-
-        var scale = this.ds.scale;
-
-        if (delta > 0) {
-            scale *= 1.1;
-        } else if (delta < 0) {
-            scale *= 1 / 1.1;
+        if(!is_inside) {
+            return;
         }
 
-        //this.setZoom( scale, [ e.clientX, e.clientY ] );
-        this.ds.changeScale(scale, [e.clientX, e.clientY]);
+        const isTouchpadPan = !!e.wheelDeltaY && e.wheelDeltaY === e.deltaY * -3
+
+        if(isTouchpadPan) { // Touchpad pan
+            this.ds.offset[0] += e.deltaX / this.ds.scale * -1;
+            this.ds.offset[1] += e.deltaY / this.ds.scale * -1;
+            this.dirty_canvas = true;
+            this.dirty_bgcanvas = true;
+        } else {
+            let scale = this.ds.scale;
+            if(Math.abs(e.deltaY) < 10) { // Treat smaller delta as touchpad zoom
+                scale *= Math.exp(-e.deltaY / 50);
+            } else { // Mouse zoom
+                const delta = e.wheelDeltaY != null ? e.wheelDeltaY : e.detail * -60;
+                this.adjustMouseEvent(e);
+                if (delta > 0) {
+                    scale *= 1.1;
+                } else if (delta < 0) {
+                    scale *= 1 / 1.1;
+                }
+            }
+
+            //this.setZoom( scale, [ e.clientX, e.clientY ] );
+            this.ds.changeScale(scale, [x, y]);
+        }
 
         this.graph.change();
 
