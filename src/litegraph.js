@@ -7005,16 +7005,14 @@ LGraphNode.prototype.executeAction = function(action)
         const isTouchpadPan = !!e.wheelDeltaY && e.wheelDeltaY === e.deltaY * -3
 
         if(isTouchpadPan) { // Touchpad pan
-            const naturalFix = -1;
-            this.ds.offset[0] += e.deltaX / this.ds.scale * naturalFix;
-            this.ds.offset[1] += e.deltaY / this.ds.scale * naturalFix;
+            this.ds.offset[0] += e.deltaX / this.ds.scale * -1;
+            this.ds.offset[1] += e.deltaY / this.ds.scale * -1;
             this.dirty_canvas = true;
             this.dirty_bgcanvas = true;
         } else {
             let scale = this.ds.scale;
             if(Math.abs(e.deltaY) < 10) { // Treat smaller delta as touchpad zoom
-                let deltaS = Math.exp(-e.deltaY / 50);
-                scale = scale * deltaS;
+                scale *= Math.exp(-e.deltaY / 50);
             } else { // Mouse zoom
                 const delta = e.wheelDeltaY != null ? e.wheelDeltaY : e.detail * -60;
                 this.adjustMouseEvent(e);
