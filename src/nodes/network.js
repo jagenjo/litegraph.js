@@ -381,10 +381,14 @@ HTTPRequestNode.desc = "Fetch data through HTTP";
 
 HTTPRequestNode.prototype.fetch = function()
 {
-	var url = this.properties.url;
+	var url = this.getInputData(1);
+
+    if(!url)
+        url = this.properties.url;
+    
 	if(!url)
 		return;
-
+    
 	this.boxcolor = "#FF0";
 	var that = this;
 	this._fetching = fetch(url)
