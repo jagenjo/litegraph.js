@@ -139,6 +139,10 @@ graph.start()
 
 ## Projects using it
 
+### [Inamata Industrial IoT](https://inamata.co/)
+
+[Inamata control plan demo with ESP32 and ESP8285](https://github.com/moritz89/litegraph.js/assets/1592994/0403dfe7-5d02-4ef6-a39a-4c5854b37f5a)
+
 ### [comfyUI](https://github.com/comfyanonymous/ComfyUI)
 ![screenshot](https://github.com/comfyanonymous/ComfyUI/blob/6efe561c2a7321501b1b27f47039c7616dda1860/comfyui_screenshot.png)
 
