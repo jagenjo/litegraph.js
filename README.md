@@ -141,7 +141,7 @@ graph.start()
 
 ### [Inamata Industrial IoT](https://inamata.co/)
 
-[https://inamata.co/wp-content/uploads/2023/11/inamata-control-plan-2-esp32-demo.mp4](https://github.com/moritz89/litegraph.js/assets/1592994/0403dfe7-5d02-4ef6-a39a-4c5854b37f5a)
+[Inamata control plan demo with ESP32 and ESP8285](https://github.com/moritz89/litegraph.js/assets/1592994/0403dfe7-5d02-4ef6-a39a-4c5854b37f5a)
 
 ### [comfyUI](https://github.com/comfyanonymous/ComfyUI)
 ![screenshot](https://github.com/comfyanonymous/ComfyUI/blob/6efe561c2a7321501b1b27f47039c7616dda1860/comfyui_screenshot.png)
