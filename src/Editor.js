@@ -1,3 +1,6 @@
+
+(function(global) {
+
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
 function Editor(container_id, options) {
     options = options || {};
@@ -20,7 +23,7 @@ function Editor(container_id, options) {
 
     //create graph
     var graph = (this.graph = new LGraph());
-    var graphcanvas = this.graphcanvas = new LGraphCanvas(canvas, graph);
+    var graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
     graphcanvas.background_image = "imgs/grid.png";
     graph.onAfterExecute = function() {
         graphcanvas.draw(true);
@@ -274,10 +277,13 @@ Editor.prototype.addMultiview = function()
 	this.graphcanvas.ctx.fillRect(0,0,canvas.width,canvas.height);
 	this.graphcanvas.viewport = [0,0,canvas.width*0.5-2,canvas.height];
 
-	var graphcanvas = new LGraphCanvas( canvas, this.graph );
+	var graphcanvas = new LiteGraph.LGraphCanvas( canvas, this.graph );
     graphcanvas.background_image = "imgs/grid.png";
     this.graphcanvas2 = graphcanvas;
 	this.graphcanvas2.viewport = [canvas.width*0.5,0,canvas.width*0.5,canvas.height];
 }
 
 LiteGraph.Editor = Editor;
+
+})(this);
+
