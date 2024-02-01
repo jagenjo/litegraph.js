@@ -1511,7 +1511,7 @@
             margin_top = 0;
         }
         if (this.flags && this.flags.collapsed) {
-            //if ( distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
+            //if ( LiteGraph.distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
             if (
                 LiteGraph.isInsideRectangle(
                     x,

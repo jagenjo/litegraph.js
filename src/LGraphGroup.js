@@ -91,7 +91,7 @@
         for (var i = 0; i < nodes.length; ++i) {
             var node = nodes[i];
             node.getBounding(node_bounding);
-            if (!overlapBounding(this._bounding, node_bounding)) {
+            if (!LiteGraph.overlapBounding(this._bounding, node_bounding)) {
                 continue;
             } //out of the visible area
             this._nodes.push(node);

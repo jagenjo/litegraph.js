@@ -191,16 +191,16 @@
         var c = [];
 
         if (this.properties.colorA != null) {
-            c.push(hex2num(this.properties.colorA));
+            c.push(LiteGraph.hex2num(this.properties.colorA));
         }
         if (this.properties.colorB != null) {
-            c.push(hex2num(this.properties.colorB));
+            c.push(LiteGraph.hex2num(this.properties.colorB));
         }
         if (this.properties.colorC != null) {
-            c.push(hex2num(this.properties.colorC));
+            c.push(LiteGraph.hex2num(this.properties.colorC));
         }
         if (this.properties.colorD != null) {
-            c.push(hex2num(this.properties.colorD));
+            c.push(LiteGraph.hex2num(this.properties.colorD));
         }
 
         var f = this.getInputData(0);
@@ -242,7 +242,7 @@
             result[i] /= 255;
         }
 
-        this.boxcolor = colorToString(result);
+        this.boxcolor = LiteGraph.colorToString(result);
         this.setOutputData(0, result);
     };
 

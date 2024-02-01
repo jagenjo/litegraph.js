@@ -4822,7 +4822,7 @@
 					break;
 				case "slider":
 					var old_value = w.value;
-					var nvalue = clamp((x - 15) / (widget_width - 30), 0, 1);
+					var nvalue = LiteGraph.clamp((x - 15) / (widget_width - 30), 0, 1);
 					if(w.options.read_only) break;
 					w.value = w.options.min + (w.options.max - w.options.min) * nvalue;
 					if (old_value != w.value) {
