@@ -8,7 +8,7 @@
      */
 
     var LiteGraph = (global.LiteGraph = {
-        VERSION: 0.4,
+        VERSION: 0.5,
 
         CANVAS_GRID_SIZE: 10,
 
