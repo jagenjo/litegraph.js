@@ -225,11 +225,20 @@ const Editor = class {
 					console.error("Error reading file:", event.target.error);
 				};
 				reader.readAsText(file);
+			} else {
+				console.error("Invalid file type. Expected JSON.");
 			}
 		}
 	}
 	
 	goFullscreen() {
+		const fullscreenChangeHandler = () => {
+			this.graphcanvas.resize();
+			document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
+			document.removeEventListener('mozfullscreenchange', fullscreenChangeHandler);
+			document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
+		};
+
 		if (this.root.requestFullscreen) {
 			this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
 		} else if (this.root.mozRequestFullscreen) {
@@ -237,15 +246,15 @@ const Editor = class {
 		} else if (this.root.webkitRequestFullscreen) {
 			this.root.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
 		} else {
-			throw "Fullscreen not supported";
+			throw new Error("Fullscreen not supported");
 		}
 
-		setTimeout(() => {
-			this.graphcanvas.resize();
-		}, 100);
+		document.addEventListener('fullscreenchange', fullscreenChangeHandler);
+		document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
+		document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
 	}
 	
-	onFullscreenButton = function() {
+	onFullscreenButton = () => {
 		
 		// DEV: This only enters fullscreen, it does not toggle it or leave it.
 		
