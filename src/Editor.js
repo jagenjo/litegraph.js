@@ -160,7 +160,30 @@ const Editor = class {
 	}
 	
 	onSaveButton() {
+		
 		// DEV: This is a missing feature meant to save JSON to a specified file
+		
+	}
+	
+	onPlayButton() {
+		
+		// DEV: This toggles the play button.  There is still a bug where changing graphs while
+		// playing will cause the button label to be backwards.
+		
+		const graph = this.graph;
+		const button = this.root.querySelector("#playnode_button");
+		console.assert(button instanceof HTMLElement);
+
+		if (graph.status === LiteGraph.LGraph.STATUS_STOPPED) {
+			
+			// DEV: change this to use DOM
+			
+			button.innerHTML = "<img src='imgs/icon-stop.png'/> Stop";
+			graph.start();
+		} else {
+			button.innerHTML = "<img src='imgs/icon-play.png'/> Play";
+			graph.stop();
+		}
 	}
 }
 
@@ -169,18 +192,6 @@ const Editor = class {
 
 
 
-Editor.prototype.onPlayButton = function() {
-    var graph = this.graph;
-    var button = this.root.querySelector("#playnode_button");
-
-    if (graph.status == LiteGraph.LGraph.STATUS_STOPPED) {
-        button.innerHTML = "<img src='imgs/icon-stop.png'/> Stop";
-        graph.start();
-    } else {
-        button.innerHTML = "<img src='imgs/icon-play.png'/> Play";
-        graph.stop();
-    }
-};
 
 Editor.prototype.onPlayStepButton = function() {
     var graph = this.graph;
