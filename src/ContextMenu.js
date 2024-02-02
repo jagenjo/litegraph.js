@@ -400,9 +400,8 @@ const ContextMenu = class {
         }
         return false;
     }
-}
-
-    LiteGraph.closeAllContextMenus = function(ref_window) {
+	
+	static closeAll(ref_window) {
         ref_window = ref_window || window;
 
         var elements = ref_window.document.querySelectorAll(".litecontextmenu");
@@ -422,6 +421,8 @@ const ContextMenu = class {
                 result[i].parentNode.removeChild(result[i]);
             }
         }
-    };
+    }
+}
+
 
 
