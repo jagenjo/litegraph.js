@@ -190,21 +190,24 @@ const Editor = class {
 		this.graph.runStep(1);
 		this.graphcanvas.draw(true, true);
 	}
+	
+	onLiveButton() {
+		let is_live_mode = this.graphcanvas.live_mode;
+		
+		this.graphcanvas.switchLiveMode(true);
+		this.graphcanvas.draw();
+		
+		const button = this.root.querySelector("#livemode_button");
+		console.assert(button instanceof HTMLElement);
+		
+		// DEV: change this to use DOM
+		
+		button.innerHTML = is_live_mode
+			? "<img src='imgs/icon-record.png'/> Live"
+			: "<img src='imgs/icon-gear.png'/> Edit";
+	}
 }
 
-
-Editor.prototype.onLiveButton = function() {
-    var is_live_mode = !this.graphcanvas.live_mode;
-    this.graphcanvas.switchLiveMode(true);
-    this.graphcanvas.draw();
-    var url = this.graphcanvas.live_mode
-        ? "imgs/gauss_bg_medium.jpg"
-        : "imgs/gauss_bg.jpg";
-    var button = this.root.querySelector("#livemode_button");
-    button.innerHTML = !is_live_mode
-        ? "<img src='imgs/icon-record.png'/> Live"
-        : "<img src='imgs/icon-gear.png'/> Edit";
-};
 
 Editor.prototype.onDropItem = function(e)
 {
