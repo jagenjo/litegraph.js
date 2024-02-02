@@ -150,17 +150,24 @@ const Editor = class {
 		return button;
 	}	
 	
+	onLoadButton() {
+		const panel = this.graphcanvas.createPanel("Load session",{closable:true});
+		console.assert(panel instanceof HTMLElement);
+		
+		// DEV: This is a missing feature meant to load JSON from the specified file
+		
+	    this.root.appendChild(panel);
+	}
+	
+	onSaveButton() {
+		// DEV: This is a missing feature meant to save JSON to a specified file
+	}
 }
 
 
-Editor.prototype.onLoadButton = function() {
-    var panel = this.graphcanvas.createPanel("Load session",{closable:true});
-	//TO DO
 
-    this.root.appendChild(panel);
-};
 
-Editor.prototype.onSaveButton = function() {};
+
 
 Editor.prototype.onPlayButton = function() {
     var graph = this.graph;
