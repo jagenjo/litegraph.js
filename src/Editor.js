@@ -120,17 +120,18 @@ const Editor = class {
 			}
 		}, 200);
 	}
+
+	addToolsButton( id, name, icon_url, callback, container = '.tools') {
+    
+		// DEV: are any of these arguments mandatory?
+		
+		const button = this.createButton(name, icon_url, callback);
+		button.id = id;
+		const parent = this.root.querySelector(container);
+		console.assert(parent instanceof HTMLElement);
+		parent.appendChild(button);
+	}
 }
-
-Editor.prototype.addToolsButton = function( id, name, icon_url, callback, container ) {
-    if (!container) {
-        container = ".tools";
-    }
-
-    var button = this.createButton(name, icon_url, callback);
-    button.id = id;
-    this.root.querySelector(container).appendChild(button);
-};
 
 Editor.prototype.createButton = function(name, icon_url, callback) {
     var button = document.createElement("button");
