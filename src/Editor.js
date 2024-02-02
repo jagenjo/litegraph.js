@@ -251,68 +251,70 @@ const Editor = class {
 		
 		this.goFullscreen();
 	}
+	
+	addMiniWindow(w, h) {
+		
+		// DEV: This entire function may be dead code.
+		
+		console.assert(Number.isInteger(w) && w >= 0);
+		console.assert(Number.isInteger(h) && h >= 0);
+		const canvas = miniwindow.querySelector("canvas");
+		console.assert(canvas instanceof HTMLElement);
+		
+		const miniwindow = document.createElement("div");
+		miniwindow.className = "litegraph miniwindow";
+		miniwindow.innerHTML = `
+			<canvas class="graphcanvas" width="${w}"  height="${h}"	tabindex="10"></canvas>`;
+		miniwindow.style.position = "absolute";
+		miniwindow.style.top = "4px";
+		miniwindow.style.right = "4px";
+		
+		const graphcanvas = new LiteGraph.LGraphCanvas( canvas, this.graph );
+		graphcanvas.show_info = false;
+		graphcanvas.background_image = "imgs/grid.png";
+		graphcanvas.scale = 0.25;
+		graphcanvas.allow_dragnodes = false;
+		graphcanvas.allow_interaction = false;
+		graphcanvas.render_shadows = false;
+		graphcanvas.max_zoom = 0.25;
+		this.miniwindow_graphcanvas = graphcanvas;
+		
+		graphcanvas.onClear = () => {
+			graphcanvas.scale = 0.25;
+			graphcanvas.allow_dragnodes = false;
+			graphcanvas.allow_interaction = false;
+		};
+		
+		graphcanvas.onRenderBackground = (canvas, ctx) => {
+			ctx.strokeStyle = "#567";
+			const tl = this.graphcanvas.convertOffsetToCanvas([0, 0]);
+			const br = this.graphcanvas.convertOffsetToCanvas([
+				this.graphcanvas.canvas.width,
+				this.graphcanvas.canvas.height
+			]);
+			const tlOffset = this.convertCanvasToOffset(tl);
+			const brOffset = this.convertCanvasToOffset(br);
+			ctx.lineWidth = 1;
+			ctx.strokeRect(
+				Math.floor(tlOffset[0]) + 0.5,
+				Math.floor(tlOffset[1]) + 0.5,
+				Math.floor(brOffset[0] - tlOffset[0]),
+				Math.floor(brOffset[1] - tlOffset[1])
+			);
+		};
+
+		const close_button = document.createElement("div");
+		close_button.className = "corner-button";
+		close_button.innerHTML = "&#10060;";
+		close_button.addEventListener("click", (e) => {
+			graphcanvas.setGraph(null);
+			miniwindow.parentNode.removeChild(miniwindow);
+		});
+		miniwindow.appendChild(close_button);
+
+		this.root.querySelector(".content").appendChild(miniwindow);
+	}
 }
-
-
-Editor.prototype.addMiniWindow = function(w, h) {
-    var miniwindow = document.createElement("div");
-    miniwindow.className = "litegraph miniwindow";
-    miniwindow.innerHTML =
-        "<canvas class='graphcanvas' width='" +
-        w +
-        "' height='" +
-        h +
-        "' tabindex=10></canvas>";
-    var canvas = miniwindow.querySelector("canvas");
-    var that = this;
-
-    var graphcanvas = new LiteGraph.LGraphCanvas( canvas, this.graph );
-    graphcanvas.show_info = false;
-    graphcanvas.background_image = "imgs/grid.png";
-    graphcanvas.scale = 0.25;
-    graphcanvas.allow_dragnodes = false;
-    graphcanvas.allow_interaction = false;
-    graphcanvas.render_shadows = false;
-    graphcanvas.max_zoom = 0.25;
-    this.miniwindow_graphcanvas = graphcanvas;
-    graphcanvas.onClear = function() {
-        graphcanvas.scale = 0.25;
-        graphcanvas.allow_dragnodes = false;
-        graphcanvas.allow_interaction = false;
-    };
-    graphcanvas.onRenderBackground = function(canvas, ctx) {
-        ctx.strokeStyle = "#567";
-        var tl = that.graphcanvas.convertOffsetToCanvas([0, 0]);
-        var br = that.graphcanvas.convertOffsetToCanvas([
-            that.graphcanvas.canvas.width,
-            that.graphcanvas.canvas.height
-        ]);
-        tl = this.convertCanvasToOffset(tl);
-        br = this.convertCanvasToOffset(br);
-        ctx.lineWidth = 1;
-        ctx.strokeRect(
-            Math.floor(tl[0]) + 0.5,
-            Math.floor(tl[1]) + 0.5,
-            Math.floor(br[0] - tl[0]),
-            Math.floor(br[1] - tl[1])
-        );
-    };
-
-    miniwindow.style.position = "absolute";
-    miniwindow.style.top = "4px";
-    miniwindow.style.right = "4px";
-
-    var close_button = document.createElement("div");
-    close_button.className = "corner-button";
-    close_button.innerHTML = "&#10060;";
-    close_button.addEventListener("click", function(e) {
-        graphcanvas.setGraph(null);
-        miniwindow.parentNode.removeChild(miniwindow);
-    });
-    miniwindow.appendChild(close_button);
-
-    this.root.querySelector(".content").appendChild(miniwindow);
-};
 
 Editor.prototype.addMultiview = function()
 {
