@@ -185,19 +185,13 @@ const Editor = class {
 			graph.stop();
 		}
 	}
+	
+	onPlayStepButton() {
+		this.graph.runStep(1);
+		this.graphcanvas.draw(true, true);
+	}
 }
 
-
-
-
-
-
-
-Editor.prototype.onPlayStepButton = function() {
-    var graph = this.graph;
-    graph.runStep(1);
-    this.graphcanvas.draw(true, true);
-};
 
 Editor.prototype.onLiveButton = function() {
     var is_live_mode = !this.graphcanvas.live_mode;
