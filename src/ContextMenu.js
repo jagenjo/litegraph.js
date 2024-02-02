@@ -402,8 +402,6 @@ const ContextMenu = class {
     }
 }
 
-LiteGraph.ContextMenu = ContextMenu;
-
     LiteGraph.closeAllContextMenus = function(ref_window) {
         ref_window = ref_window || window;
 
