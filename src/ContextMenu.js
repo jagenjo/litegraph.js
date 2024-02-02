@@ -384,21 +384,20 @@ const ContextMenu = class {
     }
 	
 	static isCursorOverElement(event, element) {
-        var left = event.clientX;
-        var top = event.clientY;
-        var rect = element.getBoundingClientRect();
-        if (!rect) {
-            return false;
-        }
-        if (
-            top > rect.top &&
-            top < rect.top + rect.height &&
-            left > rect.left &&
-            left < rect.left + rect.width
-        ) {
-            return true;
-        }
-        return false;
+		console.assert(event instanceof MouseEvent);
+		console.assert(element instanceof HTMLElement);
+        const left = event.clientX;
+        const top = event.clientY;
+        const rect = element.getBoundingClientRect();
+		if (!rect) {
+			return false;
+		}
+		return (
+			top > rect.top &&
+			top < rect.top + rect.height &&
+			left > rect.left &&
+			left < rect.left + rect.width
+		);
     }
 	
 	static closeAll(inWindow = window) {
