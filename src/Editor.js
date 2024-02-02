@@ -228,30 +228,31 @@ const Editor = class {
 			}
 		}
 	}
+	
+	goFullscreen() {
+		if (this.root.requestFullscreen) {
+			this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+		} else if (this.root.mozRequestFullscreen) {
+			this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+		} else if (this.root.webkitRequestFullscreen) {
+			this.root.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+		} else {
+			throw "Fullscreen not supported";
+		}
+
+		setTimeout(() => {
+			this.graphcanvas.resize();
+		}, 100);
+	}
+	
+	onFullscreenButton = function() {
+		
+		// DEV: This only enters fullscreen, it does not toggle it or leave it.
+		
+		this.goFullscreen();
+	}
 }
 
-
-
-Editor.prototype.goFullscreen = function() {
-    if (this.root.requestFullscreen) {
-        this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-    } else if (this.root.mozRequestFullscreen) {
-        this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-    } else if (this.root.webkitRequestFullscreen) {
-        this.root.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-    } else {
-        throw "Fullscreen not supported";
-    }
-
-    var self = this;
-    setTimeout(function() {
-        self.graphcanvas.resize();
-    }, 100);
-};
-
-Editor.prototype.onFullscreenButton = function() {
-    this.goFullscreen();
-};
 
 Editor.prototype.addMiniWindow = function(w, h) {
     var miniwindow = document.createElement("div");
