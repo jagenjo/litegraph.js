@@ -1,119 +1,126 @@
 
-(function(global) {
-
-"use strict"
 
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
-function Editor(container_id, options) {
-
-	console.assert(typeof container_id === 'string');
-	const parent = document.getElementById(container_id);
-	console.assert(parent instanceof HTMLElement);	
+const Editor = class {
 	
-    options = options || {};
+	constructor(container_id, options){
+		
+		console.assert(typeof container_id === 'string');
+		const parent = document.getElementById(container_id);
+		console.assert(parent instanceof HTMLElement);	
+		
+		options ||= {};
 
-    //fill container
-    var html = "<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
-    html += "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
-    html += "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
+		const root = this.root = document.createElement("div");
+		root.className = "litegraph litegraph-editor";
+		root.innerHTML = `
+		<div class='header'>
+			<div class='tools tools-left'></div>
+			<div class='tools tools-right'></div>
+		</div>
+		<div class='content'>
+			<div class='editor-area'>
+				<canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas>
+			</div>
+		</div>
+		<div class='footer'>
+			<div class='tools tools-left'></div>
+			<div class='tools tools-right'></div>
+		</div>`;
 
-    const root = this.root = document.createElement("div");
-    root.className = "litegraph litegraph-editor";
-    root.innerHTML = html;
+		this.tools = root.querySelector(".tools");
+		this.content = root.querySelector(".content");
+		this.footer = root.querySelector(".footer");
+		const canvas = this.canvas = root.querySelector(".graphcanvas");
 
-    this.tools = root.querySelector(".tools");
-    this.content = root.querySelector(".content");
-    this.footer = root.querySelector(".footer");
-    const canvas = this.canvas = root.querySelector(".graphcanvas");
+		//create graph
+		const graph = this.graph = new LiteGraph.LGraph();
+		const graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
+		
+		graphcanvas.background_image = "imgs/grid.png";
+		
+		graph.onAfterExecute = function(){
+			graphcanvas.draw(true);
+		}.bind(this);
+		graphcanvas.onDropItem = this.onDropItem.bind(this);
 
-	console.assert(
-		this.canvas instanceof HTMLElement
-		&& this.tools instanceof HTMLElement
-		&& this.content instanceof HTMLElement
-		&& this.footer instanceof HTMLElement
-	);
+		//add stuff
+		//this.addToolsButton("loadsession_button","Load","imgs/icon-load.png", this.onLoadButton.bind(this), ".tools-left" );
+		//this.addToolsButton("savesession_button","Save","imgs/icon-save.png", this.onSaveButton.bind(this), ".tools-left" );
+		this.addLoadCounter();
+		this.addToolsButton(
+			"playnode_button",
+			"Play",
+			"imgs/icon-play.png",
+			this.onPlayButton.bind(this),
+			".tools-right"
+		);
+		this.addToolsButton(
+			"playstepnode_button",
+			"Step",
+			"imgs/icon-playstep.png",
+			this.onPlayStepButton.bind(this),
+			".tools-right"
+		);
 
-    //create graph
-    const graph = this.graph = new LiteGraph.LGraph();
-    const graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
-    graphcanvas.background_image = "imgs/grid.png";
-    graph.onAfterExecute = function() {
-        graphcanvas.draw(true);
-    };
+		if (!options.skip_livemode) {
+			this.addToolsButton(
+				"livemode_button",
+				"Live",
+				"imgs/icon-record.png",
+				this.onLiveButton.bind(this),
+				".tools-right"
+			);
+		}
+		if (!options.skip_maximize) {
+			this.addToolsButton(
+				"maximize_button",
+				"",
+				"imgs/icon-maximize.png",
+				this.onFullscreenButton.bind(this),
+				".tools-right"
+			);
+		}
+		if (options.miniwindow) {
+			this.addMiniWindow(300, 200);
+		}
 
-	graphcanvas.onDropItem = this.onDropItem.bind(this);
+		//append to DOM
+		parent.appendChild(root);
+		graphcanvas.resize();
+	}
+	
+	addLoadCounter() {
+		const meter = document.createElement("div");
+		meter.className = "headerpanel loadmeter toolbar-widget";
+		meter.innerHTML = `
+		<div class='cpuload'>
+			<strong>CPU</strong> 
+			<div class='bgload'>
+				<div class='fgload'></div>
+			</div>
+		</div>
+		<div class='gpuload'>
+			<strong>GFX</strong>
+			<div class='bgload'>
+				<div class='fgload'></div>
+			</div>
+		</div>`;
 
-    //add stuff
-    //this.addToolsButton("loadsession_button","Load","imgs/icon-load.png", this.onLoadButton.bind(this), ".tools-left" );
-    //this.addToolsButton("savesession_button","Save","imgs/icon-save.png", this.onSaveButton.bind(this), ".tools-left" );
-    this.addLoadCounter();
-    this.addToolsButton(
-        "playnode_button",
-        "Play",
-        "imgs/icon-play.png",
-        this.onPlayButton.bind(this),
-        ".tools-right"
-    );
-    this.addToolsButton(
-        "playstepnode_button",
-        "Step",
-        "imgs/icon-playstep.png",
-        this.onPlayStepButton.bind(this),
-        ".tools-right"
-    );
-
-    if (!options.skip_livemode) {
-        this.addToolsButton(
-            "livemode_button",
-            "Live",
-            "imgs/icon-record.png",
-            this.onLiveButton.bind(this),
-            ".tools-right"
-        );
-    }
-    if (!options.skip_maximize) {
-        this.addToolsButton(
-            "maximize_button",
-            "",
-            "imgs/icon-maximize.png",
-            this.onFullscreenButton.bind(this),
-            ".tools-right"
-        );
-    }
-    if (options.miniwindow) {
-        this.addMiniWindow(300, 200);
-    }
-
-    //append to DOM
-	parent.appendChild(root);
-
-    graphcanvas.resize();
+		const parent = this.root.querySelector(".header .tools-left");
+		console.assert(parent instanceof HTMLElement);
+		parent.appendChild(meter);
+		
+		setInterval(() => {
+			meter.querySelector(".cpuload .fgload").style.width = `${2 * this.graph.execution_time * 90}px`;
+			if (this.graph.status == LGraph.STATUS_RUNNING) {
+				meter.querySelector(".gpuload .fgload").style.width = `${this.graphcanvas.render_time * 10 * 90}px`;
+			} else {
+				meter.querySelector(".gpuload .fgload").style.width = `4px`;
+			}
+		}, 200);
+	}
 }
-
-Editor.prototype.addLoadCounter = function() {
-    var meter = document.createElement("div");
-    meter.className = "headerpanel loadmeter toolbar-widget";
-
-    var html =
-        "<div class='cpuload'><strong>CPU</strong> <div class='bgload'><div class='fgload'></div></div></div>";
-    html +=
-        "<div class='gpuload'><strong>GFX</strong> <div class='bgload'><div class='fgload'></div></div></div>";
-
-    meter.innerHTML = html;
-    this.root.querySelector(".header .tools-left").appendChild(meter);
-    var self = this;
-
-    setInterval(function() {
-        meter.querySelector(".cpuload .fgload").style.width =
-            2 * self.graph.execution_time * 90 + "px";
-        if (self.graph.status == LGraph.STATUS_RUNNING) {
-            meter.querySelector(".gpuload .fgload").style.width =
-                self.graphcanvas.render_time * 10 * 90 + "px";
-        } else {
-            meter.querySelector(".gpuload .fgload").style.width = 4 + "px";
-        }
-    }, 200);
-};
 
 Editor.prototype.addToolsButton = function( id, name, icon_url, callback, container ) {
     if (!container) {
@@ -292,6 +299,3 @@ Editor.prototype.addMultiview = function()
 }
 
 LiteGraph.Editor = Editor;
-
-})(this);
-
