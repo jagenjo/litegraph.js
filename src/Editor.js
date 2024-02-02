@@ -328,5 +328,3 @@ const Editor = class {
 		this.graphcanvas2.viewport = [canvas.width*0.5,0,canvas.width*0.5,canvas.height];
 	}
 }
-
-LiteGraph.Editor = Editor;
