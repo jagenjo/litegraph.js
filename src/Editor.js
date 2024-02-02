@@ -5,6 +5,11 @@
 
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
 function Editor(container_id, options) {
+
+	console.assert(typeof container_id === 'string');
+	const parent = document.getElementById(container_id);
+	console.assert(parent instanceof HTMLElement);	
+	
     options = options || {};
 
     //fill container
@@ -75,10 +80,7 @@ function Editor(container_id, options) {
     }
 
     //append to DOM
-    var parent = document.getElementById(container_id);
-    if (parent) {
-        parent.appendChild(root);
-    }
+	parent.appendChild(root);
 
     graphcanvas.resize();
     //graphcanvas.draw(true,true);

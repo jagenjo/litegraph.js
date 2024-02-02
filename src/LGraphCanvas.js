@@ -28,8 +28,7 @@
         this.zoom_modify_alpha = true; //otherwise it generates ugly patterns when scaling down too much
 
         this.title_text_font = "" + LiteGraph.NODE_TEXT_SIZE + "px Arial";
-        this.inner_text_font =
-            "normal " + LiteGraph.NODE_SUBTEXT_SIZE + "px Arial";
+        this.inner_text_font = "normal " + LiteGraph.NODE_SUBTEXT_SIZE + "px Arial";
         this.node_title_color = LiteGraph.NODE_TITLE_COLOR;
         this.default_link_color = LiteGraph.LINK_COLOR;
         this.default_connection_color = {
@@ -349,8 +348,7 @@
 
         if (canvas.getContext == null) {
             if (canvas.localName != "canvas") {
-                throw "Element supplied for LGraphCanvas must be a <canvas> element, you passed a " +
-                    canvas.localName;
+                throw "Element supplied for LGraphCanvas must be a <canvas> element, you passed a " +canvas.localName;
             }
             throw "This browser doesn't support Canvas";
         }
@@ -2472,7 +2470,7 @@
     /* Interaction */
 
     /* LGraphCanvas render */
-    var temp = new Float32Array(4);
+    LGraphCanvas.temp = new Float32Array(4);
 
     /**
      * checks which nodes are visible (inside the camera area)
@@ -2490,7 +2488,7 @@
                 continue;
             }
 
-            if (!LiteGraph.overlapBounding(this.visible_area, n.getBounding(temp, true))) {
+            if (!LiteGraph.overlapBounding(this.visible_area, n.getBounding(LGraphCanvas.temp, true))) {
                 continue;
             } //out of the visible area
 
@@ -3222,7 +3220,7 @@
         this.dirty_canvas = true; //to force to repaint the front canvas with the bgcanvas
     };
 
-    var temp_vec2 = new Float32Array(2);
+    LGraphCanvas.temp_vec2 = new Float32Array(2);
 
     /**
      * draws the given node inside the canvas
@@ -3276,8 +3274,8 @@
 
         //clip if required (mask)
         var shape = node._shape || LiteGraph.BOX_SHAPE;
-        var size = temp_vec2;
-        temp_vec2.set(node.size);
+        var size = LGraphCanvas.temp_vec2;
+        LGraphCanvas.temp_vec2.set(node.size);
         var horizontal = node.horizontal; // || node.flags.horizontal;
 
         if (node.flags.collapsed) {
@@ -3717,7 +3715,7 @@
      * draws the shape of the given node in the canvas
      * @method drawNodeShape
      **/
-    var tmp_area = new Float32Array(4);
+    LGraphCanvas.tmp_area = new Float32Array(4);
 
     LGraphCanvas.prototype.drawNodeShape = function(
         node,
@@ -3748,7 +3746,7 @@
             render_title = true;
         }
 
-        var area = tmp_area;
+        var area = LGraphCanvas.tmp_area;
         area[0] = 0; //x
         area[1] = render_title ? -title_height : 0; //y
         area[2] = size[0] + 1; //w
@@ -4039,10 +4037,10 @@
         if (node.action_triggered>0) node.action_triggered--;
     };
 
-    var margin_area = new Float32Array(4);
-    var link_bounding = new Float32Array(4);
-    var tempA = new Float32Array(2);
-    var tempB = new Float32Array(2);
+    LGraphCanvas.margin_area = new Float32Array(4);
+    LGraphCanvas.link_bounding = new Float32Array(4);
+    LGraphCanvas.tempA = new Float32Array(2);
+    LGraphCanvas.tempB = new Float32Array(2);
 
     /**
      * draws every connection visible in the canvas
@@ -4052,10 +4050,10 @@
     LGraphCanvas.prototype.drawConnections = function(ctx) {
         var now = LiteGraph.getTime();
         var visible_area = this.visible_area;
-        margin_area[0] = visible_area[0] - 20;
-        margin_area[1] = visible_area[1] - 20;
-        margin_area[2] = visible_area[2] + 40;
-        margin_area[3] = visible_area[3] + 40;
+        LGraphCanvas.margin_area[0] = visible_area[0] - 20;
+        LGraphCanvas.margin_area[1] = visible_area[1] - 20;
+        LGraphCanvas.margin_area[2] = visible_area[2] + 40;
+        LGraphCanvas.margin_area[3] = visible_area[3] + 40;
 
         //draw connections
         ctx.lineWidth = this.connections_width;
@@ -4099,27 +4097,27 @@
                     start_node_slotpos = start_node.getConnectionPos(
                         false,
                         start_node_slot,
-                        tempA
+                        LGraphCanvas.tempA
                     );
                 }
-                var end_node_slotpos = node.getConnectionPos(true, i, tempB);
+                var end_node_slotpos = node.getConnectionPos(true, i, LGraphCanvas.tempB);
 
                 //compute link bounding
-                link_bounding[0] = start_node_slotpos[0];
-                link_bounding[1] = start_node_slotpos[1];
-                link_bounding[2] = end_node_slotpos[0] - start_node_slotpos[0];
-                link_bounding[3] = end_node_slotpos[1] - start_node_slotpos[1];
-                if (link_bounding[2] < 0) {
-                    link_bounding[0] += link_bounding[2];
-                    link_bounding[2] = Math.abs(link_bounding[2]);
+                LGraphCanvas.link_bounding[0] = start_node_slotpos[0];
+                LGraphCanvas.link_bounding[1] = start_node_slotpos[1];
+                LGraphCanvas.link_bounding[2] = end_node_slotpos[0] - start_node_slotpos[0];
+                LGraphCanvas.link_bounding[3] = end_node_slotpos[1] - start_node_slotpos[1];
+                if (LGraphCanvas.link_bounding[2] < 0) {
+                    LGraphCanvas.link_bounding[0] += LGraphCanvas.link_bounding[2];
+                    LGraphCanvas.link_bounding[2] = Math.abs(LGraphCanvas.link_bounding[2]);
                 }
-                if (link_bounding[3] < 0) {
-                    link_bounding[1] += link_bounding[3];
-                    link_bounding[3] = Math.abs(link_bounding[3]);
+                if (LGraphCanvas.link_bounding[3] < 0) {
+                    LGraphCanvas.link_bounding[1] += LGraphCanvas.link_bounding[3];
+                    LGraphCanvas.link_bounding[3] = Math.abs(LGraphCanvas.link_bounding[3]);
                 }
 
                 //skip links outside of the visible area of the canvas
-                if (!LiteGraph.overlapBounding(link_bounding, margin_area)) {
+                if (!LiteGraph.overlapBounding(LGraphCanvas.link_bounding, LGraphCanvas.margin_area)) {
                     continue;
                 }
 
@@ -5045,6 +5043,8 @@
             var parent = this.canvas.parentNode;
             width = parent.offsetWidth;
             height = parent.offsetHeight;
+
+            console.log(`resize: width=${width} height=${height}`);
         }
 
         if (this.canvas.width == width && this.canvas.height == height) {
@@ -5053,6 +5053,7 @@
 
         this.canvas.width = width;
         this.canvas.height = height;
+
         this.bgcanvas.width = this.canvas.width;
         this.bgcanvas.height = this.canvas.height;
         this.setDirty(true, true);
