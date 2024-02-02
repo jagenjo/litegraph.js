@@ -131,19 +131,27 @@ const Editor = class {
 		console.assert(parent instanceof HTMLElement);
 		parent.appendChild(button);
 	}
+
+	createButton(name, icon_url, callback) {
+		const button = document.createElement("button");
+		if (typeof icon_url === 'string') {
+			const img = document.createElement('img');
+			img.src = icon_url;
+			button.appendChild(img);
+		}
+		button.classList.add("btn");
+		if(typeof name == 'string') {
+			button.innerHTML += name;
+		}
+		if(callback) {
+			console.assert(typeof callback === 'function');
+			button.addEventListener("click", callback );
+		}
+		return button;
+	}	
+	
 }
 
-Editor.prototype.createButton = function(name, icon_url, callback) {
-    var button = document.createElement("button");
-    if (icon_url) {
-        button.innerHTML = "<img src='" + icon_url + "'/> ";
-    }
-	button.classList.add("btn");
-    button.innerHTML += name;
-	if(callback)
-		button.addEventListener("click", callback );
-    return button;
-};
 
 Editor.prototype.onLoadButton = function() {
     var panel = this.graphcanvas.createPanel("Load session",{closable:true});
