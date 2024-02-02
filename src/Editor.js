@@ -17,20 +17,25 @@ function Editor(container_id, options) {
     html += "<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
     html += "<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
 
-    var root = document.createElement("div");
-    this.root = root;
+    const root = this.root = document.createElement("div");
     root.className = "litegraph litegraph-editor";
     root.innerHTML = html;
 
     this.tools = root.querySelector(".tools");
     this.content = root.querySelector(".content");
     this.footer = root.querySelector(".footer");
+    const canvas = this.canvas = root.querySelector(".graphcanvas");
 
-    var canvas = this.canvas = root.querySelector(".graphcanvas");
+	console.assert(
+		this.canvas instanceof HTMLElement
+		&& this.tools instanceof HTMLElement
+		&& this.content instanceof HTMLElement
+		&& this.footer instanceof HTMLElement
+	);
 
     //create graph
-    var graph = (this.graph = new LiteGraph.LGraph());
-    var graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
+    const graph = this.graph = new LiteGraph.LGraph();
+    const graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
     graphcanvas.background_image = "imgs/grid.png";
     graph.onAfterExecute = function() {
         graphcanvas.draw(true);
@@ -83,7 +88,6 @@ function Editor(container_id, options) {
 	parent.appendChild(root);
 
     graphcanvas.resize();
-    //graphcanvas.draw(true,true);
 }
 
 Editor.prototype.addLoadCounter = function() {
