@@ -3,10 +3,10 @@
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
 const Editor = class {
 	
-	constructor(container_id, options){
+	constructor(containerId, options){
 		
-		console.assert(typeof container_id === 'string');
-		const parent = document.getElementById(container_id);
+		console.assert(typeof containerId === 'string');
+		const parent = document.getElementById(containerId);
 		console.assert(parent instanceof HTMLElement);	
 		
 		options ||= {};
@@ -235,23 +235,15 @@ const Editor = class {
 		const fullscreenChangeHandler = () => {
 			this.graphcanvas.resize();
 			document.removeEventListener('fullscreenchange', fullscreenChangeHandler);
-			document.removeEventListener('mozfullscreenchange', fullscreenChangeHandler);
-			document.removeEventListener('webkitfullscreenchange', fullscreenChangeHandler);
 		};
 
 		if (this.root.requestFullscreen) {
 			this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-		} else if (this.root.mozRequestFullscreen) {
-			this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
-		} else if (this.root.webkitRequestFullscreen) {
-			this.root.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
 		} else {
 			throw new Error("Fullscreen not supported");
 		}
 
 		document.addEventListener('fullscreenchange', fullscreenChangeHandler);
-		document.addEventListener('mozfullscreenchange', fullscreenChangeHandler);
-		document.addEventListener('webkitfullscreenchange', fullscreenChangeHandler);
 	}
 	
 	onFullscreenButton = () => {
