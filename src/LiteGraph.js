@@ -1,5 +1,8 @@
 
 (function(global) {
+
+    "use strict"
+
     /**
      * The Global Scope. It contains all the registered node classes.
      *

@@ -1,6 +1,8 @@
 
 (function(global) {
 
+"use strict"
+
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
 function Editor(container_id, options) {
     options = options || {};
@@ -22,7 +24,7 @@ function Editor(container_id, options) {
     var canvas = this.canvas = root.querySelector(".graphcanvas");
 
     //create graph
-    var graph = (this.graph = new LGraph());
+    var graph = (this.graph = new LiteGraph.LGraph());
     var graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
     graphcanvas.background_image = "imgs/grid.png";
     graph.onAfterExecute = function() {
@@ -142,7 +144,7 @@ Editor.prototype.onPlayButton = function() {
     var graph = this.graph;
     var button = this.root.querySelector("#playnode_button");
 
-    if (graph.status == LGraph.STATUS_STOPPED) {
+    if (graph.status == LiteGraph.LGraph.STATUS_STOPPED) {
         button.innerHTML = "<img src='imgs/icon-stop.png'/> Stop";
         graph.start();
     } else {
@@ -176,7 +178,7 @@ Editor.prototype.onDropItem = function(e)
 	for(var i = 0; i < e.dataTransfer.files.length; ++i)
 	{
 		var file = e.dataTransfer.files[i];
-		var ext = LGraphCanvas.getFileExtension(file.name);
+		var ext = LiteGraph.LGraphCanvas.getFileExtension(file.name);
 		var reader = new FileReader();
 		if(ext == "json")
 		{
@@ -222,7 +224,7 @@ Editor.prototype.addMiniWindow = function(w, h) {
     var canvas = miniwindow.querySelector("canvas");
     var that = this;
 
-    var graphcanvas = new LGraphCanvas( canvas, this.graph );
+    var graphcanvas = new LiteGraph.LGraphCanvas( canvas, this.graph );
     graphcanvas.show_info = false;
     graphcanvas.background_image = "imgs/grid.png";
     graphcanvas.scale = 0.25;

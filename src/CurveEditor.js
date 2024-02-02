@@ -1,6 +1,8 @@
 
 (function(global) {
 
+    "use strict"
+
 	//used by some widgets to render a curve editor
 	function CurveEditor( points )
 	{

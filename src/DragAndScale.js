@@ -1,6 +1,8 @@
 
 (function(global) {
 
+    "use strict"
+
     //Scale and Offset
     function DragAndScale(element, skip_events) {
         this.offset = new Float32Array([0, 0]);

@@ -1,6 +1,8 @@
 
 (function(global) {
 
+    "use strict"
+
     //this is the class in charge of storing link information
     function LLink(id, type, origin_id, origin_slot, target_id, target_slot) {
         this.id = id;

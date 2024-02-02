@@ -1,6 +1,8 @@
 
 (function(global) {
 
+    "use strict"
+
     /**
      * LGraph is the class that contain a full graph. We instantiate one and add nodes to it, and then we can run the execution loop.
 	 * supported callbacks:

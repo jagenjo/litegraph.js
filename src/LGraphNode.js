@@ -1,6 +1,8 @@
 
 (function(global) {
 
+    "use strict"
+
     /*
 	title: string
 	pos: [x,y]

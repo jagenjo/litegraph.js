@@ -1,6 +1,8 @@
 
 (function(global) {
 
+    "use strict"
+
     /**
      * This class is in charge of rendering one graph inside a canvas. And provides all the interaction required.
      * Valid callbacks are: onNodeSelected, onNodeDeselected, onShowNodePanel, onNodeDblClicked
@@ -340,6 +342,7 @@
         this.bgcanvas = null;
         if (!this.bgcanvas) {
             this.bgcanvas = document.createElement("canvas");
+            console.log(`this.canvas.width = ${this.canvas.width}`);
             this.bgcanvas.width = this.canvas.width;
             this.bgcanvas.height = this.canvas.height;
         }

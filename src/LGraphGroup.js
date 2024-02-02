@@ -1,6 +1,8 @@
 
 (function(global) {
 
+    "use strict"
+
     function LGraphGroup(title) {
         this._ctor(title);
     }
