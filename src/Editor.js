@@ -206,27 +206,31 @@ const Editor = class {
 			? "<img src='imgs/icon-record.png'/> Live"
 			: "<img src='imgs/icon-gear.png'/> Edit";
 	}
-}
-
-
-Editor.prototype.onDropItem = function(e)
-{
-	var that = this;
-	for(var i = 0; i < e.dataTransfer.files.length; ++i)
-	{
-		var file = e.dataTransfer.files[i];
-		var ext = LiteGraph.LGraphCanvas.getFileExtension(file.name);
-		var reader = new FileReader();
-		if(ext == "json")
-		{
-			reader.onload = function(event) {
-				var data = JSON.parse( event.target.result );
-				that.graph.configure(data);
-			};
-			reader.readAsText(file);
+	
+	onDropItem = (e) => {
+		for (let i = 0; i < e.dataTransfer.files.length; ++i) {
+			const file = e.dataTransfer.files[i];
+			const ext = LiteGraph.LGraphCanvas.getFileExtension(file.name);
+			const reader = new FileReader();
+			if (ext == "json") {
+				reader.onload = (event) => {
+					try {
+						const data = JSON.parse(event.target.result);
+						this.graph.configure(data);
+					} catch (error) {
+						console.error("Error parsing JSON:", error);
+					}
+				};
+				reader.onerror = (event) => {
+					console.error("Error reading file:", event.target.error);
+				};
+				reader.readAsText(file);
+			}
 		}
 	}
 }
+
+
 
 Editor.prototype.goFullscreen = function() {
     if (this.root.requestFullscreen) {
