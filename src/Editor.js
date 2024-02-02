@@ -314,19 +314,18 @@ const Editor = class {
 
 		this.root.querySelector(".content").appendChild(miniwindow);
 	}
-}
+	
+	addMultiview() {
+		const canvas = this.canvas;
+		this.graphcanvas.ctx.fillStyle = "black";
+		this.graphcanvas.ctx.fillRect(0,0,canvas.width,canvas.height);
+		this.graphcanvas.viewport = [0,0,canvas.width*0.5-2,canvas.height];
 
-Editor.prototype.addMultiview = function()
-{
-	var canvas = this.canvas;
-	this.graphcanvas.ctx.fillStyle = "black";
-	this.graphcanvas.ctx.fillRect(0,0,canvas.width,canvas.height);
-	this.graphcanvas.viewport = [0,0,canvas.width*0.5-2,canvas.height];
-
-	var graphcanvas = new LiteGraph.LGraphCanvas( canvas, this.graph );
-    graphcanvas.background_image = "imgs/grid.png";
-    this.graphcanvas2 = graphcanvas;
-	this.graphcanvas2.viewport = [canvas.width*0.5,0,canvas.width*0.5,canvas.height];
+		const graphcanvas = new LiteGraph.LGraphCanvas( canvas, this.graph );
+		graphcanvas.background_image = "imgs/grid.png";
+		this.graphcanvas2 = graphcanvas;
+		this.graphcanvas2.viewport = [canvas.width*0.5,0,canvas.width*0.5,canvas.height];
+	}
 }
 
 LiteGraph.Editor = Editor;
