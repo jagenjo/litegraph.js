@@ -218,5 +218,3 @@ const DragAndScale = class {
         this.offset[1] = 0;
     }
 }
-
-LiteGraph.DragAndScale = DragAndScale;
