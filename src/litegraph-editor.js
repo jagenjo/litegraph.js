@@ -186,6 +186,17 @@ Editor.prototype.onDropItem = function(e)
 	}
 }
 
+// CHECKING FOR FULLSCREEN OR NOT...
+Editor.prototype.isFullscreen = function() {
+    return(
+        document.fullscreenElement ||
+        document.mozRequestFullscreen ||
+        document.webkitRequestFullscreen ||
+        false
+    );
+};
+
+// ENTIRE FULLSCREEN...
 Editor.prototype.goFullscreen = function() {
     if (this.root.requestFullscreen) {
         this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
@@ -203,8 +214,24 @@ Editor.prototype.goFullscreen = function() {
     }, 100);
 };
 
+// EXIT FULLSCREEN...
+Editor.prototype.exitFullscreen = function() {
+    if(document.exitFullscreen){
+        document.exitFullscreen();
+    } else if (document.mozCancelFullscreen) {
+        document.mozCancelFullscreen();
+    } else if (document.webkitExitFullscreen) {
+        document.webkitExitFullscreen();
+    }
+};
+
+// FULLSCREEN BUTTON ONCLICK...
 Editor.prototype.onFullscreenButton = function() {
-    this.goFullscreen();
+    if(this.isFullscreen()){
+        this.exitFullscreen();
+    } else {
+        this.goFullscreen();
+    }
 };
 
 Editor.prototype.addMiniWindow = function(w, h) {
