@@ -1,10 +1,9 @@
 
-(function(global) {
+//this is the class in charge of storing link information
 
-    "use strict"
-
-    //this is the class in charge of storing link information
-    function LLink(id, type, origin_id, origin_slot, target_id, target_slot) {
+const LLink = class {
+	
+    constructor(id, type, origin_id, origin_slot, target_id, target_slot) {
         this.id = id;
         this.type = type;
         this.origin_id = origin_id;
@@ -16,7 +15,7 @@
         this._pos = new Float32Array(2); //center
     }
 
-    LLink.prototype.configure = function(o) {
+    configure(o) {
         if (o.constructor === Array) {
             this.id = o[0];
             this.origin_id = o[1];
@@ -32,9 +31,9 @@
             this.target_id = o.target_id;
             this.target_slot = o.target_slot;
         }
-    };
+    }
 
-    LLink.prototype.serialize = function() {
+    serialize() {
         return [
             this.id,
             this.origin_id,
@@ -43,9 +42,7 @@
             this.target_slot,
             this.type
         ];
-    };
+    }
+}
 
-    LiteGraph.LLink = LLink;
-
-})(this);
-
+LiteGraph.LLink = LLink;
