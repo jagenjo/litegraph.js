@@ -200,9 +200,8 @@ const ContextMenu = class {
         }
     }
 	
-	addItem(name, value, options) {
+	addItem(name, value, options = {}) {
         var that = this;
-        options = options || {};
 
         var element = document.createElement("div");
         element.className = "litemenu-entry submenu";
