@@ -172,12 +172,13 @@
                 base_class.title = classname;
             }
 
-            //extend class
-            for (var i in LGraphNode.prototype) {
-                if (!base_class.prototype[i]) {
-                    base_class.prototype[i] = LGraphNode.prototype[i];
-                }
-            }
+            Object.getOwnPropertyNames(LGraphNode.prototype).forEach(method => {
+				if (!base_class.prototype[method]) {
+					Object.defineProperty(base_class.prototype, method, {
+						value: LGraphNode.prototype[method]
+					});
+				}
+			});
 
             const prev = this.registered_node_types[type];
             if(prev) {
