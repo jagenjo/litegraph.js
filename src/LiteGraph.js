@@ -172,6 +172,9 @@
                 base_class.title = classname;
             }
 
+			// DEV: Notably, this only copies methods, while the former solution copies
+			// all properties and methods.  But there are only methods on the prototype,
+			// which when called create properties on whatever 'this' is
             Object.getOwnPropertyNames(LGraphNode.prototype).forEach(method => {
 				if (!base_class.prototype[method]) {
 					Object.defineProperty(base_class.prototype, method, {
