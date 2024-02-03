@@ -20,11 +20,8 @@ const DragAndScale = class {
             }
         }
     }
-}
 
-    LiteGraph.DragAndScale = DragAndScale;
-
-    DragAndScale.prototype.bindEvents = function(element) {
+    bindEvents (element) {
         this.last_mouse = new Float32Array(2);
 
         this._binded_mouse_callback = this.onMouse.bind(this);
@@ -39,9 +36,9 @@ const DragAndScale = class {
             false
         );
         element.addEventListener("wheel", this._binded_mouse_callback, false);
-    };
+    }
 
-    DragAndScale.prototype.computeVisibleArea = function( viewport ) {
+    computeVisibleArea ( viewport ) {
         if (!this.element) {
             this.visible_area[0] = this.visible_area[1] = this.visible_area[2] = this.visible_area[3] = 0;
             return;
@@ -63,9 +60,9 @@ const DragAndScale = class {
         this.visible_area[1] = starty;
         this.visible_area[2] = endx - startx;
         this.visible_area[3] = endy - starty;
-    };
+    }
 
-    DragAndScale.prototype.onMouse = function(e) {
+    onMouse (e) {
         if (!this.enabled) {
             return;
         }
@@ -136,38 +133,38 @@ const DragAndScale = class {
 		    e.stopPropagation();
 		    return false;
 		}
-    };
+    }
 
-    DragAndScale.prototype.toCanvasContext = function(ctx) {
+    toCanvasContext (ctx) {
         ctx.scale(this.scale, this.scale);
         ctx.translate(this.offset[0], this.offset[1]);
-    };
+    }
 
-    DragAndScale.prototype.convertOffsetToCanvas = function(pos) {
+    convertOffsetToCanvas (pos) {
         //return [pos[0] / this.scale - this.offset[0], pos[1] / this.scale - this.offset[1]];
         return [
             (pos[0] + this.offset[0]) * this.scale,
             (pos[1] + this.offset[1]) * this.scale
         ];
-    };
+    }
 
-    DragAndScale.prototype.convertCanvasToOffset = function(pos, out) {
+    convertCanvasToOffset (pos, out) {
         out = out || [0, 0];
         out[0] = pos[0] / this.scale - this.offset[0];
         out[1] = pos[1] / this.scale - this.offset[1];
         return out;
-    };
+    }
 
-    DragAndScale.prototype.mouseDrag = function(x, y) {
+    mouseDrag (x, y) {
         this.offset[0] += x / this.scale;
         this.offset[1] += y / this.scale;
 
         if (this.onredraw) {
             this.onredraw(this);
         }
-    };
+    }
 
-    DragAndScale.prototype.changeScale = function(value, zooming_center) {
+    changeScale (value, zooming_center) {
         if (value < this.min_scale) {
             value = this.min_scale;
         } else if (value > this.max_scale) {
@@ -209,16 +206,17 @@ const DragAndScale = class {
         if (this.onredraw) {
             this.onredraw(this);
         }
-    };
+    }
 
-    DragAndScale.prototype.changeDeltaScale = function(value, zooming_center) {
+    changeDeltaScale (value, zooming_center) {
         this.changeScale(this.scale * value, zooming_center);
-    };
+    }
 
-    DragAndScale.prototype.reset = function() {
+    reset () {
         this.scale = 1;
         this.offset[0] = 0;
         this.offset[1] = 0;
-    };
+    }
+}
 
-
+LiteGraph.DragAndScale = DragAndScale;
