@@ -1,47 +1,57 @@
-<!-- Javi Agenjo (@tamat) on 31/9/2011 -->
 <!DOCTYPE html>
-<html><head>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
     <title>LiteGraph</title>
-	<!--<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">-->
-	<meta http-equiv="X-UA-Compatible" content="chrome=1">
-
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
     <link rel="stylesheet" type="text/css" href="../css/litegraph.css">
     <link rel="stylesheet" type="text/css" href="../css/litegraph-editor.css">
     <link rel="stylesheet" type="text/css" href="style.css">
-	</head>
+</head>
 <body>
-	<div id="main">
-	</div>
+    <div id="main">
+    </div>
 
-    <script type="text/javascript" src="../external/jquery-1.6.2.min.js"></script>
-    <script type="text/javascript" src="https://tamats.com/projects/sillyserver/src/sillyclient.js"></script>
-	<!-- <script type="text/javascript" src="https://unpkg.com/codeflask/build/codeflask.min.js"></script> -->
-	<script type="text/javascript" src="js/libs/gl-matrix-min.js"></script>
-    <script type="text/javascript" src="js/libs/audiosynth.js"></script>
-    <script type="text/javascript" src="js/libs/midi-parser.js"></script>
+    <!-- <script src="../external/jquery-1.6.2.min.js"></script> -->
+    <!-- <script src="https://tamats.com/projects/sillyserver/src/sillyclient.js"></script> -->
+    <!-- <script src="https://unpkg.com/codeflask/build/codeflask.min.js"></script> -->
+    <script src="js/libs/gl-matrix-min.js"></script>
+    <script src="js/libs/audiosynth.js"></script>
+    <script src="js/libs/midi-parser.js"></script>
 
-    <script type="text/javascript" src="../src/litegraph.js"></script>
-    <script type="text/javascript" src="../src/litegraph-editor.js"></script>
-    <script type="text/javascript" src="js/defaults.js"></script>
+    <!-- LiteGraph.js -->
+    <script src="../src/LiteGraph.js"></script>
+    <script src="../src/LGraph.js"></script>
+    <script src="../src/LLink.js"></script>
+    <script src="../src/LGraphNode.js"></script>
+    <script src="../src/LGraphGroup.js"></script>
+    <script src="../src/DragAndScale.js"></script>
+    <script src="../src/LGraphCanvas.js"></script>
+    <script src="../src/ContextMenu.js"></script>
+    <script src="../src/CurveEditor.js"></script>
+    <script src="../src/Editor.js"></script>
 
-    <script type="text/javascript" src="../src/nodes/base.js"></script>
-    <script type="text/javascript" src="../src/nodes/logic.js"></script>
-    <script type="text/javascript" src="../src/nodes/events.js"></script>
-    <script type="text/javascript" src="../src/nodes/math.js"></script>
-    <script type="text/javascript" src="../src/nodes/math3d.js"></script>
-    <script type="text/javascript" src="../src/nodes/strings.js"></script>
-    <script type="text/javascript" src="../src/nodes/interface.js"></script>
-    <script type="text/javascript" src="../src/nodes/geometry.js"></script>
-    <script type="text/javascript" src="../src/nodes/graphics.js"></script>
-    <script type="text/javascript" src="../src/nodes/input.js"></script>
-    <script type="text/javascript" src="../src/nodes/midi.js"></script>
-    <script type="text/javascript" src="../src/nodes/audio.js"></script>
-    <script type="text/javascript" src="../src/nodes/network.js"></script>
+    <script src="js/defaults.js"></script>
 
-    <script type="text/javascript" src="js/demos.js"></script>
-	<script type="text/javascript" src="js/code.js"></script>
+    <!-- Javi's Nodes -->
+    <script src="../src/nodes/base.js"></script>
+    <script src="../src/nodes/logic.js"></script>
+    <script src="../src/nodes/events.js"></script>
+    <script src="../src/nodes/math.js"></script>
+    <script src="../src/nodes/math3d.js"></script>
+    <script src="../src/nodes/strings.js"></script>
+    <script src="../src/nodes/interface.js"></script>
+    <script src="../src/nodes/geometry.js"></script>
+    <script src="../src/nodes/graphics.js"></script>
+    <script src="../src/nodes/input.js"></script>
+    <script src="../src/nodes/midi.js"></script>
+    <script src="../src/nodes/audio.js"></script>
+    <script src="../src/nodes/network.js"></script>
 
-	<script type="text/javascript" src="../src/nodes/others.js"></script>
+    <script src="js/demos.js"></script>
+    <script src="js/code.js"></script>
 
+    <script src="../src/nodes/others.js"></script>
 </body>
 </html>
+

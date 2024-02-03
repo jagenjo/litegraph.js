@@ -26,7 +26,7 @@
         this.enabled = true;
 
         //create inner graph
-        this.subgraph = new LiteGraph.LGraph();
+        this.subgraph = new LGraph();
         this.subgraph._subgraph_node = this;
         this.subgraph._is_subgraph = true;
 
@@ -289,7 +289,7 @@
     };
 
     Subgraph.prototype.serialize = function() {
-        var data = LiteGraph.LGraphNode.prototype.serialize.call(this);
+        var data = LGraphNode.prototype.serialize.call(this);
         data.subgraph = this.subgraph.serialize();
         return data;
     };
