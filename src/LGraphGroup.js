@@ -99,5 +99,3 @@ const LGraphGroup = class {
 	
 LGraphGroup.prototype.isPointInside = LGraphNode.prototype.isPointInside;
 LGraphGroup.prototype.setDirtyCanvas = LGraphNode.prototype.setDirtyCanvas;
-
-global.LGraphGroup = LiteGraph.LGraphGroup = LGraphGroup;

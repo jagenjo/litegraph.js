@@ -729,7 +729,7 @@
      */
 
     LGraph.prototype.remove = function(node) {
-        if (node.constructor === LiteGraph.LGraphGroup) {
+        if (node.constructor === LGraphGroup) {
             var index = this._groups.indexOf(node);
             if (index != -1) {
                 this._groups.splice(index, 1);
@@ -1496,7 +1496,7 @@
         this._groups.length = 0;
         if (data.groups) {
             for (var i = 0; i < data.groups.length; ++i) {
-                var group = new LiteGraph.LGraphGroup();
+                var group = new LGraphGroup();
                 group.configure(data.groups[i]);
                 this.add(group);
             }

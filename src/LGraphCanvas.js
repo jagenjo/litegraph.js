@@ -5164,7 +5164,7 @@
         var canvas = LGraphCanvas.active_canvas;
         var ref_window = canvas.getCanvasWindow();
 
-        var group = new LiteGraph.LGraphGroup();
+        var group = new LGraphGroup();
         group.pos = canvas.convertEventToCanvasOffset(mouse_event);
         canvas.graph.add(group);
     };
@@ -7698,7 +7698,7 @@
 			
 			var fApplyColor = function(node){
 				if (color) {
-					if (node.constructor === LiteGraph.LGraphGroup) {
+					if (node.constructor === LGraphGroup) {
 						node.color = color.groupcolor;
 					} else {
 						node.color = color.color;
