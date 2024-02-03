@@ -4742,7 +4742,7 @@ void main(void){\n\
 			return;
 
 		if(!this.curve_editor)
-			this.curve_editor = new LiteGraph.CurveEditor(this._points.R);
+			this.curve_editor = new CurveEditor(this._points.R);
 		ctx.save();
 		ctx.translate(0,this.curve_offset);
 		var channel = this.widgets[1].value;

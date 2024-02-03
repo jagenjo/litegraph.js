@@ -1,5 +1,5 @@
 
-	//used by some widgets to render a curve editor
+//used by some widgets to render a curve editor
 const CurveEditor = class {
 	
 	constructor( points ) {
@@ -170,7 +170,3 @@ const CurveEditor = class {
 		return closest;
 	}
 }
-
-	LiteGraph.CurveEditor = CurveEditor;
-
-
