@@ -1,8 +1,4 @@
 
-(function(global) {
-
-    "use strict"
-
     /**
      * This class is in charge of rendering one graph inside a canvas. And provides all the interaction required.
      * Valid callbacks are: onNodeSelected, onNodeDeselected, onShowNodePanel, onNodeDblClicked
@@ -8187,9 +8183,5 @@ const LGraphCanvas = class {
         e.preventDefault();
         return true;
     };
-	
-global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
-
-})(this);
 

@@ -35,7 +35,7 @@ const Editor = class {
 
 		//create graph
 		const graph = this.graph = new LGraph();
-		const graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
+		const graphcanvas = this.graphcanvas = new LGraphCanvas(canvas, graph);
 		
 		graphcanvas.background_image = "imgs/grid.png";
 		
