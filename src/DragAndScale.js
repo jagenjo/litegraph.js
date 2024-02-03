@@ -1,10 +1,8 @@
 
-(function(global) {
-
-    "use strict"
-
-    //Scale and Offset
-    function DragAndScale(element, skip_events) {
+//Scale and Offset
+const DragAndScale = class {
+	
+    constructor(element, skip_events) {
         this.offset = new Float32Array([0, 0]);
         this.scale = 1;
         this.max_scale = 10;
@@ -22,6 +20,7 @@
             }
         }
     }
+}
 
     LiteGraph.DragAndScale = DragAndScale;
 
@@ -222,5 +221,4 @@
         this.offset[1] = 0;
     };
 
-})(this);
 
