@@ -1121,7 +1121,7 @@ if (typeof exports != "undefined") {
     exports.LGraphNode = LGraphNode;
     exports.LGraphGroup = LGraphGroup;
     exports.DragAndScale = DragAndScale;
-    exports.LGraphCanvas = this.LGraphCanvas;
+    exports.LGraphCanvas = LGraphCanvas;
     exports.ContextMenu = ContextMenu;
 }
 
