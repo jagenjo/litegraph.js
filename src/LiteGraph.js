@@ -1113,7 +1113,7 @@
 if (typeof exports != "undefined") {
     exports.LiteGraph = this.LiteGraph;
     exports.LGraph = this.LGraph;
-    exports.LLink = this.LLink;
+    exports.LLink = LLink;
     exports.LGraphNode = this.LGraphNode;
     exports.LGraphGroup = this.LGraphGroup;
     exports.DragAndScale = DragAndScale;

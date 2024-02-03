@@ -1441,7 +1441,7 @@
 					console.warn("serialized graph link data contains errors, skipping.");
 					continue;
 				}
-                var link = new LiteGraph.LLink();
+                var link = new LLink();
                 link.configure(link_data);
                 links[link.id] = link;
             }

@@ -44,5 +44,3 @@ const LLink = class {
         ];
     }
 }
-
-LiteGraph.LLink = LLink;
