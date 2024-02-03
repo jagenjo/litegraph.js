@@ -1,6 +1,7 @@
 
 	//used by some widgets to render a curve editor
 const CurveEditor = class {
+	
 	constructor( points ) {
 		this.points = points;
 		this.selected = -1;
@@ -9,10 +10,8 @@ const CurveEditor = class {
 		this.must_update = true;
 		this.margin = 5;
 	}
-}
-
-	CurveEditor.sampleCurve = function(f,points)
-	{
+	
+	static sampleCurve(f,points){
 		if(!points)
 			return;
 		for(var i = 0; i < points.length - 1; ++i)
@@ -30,8 +29,7 @@ const CurveEditor = class {
 		return 0;
 	}
 
-	CurveEditor.prototype.draw = function( ctx, size, graphcanvas, background_color, line_color, inactive )
-	{
+	draw( ctx, size, graphcanvas, background_color, line_color, inactive ) {
 		var points = this.points;
 		if(!points)
 			return;
@@ -77,8 +75,7 @@ const CurveEditor = class {
 	}
 
 	//localpos is mouse in curve editor space
-	CurveEditor.prototype.onMouseDown = function( localpos, graphcanvas )
-	{
+	onMouseDown( localpos, graphcanvas ) {
 		var points = this.points;
 		if(!points)
 			return;
@@ -107,8 +104,7 @@ const CurveEditor = class {
 			return true;
 	}
 
-	CurveEditor.prototype.onMouseMove = function( localpos, graphcanvas )
-	{
+	onMouseMove( localpos, graphcanvas ) {
 		var points = this.points;
 		if(!points)
 			return;
@@ -141,14 +137,12 @@ const CurveEditor = class {
 		}
 	}
 
-	CurveEditor.prototype.onMouseUp = function( localpos, graphcanvas )
-	{
+	onMouseUp( localpos, graphcanvas ) {
 		this.selected = -1;
 		return false;
 	}
 
-	CurveEditor.prototype.getCloserPoint = function(pos, max_dist)
-	{
+	getCloserPoint(pos, max_dist) {
 		var points = this.points;
 		if(!points)
 			return -1;
@@ -175,6 +169,7 @@ const CurveEditor = class {
 		}
 		return closest;
 	}
+}
 
 	LiteGraph.CurveEditor = CurveEditor;
 
