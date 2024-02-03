@@ -1113,9 +1113,9 @@
 
 if (typeof exports != "undefined") {
     exports.LiteGraph = this.LiteGraph;
-    exports.LGraph = this.LGraph;
+    exports.LGraph = LGraph;
     exports.LLink = LLink;
-    exports.LGraphNode = this.LGraphNode;
+    exports.LGraphNode = LGraphNode;
     exports.LGraphGroup = LGraphGroup;
     exports.DragAndScale = DragAndScale;
     exports.LGraphCanvas = this.LGraphCanvas;
