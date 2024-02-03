@@ -60,11 +60,13 @@
      * @param {String} name a name for the node
      */
 
-    function LGraphNode(title) {
-        this._ctor(title);
-    }
+const LGraphNode = class {
+		constructor(title) {
+			this._ctor(title);
+		}
+}
 
-    global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
+	global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
 
     LGraphNode.prototype._ctor = function(title) {
         this.title = title || "Unnamed";
