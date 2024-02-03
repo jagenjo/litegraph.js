@@ -34,7 +34,7 @@ const Editor = class {
 		const canvas = this.canvas = root.querySelector(".graphcanvas");
 
 		//create graph
-		const graph = this.graph = new LiteGraph.LGraph();
+		const graph = this.graph = new LGraph();
 		const graphcanvas = this.graphcanvas = new LiteGraph.LGraphCanvas(canvas, graph);
 		
 		graphcanvas.background_image = "imgs/grid.png";
@@ -174,7 +174,7 @@ const Editor = class {
 		const button = this.root.querySelector("#playnode_button");
 		console.assert(button instanceof HTMLElement);
 
-		if (graph.status === LiteGraph.LGraph.STATUS_STOPPED) {
+		if (graph.status === LGraph.STATUS_STOPPED) {
 			
 			// DEV: change this to use DOM
 			

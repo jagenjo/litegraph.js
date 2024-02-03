@@ -528,7 +528,7 @@
 	function LGraphShaderGraph() {
 
 		//before inputs
-        this.subgraph = new LiteGraph.LGraph();
+        this.subgraph = new LGraph();
         this.subgraph._subgraph_node = this;
         this.subgraph._is_subgraph = true;
 		this.subgraph.filter = "shader";

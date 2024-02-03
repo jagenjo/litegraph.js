@@ -1,8 +1,4 @@
 
-(function(global) {
-
-    "use strict"
-
     /**
      * LGraph is the class that contain a full graph. We instantiate one and add nodes to it, and then we can run the execution loop.
 	 * supported callbacks:
@@ -15,7 +11,8 @@
      * @param {Object} o data from previous serialization [optional]
      */
 
-    function LGraph(o) {
+const LGraph = class {
+	constructor(o) {
         if (LiteGraph.debug) {
             console.log("Graph created");
         }
@@ -27,25 +24,23 @@
         }
     }
 
-    global.LGraph = LiteGraph.LGraph = LGraph;
-
     //default supported types
-    LGraph.supported_types = ["number", "string", "boolean"];
+    static supported_types = ["number", "string", "boolean"];
 
     //used to know which types of connections support this graph (some graphs do not allow certain types)
-    LGraph.prototype.getSupportedTypes = function() {
+    getSupportedTypes () {
         return this.supported_types || LGraph.supported_types;
-    };
+    }
 
-    LGraph.STATUS_STOPPED = 1;
-    LGraph.STATUS_RUNNING = 2;
+	// DEV: enumerated type
+    static STATUS_STOPPED = 1;
+    static STATUS_RUNNING = 2;
 
     /**
      * Removes all nodes from this graph
      * @method clear
      */
-
-    LGraph.prototype.clear = function() {
+    clear () {
         this.stop();
         this.status = LGraph.STATUS_STOPPED;
 
@@ -107,15 +102,14 @@
         this.change();
 
         this.sendActionToCanvas("clear");
-    };
+    }
 
     /**
      * Attach Canvas to this graph
      * @method attachCanvas
      * @param {GraphCanvas} graph_canvas
      */
-
-    LGraph.prototype.attachCanvas = function(graphcanvas) {
+    attachCanvas (graphcanvas) {
         if (graphcanvas.constructor != LGraphCanvas) {
             throw "attachCanvas expects a LGraphCanvas instance";
         }
@@ -129,14 +123,14 @@
             this.list_of_graphcanvas = [];
         }
         this.list_of_graphcanvas.push(graphcanvas);
-    };
+    }
 
     /**
      * Detach Canvas from this graph
      * @method detachCanvas
      * @param {GraphCanvas} graph_canvas
      */
-    LGraph.prototype.detachCanvas = function(graphcanvas) {
+    detachCanvas (graphcanvas) {
         if (!this.list_of_graphcanvas) {
             return;
         }
@@ -147,15 +141,14 @@
         }
         graphcanvas.graph = null;
         this.list_of_graphcanvas.splice(pos, 1);
-    };
+    }
 
     /**
      * Starts running this graph every interval milliseconds.
      * @method start
      * @param {number} interval amount of milliseconds between executions, if 0 then it renders to the monitor refresh rate
      */
-
-    LGraph.prototype.start = function(interval) {
+    start (interval) {
         if (this.status == LGraph.STATUS_RUNNING) {
             return;
         }
@@ -198,14 +191,14 @@
 					that.onAfterStep();
             }, interval);
         }
-    };
+    }
 
     /**
      * Stops the execution loop of the graph
      * @method stop execution
      */
 
-    LGraph.prototype.stop = function() {
+    stop () {
         if (this.status == LGraph.STATUS_STOPPED) {
             return;
         }
@@ -224,7 +217,7 @@
         }
 
         this.sendEventToAllNodes("onStop");
-    };
+    }
 
     /**
      * Run N steps (cycles) of the graph
@@ -234,7 +227,7 @@
      * @param {number} limit max number of nodes to execute (used to execute from start to a node)
      */
 
-    LGraph.prototype.runStep = function(num, do_not_catch_errors, limit ) {
+    runStep (num, do_not_catch_errors, limit ) {
         num = num || 1;
 
         var start = LiteGraph.getTime();
@@ -323,14 +316,14 @@
         this.nodes_executing = [];
         this.nodes_actioning = [];
         this.nodes_executedAction = [];
-    };
+    }
 
     /**
      * Updates the graph execution order according to relevance of the nodes (nodes with only outputs have more relevance than
      * nodes with only inputs.
      * @method updateExecutionOrder
      */
-    LGraph.prototype.updateExecutionOrder = function() {
+    updateExecutionOrder () {
         this._nodes_in_order = this.computeExecutionOrder(false);
         this._nodes_executable = [];
         for (var i = 0; i < this._nodes_in_order.length; ++i) {
@@ -338,13 +331,10 @@
                 this._nodes_executable.push(this._nodes_in_order[i]);
             }
         }
-    };
+    }
 
     //This is more internal, it computes the executable nodes in order and returns it
-    LGraph.prototype.computeExecutionOrder = function(
-        only_onExecute,
-        set_level
-    ) {
+    computeExecutionOrder (only_onExecute, set_level) {
         var L = [];
         var S = [];
         var M = {};
@@ -479,7 +469,7 @@
         }
 
         return L;
-    };
+    }
 
     /**
      * Returns all the nodes that could affect this one (ancestors) by crawling all the inputs recursively.
@@ -487,7 +477,7 @@
      * @method getAncestors
      * @return {Array} an array with all the LGraphNodes that affect this node, in order of execution
      */
-    LGraph.prototype.getAncestors = function(node) {
+    getAncestors (node) {
         var ancestors = [];
         var pending = [node];
         var visited = {};
@@ -514,13 +504,13 @@
             return a.order - b.order;
         });
         return ancestors;
-    };
+    }
 
     /**
      * Positions every node in a more readable manner
      * @method arrange
      */
-    LGraph.prototype.arrange = function (margin, layout) {
+    arrange (margin, layout) {
         margin = margin || 100;
 
         const nodes = this.computeExecutionOrder(false, true);
@@ -558,26 +548,25 @@
         }
 
         this.setDirtyCanvas(true, true);
-    };
+    }
 
     /**
      * Returns the amount of time the graph has been running in milliseconds
      * @method getTime
      * @return {number} number of milliseconds the graph has been running
      */
-    LGraph.prototype.getTime = function() {
+    getTime () {
         return this.globaltime;
-    };
+    }
 
     /**
      * Returns the amount of time accumulated using the fixedtime_lapse var. This is used in context where the time increments should be constant
      * @method getFixedTime
      * @return {number} number of milliseconds the graph has been running
      */
-
-    LGraph.prototype.getFixedTime = function() {
+    getFixedTime () {
         return this.fixedtime;
-    };
+    }
 
     /**
      * Returns the amount of time it took to compute the latest iteration. Take into account that this number could be not correct
@@ -585,10 +574,9 @@
      * @method getElapsedTime
      * @return {number} number of milliseconds it took the last cycle
      */
-
-    LGraph.prototype.getElapsedTime = function() {
+    getElapsedTime () {
         return this.elapsed_time;
-    };
+    }
 
     /**
      * Sends an event to all the nodes, useful to trigger stuff
@@ -596,7 +584,7 @@
      * @param {String} eventname the name of the event (function to be called)
      * @param {Array} params parameters in array format
      */
-    LGraph.prototype.sendEventToAllNodes = function(eventname, params, mode) {
+    sendEventToAllNodes (eventname, params, mode) {
         mode = mode || LiteGraph.ALWAYS;
 
         var nodes = this._nodes_in_order ? this._nodes_in_order : this._nodes;
@@ -628,9 +616,9 @@
                 node[eventname](params);
             }
         }
-    };
+    }
 
-    LGraph.prototype.sendActionToCanvas = function(action, params) {
+    sendActionToCanvas (action, params) {
         if (!this.list_of_graphcanvas) {
             return;
         }
@@ -641,7 +629,7 @@
                 c[action].apply(c, params);
             }
         }
-    };
+    }
 
     /**
      * Adds a new node instance to this graph
@@ -649,7 +637,7 @@
      * @param {LGraphNode} node the instance of the node
      */
 
-    LGraph.prototype.add = function(node, skip_compute_order) {
+    add (node, skip_compute_order) {
         if (!node) {
             return;
         }
@@ -720,7 +708,7 @@
         this.change();
 
         return node; //to chain actions
-    };
+    }
 
     /**
      * Removes a node from the graph
@@ -728,7 +716,7 @@
      * @param {LGraphNode} node the instance of the node
      */
 
-    LGraph.prototype.remove = function(node) {
+    remove (node) {
         if (node.constructor === LGraphGroup) {
             var index = this._groups.indexOf(node);
             if (index != -1) {
@@ -813,7 +801,7 @@
         this.change();
 
         this.updateExecutionOrder();
-    };
+    }
 
     /**
      * Returns a node by its id.
@@ -821,12 +809,12 @@
      * @param {Number} id
      */
 
-    LGraph.prototype.getNodeById = function(id) {
+    getNodeById (id) {
         if (id == null) {
             return null;
         }
         return this._nodes_by_id[id];
-    };
+    }
 
     /**
      * Returns a list of nodes that matches a class
@@ -834,7 +822,7 @@
      * @param {Class} classObject the class itself (not an string)
      * @return {Array} a list with all the nodes of this type
      */
-    LGraph.prototype.findNodesByClass = function(classObject, result) {
+    findNodesByClass (classObject, result) {
         result = result || [];
         result.length = 0;
         for (var i = 0, l = this._nodes.length; i < l; ++i) {
@@ -843,7 +831,7 @@
             }
         }
         return result;
-    };
+    }
 
     /**
      * Returns a list of nodes that matches a type
@@ -851,7 +839,7 @@
      * @param {String} type the name of the node type
      * @return {Array} a list with all the nodes of this type
      */
-    LGraph.prototype.findNodesByType = function(type, result) {
+    findNodesByType (type, result) {
         var type = type.toLowerCase();
         result = result || [];
         result.length = 0;
@@ -861,7 +849,7 @@
             }
         }
         return result;
-    };
+    }
 
     /**
      * Returns the first node that matches a name in its title
@@ -869,14 +857,14 @@
      * @param {String} name the name of the node to search
      * @return {Node} the node or null
      */
-    LGraph.prototype.findNodeByTitle = function(title) {
+    findNodeByTitle (title) {
         for (var i = 0, l = this._nodes.length; i < l; ++i) {
             if (this._nodes[i].title == title) {
                 return this._nodes[i];
             }
         }
         return null;
-    };
+    }
 
     /**
      * Returns a list of nodes that matches a name
@@ -884,7 +872,7 @@
      * @param {String} name the name of the node to search
      * @return {Array} a list with all the nodes with this name
      */
-    LGraph.prototype.findNodesByTitle = function(title) {
+    findNodesByTitle (title) {
         var result = [];
         for (var i = 0, l = this._nodes.length; i < l; ++i) {
             if (this._nodes[i].title == title) {
@@ -892,7 +880,7 @@
             }
         }
         return result;
-    };
+    }
 
     /**
      * Returns the top-most node in this position of the canvas
@@ -902,7 +890,7 @@
      * @param {Array} nodes_list a list with all the nodes to search from, by default is all the nodes in the graph
      * @return {LGraphNode} the node at this position or null
      */
-    LGraph.prototype.getNodeOnPos = function(x, y, nodes_list, margin) {
+    getNodeOnPos (x, y, nodes_list, margin) {
         nodes_list = nodes_list || this._nodes;
 		var nRet = null;
         for (var i = nodes_list.length - 1; i >= 0; i--) {
@@ -917,7 +905,7 @@
             }
         }
         return nRet;
-    };
+    }
 
     /**
      * Returns the top-most group in that position
@@ -926,7 +914,7 @@
      * @param {number} y the y coordinate in canvas space
      * @return {LGraphGroup} the group or null
      */
-    LGraph.prototype.getGroupOnPos = function(x, y) {
+    getGroupOnPos (x, y) {
         for (var i = this._groups.length - 1; i >= 0; i--) {
             var g = this._groups[i];
             if (g.isPointInside(x, y, 2, true)) {
@@ -934,14 +922,14 @@
             }
         }
         return null;
-    };
+    }
 
     /**
      * Checks that the node type matches the node type registered, used when replacing a nodetype by a newer version during execution
      * this replaces the ones using the old version with the new version
      * @method checkNodeTypes
      */
-    LGraph.prototype.checkNodeTypes = function() {
+    checkNodeTypes () {
         var changes = false;
         for (var i = 0; i < this._nodes.length; i++) {
             var node = this._nodes[i];
@@ -964,11 +952,9 @@
             }
         }
         this.updateExecutionOrder();
-    };
+    }
 
-    // ********** GLOBALS *****************
-
-    LGraph.prototype.onAction = function(action, param, options) {
+    onAction (action, param, options) {
         this._input_nodes = this.findNodesByClass(
             LiteGraph.GraphInput,
             this._input_nodes
@@ -982,13 +968,13 @@
             node.actionDo(action, param, options);
             break;
         }
-    };
+    }
 
-    LGraph.prototype.trigger = function(action, param) {
+    trigger (action, param) {
         if (this.onTrigger) {
             this.onTrigger(action, param);
         }
-    };
+    }
 
     /**
      * Tell this graph it has a global graph input of this type
@@ -997,7 +983,7 @@
      * @param {String} type
      * @param {*} value [optional]
      */
-    LGraph.prototype.addInput = function(name, type, value) {
+    addInput (name, type, value) {
         var input = this.inputs[name];
         if (input) {
             //already exist
@@ -1016,7 +1002,7 @@
         if (this.onInputsOutputsChange) {
             this.onInputsOutputsChange();
         }
-    };
+    }
 
     /**
      * Assign a data to the global graph input
@@ -1024,13 +1010,13 @@
      * @param {String} name
      * @param {*} data
      */
-    LGraph.prototype.setInputData = function(name, data) {
+    setInputData (name, data) {
         var input = this.inputs[name];
         if (!input) {
             return;
         }
         input.value = data;
-    };
+    }
 
     /**
      * Returns the current value of a global graph input
@@ -1038,13 +1024,13 @@
      * @param {String} name
      * @return {*} the data
      */
-    LGraph.prototype.getInputData = function(name) {
+    getInputData (name) {
         var input = this.inputs[name];
         if (!input) {
             return null;
         }
         return input.value;
-    };
+    }
 
     /**
      * Changes the name of a global graph input
@@ -1052,7 +1038,7 @@
      * @param {String} old_name
      * @param {String} new_name
      */
-    LGraph.prototype.renameInput = function(old_name, name) {
+    renameInput (old_name, name) {
         if (name == old_name) {
             return;
         }
@@ -1077,7 +1063,7 @@
         if (this.onInputsOutputsChange) {
             this.onInputsOutputsChange();
         }
-    };
+    }
 
     /**
      * Changes the type of a global graph input
@@ -1085,7 +1071,7 @@
      * @param {String} name
      * @param {String} type
      */
-    LGraph.prototype.changeInputType = function(name, type) {
+    changeInputType (name, type) {
         if (!this.inputs[name]) {
             return false;
         }
@@ -1103,7 +1089,7 @@
         if (this.onInputTypeChanged) {
             this.onInputTypeChanged(name, type);
         }
-    };
+    }
 
     /**
      * Removes a global graph input
@@ -1111,7 +1097,7 @@
      * @param {String} name
      * @param {String} type
      */
-    LGraph.prototype.removeInput = function(name) {
+    removeInput (name) {
         if (!this.inputs[name]) {
             return false;
         }
@@ -1127,7 +1113,7 @@
             this.onInputsOutputsChange();
         }
         return true;
-    };
+    }
 
     /**
      * Creates a global graph output
@@ -1136,7 +1122,7 @@
      * @param {String} type
      * @param {*} value
      */
-    LGraph.prototype.addOutput = function(name, type, value) {
+    addOutput (name, type, value) {
         this.outputs[name] = { name: name, type: type, value: value };
         this._version++;
 
@@ -1147,7 +1133,7 @@
         if (this.onInputsOutputsChange) {
             this.onInputsOutputsChange();
         }
-    };
+    }
 
     /**
      * Assign a data to the global output
@@ -1155,13 +1141,13 @@
      * @param {String} name
      * @param {String} value
      */
-    LGraph.prototype.setOutputData = function(name, value) {
+    setOutputData (name, value) {
         var output = this.outputs[name];
         if (!output) {
             return;
         }
         output.value = value;
-    };
+    }
 
     /**
      * Returns the current value of a global graph output
@@ -1169,13 +1155,13 @@
      * @param {String} name
      * @return {*} the data
      */
-    LGraph.prototype.getOutputData = function(name) {
+    getOutputData (name) {
         var output = this.outputs[name];
         if (!output) {
             return null;
         }
         return output.value;
-    };
+    }
 
     /**
      * Renames a global graph output
@@ -1183,7 +1169,7 @@
      * @param {String} old_name
      * @param {String} new_name
      */
-    LGraph.prototype.renameOutput = function(old_name, name) {
+    renameOutput (old_name, name) {
         if (!this.outputs[old_name]) {
             return false;
         }
@@ -1204,7 +1190,7 @@
         if (this.onInputsOutputsChange) {
             this.onInputsOutputsChange();
         }
-    };
+    }
 
     /**
      * Changes the type of a global graph output
@@ -1212,7 +1198,7 @@
      * @param {String} name
      * @param {String} type
      */
-    LGraph.prototype.changeOutputType = function(name, type) {
+    changeOutputType (name, type) {
         if (!this.outputs[name]) {
             return false;
         }
@@ -1230,14 +1216,14 @@
         if (this.onOutputTypeChanged) {
             this.onOutputTypeChanged(name, type);
         }
-    };
+    }
 
     /**
      * Removes a global graph output
      * @method removeOutput
      * @param {String} name
      */
-    LGraph.prototype.removeOutput = function(name) {
+    removeOutput (name) {
         if (!this.outputs[name]) {
             return false;
         }
@@ -1252,53 +1238,53 @@
             this.onInputsOutputsChange();
         }
         return true;
-    };
+    }
 
-    LGraph.prototype.triggerInput = function(name, value) {
+    triggerInput (name, value) {
         var nodes = this.findNodesByTitle(name);
         for (var i = 0; i < nodes.length; ++i) {
             nodes[i].onTrigger(value);
         }
-    };
+    }
 
-    LGraph.prototype.setCallback = function(name, func) {
+    setCallback (name, func) {
         var nodes = this.findNodesByTitle(name);
         for (var i = 0; i < nodes.length; ++i) {
             nodes[i].setTrigger(func);
         }
-    };
+    }
 
 	//used for undo, called before any change is made to the graph
-    LGraph.prototype.beforeChange = function(info) {
+    beforeChange (info) {
         if (this.onBeforeChange) {
             this.onBeforeChange(this,info);
         }
         this.sendActionToCanvas("onBeforeChange", this);
-    };
+    }
 
 	//used to resend actions, called after any change is made to the graph
-    LGraph.prototype.afterChange = function(info) {
+    afterChange (info) {
         if (this.onAfterChange) {
             this.onAfterChange(this,info);
         }
         this.sendActionToCanvas("onAfterChange", this);
-    };
+    }
 
-    LGraph.prototype.connectionChange = function(node, link_info) {
+    connectionChange (node, link_info) {
         this.updateExecutionOrder();
         if (this.onConnectionChange) {
             this.onConnectionChange(node);
         }
         this._version++;
         this.sendActionToCanvas("onConnectionChange");
-    };
+    }
 
     /**
      * returns if the graph is in live mode
      * @method isLive
      */
 
-    LGraph.prototype.isLive = function() {
+    isLive () {
         if (!this.list_of_graphcanvas) {
             return false;
         }
@@ -1310,13 +1296,13 @@
             }
         }
         return false;
-    };
+    }
 
     /**
      * clears the triggered slot animation in all links (stop visual animation)
      * @method clearTriggeredSlots
      */
-    LGraph.prototype.clearTriggeredSlots = function() {
+    clearTriggeredSlots () {
         for (var i in this.links) {
             var link_info = this.links[i];
             if (!link_info) {
@@ -1326,10 +1312,10 @@
                 link_info._last_time = 0;
             }
         }
-    };
+    }
 
     /* Called when something visually changed (not the graph!) */
-    LGraph.prototype.change = function() {
+    change () {
         if (LiteGraph.debug) {
             console.log("Graph changed");
         }
@@ -1337,18 +1323,18 @@
         if (this.on_change) {
             this.on_change(this);
         }
-    };
+    }
 
-    LGraph.prototype.setDirtyCanvas = function(fg, bg) {
+    setDirtyCanvas (fg, bg) {
         this.sendActionToCanvas("setDirty", [fg, bg]);
-    };
+    }
 
     /**
      * Destroys a link
      * @method removeLink
      * @param {Number} link_id
      */
-    LGraph.prototype.removeLink = function(link_id) {
+    removeLink (link_id) {
         var link = this.links[link_id];
         if (!link) {
             return;
@@ -1357,7 +1343,7 @@
         if (node) {
             node.disconnectInput(link.target_slot);
         }
-    };
+    }
 
     //save and recover app state ***************************************
     /**
@@ -1365,7 +1351,7 @@
      * @method serialize
      * @return {Object} value of the node
      */
-    LGraph.prototype.serialize = function() {
+    serialize () {
         var nodes_info = [];
         for (var i = 0, l = this._nodes.length; i < l; ++i) {
             nodes_info.push(this._nodes[i].serialize());
@@ -1412,7 +1398,7 @@
 			this.onSerialize(data);
 
         return data;
-    };
+    }
 
     /**
      * Configure a graph from a JSON string
@@ -1420,7 +1406,7 @@
      * @param {String} str configure a graph from a JSON string
      * @param {Boolean} returns if there was any error parsing
      */
-    LGraph.prototype.configure = function(data, keep_old) {
+    configure (data, keep_old) {
         if (!data) {
             return;
         }
@@ -1512,9 +1498,9 @@
         this._version++;
         this.setDirtyCanvas(true, true);
         return error;
-    };
+    }
 
-    LGraph.prototype.load = function(url, callback) {
+    load (url, callback) {
         var that = this;
 
 		//from file
@@ -1549,11 +1535,9 @@
         req.onerror = function(err) {
             console.error("Error loading graph:", err);
         };
-    };
+    }
 
-    LGraph.prototype.onNodeTrace = function(node, msg, color) {
+    onNodeTrace (node, msg, color) {
         //TODO
-    };
-
-})(this);
-
+    }
+}
