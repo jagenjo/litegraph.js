@@ -7355,10 +7355,6 @@ LGraphNode.prototype.executeAction = function(action)
                 }
             }
 
-            if(origin_node == null) {
-                continue;
-            }
-
             var target_node = nodes[link_info[2]];
 			if( origin_node && target_node )
 	            origin_node.connect(link_info[1], target_node, link_info[3]);
