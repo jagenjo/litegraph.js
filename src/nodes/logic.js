@@ -1,7 +1,8 @@
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
-    function Selector() {
+class Selector {
+	constructor() {
         this.addInput("sel", "number");
         this.addInput("A");
         this.addInput("B");
@@ -11,7 +12,7 @@
 
         this.selected = 0;
     }
-
+	}
     Selector.title = "Selector";
     Selector.desc = "selects an output";
 
@@ -45,7 +46,8 @@
 
     LiteGraph.registerNodeType("logic/selector", Selector);
 
-    function Sequence() {
+class Sequence {
+	constructor() {
         this.properties = {
             sequence: "A,B,C"
         };
@@ -56,7 +58,7 @@
         this.index = 0;
         this.values = this.properties.sequence.split(",");
     }
-
+	}
     Sequence.title = "Sequence";
     Sequence.desc = "select one element from a sequence from a string";
 
@@ -84,12 +86,14 @@
     LiteGraph.registerNodeType("logic/sequence", Sequence);
 	
     
-    function logicAnd(){
+class logicAnd {
+	constructor() {
         this.properties = { };
         this.addInput("a", "boolean");
         this.addInput("b", "boolean");
         this.addOutput("out", "boolean");
     }
+	}
     logicAnd.title = "AND";
     logicAnd.desc = "Return true if all inputs are true";
     logicAnd.prototype.onExecute = function() {
@@ -110,12 +114,14 @@
     LiteGraph.registerNodeType("logic/AND", logicAnd);
     
     
-    function logicOr(){
+class logicOr {
+	constructor() {
         this.properties = { };
         this.addInput("a", "boolean");
         this.addInput("b", "boolean");
         this.addOutput("out", "boolean");
     }
+	}
     logicOr.title = "OR";
     logicOr.desc = "Return true if at least one input is true";
     logicOr.prototype.onExecute = function() {
@@ -136,11 +142,13 @@
     LiteGraph.registerNodeType("logic/OR", logicOr);
     
     
-    function logicNot(){
+class logicNot {
+	constructor() {
         this.properties = { };
         this.addInput("in", "boolean");
         this.addOutput("out", "boolean");
     }
+	}
     logicNot.title = "NOT";
     logicNot.desc = "Return the logical negation";
     logicNot.prototype.onExecute = function() {
@@ -150,12 +158,14 @@
     LiteGraph.registerNodeType("logic/NOT", logicNot);
     
     
-    function logicCompare(){
+class logicCompare {
+	constructor() {
         this.properties = { };
         this.addInput("a", "boolean");
         this.addInput("b", "boolean");
         this.addOutput("out", "boolean");
     }
+	}
     logicCompare.title = "bool == bool";
     logicCompare.desc = "Compare for logical equality";
     logicCompare.prototype.onExecute = function() {
@@ -179,7 +189,8 @@
     LiteGraph.registerNodeType("logic/CompareBool", logicCompare);
     
     
-    function logicBranch(){
+class logicBranch {
+	constructor() {
         this.properties = { };
         this.addInput("onTrigger", LiteGraph.ACTION);
         this.addInput("condition", "boolean");
@@ -187,6 +198,7 @@
         this.addOutput("false", LiteGraph.EVENT);
         this.mode = LiteGraph.ON_TRIGGER;
     }
+	}
     logicBranch.title = "Branch";
     logicBranch.desc = "Branch execution on condition";
     logicBranch.prototype.onExecute = function(param, options) {
