@@ -652,11 +652,11 @@
 			};
 			var that = this;
 
-			// Object.defineProperty(this.properties, "name", {
-			//     get: function() {
+
+			//     get name() {
 			//         return that.name_in_graph;
-			//     },
-			//     set: function(v) {
+			//     }
+			//     set name(v) {
 			//         if (v == "" || v == that.name_in_graph) {
 			//             return;
 			//         }
@@ -668,15 +668,12 @@
 			//         }
 			//         that.name_widget.value = v;
 			//         that.name_in_graph = v;
-			//     },
-			//     enumerable: true
-			// });
+			//     }
 
-			// Object.defineProperty(this.properties, "type", {
-			//     get: function() {
+			//     get type() {
 			//         return that.inputs[0].type;
-			//     },
-			//     set: function(v) {
+			//     }
+			//     set type(v) {
 			//         if (v == "action" || v == "event") {
 			//             v = LiteGraph.ACTION;
 			//         }
@@ -691,9 +688,7 @@
 			//             );
 			//         }
 			//         that.type_widget.value = v || "";
-			//     },
-			//     enumerable: true
-			// });
+			//     }
 
 			this.name_widget = this.addWidget("text", "Name", this.properties.name, "name");
 			this.type_widget = this.addWidget("text", "Type", this.properties.type, "type");
