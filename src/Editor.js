@@ -98,7 +98,7 @@ class Editor {
 
 		setInterval(function() {
 			meter.querySelector(".cpuload .fgload").style.width =
-				2 * self.graph.execution_time * 90 + "px";
+				2 * (self.graph.execution_time||0) * 90 + "px";
 			if (self.graph.status == LGraph.STATUS_RUNNING) {
 				meter.querySelector(".gpuload .fgload").style.width =
 					self.graphcanvas.render_time * 10 * 90 + "px";
