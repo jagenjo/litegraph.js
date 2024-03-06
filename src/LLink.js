@@ -14,9 +14,8 @@ class LLink {
         this._data = null;
         this._pos = new Float32Array(2); //center
     }
-}
 
-    LLink.prototype.configure = function(o) {
+    configure(o) {
         if (o.constructor === Array) {
             this.id = o[0];
             this.origin_id = o[1];
@@ -32,9 +31,9 @@ class LLink {
             this.target_id = o.target_id;
             this.target_slot = o.target_slot;
         }
-    };
+    }
 
-    LLink.prototype.serialize = function() {
+    serialize() {
         return [
             this.id,
             this.origin_id,
@@ -43,8 +42,8 @@ class LLink {
             this.target_slot,
             this.type
         ];
-    };
-
+    }
+}
     LiteGraph.LLink = LLink;
 
 })(this);
