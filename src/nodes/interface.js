@@ -14,12 +14,12 @@ class WidgetButton {
         this.size = [164, 84];
         this.clicked = false;
     }
-	}
-    WidgetButton.title = "Button";
-    WidgetButton.desc = "Triggers an event";
-
-    WidgetButton.font = "Arial";
-    WidgetButton.prototype.onDrawForeground = function(ctx) {
+		
+	static title = "Button";
+	static desc = "Triggers an event";
+	static font = "Arial";
+	
+	onDrawForeground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -64,7 +64,7 @@ class WidgetButton {
         }
     };
 
-    WidgetButton.prototype.onMouseDown = function(e, local_pos) {
+	onMouseDown(e, local_pos) {
         if (
             local_pos[0] > 1 &&
             local_pos[1] > 1 &&
@@ -76,16 +76,16 @@ class WidgetButton {
             this.triggerSlot(0, this.properties.message);
             return true;
         }
-    };
+    }
 
-    WidgetButton.prototype.onExecute = function() {
+	onExecute() {
         this.setOutputData(1, this.clicked);
-    };
+    }
 
-    WidgetButton.prototype.onMouseUp = function(e) {
+	onMouseUp(e) {
         this.clicked = false;
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/button", WidgetButton);
 
 class WidgetToggle {
@@ -97,11 +97,11 @@ class WidgetToggle {
         this.properties = { font: "", value: false };
         this.size = [160, 44];
     }
-	}
-    WidgetToggle.title = "Toggle";
-    WidgetToggle.desc = "Toggles between true or false";
+		
+	static title = "Toggle";
+	static desc = "Toggles between true or false";
 
-    WidgetToggle.prototype.onDrawForeground = function(ctx) {
+	onDrawForeground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -128,22 +128,22 @@ class WidgetToggle {
         ctx.fillStyle = "#AAA";
         ctx.fillText(this.title, size * 1.2 + x, h * 0.85);
         ctx.textAlign = "left";
-    };
+    }
 
-    WidgetToggle.prototype.onAction = function(action) {
+	onAction(action) {
         this.properties.value = !this.properties.value;
         this.trigger("e", this.properties.value);
-    };
+    }
 
-    WidgetToggle.prototype.onExecute = function() {
+	onExecute() {
         var v = this.getInputData(0);
         if (v != null) {
             this.properties.value = v;
         }
         this.setOutputData(0, this.properties.value);
-    };
+    }
 
-    WidgetToggle.prototype.onMouseDown = function(e, local_pos) {
+	onMouseDown(e, local_pos) {
         if (
             local_pos[0] > 1 &&
             local_pos[1] > 1 &&
@@ -155,8 +155,8 @@ class WidgetToggle {
             this.trigger("e", this.properties.value);
             return true;
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/toggle", WidgetToggle);
 
     /* Number ****************/
@@ -171,14 +171,13 @@ class WidgetNumber {
         this._precision = 0;
         this.mouse_captured = false;
     }
-	}
-    WidgetNumber.title = "Number";
-    WidgetNumber.desc = "Widget to select number value";
+		
+	static title = "Number";
+	static desc = "Widget to select number value";
+	static pixels_threshold = 10;
+	static markers_color = "#666";
 
-    WidgetNumber.pixels_threshold = 10;
-    WidgetNumber.markers_color = "#666";
-
-    WidgetNumber.prototype.onDrawForeground = function(ctx) {
+	onDrawForeground(ctx) {
         var x = this.size[0] * 0.5;
         var h = this.size[1];
         if (h > 30) {
@@ -206,18 +205,18 @@ class WidgetNumber {
             x,
             h * 0.75
         );
-    };
+    }
 
-    WidgetNumber.prototype.onExecute = function() {
+	onExecute() {
         this.setOutputData(0, this.properties.value);
-    };
+    }
 
-    WidgetNumber.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         var t = (this.properties.step + "").split(".");
         this._precision = t.length > 1 ? t[1].length : 0;
-    };
+    }
 
-    WidgetNumber.prototype.onMouseDown = function(e, pos) {
+	onMouseDown(e, pos) {
         if (pos[1] < 0) {
             return;
         }
@@ -227,9 +226,9 @@ class WidgetNumber {
         this.mouse_captured = true;
 
         return true;
-    };
+    }
 
-    WidgetNumber.prototype.onMouseMove = function(e) {
+	onMouseMove(e) {
         if (!this.mouse_captured) {
             return;
         }
@@ -255,9 +254,9 @@ class WidgetNumber {
         this.properties.value = v;
         this.graph._version++;
         this.setDirtyCanvas(true);
-    };
+    }
 
-    WidgetNumber.prototype.onMouseUp = function(e, pos) {
+	onMouseUp(e, pos) {
         if (e.click_time < 200) {
             var steps = pos[1] > this.size[1] * 0.5 ? -1 : 1;
             this.properties.value = clamp(
@@ -273,8 +272,8 @@ class WidgetNumber {
             this.mouse_captured = false;
             this.captureInput(false);
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/number", WidgetNumber);
 
 
@@ -296,15 +295,15 @@ class WidgetCombo {
             that.triggerSlot(1, v);
 		}, { property: "value", values: this._values } );
     }
-	}
-    WidgetCombo.title = "Combo";
-    WidgetCombo.desc = "Widget to select from a list";
+		
+	static title = "Combo";
+	static desc = "Widget to select from a list";
 
-    WidgetCombo.prototype.onExecute = function() {
+	onExecute() {
         this.setOutputData( 0, this.properties.value );
-    };
+    }
 
-    WidgetCombo.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
 		if(name == "values")
 		{
 			this._values = value.split(";");
@@ -314,8 +313,8 @@ class WidgetCombo {
 		{
 			this.widget.value = value;
 		}
-	};
-
+	}
+}
     LiteGraph.registerNodeType("widget/combo", WidgetCombo);
 
 
@@ -334,12 +333,12 @@ class WidgetKnob {
         };
         this.value = -1;
     }
-	}
-    WidgetKnob.title = "Knob";
-    WidgetKnob.desc = "Circular controller";
-    WidgetKnob.size = [80, 100];
+		
+	static title = "Knob";
+	static desc = "Circular controller";
+	static size = [80, 100];
 
-    WidgetKnob.prototype.onDrawForeground = function(ctx) {
+	onDrawForeground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -416,18 +415,18 @@ class WidgetKnob {
             center_x,
             center_y + radius * 0.15
         );
-    };
+    }
 
-    WidgetKnob.prototype.onExecute = function() {
+	onExecute() {
         this.setOutputData(0, this.properties.value);
         this.boxcolor = LiteGraph.colorToString([
             this.value,
             this.value,
             this.value
         ]);
-    };
+    }
 
-    WidgetKnob.prototype.onMouseDown = function(e) {
+	onMouseDown(e) {
         this.center = [this.size[0] * 0.5, this.size[1] * 0.5 + 20];
         this.radius = this.size[0] * 0.5;
         if (
@@ -442,9 +441,9 @@ class WidgetKnob {
         this.oldmouse = [e.canvasX - this.pos[0], e.canvasY - this.pos[1]];
         this.captureInput(true);
         return true;
-    };
+    }
 
-    WidgetKnob.prototype.onMouseMove = function(e) {
+	onMouseMove(e) {
         if (!this.oldmouse) {
             return;
         }
@@ -464,22 +463,22 @@ class WidgetKnob {
             (this.properties.max - this.properties.min) * this.value;
         this.oldmouse = m;
         this.setDirtyCanvas(true);
-    };
+    }
 
-    WidgetKnob.prototype.onMouseUp = function(e) {
+	onMouseUp(e) {
         if (this.oldmouse) {
             this.oldmouse = null;
             this.captureInput(false);
         }
-    };
+    }
 
-    WidgetKnob.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         if (name == "min" || name == "max" || name == "value") {
             this.properties[name] = parseFloat(value);
             return true; //block
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/knob", WidgetKnob);
 
     //Show value inside the debug console
@@ -505,19 +504,19 @@ class WidgetSliderGUI {
         );
         this.widgets_up = true;
     }
-	}
-    WidgetSliderGUI.title = "Inner Slider";
+		
+	static title = "Inner Slider";
 
-    WidgetSliderGUI.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         if (name == "value") {
             this.slider.value = value;
         }
-    };
+    }
 
-    WidgetSliderGUI.prototype.onExecute = function() {
+	onExecute() {
         this.setOutputData(0, this.properties.value);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/internal_slider", WidgetSliderGUI);
 
     //Widget H SLIDER
@@ -528,11 +527,11 @@ class WidgetHSlider {
         this.properties = { color: "#7AF", min: 0, max: 1, value: 0.5 };
         this.value = -1;
     }
-	}
-    WidgetHSlider.title = "H.Slider";
-    WidgetHSlider.desc = "Linear slider controller";
+		
+	static title = "H.Slider";
+	static desc = "Linear slider controller";
 
-    WidgetHSlider.prototype.onDrawForeground = function(ctx) {
+	onDrawForeground(ctx) {
         if (this.value == -1) {
             this.value =
                 (this.properties.value - this.properties.min) /
@@ -549,9 +548,9 @@ class WidgetHSlider {
         ctx.beginPath();
         ctx.rect(4, 4, (this.size[0] - 8) * this.value, this.size[1] - 8);
         ctx.fill();
-    };
+    }
 
-    WidgetHSlider.prototype.onExecute = function() {
+	onExecute() {
         this.properties.value =
             this.properties.min +
             (this.properties.max - this.properties.min) * this.value;
@@ -561,9 +560,9 @@ class WidgetHSlider {
             this.value,
             this.value
         ]);
-    };
+    }
 
-    WidgetHSlider.prototype.onMouseDown = function(e) {
+	onMouseDown(e) {
         if (e.canvasY - this.pos[1] < 0) {
             return false;
         }
@@ -571,9 +570,9 @@ class WidgetHSlider {
         this.oldmouse = [e.canvasX - this.pos[0], e.canvasY - this.pos[1]];
         this.captureInput(true);
         return true;
-    };
+    }
 
-    WidgetHSlider.prototype.onMouseMove = function(e) {
+	onMouseMove(e) {
         if (!this.oldmouse) {
             return;
         }
@@ -593,17 +592,17 @@ class WidgetHSlider {
 
         this.oldmouse = m;
         this.setDirtyCanvas(true);
-    };
+    }
 
-    WidgetHSlider.prototype.onMouseUp = function(e) {
+	onMouseUp(e) {
         this.oldmouse = null;
         this.captureInput(false);
-    };
+    }
 
-    WidgetHSlider.prototype.onMouseLeave = function(e) {
+	onMouseLeave(e) {
         //this.oldmouse = null;
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/hslider", WidgetHSlider);
 
 class WidgetProgress {
@@ -612,18 +611,18 @@ class WidgetProgress {
         this.addInput("", "number");
         this.properties = { min: 0, max: 1, value: 0, color: "#AAF" };
     }
-	}
-    WidgetProgress.title = "Progress";
-    WidgetProgress.desc = "Shows data in linear progress";
+		
+	static title = "Progress";
+	static desc = "Shows data in linear progress";
 
-    WidgetProgress.prototype.onExecute = function() {
+	onExecute() {
         var v = this.getInputData(0);
         if (v != undefined) {
             this.properties["value"] = v;
         }
-    };
+    }
 
-    WidgetProgress.prototype.onDrawForeground = function(ctx) {
+	onDrawForeground(ctx) {
         //border
         ctx.lineWidth = 1;
         ctx.fillStyle = this.properties.color;
@@ -633,8 +632,8 @@ class WidgetProgress {
         v = Math.min(1, v);
         v = Math.max(0, v);
         ctx.fillRect(2, 2, (this.size[0] - 4) * v, this.size[1] - 4);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/progress", WidgetProgress);
 
 class WidgetText {
@@ -650,16 +649,16 @@ class WidgetText {
             decimals: 1
         };
     }
-	}
-    WidgetText.title = "Text";
-    WidgetText.desc = "Shows the input value";
-    WidgetText.widgets = [
+		
+	static title = "Text";
+	static desc = "Shows the input value";
+	static widgets = [
         { name: "resize", text: "Resize box", type: "button" },
         { name: "led_text", text: "LED", type: "minibutton" },
         { name: "normal_text", text: "Normal", type: "minibutton" }
     ];
 
-    WidgetText.prototype.onDrawForeground = function(ctx) {
+	onDrawForeground(ctx) {
         //ctx.fillStyle="#000";
         //ctx.fillRect(0,0,100,60);
         ctx.fillStyle = this.properties["color"];
@@ -695,17 +694,17 @@ class WidgetText {
         ctx.shadowColor = "transparent";
         this.last_ctx = ctx;
         ctx.textAlign = "left";
-    };
+    }
 
-    WidgetText.prototype.onExecute = function() {
+	onExecute() {
         var v = this.getInputData(0);
         if (v != null) {
             this.properties["value"] = v;
         }
         //this.setDirtyCanvas(true);
-    };
+    }
 
-    WidgetText.prototype.resize = function() {
+	resize() {
         if (!this.last_ctx) {
             return;
         }
@@ -724,15 +723,15 @@ class WidgetText {
         this.size[1] = 4 + lines.length * this.properties["fontsize"];
 
         this.setDirtyCanvas(true);
-    };
+    }
 
-    WidgetText.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         this.properties[name] = value;
         this.str = typeof value == "number" ? value.toFixed(3) : value;
         //this.resize();
         return true;
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/text", WidgetText);
 
 class WidgetPanel {
@@ -746,12 +745,12 @@ class WidgetPanel {
             borderRadius: 3
         };
     }
-	}
-    WidgetPanel.title = "Panel";
-    WidgetPanel.desc = "Non interactive panel";
-    WidgetPanel.widgets = [{ name: "update", text: "Update", type: "button" }];
+		
+	static title = "Panel";
+	static desc = "Non interactive panel";
+	static widgets = [{ name: "update", text: "Update", type: "button" }];
 
-    WidgetPanel.prototype.createGradient = function(ctx) {
+	createGradient(ctx) {
         if (
             this.properties["bgcolorTop"] == "" ||
             this.properties["bgcolorBottom"] == ""
@@ -763,9 +762,9 @@ class WidgetPanel {
         this.lineargradient = ctx.createLinearGradient(0, 0, 0, this.size[1]);
         this.lineargradient.addColorStop(0, this.properties["bgcolorTop"]);
         this.lineargradient.addColorStop(1, this.properties["bgcolorBottom"]);
-    };
+    }
 
-    WidgetPanel.prototype.onDrawForeground = function(ctx) {
+	onDrawForeground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -802,7 +801,7 @@ class WidgetPanel {
         ctx.fill();
         ctx.shadowColor = "transparent";
         ctx.stroke();
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("widget/panel", WidgetPanel);
 })(this);
