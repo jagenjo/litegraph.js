@@ -67,20 +67,6 @@
 
 			this._pos = new Float32Array(10, 10);
 
-			Object.defineProperty(this, "pos", {
-				set: function(v) {
-					if (!v || v.length < 2) {
-						return;
-					}
-					this._pos[0] = v[0];
-					this._pos[1] = v[1];
-				},
-				get: function() {
-					return this._pos;
-				},
-				enumerable: true
-			});
-
 			if (LiteGraph.use_uuids) {
 				this.id = LiteGraph.uuidv4();
 			}
@@ -100,7 +86,19 @@
 
 			this.flags = {};
 		}
-
+			
+		set pos(v) {
+			if (!v || v.length < 2) {
+				return;
+			}
+			this._pos[0] = v[0];
+			this._pos[1] = v[1];
+		}
+		
+		get pos() {
+			return this._pos;
+		}
+			
 		/**
 		 * configure a node from an object containing the serialized info
 		 * @method configure
