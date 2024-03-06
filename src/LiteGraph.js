@@ -173,12 +173,17 @@
                 base_class.title = classname;
             }
 
-            //extend class
-            for (var i in LGraphNode.prototype) {
-                if (!base_class.prototype[i]) {
-                    base_class.prototype[i] = LGraphNode.prototype[i];
-                }
-            }
+            // Improved means to extend class from LGraphNode.
+		const propertyDescriptors = Object.getOwnPropertyDescriptors(LiteGraph.LGraphNode.prototype);
+
+    // Iterate over each property descriptor
+    Object.keys(propertyDescriptors).forEach(propertyName => {
+        // Check if the property already exists on the target prototype
+        if (!base_class.prototype.hasOwnProperty(propertyName)) {
+            // If the property doesn't exist, copy it from the source to the target
+            Object.defineProperty(base_class.prototype, propertyName, propertyDescriptors[propertyName]);
+        }
+    });
 
             const prev = this.registered_node_types[type];
             if(prev) {
