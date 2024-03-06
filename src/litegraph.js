@@ -13630,7 +13630,9 @@ LGraphNode.prototype.executeAction = function(action)
 
     //Give a array with three values as the argument and the function will return
     //	the corresponding hex triplet.
-    function num2hex(triplet) {
+    
+
+    LiteGraph.num2hex = function(triplet) {
         var hex_alphabets = "0123456789ABCDEF";
         var hex = "#";
         var int1, int2;
@@ -13641,9 +13643,7 @@ LGraphNode.prototype.executeAction = function(action)
             hex += hex_alphabets.charAt(int1) + hex_alphabets.charAt(int2);
         }
         return hex;
-    }
-
-    LiteGraph.num2hex = num2hex;
+    };
 
     /* LiteGraph GUI elements used for canvas editing *************************************/
 
