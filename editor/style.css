@@ -34,7 +34,7 @@ h2 {
 	font-size: 18px;
 	padding: 5px;
 	/*border-radius: 5px;*/
-	width: -moz-calc( 50% - 30px);
+	width: calc( 50% - 30px);
 	min-height: 30px;
 	overflow: hidden;
 	background-color: #644;
@@ -54,8 +54,6 @@ h2 {
 }
 
 .fullscreen #content {
-	min-height: -moz-calc(100% - 80px);
-	min-height: -webkit-calc(100% - 80px);
 	min-height: calc(100% - 80px);
 }
 
@@ -87,8 +85,6 @@ h2 {
 	color: #999;
 	padding-left: 5px;
 	transition: background-color 300ms, color 300ms, padding-left 300ms;
-	-moz-transition: background-color 300ms, color 300ms, padding-left 300ms;
-	-webkit-transition: background-color 300ms, color 300ms, padding-left 300ms;
 }
 
 .item-list .item:hover {
@@ -97,8 +93,6 @@ h2 {
 	color: white;
 	padding-left: 15px;
 	transition: background-color 300ms, color 300ms, padding-left 300ms;
-	-moz-transition: background-color 300ms, color 300ms, padding-left 300ms;
-	-webkit-transition: background-color 300ms, color 300ms, padding-left 300ms;
 	cursor: pointer;
 }
 
@@ -164,18 +158,6 @@ textarea {
 	color: black;
 	background-color: red;
 	padding: 0 4px 0 4px;
-}
-
-::-webkit-scrollbar {
-    height: 12px;
-	width: 6px;
-	background: #222;
-}
-::-webkit-scrollbar-thumb {
-    background: rgba(200,200,200,0.4);
-}
-::-webkit-scrollbar-corner {
-    background: #766;
 }
 
 #editor {
