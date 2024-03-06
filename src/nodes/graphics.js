@@ -11,12 +11,12 @@ class GraphicsPlot {
         this.values = [[], [], [], []];
         this.properties = { scale: 2 };
     }
-	}
-    GraphicsPlot.title = "Plot";
-    GraphicsPlot.desc = "Plots data over time";
-    GraphicsPlot.colors = ["#FFF", "#F99", "#9F9", "#99F"];
+		
+	static title = "Plot";
+	static desc = "Plots data over time";
+	static colors = ["#FFF", "#F99", "#9F9", "#99F"];
 
-    GraphicsPlot.prototype.onExecute = function(ctx) {
+	onExecute(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -34,9 +34,9 @@ class GraphicsPlot {
                 values.shift();
             }
         }
-    };
+    }
 
-    GraphicsPlot.prototype.onDrawBackground = function(ctx) {
+	onDrawBackground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -72,8 +72,8 @@ class GraphicsPlot {
                 ctx.stroke();
             }
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/plot", GraphicsPlot);
 
 class GraphicsImage {
@@ -81,29 +81,29 @@ class GraphicsImage {
         this.addOutput("frame", "image");
         this.properties = { url: "" };
     }
-	}
-    GraphicsImage.title = "Image";
-    GraphicsImage.desc = "Image loader";
-    GraphicsImage.widgets = [{ name: "load", text: "Load", type: "button" }];
+		
+	static title = "Image";
+	static desc = "Image loader";
+	static widgets = [{ name: "load", text: "Load", type: "button" }];
 
-    GraphicsImage.supported_extensions = ["jpg", "jpeg", "png", "gif"];
+	static supported_extensions = ["jpg", "jpeg", "png", "gif"];
 
-    GraphicsImage.prototype.onAdded = function() {
+	onAdded() {
         if (this.properties["url"] != "" && this.img == null) {
             this.loadImage(this.properties["url"]);
         }
-    };
+    }
 
-    GraphicsImage.prototype.onDrawBackground = function(ctx) {
+	onDrawBackground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
         if (this.img && this.size[0] > 5 && this.size[1] > 5 && this.img.width) {
             ctx.drawImage(this.img, 0, 0, this.size[0], this.size[1]);
         }
-    };
+    }
 
-    GraphicsImage.prototype.onExecute = function() {
+	onExecute() {
         if (!this.img) {
             this.boxcolor = "#000";
         }
@@ -115,18 +115,18 @@ class GraphicsImage {
         if (this.img && this.img.dirty) {
             this.img.dirty = false;
         }
-    };
+    }
 
-    GraphicsImage.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         this.properties[name] = value;
         if (name == "url" && value != "") {
             this.loadImage(value);
         }
 
         return true;
-    };
+    }
 
-    GraphicsImage.prototype.loadImage = function(url, callback) {
+	loadImage(url, callback) {
         if (url == "") {
             this.img = null;
             return;
@@ -153,15 +153,15 @@ class GraphicsImage {
         this.img.onerror = function() {
 			console.log("error loading the image:" + url);
 		}
-    };
+    }
 
-    GraphicsImage.prototype.onWidget = function(e, widget) {
+	onWidget(e, widget) {
         if (widget.name == "load") {
             this.loadImage(this.properties["url"]);
         }
-    };
+    }
 
-    GraphicsImage.prototype.onDropFile = function(file) {
+	onDropFile(file) {
         var that = this;
         if (this._url) {
             URL.revokeObjectURL(this._url);
@@ -171,8 +171,9 @@ class GraphicsImage {
         this.loadImage(this._url, function(img) {
             that.size[1] = (img.height / img.width) * that.size[0];
         });
-    };
-
+    }
+	}
+	
     LiteGraph.registerNodeType("graphics/image", GraphicsImage);
 
 class ColorPalette {
@@ -186,11 +187,11 @@ class ColorPalette {
             colorD: "#FFFFFF"
         };
     }
-	}
-    ColorPalette.title = "Palette";
-    ColorPalette.desc = "Generates a color";
+		
+	static title = "Palette";
+	static desc = "Generates a color";
 
-    ColorPalette.prototype.onExecute = function() {
+	onExecute() {
         var c = [];
 
         if (this.properties.colorA != null) {
@@ -247,8 +248,8 @@ class ColorPalette {
 
         this.boxcolor = LiteGraph.colorToString(result);
         this.setOutputData(0, result);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("color/palette", ColorPalette);
 
 class ImageFrame {
@@ -256,26 +257,26 @@ class ImageFrame {
         this.addInput("", "image,canvas");
         this.size = [200, 200];
     }
-	}
-    ImageFrame.title = "Frame";
-    ImageFrame.desc = "Frame viewerew";
-    ImageFrame.widgets = [
+		
+	static title = "Frame";
+	static desc = "Frame viewerew";
+	static widgets = [
         { name: "resize", text: "Resize box", type: "button" },
         { name: "view", text: "View Image", type: "button" }
     ];
 
-    ImageFrame.prototype.onDrawBackground = function(ctx) {
+	onDrawBackground(ctx) {
         if (this.frame && !this.flags.collapsed) {
             ctx.drawImage(this.frame, 0, 0, this.size[0], this.size[1]);
         }
-    };
+    }
 
-    ImageFrame.prototype.onExecute = function() {
+	onExecute() {
         this.frame = this.getInputData(0);
         this.setDirtyCanvas(true);
-    };
+    }
 
-    ImageFrame.prototype.onWidget = function(e, widget) {
+	onWidget(e, widget) {
         if (widget.name == "resize" && this.frame) {
             var width = this.frame.width;
             var height = this.frame.height;
@@ -292,15 +293,15 @@ class ImageFrame {
         } else if (widget.name == "view") {
             this.show();
         }
-    };
+    }
 
-    ImageFrame.prototype.show = function() {
+	show() {
         //var str = this.canvas.toDataURL("image/png");
         if (showElement && this.frame) {
             showElement(this.frame);
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/frame", ImageFrame);
 
 class ImageFade {
@@ -313,28 +314,28 @@ class ImageFade {
         this.addOutput("", "image");
         this.properties = { fade: 0.5, width: 512, height: 512 };
     }
-	}
-    ImageFade.title = "Image fade";
-    ImageFade.desc = "Fades between images";
-    ImageFade.widgets = [
+		
+	static title = "Image fade";
+	static desc = "Fades between images";
+	static widgets = [
         { name: "resizeA", text: "Resize to A", type: "button" },
         { name: "resizeB", text: "Resize to B", type: "button" }
     ];
 
-    ImageFade.prototype.onAdded = function() {
+	onAdded() {
         this.createCanvas();
         var ctx = this.canvas.getContext("2d");
         ctx.fillStyle = "#000";
         ctx.fillRect(0, 0, this.properties["width"], this.properties["height"]);
-    };
+    }
 
-    ImageFade.prototype.createCanvas = function() {
+	createCanvas() {
         this.canvas = document.createElement("canvas");
         this.canvas.width = this.properties["width"];
         this.canvas.height = this.properties["height"];
-    };
+    }
 
-    ImageFade.prototype.onExecute = function() {
+	onExecute() {
         var ctx = this.canvas.getContext("2d");
         this.canvas.width = this.canvas.width;
 
@@ -359,8 +360,8 @@ class ImageFade {
 
         this.setOutputData(0, this.canvas);
         this.setDirtyCanvas(true);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/imagefade", ImageFade);
 
 class ImageCrop {
@@ -370,21 +371,21 @@ class ImageCrop {
         this.properties = { width: 256, height: 256, x: 0, y: 0, scale: 1.0 };
         this.size = [50, 20];
     }
-	}
-    ImageCrop.title = "Crop";
-    ImageCrop.desc = "Crop Image";
+		
+	static title = "Crop";
+	static desc = "Crop Image";
 
-    ImageCrop.prototype.onAdded = function() {
+	onAdded() {
         this.createCanvas();
-    };
+    }
 
-    ImageCrop.prototype.createCanvas = function() {
+	createCanvas() {
         this.canvas = document.createElement("canvas");
         this.canvas.width = this.properties["width"];
         this.canvas.height = this.properties["height"];
-    };
+    }
 
-    ImageCrop.prototype.onExecute = function() {
+	onExecute() {
         var input = this.getInputData(0);
         if (!input) {
             return;
@@ -404,9 +405,9 @@ class ImageCrop {
         } else {
             this.setOutputData(0, null);
         }
-    };
+    }
 
-    ImageCrop.prototype.onDrawBackground = function(ctx) {
+	onDrawBackground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -423,9 +424,9 @@ class ImageCrop {
                 this.size[1]
             );
         }
-    };
+    }
 
-    ImageCrop.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         this.properties[name] = value;
 
         if (name == "scale") {
@@ -441,8 +442,8 @@ class ImageCrop {
         this.createCanvas();
 
         return true;
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/cropImage", ImageCrop);
 
     //CANVAS stuff
@@ -456,11 +457,11 @@ class CanvasNode {
         this.canvas = document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
     }
-	}
-    CanvasNode.title = "Canvas";
-    CanvasNode.desc = "Canvas to render stuff";
+		
+	static title = "Canvas";
+	static desc = "Canvas to render stuff";
 
-    CanvasNode.prototype.onExecute = function() {
+	onExecute() {
         var canvas = this.canvas;
         var w = this.properties.width | 0;
         var h = this.properties.height | 0;
@@ -475,14 +476,14 @@ class CanvasNode {
             this.ctx.clearRect(0, 0, canvas.width, canvas.height);
         }
         this.setOutputData(0, canvas);
-    };
+    }
 
-    CanvasNode.prototype.onAction = function(action, param) {
+	onAction(action, param) {
         if (action == "clear") {
             this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/canvas", CanvasNode);
 
 class DrawImageNode {
@@ -493,11 +494,11 @@ class DrawImageNode {
         this.addInput("y", "number");
         this.properties = { x: 0, y: 0, opacity: 1 };
     }
-	}
-    DrawImageNode.title = "DrawImage";
-    DrawImageNode.desc = "Draws image into a canvas";
+		
+	static title = "DrawImage";
+	static desc = "Draws image into a canvas";
 
-    DrawImageNode.prototype.onExecute = function() {
+	onExecute() {
         var canvas = this.getInputData(0);
         if (!canvas) {
             return;
@@ -512,8 +513,8 @@ class DrawImageNode {
         var y = this.getInputOrProperty("y");
         var ctx = canvas.getContext("2d");
         ctx.drawImage(img, x, y);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/drawImage", DrawImageNode);
 
 class DrawRectangleNode {
@@ -532,11 +533,11 @@ class DrawRectangleNode {
             opacity: 1
         };
     }
-	}
-    DrawRectangleNode.title = "DrawRectangle";
-    DrawRectangleNode.desc = "Draws rectangle in canvas";
+		
+	static title = "DrawRectangle";
+	static desc = "Draws rectangle in canvas";
 
-    DrawRectangleNode.prototype.onExecute = function() {
+	onExecute() {
         var canvas = this.getInputData(0);
         if (!canvas) {
             return;
@@ -548,8 +549,8 @@ class DrawRectangleNode {
         var h = this.getInputOrProperty("h");
         var ctx = canvas.getContext("2d");
         ctx.fillRect(x, y, w, h);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/drawRectangle", DrawRectangleNode);
 
 class ImageVideo {
@@ -558,17 +559,17 @@ class ImageVideo {
         this.addOutputs([["frame", "image"], ["t", "number"], ["d", "number"]]);
         this.properties = { url: "", use_proxy: true };
     }
-	}
-    ImageVideo.title = "Video";
-    ImageVideo.desc = "Video playback";
-    ImageVideo.widgets = [
+		
+	static title = "Video";
+	static desc = "Video playback";
+	static widgets = [
         { name: "play", text: "PLAY", type: "minibutton" },
         { name: "stop", text: "STOP", type: "minibutton" },
         { name: "demo", text: "Demo video", type: "button" },
         { name: "mute", text: "Mute video", type: "button" }
     ];
 
-    ImageVideo.prototype.onExecute = function() {
+	onExecute() {
         if (!this.properties.url) {
             return;
         }
@@ -592,17 +593,17 @@ class ImageVideo {
         this.setOutputData(1, this._video.currentTime);
         this.setOutputData(2, this._video.duration);
         this.setDirtyCanvas(true);
-    };
+    }
 
-    ImageVideo.prototype.onStart = function() {
+	onStart() {
         this.play();
-    };
+    }
 
-    ImageVideo.prototype.onStop = function() {
+	onStop() {
         this.stop();
-    };
+    }
 
-    ImageVideo.prototype.loadVideo = function(url) {
+	loadVideo(url) {
         this._video_url = url;
 
 		var pos = url.substr(0,10).indexOf(":");
@@ -672,24 +673,24 @@ class ImageVideo {
         });
 
         //document.body.appendChild(this.video);
-    };
+    }
 
-    ImageVideo.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         this.properties[name] = value;
         if (name == "url" && value != "") {
             this.loadVideo(value);
         }
 
         return true;
-    };
+    }
 
-    ImageVideo.prototype.play = function() {
+	play() {
         if (this._video && this._video.videoWidth ) { //is loaded
             this._video.play();
         }
-    };
+    }
 
-    ImageVideo.prototype.playPause = function() {
+	playPause() {
         if (!this._video) {
             return;
         }
@@ -698,25 +699,25 @@ class ImageVideo {
         } else {
             this.pause();
         }
-    };
+    }
 
-    ImageVideo.prototype.stop = function() {
+	stop() {
         if (!this._video) {
             return;
         }
         this._video.pause();
         this._video.currentTime = 0;
-    };
+    }
 
-    ImageVideo.prototype.pause = function() {
+	pause() {
         if (!this._video) {
             return;
         }
         console.log("Video paused");
         this._video.pause();
-    };
+    }
 
-    ImageVideo.prototype.onWidget = function(e, widget) {
+	onWidget(e, widget) {
         /*
 	if(widget.name == "demo")
 	{
@@ -737,8 +738,8 @@ class ImageVideo {
 			this._video.muted = !this._video.muted;
 	}
 	*/
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("graphics/video", ImageVideo);
 
     // Texture Webcam *****************************************
@@ -749,12 +750,12 @@ class ImageWebcam {
         this.boxcolor = "black";
         this.frame = 0;
     }
-	}
-    ImageWebcam.title = "Webcam";
-    ImageWebcam.desc = "Webcam image";
-    ImageWebcam.is_webcam_open = false;
+		
+	static title = "Webcam";
+	static desc = "Webcam image";
+	static is_webcam_open = false;
 
-    ImageWebcam.prototype.openStream = function() {
+	openStream() {
         if (!navigator.mediaDevices.getUserMedia) {
             console.log('getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags');
             return;
@@ -780,9 +781,9 @@ class ImageWebcam {
             that.boxcolor = "red";
             that.trigger("stream_error");
         }
-    };
+    }
 
-    ImageWebcam.prototype.closeStream = function() {
+	closeStream() {
         if (this._webcam_stream) {
             var tracks = this._webcam_stream.getTracks();
             if (tracks.length) {
@@ -796,21 +797,21 @@ class ImageWebcam {
             this.boxcolor = "black";
             this.trigger("stream_closed");
         }
-    };
+    }
 
-    ImageWebcam.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         if (name == "facingMode") {
             this.properties.facingMode = value;
             this.closeStream();
             this.openStream();
         }
-    };
+    }
 
-    ImageWebcam.prototype.onRemoved = function() {
+	onRemoved() {
         this.closeStream();
-    };
+    }
 
-    ImageWebcam.prototype.streamReady = function(localMediaStream) {
+	streamReady(localMediaStream) {
         this._webcam_stream = localMediaStream;
         //this._waiting_confirmation = false;
         this.boxcolor = "green";
@@ -831,9 +832,9 @@ class ImageWebcam {
         }
 
         this.trigger("stream_ready", video);
-    };
+    }
 
-    ImageWebcam.prototype.onExecute = function() {
+	onExecute() {
         if (this._webcam_stream == null && !this._waiting_confirmation) {
             this.openStream();
         }
@@ -859,9 +860,9 @@ class ImageWebcam {
                     break;
             }
         }
-    };
+    }
 
-    ImageWebcam.prototype.getExtraMenuOptions = function(graphcanvas) {
+	getExtraMenuOptions(graphcanvas) {
         var that = this;
         var txt = !that.properties.show ? "Show Frame" : "Hide Frame";
         return [
@@ -872,9 +873,9 @@ class ImageWebcam {
                 }
             }
         ];
-    };
+    }
 
-    ImageWebcam.prototype.onDrawBackground = function(ctx) {
+	onDrawBackground(ctx) {
         if (
             this.flags.collapsed ||
             this.size[1] <= 20 ||
@@ -891,9 +892,9 @@ class ImageWebcam {
         ctx.save();
         ctx.drawImage(this._video, 0, 0, this.size[0], this.size[1]);
         ctx.restore();
-    };
+    }
 
-    ImageWebcam.prototype.onGetOutputs = function() {
+	onGetOutputs() {
         return [
             ["width", "number"],
             ["height", "number"],
@@ -901,7 +902,7 @@ class ImageWebcam {
             ["stream_closed", LiteGraph.EVENT],
             ["stream_error", LiteGraph.EVENT]
         ];
-    };
-
+    }
+}
     LiteGraph.registerNodeType("graphics/webcam", ImageWebcam);
 })(this);
