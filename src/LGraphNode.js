@@ -62,9 +62,11 @@
      * @param {String} name a name for the node
      */
 
-    function LGraphNode(title) {
+class LGraphNode {
+	constructor(title) {
         this._ctor(title);
     }
+}
 
     global.LGraphNode = LiteGraph.LGraphNode = LGraphNode;
 
