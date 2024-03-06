@@ -3,11 +3,12 @@
     var LiteGraph = global.LiteGraph;
 
     //Constant
-    function Time() {
+class Time {
+	constructor() {
         this.addOutput("in ms", "number");
         this.addOutput("in sec", "number");
     }
-
+	}
     Time.title = "Time";
     Time.desc = "Time";
 
@@ -19,7 +20,8 @@
     LiteGraph.registerNodeType("basic/time", Time);
 
     //Subgraph: a node that contains a graph
-    function Subgraph() {
+class Subgraph {
+	constructor() {
         var that = this;
         this.size = [140, 80];
         this.properties = { enabled: true };
@@ -43,7 +45,7 @@
         this.subgraph.onOutputTypeChanged = this.onSubgraphTypeChangeOutput.bind(this);
         this.subgraph.onOutputRemoved = this.onSubgraphRemovedOutput.bind(this);
     }
-
+	}
     Subgraph.title = "Subgraph";
     Subgraph.desc = "Graph inside a node";
     Subgraph.title_color = "#334";
@@ -481,7 +483,8 @@
     LiteGraph.registerNodeType("graph/subgraph", Subgraph);
 
     //Input for a subgraph
-    function GraphInput() {
+class GraphInput {
+	constructor() {
         this.addOutput("", "number");
 
         this.name_in_graph = "";
@@ -525,7 +528,7 @@
         this.widgets_up = true;
         this.size = [180, 90];
     }
-
+	}
     GraphInput.title = "Input";
     GraphInput.desc = "Input of the graph";
 
@@ -642,7 +645,8 @@
     LiteGraph.registerNodeType("graph/input", GraphInput);
 
     //Output for a subgraph
-    function GraphOutput() {
+class GraphOutput {
+	constructor() {
         this.addInput("", "");
 
         this.name_in_graph = "";
@@ -697,7 +701,7 @@
         this.widgets_up = true;
         this.size = [180, 60];
     }
-
+	}
     GraphOutput.title = "Output";
     GraphOutput.desc = "Output of the graph";
 
@@ -775,14 +779,15 @@
     LiteGraph.registerNodeType("graph/output", GraphOutput);
 
     //Constant
-    function ConstantNumber() {
+class ConstantNumber {
+	constructor() {
         this.addOutput("value", "number");
         this.addProperty("value", 1.0);
         this.widget = this.addWidget("number","value",1,"value");
         this.widgets_up = true;
         this.size = [180, 30];
     }
-
+	}
     ConstantNumber.title = "Const Number";
     ConstantNumber.desc = "Constant number";
 
@@ -809,7 +814,8 @@
 
     LiteGraph.registerNodeType("basic/const", ConstantNumber);
 
-    function ConstantBoolean() {
+class ConstantBoolean {
+	constructor() {
         this.addOutput("bool", "boolean");
         this.addProperty("value", true);
         this.widget = this.addWidget("toggle","value",true,"value");
@@ -817,7 +823,7 @@
         this.widgets_up = true;
         this.size = [140, 30];
     }
-
+	}
     ConstantBoolean.title = "Const Boolean";
     ConstantBoolean.desc = "Constant boolean";
     ConstantBoolean.prototype.getTitle = ConstantNumber.prototype.getTitle;
@@ -839,14 +845,15 @@
 
     LiteGraph.registerNodeType("basic/boolean", ConstantBoolean);
 
-    function ConstantString() {
+class ConstantString {
+	constructor() {
         this.addOutput("string", "string");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","value","","value");  //link to property value
         this.widgets_up = true;
         this.size = [180, 30];
     }
-
+	}
     ConstantString.title = "Const String";
     ConstantString.desc = "Constant string";
 
@@ -871,12 +878,13 @@
 
     LiteGraph.registerNodeType("basic/string", ConstantString);
 
-    function ConstantObject() {
+class ConstantObject {
+	constructor() {
         this.addOutput("obj", "object");
         this.size = [120, 30];
 		this._object = {};
     }
-
+	}
     ConstantObject.title = "Const Object";
     ConstantObject.desc = "Constant Object";
 
@@ -886,7 +894,8 @@
 
     LiteGraph.registerNodeType( "basic/object", ConstantObject );
 
-    function ConstantFile() {
+class ConstantFile {
+	constructor() {
         this.addInput("url", "string");
         this.addOutput("file", "string");
         this.addProperty("url", "");
@@ -894,7 +903,7 @@
         this.widget = this.addWidget("text","url","","url");
         this._data = null;
     }
-
+	}
     ConstantFile.title = "Const File";
     ConstantFile.desc = "Fetches a file from an url";
     ConstantFile["@type"] = { type: "enum", values: ["text","arraybuffer","blob","json"] };
@@ -986,7 +995,8 @@
 
 
 //to store json objects
-function JSONParse() {
+class JSONParse {
+	constructor() {
 	this.addInput("parse", LiteGraph.ACTION);
 	this.addInput("json", "string");
 	this.addOutput("done", LiteGraph.EVENT);
@@ -994,6 +1004,7 @@ function JSONParse() {
 	this.widget = this.addWidget("button","parse","",this.parse.bind(this));
 	this._str = null;
 	this._obj = null;
+}
 }
 
 JSONParse.title = "JSON Parse";
@@ -1027,7 +1038,8 @@ JSONParse.prototype.onAction = function(name) {
 LiteGraph.registerNodeType("basic/jsonparse", JSONParse);	
 
 	//to store json objects
-    function ConstantData() {
+class ConstantData {
+	constructor() {
         this.addOutput("data", "object");
         this.addProperty("value", "");
         this.widget = this.addWidget("text","json","","value");
@@ -1035,6 +1047,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
         this.size = [140, 30];
         this._value = null;
     }
+	}
 
     ConstantData.title = "Const Data";
     ConstantData.desc = "Constant Data";
@@ -1062,7 +1075,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/data", ConstantData);
 
 	//to store json objects
-    function ConstantArray() {
+class ConstantArray {
+	constructor() {
 		this._value = [];
         this.addInput("json", "");
         this.addOutput("arrayOut", "array");
@@ -1072,7 +1086,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
         this.widgets_up = true;
         this.size = [140, 50];
     }
-
+	}
     ConstantArray.title = "Const Array";
     ConstantArray.desc = "Constant Array";
 
@@ -1111,15 +1125,15 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
     LiteGraph.registerNodeType("basic/array", ConstantArray);
 
-	function SetArray()
-	{
+class SetArray {
+	constructor() {
         this.addInput("arr", "array");
         this.addInput("value", "");
         this.addOutput("arr", "array");
 		this.properties = { index: 0 };
         this.widget = this.addWidget("number","i",this.properties.index,"index",{precision: 0, step: 10, min: 0});
 	}
-
+}
     SetArray.title = "Set Array";
     SetArray.desc = "Sets index of array";
 
@@ -1137,13 +1151,14 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
     LiteGraph.registerNodeType("basic/set_array", SetArray );
 
-    function ArrayElement() {
+class ArrayElement {
+	constructor() {
         this.addInput("array", "array,table,string");
         this.addInput("index", "number");
         this.addOutput("value", "");
 		this.addProperty("index",0);
     }
-
+	}
     ArrayElement.title = "Array[i]";
     ArrayElement.desc = "Returns an element from an array";
 
@@ -1159,7 +1174,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
     LiteGraph.registerNodeType("basic/array[]", ArrayElement);
 
-    function TableElement() {
+class TableElement {
+	constructor() {
         this.addInput("table", "table");
         this.addInput("row", "number");
         this.addInput("col", "number");
@@ -1167,7 +1183,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 		this.addProperty("row",0);
 		this.addProperty("column",0);
     }
-
+	}
     TableElement.title = "Table[row][col]";
     TableElement.desc = "Returns an element from a table";
 
@@ -1190,7 +1206,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
     LiteGraph.registerNodeType("basic/table[][]", TableElement);
 
-    function ObjectProperty() {
+class ObjectProperty {
+	constructor() {
         this.addInput("obj", "object");
         this.addOutput("property", 0);
         this.addProperty("value", 0);
@@ -1199,7 +1216,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
         this.size = [140, 30];
         this._value = null;
     }
-
+	}
     ObjectProperty.title = "Object property";
     ObjectProperty.desc = "Outputs the property of an object";
 
@@ -1228,12 +1245,13 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
     LiteGraph.registerNodeType("basic/object_property", ObjectProperty);
 
-    function ObjectKeys() {
+class ObjectKeys {
+	constructor() {
         this.addInput("obj", "");
         this.addOutput("keys", "array");
         this.size = [140, 30];
     }
-
+	}
     ObjectKeys.title = "Object keys";
     ObjectKeys.desc = "Outputs an array with the keys of an object";
 
@@ -1247,15 +1265,15 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/object_keys", ObjectKeys);
 
 
-	function SetObject()
-	{
+class SetObject {
+	constructor() {
         this.addInput("obj", "");
         this.addInput("value", "");
         this.addOutput("obj", "");
 		this.properties = { property: "" };
         this.name_widget = this.addWidget("text","prop.",this.properties.property,"property");
 	}
-
+}
     SetObject.title = "Set Object";
     SetObject.desc = "Adds propertiesrty to object";
 
@@ -1274,7 +1292,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/set_object", SetObject );
 
 
-    function MergeObjects() {
+class MergeObjects {
+	constructor() {
         this.addInput("A", "object");
         this.addInput("B", "object");
         this.addOutput("out", "object");
@@ -1285,7 +1304,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 		});
 		this.size = this.computeSize();
     }
-
+	}
     MergeObjects.title = "Merge Objects";
     MergeObjects.desc = "Creates an object copying properties from others";
 
@@ -1305,14 +1324,15 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/merge_objects", MergeObjects );
 
     //Store as variable
-    function Variable() {
+class Variable {
+	constructor() {
         this.size = [60, 30];
         this.addInput("in");
         this.addOutput("out");
 		this.properties = { varname: "myname", container: Variable.LITEGRAPH };
         this.value = null;
     }
-
+	}
     Variable.title = "Variable";
     Variable.desc = "store/read variable value";
 
@@ -1387,7 +1407,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
         "boolean"
     );
 
-	function DownloadData() {
+class DownloadData {
+	constructor() {
         this.size = [60, 30];
         this.addInput("data", 0 );
         this.addInput("download", LiteGraph.ACTION );
@@ -1400,7 +1421,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 			that.downloadAsFile();
 		});
     }
-
+	}
     DownloadData.title = "Download";
     DownloadData.desc = "Download some data";
 
@@ -1450,12 +1471,13 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
 
     //Watch a value in the editor
-    function Watch() {
+class Watch {
+	constructor() {
         this.size = [60, 30];
         this.addInput("value", 0, { label: "" });
         this.value = 0;
     }
-
+	}
     Watch.title = "Watch";
     Watch.desc = "Show value of input";
 
@@ -1497,12 +1519,13 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/watch", Watch);
 
     //in case one type doesnt match other type but you want to connect them anyway
-    function Cast() {
+class Cast {
+	constructor() {
         this.addInput("in", 0);
         this.addOutput("out", 0);
         this.size = [40, 30];
     }
-
+	}
     Cast.title = "Cast";
     Cast.desc = "Allows to connect different types";
 
@@ -1513,14 +1536,15 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/cast", Cast);
 
     //Show value inside the debug console
-    function Console() {
+class Console {
+	constructor() {
         this.mode = LiteGraph.ON_EVENT;
         this.size = [80, 30];
         this.addProperty("msg", "");
         this.addInput("log", LiteGraph.EVENT);
         this.addInput("msg", 0);
     }
-
+	}
     Console.title = "Console";
     Console.desc = "Show value inside the console";
 
@@ -1559,7 +1583,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/console", Console);
 
     //Show value inside the debug console
-    function Alert() {
+class Alert {
+	constructor() {
         this.mode = LiteGraph.ON_EVENT;
         this.addProperty("msg", "");
         this.addInput("", LiteGraph.EVENT);
@@ -1568,7 +1593,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
         this.widgets_up = true;
         this.size = [200, 30];
     }
-
+	}
     Alert.title = "Alert";
     Alert.desc = "Show an alert window";
     Alert.color = "#510";
@@ -1587,7 +1612,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/alert", Alert);
 
     //Execites simple code
-    function NodeScript() {
+class NodeScript {
+	constructor() {
         this.size = [60, 30];
         this.addProperty("onExecute", "return A;");
         this.addInput("A", 0);
@@ -1597,7 +1623,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
         this._func = null;
         this.data = {};
     }
-
+	}
     NodeScript.prototype.onConfigure = function(o) {
         if (o.properties.onExecute && LiteGraph.allow_scripts)
             this.compileCode(o.properties.onExecute);
@@ -1671,7 +1697,8 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
     LiteGraph.registerNodeType("basic/script", NodeScript);
     
     
-    function GenericCompare() {
+class GenericCompare {
+	constructor() {
         this.addInput("A", 0);
         this.addInput("B", 0);
         this.addOutput("true", "boolean");
@@ -1683,7 +1710,7 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
         this.size = [80, 60];
     }
-
+	}
     GenericCompare.values = ["==", "!="]; //[">", "<", "==", "!=", "<=", ">=", "||", "&&" ];
     GenericCompare["@OP"] = {
         type: "enum",
