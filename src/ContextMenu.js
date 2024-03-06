@@ -12,7 +12,8 @@
      * - ignore_item_callbacks: ignores the callback inside the item, it just calls the options.callback
      * - event: you can pass a MouseEvent, this way the ContextMenu appears in that position
      */
-    function ContextMenu(values, options) {
+class ContextMenu {
+	constructor(values, options) {
         options = options || {};
         this.options = options;
         var that = this;
@@ -197,6 +198,7 @@
             root.style.transform = "scale(" + options.scale + ")";
         }
     }
+}
 
     ContextMenu.prototype.addItem = function(name, value, options) {
         var that = this;
