@@ -8054,7 +8054,7 @@ class LGraphCanvas {
         var slot = null;
         if (node) {
             slot = node.getSlotInPosition(event.canvasX, event.canvasY);
-				LGraphNode.active_node = node;
+				LGraphCanvas.active_node = node;
         }
 
         if (slot) {
