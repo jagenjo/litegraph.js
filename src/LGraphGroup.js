@@ -1,9 +1,11 @@
 
 (function(global) {
 
-    function LGraphGroup(title) {
+class LGraphGroup {
+	constructor(title) {
         this._ctor(title);
     }
+}
 
     global.LGraphGroup = LiteGraph.LGraphGroup = LGraphGroup;
 
