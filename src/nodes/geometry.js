@@ -20,7 +20,8 @@
 		return (Math.random() * 100000)|0;
 	}
 
-	function LGraphPoints3D() {
+class LGraphPoints3D {
+	constructor() {
 
 		this.addInput("obj", "");
 		this.addInput("radius", "number");
@@ -52,7 +53,7 @@
 		this._old_obj = null;
 		this._last_radius = null;
 	}
-
+}
 	global.LGraphPoints3D = LGraphPoints3D;
 
 	LGraphPoints3D.RECTANGLE = 1;
@@ -507,7 +508,8 @@
 
 
 
-	function LGraphPointsToInstances() {
+class LGraphPointsToInstances {
+	constructor() {
 		this.addInput("points", "geometry");
 		this.addOutput("instances", "[mat4]");
 		this.properties = {
@@ -519,7 +521,7 @@
 		this.matrices = [];
 		this.first_time = true;
 	}
-
+}
 	LGraphPointsToInstances.NORMAL = 0;
 	LGraphPointsToInstances.VERTICAL = 1;
 	LGraphPointsToInstances.SPHERICAL = 2;
@@ -646,7 +648,8 @@
 	LiteGraph.registerNodeType( "geometry/points_to_instances", LGraphPointsToInstances );
 
 
-	function LGraphGeometryTransform() {
+class LGraphGeometryTransform {
+	constructor() {
 		this.addInput("in", "geometry,[mat4]");
 		this.addInput("mat4", "mat4");
 		this.addOutput("out", "geometry");
@@ -665,7 +668,7 @@
 
 		this.must_update = true;
 	}
-
+}
 	LGraphGeometryTransform.title = "Transform";
 
 	LGraphGeometryTransform.prototype.onExecute = function() {
@@ -771,7 +774,8 @@
 	LiteGraph.registerNodeType( "geometry/transform", LGraphGeometryTransform );
 
 
-	function LGraphGeometryPolygon() {
+class LGraphGeometryPolygon {
+	constructor() {
 		this.addInput("sides", "number");
 		this.addInput("radius", "number");
 		this.addOutput("out", "geometry");
@@ -788,7 +792,7 @@
 
 		this.last_info = { sides: -1, radius: -1 };
 	}
-
+}
 	LGraphGeometryPolygon.title = "Polygon";
 
 	LGraphGeometryPolygon.prototype.onExecute = function() {
@@ -845,7 +849,8 @@
 	LiteGraph.registerNodeType( "geometry/polygon", LGraphGeometryPolygon );
 
 
-	function LGraphGeometryExtrude() {
+class LGraphGeometryExtrude {
+	constructor() {
 
 		this.addInput("", "geometry");
 		this.addOutput("", "geometry");
@@ -855,7 +860,7 @@
 		this._last_geo_version = -1;
 		this._must_update = true;
 	}
-
+}
 	LGraphGeometryExtrude.title = "extrude";
 
 	LGraphGeometryExtrude.prototype.onPropertyChanged = function(name, value)
@@ -934,7 +939,8 @@
 	LiteGraph.registerNodeType( "geometry/extrude", LGraphGeometryExtrude );
 
 
-	function LGraphGeometryEval() {
+class LGraphGeometryEval {
+	constructor() {
 		this.addInput("in", "geometry");
 		this.addOutput("out", "geometry");
 
@@ -951,7 +957,7 @@
 		this.vertices = null;
 		this.func = null;
 	}
-
+}
 	LGraphGeometryEval.title = "geoeval";
 	LGraphGeometryEval.desc = "eval code";
 
@@ -1055,7 +1061,8 @@
 	LiteGraph.registerNodeType( "geometry/eval", LGraphGeometryEval );
 
 /*
-function LGraphGeometryDisplace() {
+class LGraphGeometryDisplace {
+	constructor() {
 		this.addInput("in", "geometry");
 		this.addInput("img", "image");
 		this.addOutput("out", "geometry");
@@ -1071,7 +1078,7 @@ function LGraphGeometryDisplace() {
 
 		this.vertices = null;
 	}
-
+}
 	LGraphGeometryDisplace.title = "displace";
 	LGraphGeometryDisplace.desc = "displace points";
 
@@ -1122,7 +1129,8 @@ function LGraphGeometryDisplace() {
 	LiteGraph.registerNodeType( "geometry/displace", LGraphGeometryDisplace );
 */
 
-	function LGraphConnectPoints() {
+class LGraphConnectPoints {
+	constructor() {
 		this.addInput("in", "geometry");
 		this.addOutput("out", "geometry");
 
@@ -1138,7 +1146,7 @@ function LGraphGeometryDisplace() {
 		this.my_version = 1;
 		this.must_update = true;
 	}
-
+}
 	LGraphConnectPoints.title = "connect points";
 	LGraphConnectPoints.desc = "adds indices between near points";
 
@@ -1211,14 +1219,15 @@ function LGraphGeometryDisplace() {
     if (typeof GL == "undefined") //LiteGL RELATED **********************************************
 		return;
 
-	function LGraphToGeometry() {
+class LGraphToGeometry {
+	constructor() {
 		this.addInput("mesh", "mesh");
 		this.addOutput("out", "geometry");
 
 		this.geometry = {};
 		this.last_mesh = null;
 	}
-
+}
 	LGraphToGeometry.title = "to geometry";
 	LGraphToGeometry.desc = "converts a mesh to geometry";
 
@@ -1249,14 +1258,15 @@ function LGraphGeometryDisplace() {
 
 	LiteGraph.registerNodeType( "geometry/toGeometry", LGraphToGeometry );
 
-	function LGraphGeometryToMesh() {
+class LGraphGeometryToMesh {
+	constructor() {
 		this.addInput("in", "geometry");
 		this.addOutput("mesh", "mesh");
 		this.properties = {};
 		this.version = -1;
 		this.mesh = null;
 	}
-
+}
 	LGraphGeometryToMesh.title = "Geo to Mesh";
 
 	LGraphGeometryToMesh.prototype.updateMesh = function(geometry)
@@ -1318,7 +1328,8 @@ function LGraphGeometryDisplace() {
 
 	LiteGraph.registerNodeType( "geometry/toMesh", LGraphGeometryToMesh );
 
-	function LGraphRenderMesh() {
+class LGraphRenderMesh {
+	constructor() {
 		this.addInput("mesh", "mesh");
 		this.addInput("mat4", "mat4");
 		this.addInput("tex", "texture");
@@ -1338,7 +1349,7 @@ function LGraphGeometryDisplace() {
 			u_model: this.model_matrix
 		};
 	}
-
+}
 	LGraphRenderMesh.title = "Render Mesh";
 	LGraphRenderMesh.desc = "renders a mesh flat";
 
@@ -1422,7 +1433,8 @@ function LGraphGeometryDisplace() {
 	//**************************
 
 
-	function LGraphGeometryPrimitive() {
+class LGraphGeometryPrimitive {
+	constructor() {
 		this.addInput("size", "number");
 		this.addOutput("out", "mesh");
 		this.properties = { type: 1, size: 1, subdivisions: 32 };
@@ -1430,7 +1442,7 @@ function LGraphGeometryDisplace() {
 		this.version = (Math.random() * 100000)|0;
 		this.last_info = { type: -1, size: -1, subdivisions: -1 };
 	}
-
+}
 	LGraphGeometryPrimitive.title = "Primitive";
 
 	LGraphGeometryPrimitive.VALID = { "CUBE":1, "PLANE":2, "CYLINDER":3, "SPHERE":4, "CIRCLE":5, "HEMISPHERE":6, "ICOSAHEDRON":7, "CONE":8, "QUAD":9 };
@@ -1496,7 +1508,8 @@ function LGraphGeometryDisplace() {
 	LiteGraph.registerNodeType( "geometry/mesh_primitive", LGraphGeometryPrimitive );
 
 
-	function LGraphRenderPoints() {
+class LGraphRenderPoints {
+	constructor() {
 		this.addInput("in", "geometry");
 		this.addInput("mat4", "mat4");
 		this.addInput("tex", "texture");
@@ -1522,7 +1535,7 @@ function LGraphGeometryDisplace() {
 		this.version = -1;
 		this.mesh = null;
 	}
-
+}
 	LGraphRenderPoints.title = "renderPoints";
 	LGraphRenderPoints.desc = "render points with a texture";
 
@@ -1702,7 +1715,8 @@ function LGraphGeometryDisplace() {
 
 	//based on https://inconvergent.net/2019/depth-of-field/
 	/*
-	function LGraphRenderGeometryDOF() {
+class LGraphRenderGeometryDOF {
+	constructor() {
 		this.addInput("in", "geometry");
 		this.addInput("mat4", "mat4");
 		this.addInput("tex", "texture");
@@ -1729,7 +1743,7 @@ function LGraphGeometryDisplace() {
 		this.version = -1;
 		this.mesh = null;
 	}
-
+}
 	LGraphRenderGeometryDOF.widgets_info = {
 		color: { widget: "color" }
 	};
