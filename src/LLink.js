@@ -2,7 +2,8 @@
 (function(global) {
 
     //this is the class in charge of storing link information
-    function LLink(id, type, origin_id, origin_slot, target_id, target_slot) {
+class LLink {
+	constructor(id, type, origin_id, origin_slot, target_id, target_slot) {
         this.id = id;
         this.type = type;
         this.origin_id = origin_id;
@@ -13,6 +14,7 @@
         this._data = null;
         this._pos = new Float32Array(2); //center
     }
+}
 
     LLink.prototype.configure = function(o) {
         if (o.constructor === Array) {
