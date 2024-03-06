@@ -18,17 +18,17 @@ class LGWebSocket {
         this._last_sent_data = [];
         this._last_received_data = [];
     }
-	}
-    LGWebSocket.title = "WebSocket";
-    LGWebSocket.desc = "Send data through a websocket";
+		
+	static title = "WebSocket";
+	static desc = "Send data through a websocket";
 
-    LGWebSocket.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         if (name == "url") {
             this.connectSocket();
         }
-    };
+    }
 
-    LGWebSocket.prototype.onExecute = function() {
+	onExecute() {
         if (!this._ws && this.properties.url) {
             this.connectSocket();
         }
@@ -71,9 +71,9 @@ class LGWebSocket {
         if (this.boxcolor == "#AFA") {
             this.boxcolor = "#6C6";
         }
-    };
+    }
 
-    LGWebSocket.prototype.connectSocket = function() {
+	connectSocket() {
         var that = this;
         var url = this.properties.url;
         if (url.substr(0, 2) != "ws") {
@@ -117,16 +117,16 @@ class LGWebSocket {
             console.log("connection closed");
             that.boxcolor = "#000";
         };
-    };
+    }
 
-    LGWebSocket.prototype.send = function(data) {
+	send(data) {
         if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
             return;
         }
         this._ws.send(JSON.stringify({ type: 1, msg: data }));
-    };
+    }
 
-    LGWebSocket.prototype.onAction = function(action, param) {
+	onAction(action, param) {
         if (!this._ws || this._ws.readyState != WebSocket.OPEN) {
             return;
         }
@@ -136,16 +136,16 @@ class LGWebSocket {
             action: action,
             data: param
         });
-    };
+    }
 
-    LGWebSocket.prototype.onGetInputs = function() {
+	onGetInputs() {
         return [["in", 0]];
-    };
+    }
 
-    LGWebSocket.prototype.onGetOutputs = function() {
+	onGetOutputs() {
         return [["out", 0]];
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("network/websocket", LGWebSocket);
 
     //It is like a websocket but using the SillyServer.js server that bounces packets back to all clients connected:
@@ -185,25 +185,25 @@ class LGSillyClient {
 		if(typeof(SillyClient) == "undefined")
 			console.warn("remember to add SillyClient.js to your project: https://tamats.com/projects/sillyserver/src/sillyclient.js");
     }
-	}
-    LGSillyClient.title = "SillyClient";
-    LGSillyClient.desc = "Connects to SillyServer to broadcast messages";
+		
+	static title = "SillyClient";
+	static desc = "Connects to SillyServer to broadcast messages";
 
-    LGSillyClient.prototype.onPropertyChanged = function(name, value) {
+	onPropertyChanged(name, value) {
         if (name == "room") {
             this.room_widget.value = value;
         }
         this.connectSocket();
-    };
+    }
 
-    LGSillyClient.prototype.setRoom = function(room_name) {
+	setRoom(room_name) {
         this.properties.room = room_name;
         this.room_widget.value = room_name;
         this.connectSocket();
-    };
+    }
 
     //force label names
-    LGSillyClient.prototype.onDrawForeground = function() {
+	onDrawForeground() {
         for (var i = 1; i < this.inputs.length; ++i) {
             var slot = this.inputs[i];
             slot.label = "in_" + i;
@@ -212,9 +212,9 @@ class LGSillyClient {
             var slot = this.outputs[i];
             slot.label = "out_" + i;
         }
-    };
+    }
 
-    LGSillyClient.prototype.onExecute = function() {
+	onExecute() {
         if (!this._server || !this._server.is_connected) {
             return;
         }
@@ -271,9 +271,9 @@ class LGSillyClient {
         if (this.boxcolor == "#AFA") {
             this.boxcolor = "#6C6";
         }
-    };
+    }
 
-    LGSillyClient.prototype.connectSocket = function() {
+	connectSocket() {
         var that = this;
         if (typeof SillyClient == "undefined") {
             if (!this._error) {
@@ -339,30 +339,30 @@ class LGSillyClient {
             }
             this._final_url = this.properties.url + "/" + this.properties.room;
         }
-    };
+    }
 
-    LGSillyClient.prototype.send = function(data) {
+	send(data) {
         if (!this._server || !this._server.is_connected) {
             return;
         }
         this._server.sendMessage({ type: 1, data: data });
-    };
+    }
 
-    LGSillyClient.prototype.onAction = function(action, param) {
+	onAction(action, param) {
         if (!this._server || !this._server.is_connected) {
             return;
         }
         this._server.sendMessage({ type: 1, action: action, data: param });
-    };
+    }
 
-    LGSillyClient.prototype.onGetInputs = function() {
+	onGetInputs() {
         return [["in", 0]];
-    };
+    }
 
-    LGSillyClient.prototype.onGetOutputs = function() {
+	onGetOutputs() {
         return [["out", 0]];
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("network/sillyclient", LGSillyClient);
 
 //HTTP Request
@@ -378,12 +378,11 @@ class HTTPRequestNode {
 	this._data = null;
 	this._fetching = null;
 }
-}
-HTTPRequestNode.title = "HTTP Request";
-HTTPRequestNode.desc = "Fetch data through HTTP";
 
-HTTPRequestNode.prototype.fetch = function()
-{
+	static title = "HTTP Request";
+	static desc = "Fetch data through HTTP";
+
+	fetch(){
 	var url = this.properties.url;
 	if(!url)
 		return;
@@ -410,20 +409,19 @@ HTTPRequestNode.prototype.fetch = function()
 	});
 }
 
-HTTPRequestNode.prototype.onAction = function(evt)
-{
+	onAction(evt){
 	if(evt == "request")
 		this.fetch();
 }
 
-HTTPRequestNode.prototype.onExecute = function() {
+	onExecute() {
 	this.setOutputData(1, this._data);
-};
-
-HTTPRequestNode.prototype.onGetOutputs = function() {
-	return [["error",LiteGraph.EVENT]];
 }
 
+	onGetOutputs() {
+	return [["error",LiteGraph.EVENT]];
+}
+}
 LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
 
 
