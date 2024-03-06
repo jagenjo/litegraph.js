@@ -13573,7 +13573,7 @@ LGraphNode.prototype.executeAction = function(action)
     LiteGraph.growBounding = growBounding;
 
     //point inside bounding box
-    function isInsideBounding(p, bb) {
+    LiteGraph.isInsideBounding = function(p, bb) {
         if (
             p[0] < bb[0][0] ||
             p[1] < bb[0][1] ||
@@ -13583,8 +13583,7 @@ LGraphNode.prototype.executeAction = function(action)
             return false;
         }
         return true;
-    }
-    LiteGraph.isInsideBounding = isInsideBounding;
+    };
 
     //bounding overlap, format: [ startx, starty, width, height ]
     LiteGraph.overlapBounding = function(a, b) {
@@ -13602,7 +13601,7 @@ LGraphNode.prototype.executeAction = function(action)
             return false;
         }
         return true;
-    }
+    };
 
     //Convert a hex value to its decimal value - the inputted hex must be in the
     //	format of a hex triplet - the kind we use for HTML colours. The function
