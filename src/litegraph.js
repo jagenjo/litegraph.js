@@ -13516,15 +13516,14 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
     //API *************************************************
-    function compareObjects(a, b) {
+    LiteGraph.compareObjects = function(a, b) {
         for (var i in a) {
             if (a[i] != b[i]) {
                 return false;
             }
         }
         return true;
-    }
-    LiteGraph.compareObjects = compareObjects;
+    };
 
     LiteGraph.distance = function(a, b) {
         return Math.sqrt(
