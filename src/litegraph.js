@@ -13533,7 +13533,7 @@ LGraphNode.prototype.executeAction = function(action)
     }
     LiteGraph.distance = distance;
 
-    function colorToString(c) {
+    LiteGraph.colorToString = function(c) {
         return (
             "rgba(" +
             Math.round(c[0] * 255).toFixed() +
@@ -13545,8 +13545,7 @@ LGraphNode.prototype.executeAction = function(action)
             (c.length == 4 ? c[3].toFixed(2) : "1.0") +
             ")"
         );
-    }
-    LiteGraph.colorToString = colorToString;
+    };
 
     LiteGraph.isInsideRectangle = function(x, y, left, top, width, height) {
         if (left < x && left + width > x && top < y && top + height > y) {

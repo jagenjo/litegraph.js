@@ -242,7 +242,7 @@
             result[i] /= 255;
         }
 
-        this.boxcolor = colorToString(result);
+        this.boxcolor = LiteGraph.colorToString(result);
         this.setOutputData(0, result);
     };
 
