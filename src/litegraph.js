@@ -3930,7 +3930,7 @@
             margin_top = 0;
         }
         if (this.flags && this.flags.collapsed) {
-            //if ( distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
+            //if ( LiteGraph.distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
             if (
                 LiteGraph.isInsideRectangle(
                     x,
@@ -6265,7 +6265,7 @@ LGraphNode.prototype.executeAction = function(action)
 							this.dragging_rectangle = null;
 						}
 
-						var dist = distance( [e.canvasX, e.canvasY], [ this.selected_group.pos[0] + this.selected_group.size[0], this.selected_group.pos[1] + this.selected_group.size[1] ] );
+						var dist = LiteGraph.distance( [e.canvasX, e.canvasY], [ this.selected_group.pos[0] + this.selected_group.size[0], this.selected_group.pos[1] + this.selected_group.size[1] ] );
 						if (dist * this.ds.scale < 10) {
 							this.selected_group_resizing = true;
 						} else {
@@ -9521,7 +9521,7 @@ LGraphNode.prototype.executeAction = function(action)
         start_dir = start_dir || LiteGraph.RIGHT;
         end_dir = end_dir || LiteGraph.LEFT;
 
-        var dist = distance(a, b);
+        var dist = LiteGraph.distance(a, b);
 
         if (this.render_connections_border && this.ds.scale > 0.6) {
             ctx.lineWidth = this.connections_width + 4;
@@ -9775,7 +9775,7 @@ LGraphNode.prototype.executeAction = function(action)
         start_dir = start_dir || LiteGraph.RIGHT;
         end_dir = end_dir || LiteGraph.LEFT;
 
-        var dist = distance(a, b);
+        var dist = LiteGraph.distance(a, b);
         var p0 = a;
         var p1 = [a[0], a[1]];
         var p2 = [b[0], b[1]];
@@ -13526,12 +13526,11 @@ LGraphNode.prototype.executeAction = function(action)
     }
     LiteGraph.compareObjects = compareObjects;
 
-    function distance(a, b) {
+    LiteGraph.distance = function(a, b) {
         return Math.sqrt(
             (b[0] - a[0]) * (b[0] - a[0]) + (b[1] - a[1]) * (b[1] - a[1])
         );
-    }
-    LiteGraph.distance = distance;
+    };
 
     LiteGraph.colorToString = function(c) {
         return (
