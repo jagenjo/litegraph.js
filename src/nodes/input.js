@@ -1,7 +1,8 @@
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
-    function GamepadInput() {
+class GamepadInput {
+	constructor() {
         this.addOutput("left_x_axis", "number");
         this.addOutput("left_y_axis", "number");
         this.addOutput("button_pressed", LiteGraph.EVENT);
@@ -13,7 +14,7 @@
         this._previous_buttons = new Uint8Array(17);
         this._current_buttons = new Uint8Array(17);
     }
-
+	}
     GamepadInput.title = "Gamepad";
     GamepadInput.desc = "gets the input of the gamepad";
 
