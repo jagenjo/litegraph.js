@@ -3,8 +3,10 @@ class Editor {
 	constructor(container_id, options) {
 		options = options || {};
 
-		//fill container
-		var html = `
+		var root = document.createElement("div");
+		this.root = root;
+		root.className = "litegraph litegraph-editor";
+		root.innerHTML = `
 		<div class="header">
 			<div class="tools tools-left"></div>
 			<div class="tools tools-right"></div>
@@ -18,11 +20,6 @@ class Editor {
 			<div class="tools tools-left"></div>
 			<div class="tools tools-right"></div>
 		</div>`;
-
-		var root = document.createElement("div");
-		this.root = root;
-		root.className = "litegraph litegraph-editor";
-		root.innerHTML = html;
 
 		this.tools = root.querySelector(".tools");
 		this.content = root.querySelector(".content");
@@ -94,8 +91,7 @@ class Editor {
 	addLoadCounter() {
 		var meter = document.createElement("div");
 		meter.className = "headerpanel loadmeter toolbar-widget";
-
-		var html = `
+		meter.innerHTML = `
 		<div class="cpuload">
 			<strong>CPU</strong>
 			<div class="bgload">
@@ -108,8 +104,7 @@ class Editor {
 				<div class="fgload"></div>
 			</div>
 		</div>`;
-
-		meter.innerHTML = html;
+		
 		this.root.querySelector(".header .tools-left").appendChild(meter);
 		var self = this;
 
