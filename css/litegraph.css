@@ -3,8 +3,6 @@
 .lgraphcanvas {
     /*cursor: crosshair;*/
     user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
 	outline: none;
     font-family: Tahoma, sans-serif;
 }
@@ -63,8 +61,6 @@
     padding-left: 10px;
     padding-right: 10px;
     user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
     cursor: pointer;
 }
 
@@ -92,8 +88,6 @@
     padding: 0 0 0 4px;
     margin: 2px;
     padding-left: 2px;
-    -moz-user-select: none;
-    -webkit-user-select: none;
     user-select: none;
     cursor: pointer;
 }
@@ -482,7 +476,6 @@
 	margin-top: 2px;
 	margin-right: 4px;
     transition: background-color 0.1s ease 0s;
-    -moz-transition: background-color 0.1s ease 0s;
 }
 
 .litegraph .bullet_icon:hover {
@@ -510,8 +503,6 @@
     margin: 2px;
     padding-left: 20px;
     user-select: none;
-    -moz-user-select: none;
-    -webkit-user-select: none;
     transition: all linear 0.3s;
 }
 
@@ -538,8 +529,6 @@
     border-bottom: 1px solid #666;
     height: 1px;
     width: calc(100% - 20px);
-    -moz-width: calc(100% - 20px);
-    -webkit-width: calc(100% - 20px);
 }
 
 .graphmenu-entry .property_name {
