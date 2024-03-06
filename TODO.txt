@@ -1,5 +1,4 @@
 
-* Convert nodes/* to ES6 classes, perform no other upgrades.
 * Fix editor/js/* as necessary
 * Fix editor/editor_mobile.html
 * Eliminate references to jquery?
