@@ -2,7 +2,8 @@
 (function(global) {
 
     //Scale and Offset
-    function DragAndScale(element, skip_events) {
+class DragAndScale {
+	constructor(element, skip_events) {
         this.offset = new Float32Array([0, 0]);
         this.scale = 1;
         this.max_scale = 10;
@@ -20,6 +21,7 @@
             }
         }
     }
+}
 
     LiteGraph.DragAndScale = DragAndScale;
 
