@@ -2,8 +2,8 @@
     var LiteGraph = global.LiteGraph;
 
 
-	function Math3DMat4()
-	{
+class Math3DMat4 {
+	constructor() {
         this.addInput("T", "vec3");
         this.addInput("R", "vec3");
         this.addInput("S", "vec3");
@@ -17,7 +17,7 @@
 		this._result = mat4.create();
 		this._must_update = true;
 	}
-
+}
 	Math3DMat4.title = "mat4";
 	Math3DMat4.temp_quat = new Float32Array([0,0,0,1]);
 	Math3DMat4.temp_mat4 = new Float32Array(16);
@@ -65,14 +65,15 @@
     LiteGraph.registerNodeType("math3d/mat4", Math3DMat4);
 
     //Math 3D operation
-    function Math3DOperation() {
+class Math3DOperation {
+	constructor() {
         this.addInput("A", "number,vec3");
         this.addInput("B", "number,vec3");
         this.addOutput("=", "number,vec3");
         this.addProperty("OP", "+", "enum", { values: Math3DOperation.values });
 		this._result = vec3.create();
     }
-
+	}
     Math3DOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min","dot","cross"];
 
     LiteGraph.registerSearchboxExtra("math3d/operation", "CROSS()", {
@@ -175,14 +176,15 @@
 
     LiteGraph.registerNodeType("math3d/operation", Math3DOperation);
 
-    function Math3DVec3Scale() {
+class Math3DVec3Scale {
+	constructor() {
         this.addInput("in", "vec3");
         this.addInput("f", "number");
         this.addOutput("out", "vec3");
         this.properties = { f: 1 };
         this._data = new Float32Array(3);
     }
-
+	}
     Math3DVec3Scale.title = "vec3_scale";
     Math3DVec3Scale.desc = "scales the components of a vec3";
 
@@ -205,11 +207,12 @@
 
     LiteGraph.registerNodeType("math3d/vec3-scale", Math3DVec3Scale);
 
-    function Math3DVec3Length() {
+class Math3DVec3Length {
+	constructor() {
         this.addInput("in", "vec3");
         this.addOutput("out", "number");
     }
-
+	}
     Math3DVec3Length.title = "vec3_length";
     Math3DVec3Length.desc = "returns the module of a vector";
 
@@ -224,12 +227,13 @@
 
     LiteGraph.registerNodeType("math3d/vec3-length", Math3DVec3Length);
 
-    function Math3DVec3Normalize() {
+class Math3DVec3Normalize {
+	constructor() {
         this.addInput("in", "vec3");
         this.addOutput("out", "vec3");
         this._data = new Float32Array(3);
     }
-
+	}
     Math3DVec3Normalize.title = "vec3_normalize";
     Math3DVec3Normalize.desc = "returns the vector normalized";
 
@@ -249,7 +253,8 @@
 
     LiteGraph.registerNodeType("math3d/vec3-normalize", Math3DVec3Normalize);
 
-    function Math3DVec3Lerp() {
+class Math3DVec3Lerp {
+	constructor() {
         this.addInput("A", "vec3");
         this.addInput("B", "vec3");
         this.addInput("f", "vec3");
@@ -257,7 +262,7 @@
         this.properties = { f: 0.5 };
         this._data = new Float32Array(3);
     }
-
+	}
     Math3DVec3Lerp.title = "vec3_lerp";
     Math3DVec3Lerp.desc = "returns the interpolated vector";
 
@@ -282,12 +287,13 @@
 
     LiteGraph.registerNodeType("math3d/vec3-lerp", Math3DVec3Lerp);
 
-    function Math3DVec3Dot() {
+class Math3DVec3Dot {
+	constructor() {
         this.addInput("A", "vec3");
         this.addInput("B", "vec3");
         this.addOutput("out", "number");
     }
-
+	}
     Math3DVec3Dot.title = "vec3_dot";
     Math3DVec3Dot.desc = "returns the dot product";
 
@@ -309,12 +315,13 @@
 
     //if glMatrix is installed...
     if (global.glMatrix) {
-        function Math3DQuaternion() {
+class Math3DQuaternion {
+	constructor() {
             this.addOutput("quat", "quat");
             this.properties = { x: 0, y: 0, z: 0, w: 1, normalize: false };
             this._value = quat.create();
         }
-
+			}
         Math3DQuaternion.title = "Quaternion";
         Math3DQuaternion.desc = "quaternion";
 
@@ -340,14 +347,15 @@
 
         LiteGraph.registerNodeType("math3d/quaternion", Math3DQuaternion);
 
-        function Math3DRotation() {
+class Math3DRotation {
+	constructor() {
             this.addInputs([["degrees", "number"], ["axis", "vec3"]]);
             this.addOutput("quat", "quat");
             this.properties = { angle: 90.0, axis: vec3.fromValues(0, 1, 0) };
 
             this._value = quat.create();
         }
-
+			}
         Math3DRotation.title = "Rotation";
         Math3DRotation.desc = "quaternion rotation";
 
@@ -368,14 +376,15 @@
         LiteGraph.registerNodeType("math3d/rotation", Math3DRotation);
 
 
-        function MathEulerToQuat() {
+class MathEulerToQuat {
+	constructor() {
             this.addInput("euler", "vec3");
             this.addOutput("quat", "quat");
             this.properties = { euler:[0,0,0], use_yaw_pitch_roll: false };
 			this._degs = vec3.create();
             this._value = quat.create();
         }
-
+			}
         MathEulerToQuat.title = "Euler->Quat";
         MathEulerToQuat.desc = "Converts euler angles (in degrees) to quaternion";
 
@@ -393,12 +402,13 @@
 
         LiteGraph.registerNodeType("math3d/euler_to_quat", MathEulerToQuat);
 
-        function MathQuatToEuler() {
+class MathQuatToEuler {
+	constructor() {
             this.addInput(["quat", "quat"]);
             this.addOutput("euler", "vec3");
 			this._value = vec3.create();
         }
-
+			}
         MathQuatToEuler.title = "Euler->Quat";
         MathQuatToEuler.desc = "Converts rotX,rotY,rotZ in degrees to quat";
 
@@ -415,12 +425,13 @@
 
 
         //Math3D rotate vec3
-        function Math3DRotateVec3() {
+class Math3DRotateVec3 {
+	constructor() {
             this.addInputs([["vec3", "vec3"], ["quat", "quat"]]);
             this.addOutput("result", "vec3");
             this.properties = { vec: [0, 0, 1] };
         }
-
+			}
         Math3DRotateVec3.title = "Rot. Vec3";
         Math3DRotateVec3.desc = "rotate a point";
 
@@ -442,13 +453,14 @@
 
         LiteGraph.registerNodeType("math3d/rotate_vec3", Math3DRotateVec3);
 
-        function Math3DMultQuat() {
+class Math3DMultQuat {
+	constructor() {
             this.addInputs([["A", "quat"], ["B", "quat"]]);
             this.addOutput("A*B", "quat");
 
             this._value = quat.create();
         }
-
+			}
         Math3DMultQuat.title = "Mult. Quat";
         Math3DMultQuat.desc = "rotate quaternion";
 
@@ -468,7 +480,8 @@
 
         LiteGraph.registerNodeType("math3d/mult-quat", Math3DMultQuat);
 
-        function Math3DQuatSlerp() {
+class Math3DQuatSlerp {
+	constructor() {
             this.addInputs([
                 ["A", "quat"],
                 ["B", "quat"],
@@ -479,7 +492,7 @@
 
             this._value = quat.create();
         }
-
+			}
         Math3DQuatSlerp.title = "Quat Slerp";
         Math3DQuatSlerp.desc = "quaternion spherical interpolation";
 
@@ -505,7 +518,8 @@
 
 
         //Math3D rotate vec3
-        function Math3DRemapRange() {
+class Math3DRemapRange {
+	constructor() {
             this.addInput("vec3", "vec3");
             this.addOutput("remap", "vec3");
 			this.addOutput("clamped", "vec3");
@@ -513,7 +527,7 @@
 			this._value = vec3.create();
 			this._clamped = vec3.create();
         }
-
+			}
         Math3DRemapRange.title = "Remap Range";
         Math3DRemapRange.desc = "remap a 3D range";
 
