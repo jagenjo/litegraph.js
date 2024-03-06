@@ -36,7 +36,6 @@
 
 .litegraph-editor * {
     box-sizing: border-box;
-    -moz-box-sizing: border-box;
 }
 
 .litegraph-editor .content {
@@ -105,16 +104,12 @@
     padding: 4px 10px;
     cursor: pointer;
     transition: all 1s;
-    -moz-transition: all 1s;
-    -webkit-transition: all 0.4s;
 }
 
 .litegraph-editor button:hover {
     background-color: #999;
     color: #fff;
     transition: all 1s;
-    -moz-transition: all 1s;
-    -webkit-transition: all 0.4s;
 }
 
 .litegraph-editor button:active {
