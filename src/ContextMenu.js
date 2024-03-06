@@ -198,9 +198,8 @@ class ContextMenu {
             root.style.transform = "scale(" + options.scale + ")";
         }
     }
-}
 
-    ContextMenu.prototype.addItem = function(name, value, options) {
+	addItem(name, value, options) {
         var that = this;
         options = options || {};
 
@@ -324,9 +323,9 @@ class ContextMenu {
         }
 
         return element;
-    };
+    }
 
-    ContextMenu.prototype.close = function(e, ignore_parent_menu) {
+	close(e, ignore_parent_menu) {
         if (this.root.parentNode) {
             this.root.parentNode.removeChild(this.root);
         }
@@ -352,10 +351,10 @@ class ContextMenu {
         
         // TODO implement : LiteGraph.contextMenuClosed(); :: keep track of opened / closed / current ContextMenu
         // on key press, allow filtering/selecting the context menu elements
-    };
+    }
 
     //this code is used to trigger events easily (used in the context menu mouseleave
-    ContextMenu.trigger = function(element, event_name, params, origin) {
+	static trigger(element, event_name, params, origin) {
         var evt = document.createEvent("CustomEvent");
         evt.initCustomEvent(event_name, true, true, params); //canBubble, cancelable, detail
         evt.srcElement = origin;
@@ -366,24 +365,24 @@ class ContextMenu {
         }
         //else nothing seems binded here so nothing to do
         return evt;
-    };
+    }
 
     //returns the top most menu
-    ContextMenu.prototype.getTopMenu = function() {
+	getTopMenu() {
         if (this.options.parentMenu) {
             return this.options.parentMenu.getTopMenu();
         }
         return this;
-    };
+    }
 
-    ContextMenu.prototype.getFirstEvent = function() {
+	getFirstEvent() {
         if (this.options.parentMenu) {
             return this.options.parentMenu.getFirstEvent();
         }
         return this.options.event;
-    };
+    }
 
-    ContextMenu.isCursorOverElement = function(event, element) {
+	static isCursorOverElement(event, element) {
         var left = event.clientX;
         var top = event.clientY;
         var rect = element.getBoundingClientRect();
@@ -399,7 +398,8 @@ class ContextMenu {
             return true;
         }
         return false;
-    };
+    }
+}
 
     LiteGraph.ContextMenu = ContextMenu;
 
