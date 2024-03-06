@@ -118,7 +118,8 @@
     );
 
 
-    function StringToTable() {
+class StringToTable {
+	constructor() {
         this.addInput("", "string");
         this.addOutput("table", "table");
         this.addOutput("rows", "number");
@@ -126,7 +127,7 @@
         this.addProperty("separator", ",");
 		this._table = null;
     }
-
+	}
     StringToTable.title = "toTable";
     StringToTable.desc = "Splits a string to table";
 
