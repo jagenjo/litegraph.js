@@ -161,7 +161,7 @@
 
 	//It is like a websocket but using the SillyServer.js server that bounces packets back to all clients connected:
 	//For more information: https://github.com/jagenjo/SillyServer.js
-
+/*
 	class LGSillyClient {
 		constructor() {
 			//this.size = [60,20];
@@ -392,7 +392,7 @@
 		}
 	}
 	LiteGraph.registerNodeType("network/sillyclient", LGSillyClient);
-
+*/
 	//HTTP Request
 	class HTTPRequestNode {
 		constructor() {
