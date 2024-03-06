@@ -2,12 +2,13 @@
     var LiteGraph = global.LiteGraph;
 
     //Converter
-    function Converter() {
+class Converter {
+	constructor() {
         this.addInput("in", 0);
 		this.addOutput("out", 0);
         this.size = [80, 30];
     }
-
+	}
     Converter.title = "Converter";
     Converter.desc = "type A to type B";
 
@@ -77,12 +78,13 @@
     LiteGraph.registerNodeType("math/converter", Converter);
 
     //Bypass
-    function Bypass() {
+class Bypass {
+	constructor() {
         this.addInput("in");
         this.addOutput("out");
         this.size = [80, 30];
     }
-
+	}
     Bypass.title = "Bypass";
     Bypass.desc = "removes the type";
 
@@ -93,11 +95,12 @@
 
     LiteGraph.registerNodeType("math/bypass", Bypass);
 
-    function ToNumber() {
+class ToNumber {
+	constructor() {
         this.addInput("in");
         this.addOutput("out");
     }
-
+	}
     ToNumber.title = "to Number";
     ToNumber.desc = "Cast to number";
 
@@ -108,7 +111,8 @@
 
     LiteGraph.registerNodeType("math/to_number", ToNumber);
 
-    function MathRange() {
+class MathRange {
+	constructor() {
         this.addInput("in", "number", { locked: true });
         this.addOutput("out", "number", { locked: true });
         this.addOutput("clamped", "number", { locked: true });
@@ -121,7 +125,7 @@
 
         this.size = [120, 50];
     }
-
+	}
     MathRange.title = "Range";
     MathRange.desc = "Convert a number from one range to another";
 
@@ -191,13 +195,14 @@
 
     LiteGraph.registerNodeType("math/range", MathRange);
 
-    function MathRand() {
+class MathRand {
+	constructor() {
         this.addOutput("value", "number");
         this.addProperty("min", 0);
         this.addProperty("max", 1);
         this.size = [80, 30];
     }
-
+	}
     MathRand.title = "Rand";
     MathRand.desc = "Random number";
 
@@ -231,7 +236,8 @@
     LiteGraph.registerNodeType("math/rand", MathRand);
 
     //basic continuous noise
-    function MathNoise() {
+class MathNoise {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.addProperty("min", 0);
@@ -243,7 +249,7 @@
         this.addProperty("speed", 1);
         this.size = [90, 30];
     }
-
+	}
     MathNoise.title = "Noise";
     MathNoise.desc = "Random number with temporal continuity";
     MathNoise.data = null;
@@ -301,7 +307,8 @@
     LiteGraph.registerNodeType("math/noise", MathNoise);
 
     //generates spikes every random time
-    function MathSpikes() {
+class MathSpikes {
+	constructor() {
         this.addOutput("out", "number");
         this.addProperty("min_time", 1);
         this.addProperty("max_time", 2);
@@ -310,7 +317,7 @@
         this._remaining_time = 0;
         this._blink_time = 0;
     }
-
+	}
     MathSpikes.title = "Spikes";
     MathSpikes.desc = "spike every random time";
 
@@ -342,14 +349,15 @@
     LiteGraph.registerNodeType("math/spikes", MathSpikes);
 
     //Math clamp
-    function MathClamp() {
+class MathClamp {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.size = [80, 30];
         this.addProperty("min", 0);
         this.addProperty("max", 1);
     }
-
+	}
     MathClamp.title = "Clamp";
     MathClamp.desc = "Clamp number between min and max";
     //MathClamp.filter = "shader";
@@ -380,14 +388,15 @@
     LiteGraph.registerNodeType("math/clamp", MathClamp);
 
     //Math ABS
-    function MathLerp() {
+class MathLerp {
+	constructor() {
         this.properties = { f: 0.5 };
         this.addInput("A", "number");
         this.addInput("B", "number");
 
         this.addOutput("out", "number");
     }
-
+	}
     MathLerp.title = "Lerp";
     MathLerp.desc = "Linear Interpolation";
 
@@ -418,12 +427,13 @@
     LiteGraph.registerNodeType("math/lerp", MathLerp);
 
     //Math ABS
-    function MathAbs() {
+class MathAbs {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.size = [80, 30];
     }
-
+	}
     MathAbs.title = "Abs";
     MathAbs.desc = "Absolute";
 
@@ -438,12 +448,13 @@
     LiteGraph.registerNodeType("math/abs", MathAbs);
 
     //Math Floor
-    function MathFloor() {
+class MathFloor {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.size = [80, 30];
     }
-
+	}
     MathFloor.title = "Floor";
     MathFloor.desc = "Floor number to remove fractional part";
 
@@ -458,12 +469,13 @@
     LiteGraph.registerNodeType("math/floor", MathFloor);
 
     //Math frac
-    function MathFrac() {
+class MathFrac {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.size = [80, 30];
     }
-
+	}
     MathFrac.title = "Frac";
     MathFrac.desc = "Returns fractional part";
 
@@ -478,13 +490,14 @@
     LiteGraph.registerNodeType("math/frac", MathFrac);
 
     //Math Floor
-    function MathSmoothStep() {
+class MathSmoothStep {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.size = [80, 30];
         this.properties = { A: 0, B: 1 };
     }
-
+	}
     MathSmoothStep.title = "Smoothstep";
     MathSmoothStep.desc = "Smoothstep";
 
@@ -508,13 +521,14 @@
     LiteGraph.registerNodeType("math/smoothstep", MathSmoothStep);
 
     //Math scale
-    function MathScale() {
+class MathScale {
+	constructor() {
         this.addInput("in", "number", { label: "" });
         this.addOutput("out", "number", { label: "" });
         this.size = [80, 30];
         this.addProperty("factor", 1);
     }
-
+	}
     MathScale.title = "Scale";
     MathScale.desc = "v * factor";
 
@@ -528,13 +542,14 @@
     LiteGraph.registerNodeType("math/scale", MathScale);
 
 	//Gate
-	function Gate() {
+class Gate {
+	constructor() {
 		this.addInput("v","boolean");
 		this.addInput("A");
 		this.addInput("B");
 		this.addOutput("out");
 	}
-
+}
 	Gate.title = "Gate";
 	Gate.desc = "if v is true, then outputs A, otherwise B";
 
@@ -547,7 +562,8 @@
 
 
     //Math Average
-    function MathAverageFilter() {
+class MathAverageFilter {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.size = [80, 30];
@@ -555,7 +571,7 @@
         this._values = new Float32Array(10);
         this._current = 0;
     }
-
+	}
     MathAverageFilter.title = "Average";
     MathAverageFilter.desc = "Average Filter";
 
@@ -599,14 +615,15 @@
     LiteGraph.registerNodeType("math/average", MathAverageFilter);
 
     //Math
-    function MathTendTo() {
+class MathTendTo {
+	constructor() {
         this.addInput("in", "number");
         this.addOutput("out", "number");
         this.addProperty("factor", 0.1);
         this.size = [80, 30];
         this._value = null;
     }
-
+	}
     MathTendTo.title = "TendTo";
     MathTendTo.desc = "moves the output value always closer to the input";
 
@@ -627,7 +644,8 @@
     LiteGraph.registerNodeType("math/tendTo", MathTendTo);
 
     //Math operation
-    function MathOperation() {
+class MathOperation {
+	constructor() {
         this.addInput("A", "number,array,object");
         this.addInput("B", "number");
         this.addOutput("=", "number");
@@ -637,7 +655,7 @@
 		this._func = MathOperation.funcs[this.properties.OP];
 		this._result = []; //only used for arrays
     }
-
+	}
     MathOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min"];
     MathOperation.funcs = {
         "+": function(A,B) { return A + B; },
@@ -756,7 +774,8 @@
 
 
     //Math compare
-    function MathCompare() {
+class MathCompare {
+	constructor() {
         this.addInput("A", "number");
         this.addInput("B", "number");
         this.addOutput("A==B", "boolean");
@@ -764,7 +783,7 @@
         this.addProperty("A", 0);
         this.addProperty("B", 0);
     }
-
+	}
     MathCompare.title = "Compare";
     MathCompare.desc = "compares between two values";
 
@@ -851,7 +870,8 @@
         title: "A<=B"
     });
 
-    function MathCondition() {
+class MathCondition {
+	constructor() {
         this.addInput("A", "number");
         this.addInput("B", "number");
         this.addOutput("true", "boolean");
@@ -863,7 +883,7 @@
 
         this.size = [80, 60];
     }
-
+	}
     MathCondition.values = [">", "<", "==", "!=", "<=", ">=", "||", "&&" ];
     MathCondition["@OP"] = {
         type: "enum",
@@ -928,14 +948,15 @@
     LiteGraph.registerNodeType("math/condition", MathCondition);
 
 
-    function MathBranch() {
+class MathBranch {
+	constructor() {
         this.addInput("in", 0);
         this.addInput("cond", "boolean");
         this.addOutput("true", 0);
         this.addOutput("false", 0);
         this.size = [80, 60];
     }
-
+	}
     MathBranch.title = "Branch";
     MathBranch.desc = "If condition is true, outputs IN in true, otherwise in false";
 
@@ -958,13 +979,14 @@
     LiteGraph.registerNodeType("math/branch", MathBranch);
 
 
-    function MathAccumulate() {
+class MathAccumulate {
+	constructor() {
         this.addInput("inc", "number");
         this.addOutput("total", "number");
         this.addProperty("increment", 1);
         this.addProperty("value", 0);
     }
-
+	}
     MathAccumulate.title = "Accumulate";
     MathAccumulate.desc = "Increments a value every time";
 
@@ -985,7 +1007,8 @@
     LiteGraph.registerNodeType("math/accumulate", MathAccumulate);
 
     //Math Trigonometry
-    function MathTrigonometry() {
+class MathTrigonometry {
+	constructor() {
         this.addInput("v", "number");
         this.addOutput("sin", "number");
 
@@ -993,7 +1016,7 @@
         this.addProperty("offset", 0);
         this.bgImageUrl = "nodes/imgs/icon-sin.png";
     }
-
+	}
     MathTrigonometry.title = "Trigonometry";
     MathTrigonometry.desc = "Sin Cos Tan";
     //MathTrigonometry.filter = "shader";
@@ -1072,7 +1095,8 @@
     });
 
     //math library for safe math operations without eval
-    function MathFormula() {
+class MathFormula {
+	constructor() {
         this.addInput("x", "number");
         this.addInput("y", "number");
         this.addOutput("", "number");
@@ -1090,7 +1114,7 @@
         });
         this._func = null;
     }
-
+	}
     MathFormula.title = "Formula";
     MathFormula.desc = "Compute formula";
     MathFormula.size = [160, 100];
@@ -1154,12 +1178,13 @@
 
     LiteGraph.registerNodeType("math/formula", MathFormula);
 
-    function Math3DVec2ToXY() {
+class Math3DVec2ToXY {
+	constructor() {
         this.addInput("vec2", "vec2");
         this.addOutput("x", "number");
         this.addOutput("y", "number");
     }
-
+	}
     Math3DVec2ToXY.title = "Vec2->XY";
     Math3DVec2ToXY.desc = "vector 2 to components";
 
@@ -1175,13 +1200,14 @@
 
     LiteGraph.registerNodeType("math3d/vec2-to-xy", Math3DVec2ToXY);
 
-    function Math3DXYToVec2() {
+class Math3DXYToVec2 {
+	constructor() {
         this.addInputs([["x", "number"], ["y", "number"]]);
         this.addOutput("vec2", "vec2");
         this.properties = { x: 0, y: 0 };
         this._data = new Float32Array(2);
     }
-
+	}
     Math3DXYToVec2.title = "XY->Vec2";
     Math3DXYToVec2.desc = "components to vector2";
 
@@ -1204,13 +1230,14 @@
 
     LiteGraph.registerNodeType("math3d/xy-to-vec2", Math3DXYToVec2);
 
-    function Math3DVec3ToXYZ() {
+class Math3DVec3ToXYZ {
+	constructor() {
         this.addInput("vec3", "vec3");
         this.addOutput("x", "number");
         this.addOutput("y", "number");
         this.addOutput("z", "number");
     }
-
+	}
     Math3DVec3ToXYZ.title = "Vec3->XYZ";
     Math3DVec3ToXYZ.desc = "vector 3 to components";
 
@@ -1227,13 +1254,14 @@
 
     LiteGraph.registerNodeType("math3d/vec3-to-xyz", Math3DVec3ToXYZ);
 
-    function Math3DXYZToVec3() {
+class Math3DXYZToVec3 {
+	constructor() {
         this.addInputs([["x", "number"], ["y", "number"], ["z", "number"]]);
         this.addOutput("vec3", "vec3");
         this.properties = { x: 0, y: 0, z: 0 };
         this._data = new Float32Array(3);
     }
-
+	}
     Math3DXYZToVec3.title = "XYZ->Vec3";
     Math3DXYZToVec3.desc = "components to vector3";
 
@@ -1261,14 +1289,15 @@
 
     LiteGraph.registerNodeType("math3d/xyz-to-vec3", Math3DXYZToVec3);
 
-    function Math3DVec4ToXYZW() {
+class Math3DVec4ToXYZW {
+	constructor() {
         this.addInput("vec4", "vec4");
         this.addOutput("x", "number");
         this.addOutput("y", "number");
         this.addOutput("z", "number");
         this.addOutput("w", "number");
     }
-
+	}
     Math3DVec4ToXYZW.title = "Vec4->XYZW";
     Math3DVec4ToXYZW.desc = "vector 4 to components";
 
@@ -1286,7 +1315,8 @@
 
     LiteGraph.registerNodeType("math3d/vec4-to-xyzw", Math3DVec4ToXYZW);
 
-    function Math3DXYZWToVec4() {
+class Math3DXYZWToVec4 {
+	constructor() {
         this.addInputs([
             ["x", "number"],
             ["y", "number"],
@@ -1297,7 +1327,7 @@
         this.properties = { x: 0, y: 0, z: 0, w: 0 };
         this._data = new Float32Array(4);
     }
-
+	}
     Math3DXYZWToVec4.title = "XYZW->Vec4";
     Math3DXYZWToVec4.desc = "components to vector4";
 
