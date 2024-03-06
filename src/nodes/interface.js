@@ -4,7 +4,8 @@
 
     /* Button ****************/
 
-    function WidgetButton() {
+class WidgetButton {
+	constructor() {
         this.addOutput("", LiteGraph.EVENT);
         this.addOutput("", "boolean");
         this.addProperty("text", "click me");
@@ -13,7 +14,7 @@
         this.size = [164, 84];
         this.clicked = false;
     }
-
+	}
     WidgetButton.title = "Button";
     WidgetButton.desc = "Triggers an event";
 
@@ -87,7 +88,8 @@
 
     LiteGraph.registerNodeType("widget/button", WidgetButton);
 
-    function WidgetToggle() {
+class WidgetToggle {
+	constructor() {
         this.addInput("", "boolean");
         this.addInput("e", LiteGraph.ACTION);
         this.addOutput("v", "boolean");
@@ -95,7 +97,7 @@
         this.properties = { font: "", value: false };
         this.size = [160, 44];
     }
-
+	}
     WidgetToggle.title = "Toggle";
     WidgetToggle.desc = "Toggles between true or false";
 
@@ -159,7 +161,8 @@
 
     /* Number ****************/
 
-    function WidgetNumber() {
+class WidgetNumber {
+	constructor() {
         this.addOutput("", "number");
         this.size = [80, 60];
         this.properties = { min: -1000, max: 1000, value: 1, step: 1 };
@@ -168,7 +171,7 @@
         this._precision = 0;
         this.mouse_captured = false;
     }
-
+	}
     WidgetNumber.title = "Number";
     WidgetNumber.desc = "Widget to select number value";
 
@@ -277,7 +280,8 @@
 
     /* Combo ****************/
 
-    function WidgetCombo() {
+class WidgetCombo {
+	constructor() {
         this.addOutput("", "string");
         this.addOutput("change", LiteGraph.EVENT);
         this.size = [80, 60];
@@ -292,7 +296,7 @@
             that.triggerSlot(1, v);
 		}, { property: "value", values: this._values } );
     }
-
+	}
     WidgetCombo.title = "Combo";
     WidgetCombo.desc = "Widget to select from a list";
 
@@ -317,7 +321,8 @@
 
     /* Knob ****************/
 
-    function WidgetKnob() {
+class WidgetKnob {
+	constructor() {
         this.addOutput("", "number");
         this.size = [64, 84];
         this.properties = {
@@ -329,7 +334,7 @@
         };
         this.value = -1;
     }
-
+	}
     WidgetKnob.title = "Knob";
     WidgetKnob.desc = "Circular controller";
     WidgetKnob.size = [80, 100];
@@ -478,7 +483,8 @@
     LiteGraph.registerNodeType("widget/knob", WidgetKnob);
 
     //Show value inside the debug console
-    function WidgetSliderGUI() {
+class WidgetSliderGUI {
+	constructor() {
         this.addOutput("", "number");
         this.properties = {
             value: 0.5,
@@ -499,7 +505,7 @@
         );
         this.widgets_up = true;
     }
-
+	}
     WidgetSliderGUI.title = "Inner Slider";
 
     WidgetSliderGUI.prototype.onPropertyChanged = function(name, value) {
@@ -515,13 +521,14 @@
     LiteGraph.registerNodeType("widget/internal_slider", WidgetSliderGUI);
 
     //Widget H SLIDER
-    function WidgetHSlider() {
+class WidgetHSlider {
+	constructor() {
         this.size = [160, 26];
         this.addOutput("", "number");
         this.properties = { color: "#7AF", min: 0, max: 1, value: 0.5 };
         this.value = -1;
     }
-
+	}
     WidgetHSlider.title = "H.Slider";
     WidgetHSlider.desc = "Linear slider controller";
 
@@ -599,12 +606,13 @@
 
     LiteGraph.registerNodeType("widget/hslider", WidgetHSlider);
 
-    function WidgetProgress() {
+class WidgetProgress {
+	constructor() {
         this.size = [160, 26];
         this.addInput("", "number");
         this.properties = { min: 0, max: 1, value: 0, color: "#AAF" };
     }
-
+	}
     WidgetProgress.title = "Progress";
     WidgetProgress.desc = "Shows data in linear progress";
 
@@ -629,7 +637,8 @@
 
     LiteGraph.registerNodeType("widget/progress", WidgetProgress);
 
-    function WidgetText() {
+class WidgetText {
+	constructor() {
         this.addInputs("", 0);
         this.properties = {
             value: "...",
@@ -641,7 +650,7 @@
             decimals: 1
         };
     }
-
+	}
     WidgetText.title = "Text";
     WidgetText.desc = "Shows the input value";
     WidgetText.widgets = [
@@ -726,7 +735,8 @@
 
     LiteGraph.registerNodeType("widget/text", WidgetText);
 
-    function WidgetPanel() {
+class WidgetPanel {
+	constructor() {
         this.size = [200, 100];
         this.properties = {
             borderColor: "#ffffff",
@@ -736,7 +746,7 @@
             borderRadius: 3
         };
     }
-
+	}
     WidgetPanel.title = "Panel";
     WidgetPanel.desc = "Non interactive panel";
     WidgetPanel.widgets = [{ name: "update", text: "Update", type: "button" }];
