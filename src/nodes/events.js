@@ -8,14 +8,14 @@ class LogEvent {
         this.size = [60, 30];
         this.addInput("event", LiteGraph.ACTION);
     }
-	}
-    LogEvent.title = "Log Event";
-    LogEvent.desc = "Log event in console";
+		
+	static title = "Log Event";
+	static desc = "Log event in console";
 
-    LogEvent.prototype.onAction = function(action, param, options) {
+	onAction(action, param, options) {
         console.log(action, param);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/log", LogEvent);
 
     //convert to Event if the value is true
@@ -29,11 +29,11 @@ class TriggerEvent {
 		this.properties = { only_on_change: true };
 		this.prev = 0;
     }
-	}
-    TriggerEvent.title = "TriggerEvent";
-    TriggerEvent.desc = "Triggers event if input evaluates to true";
+		
+	static title = "TriggerEvent";
+	static desc = "Triggers event if input evaluates to true";
 
-    TriggerEvent.prototype.onExecute = function( param, options) {
+	onExecute( param, options) {
 		var v = this.getInputData(0);
 		var changed = (v != this.prev);
 		if(this.prev === 0)
@@ -46,8 +46,8 @@ class TriggerEvent {
 		if(changed)
 	        this.triggerSlot(1, param, null, options);
 		this.prev = v;
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/trigger", TriggerEvent);
 
     //Sequence of events
@@ -67,15 +67,15 @@ class Sequence {
         this.size = [90, 70];
         this.flags = { horizontal: true, render_box: false };
     }
-	}
-    Sequence.title = "Sequence";
-    Sequence.desc = "Triggers a sequence of events when an event arrives";
+		
+	static title = "Sequence";
+	static desc = "Triggers a sequence of events when an event arrives";
 
-    Sequence.prototype.getTitle = function() {
+	getTitle() {
         return "";
-    };
+    }
 
-    Sequence.prototype.onAction = function(action, param, options) {
+	onAction(action, param, options) {
         if (this.outputs) {
             options = options || {};
             for (var i = 0; i < this.outputs.length; ++i) {
@@ -88,8 +88,8 @@ class Sequence {
                 this.triggerSlot(i, param, null, options);
             }
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/sequence", Sequence);
 
 
@@ -107,15 +107,15 @@ class WaitAll {
     this.size = [90, 70];
     this.ready = [];
 }
-}
-WaitAll.title = "WaitAll";
-WaitAll.desc = "Wait until all input events arrive then triggers output";
 
-WaitAll.prototype.getTitle = function() {
+	static title = "WaitAll";
+	static desc = "Wait until all input events arrive then triggers output";
+
+	getTitle() {
     return "";
-};
+}
 
-WaitAll.prototype.onDrawBackground = function(ctx)
+	onDrawBackground(ctx)
 {
     if (this.flags.collapsed) {
         return;
@@ -128,7 +128,7 @@ WaitAll.prototype.onDrawBackground = function(ctx)
     }
 }
 
-WaitAll.prototype.onAction = function(action, param, options, slot_index) {
+	onAction(action, param, options, slot_index) {
     if(slot_index == null)
         return;
 
@@ -141,13 +141,13 @@ WaitAll.prototype.onAction = function(action, param, options, slot_index) {
     //pass
     this.reset();
     this.triggerSlot(0);
-};
+}
 
-WaitAll.prototype.reset = function()
+	reset()
 {
     this.ready.length = 0;
 }
-
+}
 LiteGraph.registerNodeType("events/waitAll", WaitAll);    
 
 
@@ -169,11 +169,11 @@ class Stepper {
         this.size = [120, 120];
         this.flags = { render_box: false };
     }
-	}
-    Stepper.title = "Stepper";
-    Stepper.desc = "Trigger events sequentially when an tick arrives";
+		
+	static title = "Stepper";
+	static desc = "Trigger events sequentially when an tick arrives";
 
-	Stepper.prototype.onDrawBackground = function(ctx)
+	onDrawBackground(ctx)
 	{
         if (this.flags.collapsed) {
             return;
@@ -189,7 +189,7 @@ class Stepper {
         ctx.fill();
 	}
 
-	Stepper.prototype.onExecute = function()
+	onExecute()
 	{
 		var index = this.getInputData(0);
 		if(index != null)
@@ -206,7 +206,7 @@ class Stepper {
 		this.setOutputData(0, this.properties.index );
 	}
 
-    Stepper.prototype.onAction = function(action, param) {
+	onAction(action, param) {
 		if(action == "reset")
 			this.properties.index = 0;
 		else if(action == "step")
@@ -215,8 +215,8 @@ class Stepper {
 			var n = this.outputs ? this.outputs.length - 1 : 0;
 			this.properties.index = (this.properties.index + 1) % n;
         }
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/stepper", Stepper);
 
     //Filter events
@@ -231,11 +231,11 @@ class FilterEvent {
             property_equal_to: ""
         };
     }
-	}
-    FilterEvent.title = "Filter Event";
-    FilterEvent.desc = "Blocks events that do not match the filter";
+		
+	static title = "Filter Event";
+	static desc = "Blocks events that do not match the filter";
 
-    FilterEvent.prototype.onAction = function(action, param, options) {
+	onAction(action, param, options) {
         if (param == null) {
             return;
         }
@@ -259,8 +259,8 @@ class FilterEvent {
         }
 
         this.triggerSlot(0, param, null, options);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/filter", FilterEvent);
 
 
@@ -273,19 +273,19 @@ class EventBranch {
         this.size = [120, 60];
 		this._value = false;
     }
-	}
-    EventBranch.title = "Branch";
-    EventBranch.desc = "If condition is true, outputs triggers true, otherwise false";
+		
+	static title = "Branch";
+	static desc = "If condition is true, outputs triggers true, otherwise false";
 
-    EventBranch.prototype.onExecute = function() {
+	onExecute() {
 		this._value = this.getInputData(1);
 	}
 
-    EventBranch.prototype.onAction = function(action, param, options) {
+	onAction(action, param, options) {
         this._value = this.getInputData(1);
 		this.triggerSlot(this._value ? 0 : 1, param, null, options);
 	}
-
+}
     LiteGraph.registerNodeType("events/branch", EventBranch);
 
     //Show value inside the debug console
@@ -300,18 +300,18 @@ class EventCounter {
         this.addWidget("toggle","Count Exec.",this.properties.doCountExecution,"doCountExecution");
         this.num = 0;
     }
-	}
-    EventCounter.title = "Counter";
-    EventCounter.desc = "Counts events";
+		
+	static title = "Counter";
+	static desc = "Counts events";
 
-    EventCounter.prototype.getTitle = function() {
+	getTitle() {
         if (this.flags.collapsed) {
             return String(this.num);
         }
         return this.title;
-    };
+    }
 
-    EventCounter.prototype.onAction = function(action, param, options) {
+	onAction(action, param, options) {
         var v = this.num;
         if (action == "inc") {
             this.num += 1;
@@ -323,9 +323,9 @@ class EventCounter {
         if (this.num != v) {
             this.trigger("change", this.num);
         }
-    };
+    }
 
-    EventCounter.prototype.onDrawBackground = function(ctx) {
+	onDrawBackground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -333,15 +333,15 @@ class EventCounter {
         ctx.font = "20px Arial";
         ctx.textAlign = "center";
         ctx.fillText(this.num, this.size[0] * 0.5, this.size[1] * 0.5);
-    };
+    }
 
-    EventCounter.prototype.onExecute = function() {
+	onExecute() {
         if(this.properties.doCountExecution){
             this.num += 1;
         }
         this.setOutputData(1, this.num);
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/counter", EventCounter);
 
     //Show value inside the debug console
@@ -354,20 +354,20 @@ class DelayEvent {
 
         this._pending = [];
     }
-	}
-    DelayEvent.title = "Delay";
-    DelayEvent.desc = "Delays one event";
+		
+	static title = "Delay";
+	static desc = "Delays one event";
 
-    DelayEvent.prototype.onAction = function(action, param, options) {
+	onAction(action, param, options) {
         var time = this.properties.time_in_ms;
         if (time <= 0) {
             this.trigger(null, param, options);
         } else {
             this._pending.push([time, param]);
         }
-    };
+    }
 
-    DelayEvent.prototype.onExecute = function(param, options) {
+	onExecute(param, options) {
         var dt = this.graph.elapsed_time * 1000; //in ms
 
         if (this.isInputConnected(1)) {
@@ -388,12 +388,12 @@ class DelayEvent {
             //trigger
             this.trigger(null, actionPass[1], options);
         }
-    };
+    }
 
-    DelayEvent.prototype.onGetInputs = function() {
+	onGetInputs() {
         return [["event", LiteGraph.ACTION], ["time_in_ms", "number"]];
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/delay", DelayEvent);
 
     //Show value inside the debug console
@@ -406,29 +406,29 @@ class TimerEvent {
         this.last_interval = 1000;
         this.triggered = false;
     }
-	}
-    TimerEvent.title = "Timer";
-    TimerEvent.desc = "Sends an event every N milliseconds";
+		
+	static title = "Timer";
+	static desc = "Sends an event every N milliseconds";
 
-    TimerEvent.prototype.onStart = function() {
+	onStart() {
         this.time = 0;
-    };
+    }
 
-    TimerEvent.prototype.getTitle = function() {
+	getTitle() {
         return "Timer: " + this.last_interval.toString() + "ms";
-    };
+    }
 
-    TimerEvent.on_color = "#AAA";
-    TimerEvent.off_color = "#222";
+	static on_color = "#AAA";
+	static off_color = "#222";
 
-    TimerEvent.prototype.onDrawBackground = function() {
+	onDrawBackground() {
         this.boxcolor = this.triggered
             ? TimerEvent.on_color
             : TimerEvent.off_color;
         this.triggered = false;
-    };
+    }
 
-    TimerEvent.prototype.onExecute = function() {
+	onExecute() {
         var dt = this.graph.elapsed_time * 1000; //in ms
 
         var trigger = this.time == 0;
@@ -455,16 +455,16 @@ class TimerEvent {
         if (this.inputs && this.inputs.length > 1 && this.inputs[1]) {
             this.setOutputData(1, true);
         }
-    };
+    }
 
-    TimerEvent.prototype.onGetInputs = function() {
+	onGetInputs() {
         return [["interval", "number"]];
-    };
+    }
 
-    TimerEvent.prototype.onGetOutputs = function() {
+	onGetOutputs() {
         return [["tick", "boolean"]];
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/timer", TimerEvent);
 
 
@@ -484,25 +484,24 @@ class SemaphoreEvent {
 			that._ready = false;
 		});
     }
-	}
-    SemaphoreEvent.title = "Semaphore Event";
-    SemaphoreEvent.desc = "Until both events are not triggered, it doesnt continue.";
+		
+	static title = "Semaphore Event";
+	static desc = "Until both events are not triggered, it doesnt continue.";
 
-	SemaphoreEvent.prototype.onExecute = function()
-	{
+	onExecute()	{
 		this.setOutputData(1,this._ready);
 		this.boxcolor = this._ready ? "#9F9" : "#FA5";
 	}
 
-    SemaphoreEvent.prototype.onAction = function(action, param) {
+	onAction(action, param) {
 		if( action == "go" )
 			this.triggerSlot( this._ready ? 0 : 1 );
 		else if( action == "green" )
 			this._ready = true;
 		else if( action == "red" )
 			this._ready = false;
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/semaphore", SemaphoreEvent);
 
 class OnceEvent {
@@ -517,11 +516,11 @@ class OnceEvent {
 			that._once = false;
 		});
     }
-	}
-    OnceEvent.title = "Once";
-    OnceEvent.desc = "Only passes an event once, then gets locked";
+		
+	static title = "Once";
+	static desc = "Only passes an event once, then gets locked";
 
-    OnceEvent.prototype.onAction = function(action, param) {
+	onAction(action, param) {
 		if( action == "in" && !this._once )
 		{
 			this._once = true;
@@ -529,8 +528,8 @@ class OnceEvent {
 		}
 		else if( action == "reset" )
 			this._once = false;
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("events/once", OnceEvent);
 
 class DataStore {
@@ -545,28 +544,28 @@ class DataStore {
 			that.properties.data = that._last_value;
 		});
     }
-	}
-    DataStore.title = "Data Store";
-    DataStore.desc = "Stores data and only changes when event is received";
+		
+	static title = "Data Store";
+	static desc = "Stores data and only changes when event is received";
 
-	DataStore.prototype.onExecute = function()
+	onExecute()
 	{
 		this._last_value = this.getInputData(0);
 		this.setOutputData(0, this.properties.data );
 	}
 
-    DataStore.prototype.onAction = function(action, param, options) {
+	onAction(action, param, options) {
 		this.properties.data = this._last_value;
-    };
+    }
 
-	DataStore.prototype.onSerialize = function(o)
+	onSerialize(o)
 	{
 		if(o.data == null)
 			return;
 		if(this.properties.serialize == false || (o.data.constructor !== String && o.data.constructor !== Number && o.data.constructor !== Boolean && o.data.constructor !== Array && o.data.constructor !== Object ))
 			o.data = null;
 	}
-
+}
     LiteGraph.registerNodeType("basic/data_store", DataStore);
 
 
