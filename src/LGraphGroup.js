@@ -43,7 +43,7 @@
 			this._bounding.set(o.bounding);
 			this.color = o.color;
 			this.font_size = o.font_size;
-		};
+		}
 
 		serialize() {
 			var b = this._bounding;
