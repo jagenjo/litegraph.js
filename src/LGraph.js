@@ -17,7 +17,8 @@
      * @param {Object} o data from previous serialization [optional]
      */
 
-    function LGraph(o) {
+class LGraph {
+	constructor(o) {
         if (LiteGraph.debug) {
             console.log("Graph created");
         }
@@ -28,6 +29,7 @@
             this.configure(o);
         }
     }
+}
 
     global.LGraph = LiteGraph.LGraph = LGraph;
 
