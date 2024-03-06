@@ -59,11 +59,8 @@
 	 */
 
 	class LGraphNode {
+		
 		constructor(title) {
-			this._ctor(title);
-		}
-
-		_ctor(title) {
 			this.title = title || "Unnamed";
 			this.size = [LiteGraph.NODE_WIDTH, 60];
 			this.graph = null;
