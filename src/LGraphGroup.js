@@ -5,11 +5,8 @@ class LGraphGroup {
 	constructor(title) {
         this._ctor(title);
     }
-}
 
-    global.LGraphGroup = LiteGraph.LGraphGroup = LGraphGroup;
-
-    LGraphGroup.prototype._ctor = function(title) {
+	_ctor(title) {
         this.title = title || "Group";
         this.font_size = 24;
         this.color = LGraphCanvas.node_colors.pale_blue
@@ -48,16 +45,16 @@ class LGraphGroup {
             },
             enumerable: true
         });
-    };
+    }
 
-    LGraphGroup.prototype.configure = function(o) {
+	configure(o) {
         this.title = o.title;
         this._bounding.set(o.bounding);
         this.color = o.color;
         this.font_size = o.font_size;
     };
 
-    LGraphGroup.prototype.serialize = function() {
+	serialize() {
         var b = this._bounding;
         return {
             title: this.title,
@@ -70,9 +67,9 @@ class LGraphGroup {
             color: this.color,
             font_size: this.font_size
         };
-    };
+    }
 
-    LGraphGroup.prototype.move = function(deltax, deltay, ignore_nodes) {
+	move(deltax, deltay, ignore_nodes) {
         this._pos[0] += deltax;
         this._pos[1] += deltay;
         if (ignore_nodes) {
@@ -83,9 +80,9 @@ class LGraphGroup {
             node.pos[0] += deltax;
             node.pos[1] += deltay;
         }
-    };
+    }
 
-    LGraphGroup.prototype.recomputeInsideNodes = function() {
+	recomputeInsideNodes() {
         this._nodes.length = 0;
         var nodes = this.graph._nodes;
         var node_bounding = new Float32Array(4);
@@ -98,8 +95,10 @@ class LGraphGroup {
             } //out of the visible area
             this._nodes.push(node);
         }
-    };
+    }		
+}
 
+    global.LGraphGroup = LiteGraph.LGraphGroup = LGraphGroup;
     LGraphGroup.prototype.isPointInside = LGraphNode.prototype.isPointInside;
     LGraphGroup.prototype.setDirtyCanvas = LGraphNode.prototype.setDirtyCanvas;
 
