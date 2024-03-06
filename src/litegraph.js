@@ -13557,7 +13557,7 @@ LGraphNode.prototype.executeAction = function(action)
     LiteGraph.isInsideRectangle = isInsideRectangle;
 
     //[minx,miny,maxx,maxy]
-    function growBounding(bounding, x, y) {
+    LiteGraph.growBounding = function(bounding, x, y) {
         if (x < bounding[0]) {
             bounding[0] = x;
         } else if (x > bounding[2]) {
@@ -13569,8 +13569,7 @@ LGraphNode.prototype.executeAction = function(action)
         } else if (y > bounding[3]) {
             bounding[3] = y;
         }
-    }
-    LiteGraph.growBounding = growBounding;
+    };
 
     //point inside bounding box
     LiteGraph.isInsideBounding = function(p, bb) {
