@@ -4,12 +4,20 @@ class Editor {
 		options = options || {};
 
 		//fill container
-		var html =
-			"<div class='header'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
-		html +=
-			"<div class='content'><div class='editor-area'><canvas class='graphcanvas' width='1000' height='500' tabindex=10></canvas></div></div>";
-		html +=
-			"<div class='footer'><div class='tools tools-left'></div><div class='tools tools-right'></div></div>";
+		var html = `
+		<div class="header">
+			<div class="tools tools-left"></div>
+			<div class="tools tools-right"></div>
+		</div>
+		<div class="content">
+			<div class="editor-area">
+				<canvas class="graphcanvas" width="1000" height="500" tabindex="10"></canvas>
+			</div>
+		</div>
+		<div class="footer">
+			<div class="tools tools-left"></div>
+			<div class="tools tools-right"></div>
+		</div>`;
 
 		var root = document.createElement("div");
 		this.root = root;
@@ -87,10 +95,19 @@ class Editor {
 		var meter = document.createElement("div");
 		meter.className = "headerpanel loadmeter toolbar-widget";
 
-		var html =
-			"<div class='cpuload'><strong>CPU</strong> <div class='bgload'><div class='fgload'></div></div></div>";
-		html +=
-			"<div class='gpuload'><strong>GFX</strong> <div class='bgload'><div class='fgload'></div></div></div>";
+		var html = `
+		<div class="cpuload">
+			<strong>CPU</strong>
+			<div class="bgload">
+				<div class="fgload"></div>
+			</div>
+		</div>
+		<div class="gpuload">
+			<strong>GFX</strong>
+			<div class="bgload">
+				<div class="fgload"></div>
+			</div>
+		</div>`;
 
 		meter.innerHTML = html;
 		this.root.querySelector(".header .tools-left").appendChild(meter);
@@ -218,12 +235,8 @@ class Editor {
 	addMiniWindow(w, h) {
 		var miniwindow = document.createElement("div");
 		miniwindow.className = "litegraph miniwindow";
-		miniwindow.innerHTML =
-			"<canvas class='graphcanvas' width='" +
-			w +
-			"' height='" +
-			h +
-			"' tabindex=10></canvas>";
+		miniwindow.innerHTML = `
+			<canvas class="graphcanvas" width="${	w }" height="${ h }" tabindex="10"></canvas>`;
 		var canvas = miniwindow.querySelector("canvas");
 		var that = this;
 
