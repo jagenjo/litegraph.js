@@ -79,9 +79,8 @@ class Editor {
     graphcanvas.resize();
     //graphcanvas.draw(true,true);
 	}
-}
 
-Editor.prototype.addLoadCounter = function() {
+	addLoadCounter() {
     var meter = document.createElement("div");
     meter.className = "headerpanel loadmeter toolbar-widget";
 
@@ -104,9 +103,9 @@ Editor.prototype.addLoadCounter = function() {
             meter.querySelector(".gpuload .fgload").style.width = 4 + "px";
         }
     }, 200);
-};
+}
 
-Editor.prototype.addToolsButton = function( id, name, icon_url, callback, container ) {
+	addToolsButton( id, name, icon_url, callback, container ) {
     if (!container) {
         container = ".tools";
     }
@@ -116,7 +115,7 @@ Editor.prototype.addToolsButton = function( id, name, icon_url, callback, contai
     this.root.querySelector(container).appendChild(button);
 };
 
-Editor.prototype.createButton = function(name, icon_url, callback) {
+	createButton(name, icon_url, callback) {
     var button = document.createElement("button");
     if (icon_url) {
         button.innerHTML = "<img src='" + icon_url + "'/> ";
@@ -128,16 +127,16 @@ Editor.prototype.createButton = function(name, icon_url, callback) {
     return button;
 };
 
-Editor.prototype.onLoadButton = function() {
+	onLoadButton() {
     var panel = this.graphcanvas.createPanel("Load session",{closable:true});
 	//TO DO
 
     this.root.appendChild(panel);
-};
+}
 
-Editor.prototype.onSaveButton = function() {};
+	onSaveButton() {};
 
-Editor.prototype.onPlayButton = function() {
+	onPlayButton() {
     var graph = this.graph;
     var button = this.root.querySelector("#playnode_button");
 
@@ -148,15 +147,15 @@ Editor.prototype.onPlayButton = function() {
         button.innerHTML = "<img src='imgs/icon-play.png'/> Play";
         graph.stop();
     }
-};
+}
 
-Editor.prototype.onPlayStepButton = function() {
+	onPlayStepButton() {
     var graph = this.graph;
     graph.runStep(1);
     this.graphcanvas.draw(true, true);
-};
+}
 
-Editor.prototype.onLiveButton = function() {
+	onLiveButton() {
     var is_live_mode = !this.graphcanvas.live_mode;
     this.graphcanvas.switchLiveMode(true);
     this.graphcanvas.draw();
@@ -167,9 +166,9 @@ Editor.prototype.onLiveButton = function() {
     button.innerHTML = !is_live_mode
         ? "<img src='imgs/icon-record.png'/> Live"
         : "<img src='imgs/icon-gear.png'/> Edit";
-};
+}
 
-Editor.prototype.onDropItem = function(e)
+	onDropItem(e)
 {
 	var that = this;
 	for(var i = 0; i < e.dataTransfer.files.length; ++i)
@@ -188,7 +187,7 @@ Editor.prototype.onDropItem = function(e)
 	}
 }
 
-Editor.prototype.goFullscreen = function() {
+	goFullscreen() {
     if (this.root.requestFullscreen) {
         this.root.requestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
     } else if (this.root.mozRequestFullscreen) {
@@ -203,13 +202,13 @@ Editor.prototype.goFullscreen = function() {
     setTimeout(function() {
         self.graphcanvas.resize();
     }, 100);
-};
+}
 
-Editor.prototype.onFullscreenButton = function() {
+	onFullscreenButton() {
     this.goFullscreen();
-};
+}
 
-Editor.prototype.addMiniWindow = function(w, h) {
+	addMiniWindow(w, h) {
     var miniwindow = document.createElement("div");
     miniwindow.className = "litegraph miniwindow";
     miniwindow.innerHTML =
@@ -267,9 +266,9 @@ Editor.prototype.addMiniWindow = function(w, h) {
     miniwindow.appendChild(close_button);
 
     this.root.querySelector(".content").appendChild(miniwindow);
-};
+}
 
-Editor.prototype.addMultiview = function()
+	addMultiview()
 {
 	var canvas = this.canvas;
 	this.graphcanvas.ctx.fillStyle = "black";
@@ -280,6 +279,7 @@ Editor.prototype.addMultiview = function()
     graphcanvas.background_image = "imgs/grid.png";
     this.graphcanvas2 = graphcanvas;
 	this.graphcanvas2.viewport = [canvas.width*0.5,0,canvas.width*0.5,canvas.height];
+}
 }
 
 LiteGraph.Editor = Editor;
