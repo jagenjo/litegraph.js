@@ -1,7 +1,6 @@
 
-* Fix editor/js/* as necessary
-* Fix editor/editor_mobile.html
-* Eliminate references to jquery?
+* editor/editor_mobile.html doesn't run workflows, silently
+* nodes/base.js/Subgraph relies on JQuery 1.6* which is horrifically obsolete
 * Go through and fix utils/*
 * Fix CONTRIBUTING.md
 * Fix README.md
