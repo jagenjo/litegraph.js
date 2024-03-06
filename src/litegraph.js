@@ -13608,7 +13608,7 @@ LGraphNode.prototype.executeAction = function(action)
     //Convert a hex value to its decimal value - the inputted hex must be in the
     //	format of a hex triplet - the kind we use for HTML colours. The function
     //	will return an array with three values.
-    function hex2num(hex) {
+    LiteGraph.hex2num = function(hex) {
         if (hex.charAt(0) == "#") {
             hex = hex.slice(1);
         } //Remove the '#' char - if there is one.
@@ -13624,9 +13624,7 @@ LGraphNode.prototype.executeAction = function(action)
             k++;
         }
         return value;
-    }
-
-    LiteGraph.hex2num = hex2num;
+    };
 
     //Give a array with three values as the argument and the function will return
     //	the corresponding hex triplet.
