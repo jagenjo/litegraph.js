@@ -1,5 +1,6 @@
 //Creates an interface to access extra features from a graph (like play, stop, live, etc)
-function Editor(container_id, options) {
+class Editor {
+	constructor(container_id, options) {
     options = options || {};
 
     //fill container
@@ -77,6 +78,7 @@ function Editor(container_id, options) {
 
     graphcanvas.resize();
     //graphcanvas.draw(true,true);
+	}
 }
 
 Editor.prototype.addLoadCounter = function() {
