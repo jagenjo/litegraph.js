@@ -1,7 +1,8 @@
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
-    function GamepadInput() {
+  class GamepadInput {
+		constructor() {
         this.addOutput("left_x_axis", "number");
         this.addOutput("left_y_axis", "number");
         this.addOutput("button_pressed", LiteGraph.EVENT);
@@ -14,17 +15,17 @@
         this._current_buttons = new Uint8Array(17);
     }
 
-    GamepadInput.title = "Gamepad";
-    GamepadInput.desc = "gets the input of the gamepad";
+    static title = "Gamepad";
+    static desc = "gets the input of the gamepad";
 
-    GamepadInput.CENTER = 0;
-    GamepadInput.LEFT = 1;
-    GamepadInput.RIGHT = 2;
-    GamepadInput.UP = 4;
-    GamepadInput.DOWN = 8;
+    static CENTER = 0;
+    static LEFT = 1;
+    static RIGHT = 2;
+    static UP = 4;
+    static DOWN = 8;
 
-    GamepadInput.zero = new Float32Array(2);
-    GamepadInput.buttons = [
+    static zero = new Float32Array(2);
+    static buttons = [
         "a",
         "b",
         "x",
@@ -40,7 +41,7 @@
         "home"
     ];
 
-    GamepadInput.prototype.onExecute = function() {
+    onExecute() {
         //get gamepad
         var gamepad = this.getGamepad();
         var threshold = this.properties.threshold || 0.0;
@@ -187,12 +188,12 @@
                 this.setOutputData(i, v);
             }
         }
-    };
+    }
 
-	GamepadInput.mapping = {a:0,b:1,x:2,y:3,lb:4,rb:5,lt:6,rt:7,back:8,start:9,ls:10,rs:11 };
-	GamepadInput.mapping_array = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs"];
+	static mapping = {a:0,b:1,x:2,y:3,lb:4,rb:5,lt:6,rt:7,back:8,start:9,ls:10,rs:11 };
+	static mapping_array = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs"];
 
-    GamepadInput.prototype.getGamepad = function() {
+    getGamepad() {
         var getGamepads =
             navigator.getGamepads ||
             navigator.webkitGetGamepads ||
@@ -277,9 +278,9 @@
             gamepad.xbox = xbox;
             return gamepad;
         }
-    };
+    }
 
-    GamepadInput.prototype.onDrawBackground = function(ctx) {
+    onDrawBackground(ctx) {
         if (this.flags.collapsed) {
             return;
         }
@@ -308,9 +309,9 @@
                 ctx.fillRect(0, h * i, 6, h);
             }
         }
-    };
+    }
 
-    GamepadInput.prototype.onGetOutputs = function() {
+    onGetOutputs() {
         return [
             ["left_axis", "vec2"],
             ["right_axis", "vec2"],
@@ -347,8 +348,8 @@
             ["hat", "number"],
             ["button_pressed", LiteGraph.EVENT]
         ];
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("input/gamepad", GamepadInput);
 
 })(this);
