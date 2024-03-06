@@ -12,30 +12,30 @@
 			this._size = this._bounding.subarray(2, 4);
 			this._nodes = [];
 			this.graph = null;
+		}
+		
+		set pos(v) {
+			if (!v || v.length < 2) {
+				return;
+			}
+			this._pos[0] = v[0];
+			this._pos[1] = v[1];
+		}
+		
+		get pos() {
+			return this._pos;
+		}
 
-			set pos(v) {
-				if (!v || v.length < 2) {
-					return;
-				}
-				this._pos[0] = v[0];
-				this._pos[1] = v[1];
+		set size(v) {
+			if (!v || v.length < 2) {
+				return;
 			}
-			
-			get pos() {
-				return this._pos;
-			}
-
-			set size(v) {
-				if (!v || v.length < 2) {
-					return;
-				}
-				this._size[0] = Math.max(140, v[0]);
-				this._size[1] = Math.max(80, v[1]);
-			}
-			
-			get size() {
-				return this._size;
-			}
+			this._size[0] = Math.max(140, v[0]);
+			this._size[1] = Math.max(80, v[1]);
+		}
+		
+		get size() {
+			return this._size;
 		}
 
 		configure(o) {
