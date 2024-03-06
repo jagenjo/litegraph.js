@@ -15,7 +15,8 @@
      * @param {LGraph} graph [optional]
      * @param {Object} options [optional] { skip_rendering, autoresize, viewport }
      */
-    function LGraphCanvas(canvas, graph, options) {
+class LGraphCanvas {
+	constructor(canvas, graph, options) {
         this.options = options = options || {};
 
         //if(graph === undefined)
@@ -136,6 +137,7 @@
 
         this.autoresize = options.autoresize;
     }
+}
 
     global.LGraphCanvas = LiteGraph.LGraphCanvas = LGraphCanvas;
 
