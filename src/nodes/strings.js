@@ -127,11 +127,11 @@ class StringToTable {
         this.addProperty("separator", ",");
 		this._table = null;
     }
-	}
-    StringToTable.title = "toTable";
-    StringToTable.desc = "Splits a string to table";
+		
+    static title = "toTable";
+    static desc = "Splits a string to table";
 
-    StringToTable.prototype.onExecute = function() {
+    onExecute() {
         var input = this.getInputData(0);
 		if(!input)
 			return;
@@ -144,8 +144,8 @@ class StringToTable {
 		}
         this.setOutputData(0, this._table );
         this.setOutputData(1, this._table ? this._table.length : 0 );
-    };
-
+    }
+	}
     LiteGraph.registerNodeType("string/toTable", StringToTable);
 
 })(this);
