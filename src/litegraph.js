@@ -5077,7 +5077,7 @@ LGraphNode.prototype.executeAction = function(action)
         for (var i = 0; i < nodes.length; ++i) {
             var node = nodes[i];
             node.getBounding(node_bounding);
-            if (!overlapBounding(this._bounding, node_bounding)) {
+            if (!LiteGraph.overlapBounding(this._bounding, node_bounding)) {
                 continue;
             } //out of the visible area
             this._nodes.push(node);
@@ -6790,7 +6790,7 @@ LGraphNode.prototype.executeAction = function(action)
 							var nodeX = nodes[i];
 							nodeX.getBounding(node_bounding);
 							if (
-								!overlapBounding(
+								!LiteGraph.overlapBounding(
 									this.dragging_rectangle,
 									node_bounding
 								)
@@ -7798,7 +7798,7 @@ LGraphNode.prototype.executeAction = function(action)
                 continue;
             }
 
-            if (!overlapBounding(this.visible_area, n.getBounding(temp, true))) {
+            if (!LiteGraph.overlapBounding(this.visible_area, n.getBounding(temp, true))) {
                 continue;
             } //out of the visible area
 
@@ -9427,7 +9427,7 @@ LGraphNode.prototype.executeAction = function(action)
                 }
 
                 //skip links outside of the visible area of the canvas
-                if (!overlapBounding(link_bounding, margin_area)) {
+                if (!LiteGraph.overlapBounding(link_bounding, margin_area)) {
                     continue;
                 }
 
@@ -10305,7 +10305,7 @@ LGraphNode.prototype.executeAction = function(action)
         for (var i = 0; i < groups.length; ++i) {
             var group = groups[i];
 
-            if (!overlapBounding(this.visible_area, group._bounding)) {
+            if (!LiteGraph.overlapBounding(this.visible_area, group._bounding)) {
                 continue;
             } //out of the visible area
 
@@ -13587,7 +13587,7 @@ LGraphNode.prototype.executeAction = function(action)
     LiteGraph.isInsideBounding = isInsideBounding;
 
     //bounding overlap, format: [ startx, starty, width, height ]
-    function overlapBounding(a, b) {
+    LiteGraph.overlapBounding = function(a, b) {
         var A_end_x = a[0] + a[2];
         var A_end_y = a[1] + a[3];
         var B_end_x = b[0] + b[2];
@@ -13603,7 +13603,6 @@ LGraphNode.prototype.executeAction = function(action)
         }
         return true;
     }
-    LiteGraph.overlapBounding = overlapBounding;
 
     //Convert a hex value to its decimal value - the inputted hex must be in the
     //	format of a hex triplet - the kind we use for HTML colours. The function
