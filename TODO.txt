@@ -1,2 +1,9 @@
 
-* Convert nodes\GL stuff to ES6 classes
+* Convert nodes/* to ES6 classes, perform no other upgrades.
+* Fix editor/js/* as necessary
+* Fix editor/editor_mobile.html
+* Eliminate references to jquery?
+* Go through and fix utils/*
+* Fix CONTRIBUTING.md
+* Fix README.md
+
