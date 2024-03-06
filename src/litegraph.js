@@ -3932,7 +3932,7 @@
         if (this.flags && this.flags.collapsed) {
             //if ( distance([x,y], [this.pos[0] + this.size[0]*0.5, this.pos[1] + this.size[1]*0.5]) < LiteGraph.NODE_COLLAPSED_RADIUS)
             if (
-                isInsideRectangle(
+                LiteGraph.isInsideRectangle(
                     x,
                     y,
                     this.pos[0] - margin,
@@ -3970,7 +3970,7 @@
                 var input = this.inputs[i];
                 this.getConnectionPos(true, i, link_pos);
                 if (
-                    isInsideRectangle(
+                    LiteGraph.isInsideRectangle(
                         x,
                         y,
                         link_pos[0] - 10,
@@ -3989,7 +3989,7 @@
                 var output = this.outputs[i];
                 this.getConnectionPos(false, i, link_pos);
                 if (
-                    isInsideRectangle(
+                    LiteGraph.isInsideRectangle(
                         x,
                         y,
                         link_pos[0] - 10,
@@ -6038,7 +6038,7 @@ LGraphNode.prototype.executeAction = function(action)
                     //Search for corner for resize
                     if ( !skip_action &&
                         node.resizable !== false &&
-                        isInsideRectangle( e.canvasX,
+                        LiteGraph.isInsideRectangle( e.canvasX,
                             e.canvasY,
                             node.pos[0] + node.size[0] - 5,
                             node.pos[1] + node.size[1] - 5,
@@ -6057,7 +6057,7 @@ LGraphNode.prototype.executeAction = function(action)
                                 var output = node.outputs[i];
                                 var link_pos = node.getConnectionPos(false, i);
                                 if (
-                                    isInsideRectangle(
+                                    LiteGraph.isInsideRectangle(
                                         e.canvasX,
                                         e.canvasY,
                                         link_pos[0] - 15,
@@ -6100,7 +6100,7 @@ LGraphNode.prototype.executeAction = function(action)
                                 var input = node.inputs[i];
                                 var link_pos = node.getConnectionPos(true, i);
                                 if (
-                                    isInsideRectangle(
+                                    LiteGraph.isInsideRectangle(
                                         e.canvasX,
                                         e.canvasY,
                                         link_pos[0] - 15,
@@ -6307,7 +6307,7 @@ LGraphNode.prototype.executeAction = function(action)
 							for ( var i = 0, l = node.outputs.length; i < l; ++i ) {
 								var output = node.outputs[i];
 								var link_pos = node.getConnectionPos(false, i);
-								if (isInsideRectangle(e.canvasX,e.canvasY,link_pos[0] - 15,link_pos[1] - 10,30,20)) {
+								if (LiteGraph.isInsideRectangle(e.canvasX,e.canvasY,link_pos[0] - 15,link_pos[1] - 10,30,20)) {
 									mClikSlot = output;
 									mClikSlot_index = i;
 									mClikSlot_isOut = true;
@@ -6321,7 +6321,7 @@ LGraphNode.prototype.executeAction = function(action)
 							for ( var i = 0, l = node.inputs.length; i < l; ++i ) {
 								var input = node.inputs[i];
 								var link_pos = node.getConnectionPos(true, i);
-								if (isInsideRectangle(e.canvasX,e.canvasY,link_pos[0] - 15,link_pos[1] - 10,30,20)) {
+								if (LiteGraph.isInsideRectangle(e.canvasX,e.canvasY,link_pos[0] - 15,link_pos[1] - 10,30,20)) {
 									mClikSlot = input;
 									mClikSlot_index = i;
 									mClikSlot_isOut = false;
@@ -6589,7 +6589,7 @@ LGraphNode.prototype.executeAction = function(action)
                 //Search for corner
                 if (this.canvas) {
                     if (
-                        isInsideRectangle(
+                        LiteGraph.isInsideRectangle(
                             e.canvasX,
                             e.canvasY,
                             node.pos[0] + node.size[0] - 5,
@@ -6909,7 +6909,7 @@ LGraphNode.prototype.executeAction = function(action)
                 if (
                     node &&
                     e.click_time < 300 &&
-                    isInsideRectangle( e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT )
+                    LiteGraph.isInsideRectangle( e.canvasX, e.canvasY, node.pos[0], node.pos[1] - LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT, LiteGraph.NODE_TITLE_HEIGHT )
                 ) {
                     node.collapse();
                 }
@@ -7028,7 +7028,7 @@ LGraphNode.prototype.executeAction = function(action)
     LGraphCanvas.prototype.isOverNodeBox = function(node, canvasx, canvasy) {
         var title_height = LiteGraph.NODE_TITLE_HEIGHT;
         if (
-            isInsideRectangle(
+            LiteGraph.isInsideRectangle(
                 canvasx,
                 canvasy,
                 node.pos[0] + 2,
@@ -7058,7 +7058,7 @@ LGraphNode.prototype.executeAction = function(action)
                 var link_pos = node.getConnectionPos(true, i);
                 var is_inside = false;
                 if (node.horizontal) {
-                    is_inside = isInsideRectangle(
+                    is_inside = LiteGraph.isInsideRectangle(
                         canvasx,
                         canvasy,
                         link_pos[0] - 5,
@@ -7067,7 +7067,7 @@ LGraphNode.prototype.executeAction = function(action)
                         20
                     );
                 } else {
-                    is_inside = isInsideRectangle(
+                    is_inside = LiteGraph.isInsideRectangle(
                         canvasx,
                         canvasy,
                         link_pos[0] - 10,
@@ -7104,7 +7104,7 @@ LGraphNode.prototype.executeAction = function(action)
                 var link_pos = node.getConnectionPos(false, i);
                 var is_inside = false;
                 if (node.horizontal) {
-                    is_inside = isInsideRectangle(
+                    is_inside = LiteGraph.isInsideRectangle(
                         canvasx,
                         canvasy,
                         link_pos[0] - 5,
@@ -7113,7 +7113,7 @@ LGraphNode.prototype.executeAction = function(action)
                         20
                     );
                 } else {
-                    is_inside = isInsideRectangle(
+                    is_inside = LiteGraph.isInsideRectangle(
                         canvasx,
                         canvasy,
                         link_pos[0] - 10,
@@ -13548,13 +13548,12 @@ LGraphNode.prototype.executeAction = function(action)
     }
     LiteGraph.colorToString = colorToString;
 
-    function isInsideRectangle(x, y, left, top, width, height) {
+    LiteGraph.isInsideRectangle = function(x, y, left, top, width, height) {
         if (left < x && left + width > x && top < y && top + height > y) {
             return true;
         }
         return false;
-    }
-    LiteGraph.isInsideRectangle = isInsideRectangle;
+    };
 
     //[minx,miny,maxx,maxy]
     LiteGraph.growBounding = function(bounding, x, y) {
