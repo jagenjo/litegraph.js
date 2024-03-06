@@ -2014,7 +2014,7 @@
             nextId = ++this.graph.last_link_id;
         
 		//create link class
-		link_info = new LLink(
+		link_info = new LiteGraph.LLink(
 			nextId,
 			input.type || output.type,
 			this.id,
