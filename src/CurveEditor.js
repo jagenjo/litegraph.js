@@ -1,8 +1,8 @@
 (function(global) {
 	
 	//used by some widgets to render a curve editor
-	function CurveEditor( points )
-	{
+class CurveEditor {
+	constructor( points ) {
 		this.points = points;
 		this.selected = -1;
 		this.nearest = -1;
@@ -10,6 +10,7 @@
 		this.must_update = true;
 		this.margin = 5;
 	}
+}
 
 	CurveEditor.sampleCurve = function(f,points)
 	{
