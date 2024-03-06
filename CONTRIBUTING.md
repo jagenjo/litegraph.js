@@ -6,4 +6,4 @@ There are some simple rules that everyone should follow:
 > https://github.com/jagenjo/litegraph.js/pull/155#issuecomment-656602861
 Those files will be updated by owner.
 
-
+- Javi, a long time ago
