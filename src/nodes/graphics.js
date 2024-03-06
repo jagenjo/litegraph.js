@@ -1,7 +1,8 @@
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
-    function GraphicsPlot() {
+class GraphicsPlot {
+	constructor() {
         this.addInput("A", "Number");
         this.addInput("B", "Number");
         this.addInput("C", "Number");
@@ -10,7 +11,7 @@
         this.values = [[], [], [], []];
         this.properties = { scale: 2 };
     }
-
+	}
     GraphicsPlot.title = "Plot";
     GraphicsPlot.desc = "Plots data over time";
     GraphicsPlot.colors = ["#FFF", "#F99", "#9F9", "#99F"];
@@ -75,11 +76,12 @@
 
     LiteGraph.registerNodeType("graphics/plot", GraphicsPlot);
 
-    function GraphicsImage() {
+class GraphicsImage {
+	constructor() {
         this.addOutput("frame", "image");
         this.properties = { url: "" };
     }
-
+	}
     GraphicsImage.title = "Image";
     GraphicsImage.desc = "Image loader";
     GraphicsImage.widgets = [{ name: "load", text: "Load", type: "button" }];
@@ -173,7 +175,8 @@
 
     LiteGraph.registerNodeType("graphics/image", GraphicsImage);
 
-    function ColorPalette() {
+class ColorPalette {
+	constructor() {
         this.addInput("f", "number");
         this.addOutput("Color", "color");
         this.properties = {
@@ -183,7 +186,7 @@
             colorD: "#FFFFFF"
         };
     }
-
+	}
     ColorPalette.title = "Palette";
     ColorPalette.desc = "Generates a color";
 
@@ -248,11 +251,12 @@
 
     LiteGraph.registerNodeType("color/palette", ColorPalette);
 
-    function ImageFrame() {
+class ImageFrame {
+	constructor() {
         this.addInput("", "image,canvas");
         this.size = [200, 200];
     }
-
+	}
     ImageFrame.title = "Frame";
     ImageFrame.desc = "Frame viewerew";
     ImageFrame.widgets = [
@@ -299,7 +303,8 @@
 
     LiteGraph.registerNodeType("graphics/frame", ImageFrame);
 
-    function ImageFade() {
+class ImageFade {
+	constructor() {
         this.addInputs([
             ["img1", "image"],
             ["img2", "image"],
@@ -308,7 +313,7 @@
         this.addOutput("", "image");
         this.properties = { fade: 0.5, width: 512, height: 512 };
     }
-
+	}
     ImageFade.title = "Image fade";
     ImageFade.desc = "Fades between images";
     ImageFade.widgets = [
@@ -358,13 +363,14 @@
 
     LiteGraph.registerNodeType("graphics/imagefade", ImageFade);
 
-    function ImageCrop() {
+class ImageCrop {
+	constructor() {
         this.addInput("", "image");
         this.addOutput("", "image");
         this.properties = { width: 256, height: 256, x: 0, y: 0, scale: 1.0 };
         this.size = [50, 20];
     }
-
+	}
     ImageCrop.title = "Crop";
     ImageCrop.desc = "Crop Image";
 
@@ -441,7 +447,8 @@
 
     //CANVAS stuff
 
-    function CanvasNode() {
+class CanvasNode {
+	constructor() {
         this.addInput("clear", LiteGraph.ACTION);
         this.addOutput("", "canvas");
         this.properties = { width: 512, height: 512, autoclear: true };
@@ -449,7 +456,7 @@
         this.canvas = document.createElement("canvas");
         this.ctx = this.canvas.getContext("2d");
     }
-
+	}
     CanvasNode.title = "Canvas";
     CanvasNode.desc = "Canvas to render stuff";
 
@@ -478,14 +485,15 @@
 
     LiteGraph.registerNodeType("graphics/canvas", CanvasNode);
 
-    function DrawImageNode() {
+class DrawImageNode {
+	constructor() {
         this.addInput("canvas", "canvas");
         this.addInput("img", "image,canvas");
         this.addInput("x", "number");
         this.addInput("y", "number");
         this.properties = { x: 0, y: 0, opacity: 1 };
     }
-
+	}
     DrawImageNode.title = "DrawImage";
     DrawImageNode.desc = "Draws image into a canvas";
 
@@ -508,7 +516,8 @@
 
     LiteGraph.registerNodeType("graphics/drawImage", DrawImageNode);
 
-    function DrawRectangleNode() {
+class DrawRectangleNode {
+	constructor() {
         this.addInput("canvas", "canvas");
         this.addInput("x", "number");
         this.addInput("y", "number");
@@ -523,7 +532,7 @@
             opacity: 1
         };
     }
-
+	}
     DrawRectangleNode.title = "DrawRectangle";
     DrawRectangleNode.desc = "Draws rectangle in canvas";
 
@@ -543,12 +552,13 @@
 
     LiteGraph.registerNodeType("graphics/drawRectangle", DrawRectangleNode);
 
-    function ImageVideo() {
+class ImageVideo {
+	constructor() {
         this.addInput("t", "number");
         this.addOutputs([["frame", "image"], ["t", "number"], ["d", "number"]]);
         this.properties = { url: "", use_proxy: true };
     }
-
+	}
     ImageVideo.title = "Video";
     ImageVideo.desc = "Video playback";
     ImageVideo.widgets = [
@@ -732,13 +742,14 @@
     LiteGraph.registerNodeType("graphics/video", ImageVideo);
 
     // Texture Webcam *****************************************
-    function ImageWebcam() {
+class ImageWebcam {
+	constructor() {
         this.addOutput("Webcam", "image");
         this.properties = { filterFacingMode: false, facingMode: "user" };
         this.boxcolor = "black";
         this.frame = 0;
     }
-
+	}
     ImageWebcam.title = "Webcam";
     ImageWebcam.desc = "Webcam image";
     ImageWebcam.is_webcam_open = false;
