@@ -30,11 +30,6 @@
 			LiteGraph.pointerListenerAdd(element, "move", this._binded_mouse_callback);
 			LiteGraph.pointerListenerAdd(element, "up", this._binded_mouse_callback);
 
-			element.addEventListener(
-				"mousewheel",
-				this._binded_mouse_callback,
-				false
-			);
 			element.addEventListener("wheel", this._binded_mouse_callback, false);
 		}
 
