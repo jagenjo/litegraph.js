@@ -429,10 +429,10 @@
 
 			// Drop
 			this._ondrop_callback = this.processDrop.bind(this);
-			canvas.addEventListener("dragover", this._doNothing, false);
-			canvas.addEventListener("dragend", this._doNothing, false);
-			canvas.addEventListener("drop", this._ondrop_callback, false);
-			canvas.addEventListener("dragenter", this._doReturnTrue, false);
+			canvas.addEventListener("dragover", this._doNothing);
+			canvas.addEventListener("dragend", this._doNothing);
+			canvas.addEventListener("drop", this._ondrop_callback);
+			canvas.addEventListener("dragenter", this._doReturnTrue);
 
 			this._events_binded = true;
 		}
@@ -467,6 +467,8 @@
 			document.removeEventListener("keyup", this._key_callback);
 			
 			// Drop
+			canvas.removeEventListener("dragover", this._doNothing);
+			canvas.removeEventListener("dragend", this._doNothing);
 			canvas.removeEventListener("drop", this._ondrop_callback);
 			canvas.removeEventListener("dragenter", this._doReturnTrue);
 
