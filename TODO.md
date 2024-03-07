@@ -4,6 +4,7 @@
 ## Donts:
 - Do NOT change over comments or variables from 'mouse' to 'pointer' yet.
 - Do NOT touch stuff you aren't prepared to apply proper rigor to fix yet.
+- Try not to use any JS more modern than ES6 yet.
 
 ## Events:
 - Remove any unnecessary event capture flags
@@ -16,6 +17,9 @@
 ## ES6:
 - Replace var with const/let on smaller methods only when I trust myself
 - Apply the spread operator where appropriate
+
+## CSS:
+- Attempt to eliminate the specification of fonts in script by using CSS
 
 ## Issues:
 - editor/editor_mobile.html doesn't run workflows, silently
