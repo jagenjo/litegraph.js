@@ -410,32 +410,18 @@
 			var document = ref_window.document; //hack used when moving canvas between windows
 
 			this._mousedown_callback = this.processMouseDown.bind(this);
-			this._mousewheel_callback = this.processMouseWheel.bind(this);
-			// why mousemove and mouseup were not binded here?
 			this._mousemove_callback = this.processMouseMove.bind(this);
 			this._mouseup_callback = this.processMouseUp.bind(this);
 
-			//touch events -- TODO IMPLEMENT
-			//this._touch_callback = this.touchHandler.bind(this);
-
-			LiteGraph.pointerListenerAdd(canvas, "down", this._mousedown_callback,
-			true); //down do not need to store the binded
-			canvas.addEventListener("mousewheel", this._mousewheel_callback, false);
-
-			LiteGraph.pointerListenerAdd(canvas, "up", this._mouseup_callback,
-			true); // CHECK: ??? binded or not
+			LiteGraph.pointerListenerAdd(canvas, "down", this._mousedown_callback, true);
+			LiteGraph.pointerListenerAdd(canvas, "up", this._mouseup_callback, true);
 			LiteGraph.pointerListenerAdd(canvas, "move", this._mousemove_callback);
+			
+			this._mousewheel_callback = this.processMouseWheel.bind(this);
+			canvas.addEventListener("wheel", this._mousewheel_callback, false);
+
 
 			canvas.addEventListener("contextmenu", this._doNothing);
-
-			//touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
-			/*if( 'touchstart' in document.documentElement )
-			{
-			    canvas.addEventListener("touchstart", this._touch_callback, true);
-			    canvas.addEventListener("touchmove", this._touch_callback, true);
-			    canvas.addEventListener("touchend", this._touch_callback, true);
-			    canvas.addEventListener("touchcancel", this._touch_callback, true);
-			}*/
 
 			//Keyboard ******************
 			this._key_callback = this.processKey.bind(this);
@@ -446,7 +432,6 @@
 
 			//Dropping Stuff over nodes ************************************
 			this._ondrop_callback = this.processDrop.bind(this);
-
 			canvas.addEventListener("dragover", this._doNothing, false);
 			canvas.addEventListener("dragend", this._doNothing, false);
 			canvas.addEventListener("drop", this._ondrop_callback, false);
@@ -473,25 +458,13 @@
 			LiteGraph.pointerListenerRemove(this.canvas, "move", this._mousedown_callback);
 			LiteGraph.pointerListenerRemove(this.canvas, "up", this._mousedown_callback);
 			LiteGraph.pointerListenerRemove(this.canvas, "down", this._mousedown_callback);
-			this.canvas.removeEventListener(
-				"mousewheel",
-				this._mousewheel_callback
-			);
-			this.canvas.removeEventListener(
-				"DOMMouseScroll",
-				this._mousewheel_callback
-			);
+			this.canvas.removeEventListener("wheel", this._mousewheel_callback);
+
 			this.canvas.removeEventListener("keydown", this._key_callback);
 			document.removeEventListener("keyup", this._key_callback);
 			this.canvas.removeEventListener("contextmenu", this._doNothing);
 			this.canvas.removeEventListener("drop", this._ondrop_callback);
 			this.canvas.removeEventListener("dragenter", this._doReturnTrue);
-
-			//touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
-			/*this.canvas.removeEventListener("touchstart", this._touch_callback );
-			this.canvas.removeEventListener("touchmove", this._touch_callback );
-			this.canvas.removeEventListener("touchend", this._touch_callback );
-			this.canvas.removeEventListener("touchcancel", this._touch_callback );*/
 
 			this._mousedown_callback = null;
 			this._mousewheel_callback = null;
