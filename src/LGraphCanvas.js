@@ -657,7 +657,7 @@
 
 			this.canvas.focus();
 
-			LiteGraph.closeAllContextMenus(ref_window);
+			ContextMenu.closeAll(ref_window);
 
 			if (this.onMouse) {
 				if (this.onMouse(e) == true)
