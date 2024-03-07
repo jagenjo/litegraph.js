@@ -412,9 +412,9 @@
 			this._mousemove_callback = this.processMouseMove.bind(this);
 			this._mouseup_callback = this.processMouseUp.bind(this);
 
-			LiteGraph.pointerListenerAdd(canvas, "down", this._mousedown_callback);
-			LiteGraph.pointerListenerAdd(canvas, "move", this._mousemove_callback);
-			LiteGraph.pointerListenerAdd(canvas, "up", this._mouseup_callback);
+			canvas.addEventListener("mousedown", this._mousedown_callback);
+			canvas.addEventListener("mousemove", this._mousemove_callback);
+			canvas.addEventListener("mouseup", this._mouseup_callback);
 			canvas.addEventListener("contextmenu", this._doNothing);
 			
 			// Wheel
@@ -625,9 +625,9 @@
 
 			//move mouse move event to the window in case it drags outside of the canvas
 			if (!this.options.skip_events) {
-				LiteGraph.pointerListenerRemove(this.canvas, "move", this._mousemove_callback);
-				LiteGraph.pointerListenerAdd(ref_window.document, "move", this._mousemove_callback); //catch for the entire window
-				LiteGraph.pointerListenerAdd(ref_window.document, "up", this._mouseup_callback);
+				this.canvas.removeEventListener("mousemove", this._mousemove_callback);
+				ref_window.document.addEventListener("mousemove", this._mousemove_callback); //catch for the entire window
+				ref_window.document.addEventListener("mouseup", this._mouseup_callback);
 			}
 
 			if (!is_inside) {
@@ -1426,9 +1426,9 @@
 			//restore the mousemove event back to the canvas
 			if (!this.options.skip_events) {
 				//console.log("pointerevents: processMouseUp adjustEventListener");
-				LiteGraph.pointerListenerRemove(document, "move", this._mousemove_callback);
-				LiteGraph.pointerListenerAdd(this.canvas, "move", this._mousemove_callback);
-				LiteGraph.pointerListenerRemove(document, "up", this._mouseup_callback);
+				document.removeEventListener("mousemove", this._mousemove_callback);
+				this.canvas.addEventListener("mousemove", this._mousemove_callback);
+				document.removeEventListener("mouseup", this._mouseup_callback);
 			}
 
 			this.adjustMouseEvent(e);
