@@ -62,18 +62,6 @@
 			//this prevents the default context browser menu to open in case this menu was created when pressing right button
 			root.addEventListener("contextmenu", (event) => event.preventDefault());
 
-			LiteGraph.pointerListenerAdd(root, "down",
-				function(e) {
-					//console.log("pointerevents: ContextMenu down");
-					if (e.button == 2) {
-						that.close();
-						e.preventDefault();
-						return true;
-					}
-				},
-				true
-			);
-
 			function on_mouse_wheel(e) {
 				var pos = parseInt(root.style.top);
 				root.style.top =
