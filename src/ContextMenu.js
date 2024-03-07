@@ -59,8 +59,8 @@
 				root.style.pointerEvents = "auto";
 			}, 100); //delay so the mouse up event is not caught by this element
 
-			//this prevents the default context browser menu to open in case this menu was created when pressing right button
-			root.addEventListener("contextmenu", (event) => event.preventDefault());
+			//this prevents the context menu from opening, but also closes it on right click
+			root.addEventListener("contextmenu", (event) => { this.close(); event.preventDefault(); });
 
 			function on_mouse_wheel(e) {
 				var pos = parseInt(root.style.top);
@@ -75,7 +75,6 @@
 			}
 
 			root.addEventListener("wheel", on_mouse_wheel, true);
-			root.addEventListener("mousewheel", on_mouse_wheel, true);
 
 			this.root = root;
 
