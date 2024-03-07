@@ -397,18 +397,17 @@
 		 * @method bindEvents
 		 **/
 		bindEvents() {
+			//console.log("LGraphCanvas.bindEvents()");
 			if (this._events_binded) {
-				console.warn("LGraphCanvas: events already binded");
+				console.warn("LGraphCanvas.bindEvents(): Events already binded");
 				return;
 			}
 
-			//console.log("pointerevents: bindEvents");
+			const canvas = this.canvas;
+			const ref_window = this.getCanvasWindow();
+			const document = ref_window.document; //hack used when moving canvas between windows
 
-			var canvas = this.canvas;
-
-			var ref_window = this.getCanvasWindow();
-			var document = ref_window.document; //hack used when moving canvas between windows
-
+			// Pointer
 			this._mousedown_callback = this.processMouseDown.bind(this);
 			this._mousemove_callback = this.processMouseMove.bind(this);
 			this._mouseup_callback = this.processMouseUp.bind(this);
@@ -416,21 +415,19 @@
 			LiteGraph.pointerListenerAdd(canvas, "down", this._mousedown_callback, true);
 			LiteGraph.pointerListenerAdd(canvas, "up", this._mouseup_callback, true);
 			LiteGraph.pointerListenerAdd(canvas, "move", this._mousemove_callback);
+			canvas.addEventListener("contextmenu", this._doNothing);
 			
+			// Wheel
 			this._mousewheel_callback = this.processMouseWheel.bind(this);
 			canvas.addEventListener("wheel", this._mousewheel_callback, false);
 
-
-			canvas.addEventListener("contextmenu", this._doNothing);
-
-			//Keyboard ******************
+			// Keyboard
 			this._key_callback = this.processKey.bind(this);
 			canvas.setAttribute("tabindex", 1); //otherwise key events are ignored
 			canvas.addEventListener("keydown", this._key_callback, true);
-			document.addEventListener("keyup", this._key_callback,
-			true); //in document, otherwise it doesn't fire keyup
+			document.addEventListener("keyup", this._key_callback, true); //in document, otherwise it doesn't fire keyup
 
-			//Dropping Stuff over nodes ************************************
+			// Dropping stuff over canvas
 			this._ondrop_callback = this.processDrop.bind(this);
 			canvas.addEventListener("dragover", this._doNothing, false);
 			canvas.addEventListener("dragend", this._doNothing, false);
