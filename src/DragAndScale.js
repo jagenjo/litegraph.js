@@ -26,9 +26,9 @@
 
 			this._binded_mouse_callback = this.onMouse.bind(this);
 
-			LiteGraph.pointerListenerAdd(element, "down", this._binded_mouse_callback);
-			LiteGraph.pointerListenerAdd(element, "move", this._binded_mouse_callback);
-			LiteGraph.pointerListenerAdd(element, "up", this._binded_mouse_callback);
+			element.addEventListener("pointerdown", this._binded_mouse_callback);
+			element.addEventListener("pointermove", this._binded_mouse_callback);
+			element.addEventListener("pointerup", this._binded_mouse_callback);
 
 			element.addEventListener("wheel", this._binded_mouse_callback, false);
 		}
@@ -83,9 +83,9 @@
 
 			if (e.type == LiteGraph.pointerevents_method + "down" && is_inside) {
 				this.dragging = true;
-				LiteGraph.pointerListenerRemove(canvas, "move", this._binded_mouse_callback);
-				LiteGraph.pointerListenerAdd(document, "move", this._binded_mouse_callback);
-				LiteGraph.pointerListenerAdd(document, "up", this._binded_mouse_callback);
+				canvas.removeEventListener("pointermove", this._binded_mouse_callback);
+				document.addEventListener("pointermove", this._binded_mouse_callback);
+				document.addEventListener("pointerup", this._binded_mouse_callback);
 			}
 			else if (e.type == LiteGraph.pointerevents_method + "move") {
 				if (!ignore) {
@@ -98,9 +98,9 @@
 			}
 			else if (e.type == LiteGraph.pointerevents_method + "up") {
 				this.dragging = false;
-				LiteGraph.pointerListenerRemove(document, "move", this._binded_mouse_callback);
-				LiteGraph.pointerListenerRemove(document, "up", this._binded_mouse_callback);
-				LiteGraph.pointerListenerAdd(canvas, "move", this._binded_mouse_callback);
+				document.removeEventListener("pointermove", this._binded_mouse_callback);
+				document.removeEventListener("pointerup", this._binded_mouse_callback);
+				canvas.addEventListener("pointermove", this._binded_mouse_callback);
 			}
 			else if (is_inside &&
 				(e.type == "mousewheel" ||
