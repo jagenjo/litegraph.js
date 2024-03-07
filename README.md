@@ -1,6 +1,6 @@
 # litegraph.js
 
-A library in Javascript to create graphs in the browser similar to Unreal Blueprints. Nodes can be programmed easily and it includes an editor to construct and tests the graphs.
+A library in Javascript to create flow graphs in the browser similar to Unreal Blueprints or Blender Nodes. Nodes can be programmed easily and it includes an editor to construct and tests the graphs.
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
@@ -18,8 +18,6 @@ Try it in the [demo site](https://tamats.com/projects/litegraph/editor).
 - Live mode system (hides the graph but calls nodes to render whatever they want, useful to create UIs)
 - Graphs can be executed in NodeJS
 - Highly customizable nodes (color, shape, slots vertical or horizontal, widgets, custom rendering)
-- Easy to integrate in any JS application (one single file, no dependencies)
-- Typescript support
 
 ## Nodes provided
 Although it is easy to create new node types, LiteGraph comes with some default nodes that could be useful for many cases:
@@ -31,9 +29,11 @@ Although it is easy to create new node types, LiteGraph comes with some default 
 
 ## Installation
 
-You can install it using npm 
+Using git:
+
+(from the folder above litegraph.js)
 ```
-npm install litegraph.js
+git clone https://github.com/daniel-lewis-ab/litegraph.js
 ```
 
 Or downloading the ```build/litegraph.js``` and ```css/litegraph.css``` version from this repository.
@@ -75,28 +75,33 @@ graph.start()
 Here is an example of how to build a node that sums two inputs:
 
 ```javascript
-//node constructor class
-function MyAddNode()
-{
-  this.addInput("A","number");
-  this.addInput("B","number");
-  this.addOutput("A+B","number");
-  this.properties = { precision: 1 };
-}
-
-//name to show
-MyAddNode.title = "Sum";
-
-//function to call when the node is executed
-MyAddNode.prototype.onExecute = function()
-{
-  var A = this.getInputData(0);
-  if( A === undefined )
-    A = 0;
-  var B = this.getInputData(1);
-  if( B === undefined )
-    B = 0;
-  this.setOutputData( 0, A + B );
+//your node constructor class
+class MyAddNode {
+	constructor() {
+		//add some input slots
+		this.addInput("A","number");
+		this.addInput("B","number");
+		//add some output slots
+		this.addOutput("A+B","number");
+		//add some properties
+		this.properties = { precision: 1 };
+	}
+	
+	// Name to show on node
+	static title = "Sum";
+	
+	//function to call when the node is executed
+	onExecute = function() {
+	  //retrieve data from inputs
+		var A = this.getInputData(0);
+		if( A === undefined )
+		  A = 0;
+		var B = this.getInputData(1);
+		if( B === undefined )
+		  B = 0;
+		//assing data to outputs
+		this.setOutputData( 0, A + B );
+	}
 }
 
 //register in the system
@@ -120,6 +125,8 @@ LiteGraph.wrapFunctionAsNode("math/sum",sum, ["Number","Number"],"Number");
 It also works server-side using NodeJS although some nodes do not work in server (audio, graphics, input, etc).
 
 ```js
+///@TODO: 
+// NOTE FROM Daniel: you'd have to actually require all of the core, 2024-03-06
 var LiteGraph = require("./litegraph.js").LiteGraph;
 
 var graph = new LiteGraph.LGraph();
@@ -137,7 +144,7 @@ graph.start()
 ```
 
 
-## Projects using it
+## Projects using Javengo's LiteGraph.js:
 
 ### [comfyUI](https://github.com/comfyanonymous/ComfyUI)
 ![screenshot](https://github.com/comfyanonymous/ComfyUI/blob/6efe561c2a7321501b1b27f47039c7616dda1860/comfyui_screenshot.png)
@@ -164,7 +171,7 @@ It includes several commands in the utils folder to generate doc, check errors a
 -----
 The demo includes some examples of graphs. In order to try them you can visit [demo site](http://tamats.com/projects/litegraph/editor) or install it on your local computer, to do so you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
 ```sh
-$ git clone https://github.com/jagenjo/litegraph.js.git
+$ git clone https://github.com/daniel-lewis-ab/litegraph.js
 $ cd litegraph.js
 $ npm install
 $ node utils/server.js
@@ -175,9 +182,10 @@ Open your browser and point it to http://localhost:8000/. You can select a demo 
 ## Feedback
 --------
 
-You can write any feedback to javi.agenjo@gmail.com
+You can write any feedback about the original to javi.agenjo@gmail.com
+You can write any feedback about my fork to daniel.lewis.ab@gmail.com
 
-## Contributors
+## Contributors (to Original)
 
 - atlasan
 - kriffe
@@ -188,5 +196,6 @@ You can write any feedback to javi.agenjo@gmail.com
 - ilyabesk
 - gausszhou
 
+##Contributors (to Fork)
 
 
