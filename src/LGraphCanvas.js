@@ -424,8 +424,8 @@
 			// Keyboard
 			this._key_callback = this.processKey.bind(this);
 			canvas.setAttribute("tabindex", 1); //otherwise key events are ignored
-			canvas.addEventListener("keydown", this._key_callback, true);
-			document.addEventListener("keyup", this._key_callback, true); //in document, otherwise it doesn't fire keyup
+			canvas.addEventListener("keydown", this._key_callback);
+			document.addEventListener("keyup", this._key_callback); //in document, otherwise it doesn't fire keyup
 
 			// Drop
 			this._ondrop_callback = this.processDrop.bind(this);
