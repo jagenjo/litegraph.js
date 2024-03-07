@@ -74,7 +74,7 @@
 				options.scroll_speed = 0.1;
 			}
 
-			root.addEventListener("wheel", on_mouse_wheel, true);
+			root.addEventListener("wheel", on_mouse_wheel);
 
 			this.root = root;
 
@@ -98,20 +98,8 @@
 				num++;
 			}
 
-			//close on leave? touch enabled devices won't work TODO use a global device detector and condition on that
-			/*LiteGraph.pointerListenerAdd(root,"leave", function(e) {
-		  	console.log("pointerevents: ContextMenu leave");
-            if (that.lock) {
-                return;
-            }
-            if (root.closing_timer) {
-                clearTimeout(root.closing_timer);
-            }
-            root.closing_timer = setTimeout(that.close.bind(that, e), 500);
-            //that.close(e);
-        });*/
-
-			LiteGraph.pointerListenerAdd(root, "enter", function(e) {
+			/// @TODO: Verify this closing_timer is real
+			root.addEventListener("pointerenter", function(e) {
 				//console.log("pointerevents: ContextMenu enter");
 				if (root.closing_timer) {
 					clearTimeout(root.closing_timer);
@@ -217,7 +205,7 @@
 				element.addEventListener("click", inner_onclick);
 			}
 			if (!disabled && options.autoopen) {
-				LiteGraph.pointerListenerAdd(element, "enter", inner_over);
+				element.addEventListener("pointerenter", inner_over);
 			}
 
 			function inner_over(e) {
