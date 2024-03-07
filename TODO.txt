@@ -3,7 +3,6 @@
 *
 * Remove any unnecessary event capture flags
 * Remove any unnecessary stopPropagation, return true/false, cancelBubble calls
-* Replace obsolete DOMMouseScroll and mousewheel handlers with wheel
 * Replace mouseup/down/move handlers with pointerup/down/move
 * Eliminate use of LiteGraph.pointerListenerAdd/Remove
 * Every event gets a separate handler
