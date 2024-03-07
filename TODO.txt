@@ -4,7 +4,6 @@
 * Remove any unnecessary event capture flags
 * Remove any unnecessary stopPropagation, return true/false, cancelBubble calls
 * Replace mouseup/down/move handlers with pointerup/down/move
-* Eliminate use of LiteGraph.pointerListenerAdd/Remove
 * Every event gets a separate handler
 * Every event target gets a seperate listener
 *
