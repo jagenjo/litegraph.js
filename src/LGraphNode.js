@@ -86,7 +86,8 @@
 
 			this.flags = {};
 		}
-			
+		
+		_pos;
 		set pos(v) {
 			if (!v || v.length < 2) {
 				return;
