@@ -60,26 +60,7 @@
 			}, 100); //delay so the mouse up event is not caught by this element
 
 			//this prevents the default context browser menu to open in case this menu was created when pressing right button
-			LiteGraph.pointerListenerAdd(root, "up",
-				function(e) {
-					//console.log("pointerevents: ContextMenu up root prevent");
-					e.preventDefault();
-					return true;
-				},
-				true
-			);
-			root.addEventListener(
-				"contextmenu",
-				function(e) {
-					if (e.button != 2) {
-						//right button
-						return false;
-					}
-					e.preventDefault();
-					return false;
-				},
-				true
-			);
+			root.addEventListener("contextmenu", (event) => event.preventDefault());
 
 			LiteGraph.pointerListenerAdd(root, "down",
 				function(e) {
