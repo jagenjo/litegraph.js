@@ -626,9 +626,8 @@
 			//move mouse move event to the window in case it drags outside of the canvas
 			if (!this.options.skip_events) {
 				LiteGraph.pointerListenerRemove(this.canvas, "move", this._mousemove_callback);
-				LiteGraph.pointerListenerAdd(ref_window.document, "move", this._mousemove_callback,
-					true); //catch for the entire window
-				LiteGraph.pointerListenerAdd(ref_window.document, "up", this._mouseup_callback, true);
+				LiteGraph.pointerListenerAdd(ref_window.document, "move", this._mousemove_callback); //catch for the entire window
+				LiteGraph.pointerListenerAdd(ref_window.document, "up", this._mouseup_callback);
 			}
 
 			if (!is_inside) {
