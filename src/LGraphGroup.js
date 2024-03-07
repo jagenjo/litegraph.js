@@ -66,7 +66,7 @@
 			if (ignore_nodes) {
 				return;
 			}
-			for (const i = 0; i < this._nodes.length; ++i) {
+			for (let i = 0; i < this._nodes.length; ++i) {
 				const node = this._nodes[i];
 				node.pos[0] += deltax;
 				node.pos[1] += deltay;
@@ -78,7 +78,7 @@
 			const nodes = this.graph._nodes;
 			const node_bounding = new Float32Array(4);
 
-			for (const i = 0; i < nodes.length; ++i) {
+			for (let i = 0; i < nodes.length; ++i) {
 				const node = nodes[i];
 				node.getBounding(node_bounding);
 				if (!LiteGraph.overlapBounding(this._bounding, node_bounding)) {
