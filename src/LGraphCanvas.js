@@ -6334,7 +6334,7 @@
 
 			var dialogCloseTimer = null;
 			var prevent_timeout = false;
-			LiteGraph.pointerListenerAdd(dialog, "leave", function(e) {
+			dialog.addEventListener("mouseleave", function(e) {
 				if (prevent_timeout)
 					return;
 				if (LiteGraph.dialog_close_on_mouse_leave)
@@ -6342,7 +6342,7 @@
 						dialogCloseTimer = setTimeout(dialog.close, LiteGraph
 							.dialog_close_on_mouse_leave_delay); //dialog.close();
 			});
-			LiteGraph.pointerListenerAdd(dialog, "enter", function(e) {
+			dialog.addEventListener("mouseenter", function(e) {
 				if (LiteGraph.dialog_close_on_mouse_leave)
 					if (dialogCloseTimer) clearTimeout(dialogCloseTimer);
 			});
@@ -6505,13 +6505,13 @@
 			if (options.hide_on_mouse_leave) {
 				var prevent_timeout = false;
 				var timeout_close = null;
-				LiteGraph.pointerListenerAdd(dialog, "enter", function(e) {
+				dialog.addEventListener("mouseenter", function(e) {
 					if (timeout_close) {
 						clearTimeout(timeout_close);
 						timeout_close = null;
 					}
 				});
-				LiteGraph.pointerListenerAdd(dialog, "leave", function(e) {
+				dialog.addEventListener("mouseleave", function(e) {
 					if (prevent_timeout) {
 						return;
 					}
