@@ -1,6 +1,7 @@
 (function(global) {
 
 	class LGraphGroup {
+		
 		constructor(title) {
 			this.title = title || "Group";
 			this.font_size = 24;

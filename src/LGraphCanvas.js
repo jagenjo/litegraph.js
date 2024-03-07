@@ -341,7 +341,7 @@
 			}
 
 			//this.canvas.tabindex = "1000";
-			canvas.className += " lgraphcanvas";
+			canvas.classList.add("lgraphcanvas");
 			canvas.data = this;
 			canvas.tabindex = "1"; //to allow key events
 
@@ -427,11 +427,6 @@
 			LiteGraph.pointerListenerAdd(canvas, "move", this._mousemove_callback);
 
 			canvas.addEventListener("contextmenu", this._doNothing);
-			canvas.addEventListener(
-				"DOMMouseScroll",
-				this._mousewheel_callback,
-				false
-			);
 
 			//touch events -- THIS WAY DOES NOT WORK, finish implementing pointerevents, than clean the touchevents
 			/*if( 'touchstart' in document.documentElement )
