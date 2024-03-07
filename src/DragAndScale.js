@@ -30,7 +30,7 @@
 			element.addEventListener("pointermove", this._binded_mouse_callback);
 			element.addEventListener("pointerup", this._binded_mouse_callback);
 
-			element.addEventListener("wheel", this._binded_mouse_callback, false);
+			element.addEventListener("wheel", this._binded_mouse_callback);
 		}
 
 		computeVisibleArea(viewport) {
@@ -102,19 +102,8 @@
 				document.removeEventListener("pointerup", this._binded_mouse_callback);
 				canvas.addEventListener("pointermove", this._binded_mouse_callback);
 			}
-			else if (is_inside &&
-				(e.type == "mousewheel" ||
-					e.type == "wheel" ||
-					e.type == "DOMMouseScroll")
-			) {
-				e.eventType = "mousewheel";
-				if (e.type == "wheel") {
-					e.wheel = -e.deltaY;
-				}
-				else {
-					e.wheel =
-						e.wheelDeltaY != null ? e.wheelDeltaY : e.detail * -60;
-				}
+			else if (is_inside &&	(e.type == "wheel")) {
+				e.wheel = -e.deltaY;
 
 				//from stack overflow
 				e.delta = e.wheelDelta ?
