@@ -399,7 +399,7 @@
 		bindEvents() {
 			//console.log("LGraphCanvas.bindEvents()");
 			if (this._events_binded) {
-				console.warn("LGraphCanvas.bindEvents(): Events already binded");
+				console.warn("LGraphCanvas.bindEvents(): Events already bound");
 				return;
 			}
 
@@ -442,12 +442,11 @@
 		 * @method unbindEvents
 		 **/
 		unbindEvents() {
+			//console.log("LGraphCanvas.unbindEvents()");
 			if (!this._events_binded) {
-				console.warn("LGraphCanvas: no events binded");
+				console.warn("LGraphCanvas.unbindEvents(): Events aren't bound.");
 				return;
 			}
-
-			//console.log("pointerevents: unbindEvents");
 
 			const canvas = this.canvas;
 			const ref_window = this.getCanvasWindow();
