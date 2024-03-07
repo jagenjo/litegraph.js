@@ -1426,9 +1426,9 @@
 			//restore the mousemove event back to the canvas
 			if (!this.options.skip_events) {
 				//console.log("pointerevents: processMouseUp adjustEventListener");
-				LiteGraph.pointerListenerRemove(document, "move", this._mousemove_callback, true);
-				LiteGraph.pointerListenerAdd(this.canvas, "move", this._mousemove_callback, true);
-				LiteGraph.pointerListenerRemove(document, "up", this._mouseup_callback, true);
+				LiteGraph.pointerListenerRemove(document, "move", this._mousemove_callback);
+				LiteGraph.pointerListenerAdd(this.canvas, "move", this._mousemove_callback);
+				LiteGraph.pointerListenerRemove(document, "up", this._mouseup_callback);
 			}
 
 			this.adjustMouseEvent(e);
