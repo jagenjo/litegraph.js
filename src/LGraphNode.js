@@ -86,12 +86,13 @@
 
 			this.flags = {};
 		}
-		
-		_pos;
+			
 		set pos(v) {
 			if (!v || v.length < 2) {
 				return;
 			}
+			if(!Array.isArray(this._pos))
+				this._pos = new Float32Array(10,10);
 			this._pos[0] = v[0];
 			this._pos[1] = v[1];
 		}
