@@ -46,7 +46,7 @@
 		}
 
 		serialize() {
-			var b = this._bounding;
+			const b = this._bounding;
 			return {
 				title: this.title,
 				bounding: [
@@ -66,8 +66,8 @@
 			if (ignore_nodes) {
 				return;
 			}
-			for (var i = 0; i < this._nodes.length; ++i) {
-				var node = this._nodes[i];
+			for (const i = 0; i < this._nodes.length; ++i) {
+				const node = this._nodes[i];
 				node.pos[0] += deltax;
 				node.pos[1] += deltay;
 			}
@@ -75,11 +75,11 @@
 
 		recomputeInsideNodes() {
 			this._nodes.length = 0;
-			var nodes = this.graph._nodes;
-			var node_bounding = new Float32Array(4);
+			const nodes = this.graph._nodes;
+			const node_bounding = new Float32Array(4);
 
-			for (var i = 0; i < nodes.length; ++i) {
-				var node = nodes[i];
+			for (const i = 0; i < nodes.length; ++i) {
+				const node = nodes[i];
 				node.getBounding(node_bounding);
 				if (!LiteGraph.overlapBounding(this._bounding, node_bounding)) {
 					continue;
