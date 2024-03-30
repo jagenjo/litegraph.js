@@ -229,7 +229,7 @@
 
 /* DIALOGs ******/
 
-.litegraph .dialog {
+.litegraph.dialog {
     position: absolute;
     top: 50%;
     left: 50%;
@@ -244,7 +244,7 @@
     border-radius: 6px;
 }
 
-.litegraph .dialog.settings {
+.litegraph.dialog.settings {
 	left: 10px;
 	top: 10px;
 	height: calc( 100% - 20px );
@@ -252,7 +252,7 @@
     max-width: 50%;
 }
 
-.litegraph .dialog.centered {
+.litegraph.dialog.centered {
     top: 50px;
     left: 50%;
     position: absolute;
@@ -263,7 +263,7 @@
 	margin: auto;
 }
 
-.litegraph .dialog .close {
+.litegraph.dialog .close {
     float: right;
 	margin: 4px;
 	margin-right: 10px;
@@ -271,26 +271,26 @@
 	font-size: 1.4em;
 }
 
-.litegraph .dialog .close:hover {
+.litegraph.dialog .close:hover {
 	color: white;
 }
 
-.litegraph .dialog .dialog-header {
+.litegraph.dialog .dialog-header {
 	color: #AAA;
 	border-bottom: 1px solid #161616;
 }
 
-.litegraph .dialog .dialog-header { height: 40px; }
-.litegraph .dialog .dialog-footer { height: 50px; padding: 10px; border-top: 1px solid #1a1a1a;}
+.litegraph.dialog .dialog-header { height: 40px; }
+.litegraph.dialog .dialog-footer { height: 50px; padding: 10px; border-top: 1px solid #1a1a1a;}
 
-.litegraph .dialog .dialog-header .dialog-title {
+.litegraph.dialog .dialog-header .dialog-title {
     font: 20px "Arial";
     margin: 4px;
     padding: 4px 10px;
     display: inline-block;
 }
 
-.litegraph .dialog .dialog-content, .litegraph .dialog .dialog-alt-content {
+.litegraph.dialog .dialog-content, .litegraph.dialog .dialog-alt-content {
     height: calc(100% - 90px);
     width: 100%;
 	min-height: 100px;
@@ -300,34 +300,34 @@
     overflow: auto;
 }
 
-.litegraph .dialog .dialog-content h3 {
+.litegraph.dialog .dialog-content h3 {
 	margin: 10px;
 }
 
-.litegraph .dialog .dialog-content .connections {
+.litegraph.dialog .dialog-content .connections {
 	flex-direction: row;
 }
 
-.litegraph .dialog .dialog-content .connections .connections_side {
+.litegraph.dialog .dialog-content .connections .connections_side {
 	width: calc(50% - 5px);
 	min-height: 100px;
 	background-color: black;
 	display: flex;
 }
 
-.litegraph .dialog .node_type {
+.litegraph.dialog .node_type {
 	font-size: 1.2em;
 	display: block;
 	margin: 10px;
 }
 
-.litegraph .dialog .node_desc {
+.litegraph.dialog .node_desc {
 	opacity: 0.5;
 	display: block;
 	margin: 10px;
 }
 
-.litegraph .dialog .separator {
+.litegraph.dialog .separator {
 	display: block;
 	width: calc( 100% - 4px );
 	height: 1px;
@@ -337,16 +337,16 @@
 	padding: 0;
 }
 
-.litegraph .dialog .property {
+.litegraph.dialog .property {
 	margin-bottom: 2px;
 	padding: 4px;
 }
 
-.litegraph .dialog .property:hover {
+.litegraph.dialog .property:hover {
 	background: #545454;
 }
 
-.litegraph .dialog .property_name {
+.litegraph.dialog .property_name {
 	color: #737373;
     display: inline-block;
     text-align: left;
@@ -357,11 +357,11 @@
     margin-right: 6px;
 }
 
-.litegraph .dialog .property:hover .property_name {
+.litegraph.dialog .property:hover .property_name {
     color: white;
 }
 
-.litegraph .dialog .property_value {
+.litegraph.dialog .property_value {
     display: inline-block;
     text-align: right;
 	color: #AAA;
@@ -378,25 +378,25 @@
 	border-radius: 3px;
 }
 
-.litegraph .dialog .property_value:hover {
+.litegraph.dialog .property_value:hover {
 	color: white;
 }
 
-.litegraph .dialog .property.boolean .property_value {
+.litegraph.dialog .property.boolean .property_value {
 	padding-right: 30px;
     color: #A88;
     /*width: auto;
     float: right;*/
 }
 
-.litegraph .dialog .property.boolean.bool-on .property_name{
+.litegraph.dialog .property.boolean.bool-on .property_name{
     color: #8A8;
 }
-.litegraph .dialog .property.boolean.bool-on .property_value{
+.litegraph.dialog .property.boolean.bool-on .property_value{
     color: #8A8;
 }
 
-.litegraph .dialog .btn {
+.litegraph.dialog .btn {
 	border: 0;
 	border-radius: 4px;
     padding: 4px 20px;
@@ -405,12 +405,12 @@
     color: #8e8e8e;
 }
 
-.litegraph .dialog .btn:hover {
+.litegraph.dialog .btn:hover {
     background-color: #111;
     color: #FFF;
 }
 
-.litegraph .dialog .btn.delete:hover {
+.litegraph.dialog .btn.delete:hover {
     background-color: #F33;
     color: black;
 }
@@ -628,53 +628,53 @@
     color: black;
 }
 
-.litegraph .dialog {
+.litegraph.dialog {
     min-height: 0;
 }
-.litegraph .dialog .dialog-content {
-display: block;
+.litegraph.dialog .dialog-content {
+    display: block;
 }
-.litegraph .dialog .dialog-content .subgraph_property {
-padding: 5px;
+.litegraph.dialog .dialog-content .subgraph_property {
+    padding: 5px;
 }
-.litegraph .dialog .dialog-footer {
-margin: 0;
+.litegraph.dialog .dialog-footer {
+    margin: 0;
 }
-.litegraph .dialog .dialog-footer .subgraph_property {
-margin-top: 0;
-display: flex;
-align-items: center;
-padding: 5px;
+.litegraph.dialog .dialog-footer .subgraph_property {
+    margin-top: 0;
+    display: flex;
+    align-items: center;
+    padding: 5px;
 }
-.litegraph .dialog .dialog-footer .subgraph_property .name {
-flex: 1;
+.litegraph.dialog .dialog-footer .subgraph_property .name {
+    flex: 1;
 }
 .litegraph .graphdialog {
-display: flex;
-align-items: center;
-border-radius: 20px;
-padding: 4px 10px;
-position: fixed;
+    display: flex;
+    align-items: center;
+    border-radius: 20px;
+    padding: 4px 10px;
+    position: fixed;
 }
 .litegraph .graphdialog .name {
-padding: 0;
-min-height: 0;
-font-size: 16px;
-vertical-align: middle;
+    padding: 0;
+    min-height: 0;
+    font-size: 16px;
+    vertical-align: middle;
 }
 .litegraph .graphdialog .value {
-font-size: 16px;
-min-height: 0;
-margin: 0 10px;
-padding: 2px 5px;
+    font-size: 16px;
+    min-height: 0;
+    margin: 0 10px;
+    padding: 2px 5px;
 }
 .litegraph .graphdialog input[type="checkbox"] {
-width: 16px;
-height: 16px;
+    width: 16px;
+    height: 16px;
 }
 .litegraph .graphdialog button {
-padding: 4px 18px;
-border-radius: 20px;
-cursor: pointer;
+    padding: 4px 18px;
+    border-radius: 20px;
+    cursor: pointer;
 }
   
