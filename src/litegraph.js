@@ -14194,7 +14194,7 @@ LGraphNode.prototype.executeAction = function(action)
             ctx.restore();
         }
 
-	//localpos is mouse in curve editor space
+	    //localpos is mouse in curve editor space
 	    onMouseDown( localpos, graphcanvas ) {
             var points = this.points;
             if(!points)
