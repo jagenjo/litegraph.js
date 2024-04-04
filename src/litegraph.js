@@ -14121,7 +14121,8 @@ LGraphNode.prototype.executeAction = function(action)
     };
 
 	//used by some widgets to render a curve editor
-	function CurveEditor( points )
+	class CurveEditor {
+    constructor( points )
 	{
 		this.points = points;
 		this.selected = -1;
@@ -14131,7 +14132,7 @@ LGraphNode.prototype.executeAction = function(action)
 		this.margin = 5;
 	}
 
-	CurveEditor.sampleCurve = function(f,points)
+	static sampleCurve(f,points)
 	{
 		if(!points)
 			return;
@@ -14150,7 +14151,7 @@ LGraphNode.prototype.executeAction = function(action)
 		return 0;
 	}
 
-	CurveEditor.prototype.draw = function( ctx, size, graphcanvas, background_color, line_color, inactive )
+	draw( ctx, size, graphcanvas, background_color, line_color, inactive )
 	{
 		var points = this.points;
 		if(!points)
@@ -14197,7 +14198,7 @@ LGraphNode.prototype.executeAction = function(action)
 	}
 
 	//localpos is mouse in curve editor space
-	CurveEditor.prototype.onMouseDown = function( localpos, graphcanvas )
+	onMouseDown( localpos, graphcanvas )
 	{
 		var points = this.points;
 		if(!points)
@@ -14227,7 +14228,7 @@ LGraphNode.prototype.executeAction = function(action)
 			return true;
 	}
 
-	CurveEditor.prototype.onMouseMove = function( localpos, graphcanvas )
+	onMouseMove( localpos, graphcanvas )
 	{
 		var points = this.points;
 		if(!points)
@@ -14261,13 +14262,13 @@ LGraphNode.prototype.executeAction = function(action)
 		}
 	}
 
-	CurveEditor.prototype.onMouseUp = function( localpos, graphcanvas )
+	onMouseUp( localpos, graphcanvas )
 	{
 		this.selected = -1;
 		return false;
 	}
 
-	CurveEditor.prototype.getCloserPoint = function(pos, max_dist)
+	getCloserPoint(pos, max_dist)
 	{
 		var points = this.points;
 		if(!points)
@@ -14295,6 +14296,7 @@ LGraphNode.prototype.executeAction = function(action)
 		}
 		return closest;
 	}
+    }
 
 	LiteGraph.CurveEditor = CurveEditor;
 
