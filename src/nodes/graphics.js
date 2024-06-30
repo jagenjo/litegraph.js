@@ -149,8 +149,8 @@
             that.setDirtyCanvas(true);
         };
         this.img.onerror = function() {
-			console.log("error loading the image:" + url);
-		}
+            console.log("error loading the image:" + url);
+        }
     };
 
     GraphicsImage.prototype.onWidget = function(e, widget) {
@@ -180,7 +180,7 @@
             colorA: "#444444",
             colorB: "#44AAFF",
             colorC: "#44FFAA",
-            colorD: "#FFFFFF"
+            colorD: "#FFFFFF",
         };
     }
 
@@ -257,7 +257,7 @@
     ImageFrame.desc = "Frame viewerew";
     ImageFrame.widgets = [
         { name: "resize", text: "Resize box", type: "button" },
-        { name: "view", text: "View Image", type: "button" }
+        { name: "view", text: "View Image", type: "button" },
     ];
 
     ImageFrame.prototype.onDrawBackground = function(ctx) {
@@ -291,7 +291,7 @@
     };
 
     ImageFrame.prototype.show = function() {
-        //var str = this.canvas.toDataURL("image/png");
+        // var str = this.canvas.toDataURL("image/png");
         if (showElement && this.frame) {
             showElement(this.frame);
         }
@@ -303,7 +303,7 @@
         this.addInputs([
             ["img1", "image"],
             ["img2", "image"],
-            ["fade", "number"]
+            ["fade", "number"],
         ]);
         this.addOutput("", "image");
         this.properties = { fade: 0.5, width: 512, height: 512 };
@@ -313,7 +313,7 @@
     ImageFade.desc = "Fades between images";
     ImageFade.widgets = [
         { name: "resizeA", text: "Resize to A", type: "button" },
-        { name: "resizeB", text: "Resize to B", type: "button" }
+        { name: "resizeB", text: "Resize to B", type: "button" },
     ];
 
     ImageFade.prototype.onAdded = function() {
@@ -331,7 +331,6 @@
 
     ImageFade.prototype.onExecute = function() {
         var ctx = this.canvas.getContext("2d");
-        this.canvas.width = this.canvas.width;
 
         var A = this.getInputData(0);
         if (A != null) {
@@ -392,7 +391,7 @@
                 -this.properties["x"],
                 -this.properties["y"],
                 input.width * this.properties["scale"],
-                input.height * this.properties["scale"]
+                input.height * this.properties["scale"],
             );
             this.setOutputData(0, this.canvas);
         } else {
@@ -414,7 +413,7 @@
                 0,
                 0,
                 this.size[0],
-                this.size[1]
+                this.size[1],
             );
         }
     };
@@ -439,7 +438,7 @@
 
     LiteGraph.registerNodeType("graphics/cropImage", ImageCrop);
 
-    //CANVAS stuff
+    // CANVAS stuff
 
     function CanvasNode() {
         this.addInput("clear", LiteGraph.ACTION);
@@ -520,7 +519,7 @@
             w: 10,
             h: 10,
             color: "white",
-            opacity: 1
+            opacity: 1,
         };
     }
 
@@ -555,7 +554,7 @@
         { name: "play", text: "PLAY", type: "minibutton" },
         { name: "stop", text: "STOP", type: "minibutton" },
         { name: "demo", text: "Demo video", type: "button" },
-        { name: "mute", text: "Mute video", type: "button" }
+        { name: "mute", text: "Mute video", type: "button" },
     ];
 
     ImageVideo.prototype.onExecute = function() {
@@ -595,17 +594,16 @@
     ImageVideo.prototype.loadVideo = function(url) {
         this._video_url = url;
 
-		var pos = url.substr(0,10).indexOf(":");
-		var protocol = "";
-		if(pos != -1)
-			protocol = url.substr(0,pos);
+        var pos = url.substr(0,10).indexOf(":");
+        var protocol = "";
+        if(pos != -1)
+            protocol = url.substr(0,pos);
 
-		var host = "";
-		if(protocol)
-		{
-			host = url.substr(0,url.indexOf("/",protocol.length + 3));
-			host = host.substr(protocol.length+3);
-		}
+        var host = "";
+        if(protocol) {
+            host = url.substr(0,url.indexOf("/",protocol.length + 3));
+            host = host.substr(protocol.length+3);
+        }
 
         if (
             this.properties.use_proxy &&
@@ -625,7 +623,7 @@
 
         var that = this;
         this._video.addEventListener("loadedmetadata", function(e) {
-            //onload
+            // onload
             console.log("Duration: " + this.duration + " seconds");
             console.log("Size: " + this.videoWidth + "," + this.videoHeight);
             that.setDirtyCanvas(true);
@@ -633,7 +631,7 @@
             this.height = this.videoHeight;
         });
         this._video.addEventListener("progress", function(e) {
-            //onload
+            // onload
             console.log("video loading...");
         });
         this._video.addEventListener("error", function(e) {
@@ -658,10 +656,10 @@
 
         this._video.addEventListener("ended", function(e) {
             console.log("Video Ended.");
-            this.play(); //loop
+            this.play(); // loop
         });
 
-        //document.body.appendChild(this.video);
+        // document.body.appendChild(this.video);
     };
 
     ImageVideo.prototype.onPropertyChanged = function(name, value) {
@@ -674,7 +672,7 @@
     };
 
     ImageVideo.prototype.play = function() {
-        if (this._video && this._video.videoWidth ) { //is loaded
+        if (this._video && this._video.videoWidth ) { // is loaded
             this._video.play();
         }
     };
@@ -754,7 +752,7 @@
         // Not showing vendor prefixes.
         var constraints = {
             audio: false,
-            video: !this.properties.filterFacingMode ? true : { facingMode: this.properties.facingMode }
+            video: !this.properties.filterFacingMode ? true : { facingMode: this.properties.facingMode },
         };
         navigator.mediaDevices
             .getUserMedia(constraints)
@@ -801,7 +799,7 @@
 
     ImageWebcam.prototype.streamReady = function(localMediaStream) {
         this._webcam_stream = localMediaStream;
-        //this._waiting_confirmation = false;
+        // this._waiting_confirmation = false;
         this.boxcolor = "green";
 
         var video = this._video;
@@ -810,8 +808,8 @@
             video.autoplay = true;
             video.srcObject = localMediaStream;
             this._video = video;
-            //document.body.appendChild( video ); //debug
-            //when video info is loaded (size and so)
+            // document.body.appendChild( video ); //debug
+            // when video info is loaded (size and so)
             video.onloadedmetadata = function(e) {
                 // Ready to go. Do some stuff.
                 console.log(e);
@@ -858,8 +856,8 @@
                 content: txt,
                 callback: function() {
                     that.properties.show = !that.properties.show;
-                }
-            }
+                },
+            },
         ];
     };
 
@@ -876,7 +874,7 @@
             return;
         }
 
-        //render to graph canvas
+        // render to graph canvas
         ctx.save();
         ctx.drawImage(this._video, 0, 0, this.size[0], this.size[1]);
         ctx.restore();
@@ -888,7 +886,7 @@
             ["height", "number"],
             ["stream_ready", LiteGraph.EVENT],
             ["stream_closed", LiteGraph.EVENT],
-            ["stream_error", LiteGraph.EVENT]
+            ["stream_error", LiteGraph.EVENT],
         ];
     };
 

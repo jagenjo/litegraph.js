@@ -2,113 +2,107 @@
     var LiteGraph = global.LiteGraph;
 
 
-	function Math3DMat4()
-	{
+    function Math3DMat4() {
         this.addInput("T", "vec3");
         this.addInput("R", "vec3");
         this.addInput("S", "vec3");
         this.addOutput("mat4", "mat4");
-		this.properties = {
-			"T":[0,0,0],
-			"R":[0,0,0],
-			"S":[1,1,1],
-			R_in_degrees: true
-		};
-		this._result = mat4.create();
-		this._must_update = true;
-	}
+        this.properties = {
+            "T": [0,0,0],
+            "R": [0,0,0],
+            "S": [1,1,1],
+            R_in_degrees: true,
+        };
+        this._result = mat4.create();
+        this._must_update = true;
+    }
 
-	Math3DMat4.title = "mat4";
-	Math3DMat4.temp_quat = new Float32Array([0,0,0,1]);
-	Math3DMat4.temp_mat4 = new Float32Array(16);
-	Math3DMat4.temp_vec3 = new Float32Array(3);
+    Math3DMat4.title = "mat4";
+    Math3DMat4.temp_quat = new Float32Array([0,0,0,1]);
+    Math3DMat4.temp_mat4 = new Float32Array(16);
+    Math3DMat4.temp_vec3 = new Float32Array(3);
 
-	Math3DMat4.prototype.onPropertyChanged = function(name, value)
-	{
-		this._must_update = true;
-	}
+    Math3DMat4.prototype.onPropertyChanged = function(name, value) {
+        this._must_update = true;
+    }
 
-	Math3DMat4.prototype.onExecute = function()
-	{
-		var M = this._result;
-		var Q = Math3DMat4.temp_quat;
-		var temp_mat4 = Math3DMat4.temp_mat4;
-		var temp_vec3 = Math3DMat4.temp_vec3;
+    Math3DMat4.prototype.onExecute = function() {
+        var M = this._result;
+        var Q = Math3DMat4.temp_quat;
+        var temp_mat4 = Math3DMat4.temp_mat4;
+        var temp_vec3 = Math3DMat4.temp_vec3;
 
-		var T = this.getInputData(0);
-		var R = this.getInputData(1);
-		var S = this.getInputData(2);
+        var T = this.getInputData(0);
+        var R = this.getInputData(1);
+        var S = this.getInputData(2);
 
-		if( this._must_update || T || R || S )
-		{
-			T = T || this.properties.T;
-			R = R || this.properties.R;
-			S = S || this.properties.S;
-			mat4.identity( M );
-			mat4.translate( M, M, T );
-			if(this.properties.R_in_degrees)
-			{
-				temp_vec3.set( R );
-				vec3.scale(temp_vec3,temp_vec3,DEG2RAD);
-				quat.fromEuler( Q, temp_vec3 );
-			}
-			else
-				quat.fromEuler( Q, R );
-			mat4.fromQuat( temp_mat4, Q );
-			mat4.multiply( M, M, temp_mat4 );
-			mat4.scale( M, M, S );
-		}
+        if( this._must_update || T || R || S ) {
+            T = T || this.properties.T;
+            R = R || this.properties.R;
+            S = S || this.properties.S;
+            mat4.identity( M );
+            mat4.translate( M, M, T );
+            if(this.properties.R_in_degrees) {
+                temp_vec3.set( R );
+                vec3.scale(temp_vec3,temp_vec3,DEG2RAD);
+                quat.fromEuler( Q, temp_vec3 );
+            } else
+                quat.fromEuler( Q, R );
+            mat4.fromQuat( temp_mat4, Q );
+            mat4.multiply( M, M, temp_mat4 );
+            mat4.scale( M, M, S );
+        }
 
-		this.setOutputData(0, M);		
-	}
+        this.setOutputData(0, M);
+    }
 
     LiteGraph.registerNodeType("math3d/mat4", Math3DMat4);
 
-    //Math 3D operation
+    // Math 3D operation
     function Math3DOperation() {
         this.addInput("A", "number,vec3");
         this.addInput("B", "number,vec3");
         this.addOutput("=", "number,vec3");
         this.addProperty("OP", "+", "enum", { values: Math3DOperation.values });
-		this._result = vec3.create();
+        this._result = vec3.create();
     }
 
     Math3DOperation.values = ["+", "-", "*", "/", "%", "^", "max", "min","dot","cross"];
 
     LiteGraph.registerSearchboxExtra("math3d/operation", "CROSS()", {
-        properties: {"OP":"cross"},
-        title: "CROSS()"
+        properties: {"OP": "cross"},
+        title: "CROSS()",
     });
 
     LiteGraph.registerSearchboxExtra("math3d/operation", "DOT()", {
-        properties: {"OP":"dot"},
-        title: "DOT()"
+        properties: {"OP": "dot"},
+        title: "DOT()",
     });
 
-	Math3DOperation.title = "Operation";
+    Math3DOperation.title = "Operation";
     Math3DOperation.desc = "Easy math 3D operators";
     Math3DOperation["@OP"] = {
         type: "enum",
         title: "operation",
-        values: Math3DOperation.values
+        values: Math3DOperation.values,
     };
     Math3DOperation.size = [100, 60];
 
     Math3DOperation.prototype.getTitle = function() {
-		if(this.properties.OP == "max" || this.properties.OP == "min" )
-			return this.properties.OP + "(A,B)";
+        if(this.properties.OP == "max" || this.properties.OP == "min" )
+            return this.properties.OP + "(A,B)";
         return "A " + this.properties.OP + " B";
     };
 
     Math3DOperation.prototype.onExecute = function() {
         var A = this.getInputData(0);
         var B = this.getInputData(1);
-		if(A == null || B == null)
-			return;
-		if(A.constructor === Number)
-			A = [A,A,A];
-		if(B.constructor === Number)
-			B = [B,B,B];
+        if(A == null || B == null)
+            return;
+        if(A.constructor === Number)
+            A = [A,A,A];
+        if(B.constructor === Number)
+            B = [B,B,B];
 
         var result = this._result;
         switch (this.properties.OP) {
@@ -145,6 +139,7 @@
                 result[0] = Math.min(A[0],B[0]);
                 result[1] = Math.min(A[1],B[1]);
                 result[2] = Math.min(A[2],B[2]);
+                break;
             case "dot":
                 result = vec3.dot(A,B);
                 break;
@@ -168,7 +163,7 @@
         ctx.fillText(
             this.properties.OP,
             this.size[0] * 0.5,
-            (this.size[1] + LiteGraph.NODE_TITLE_HEIGHT) * 0.5
+            (this.size[1] + LiteGraph.NODE_TITLE_HEIGHT) * 0.5,
         );
         ctx.textAlign = "left";
     };
@@ -307,7 +302,7 @@
 
     LiteGraph.registerNodeType("math3d/vec3-dot", Math3DVec3Dot);
 
-    //if glMatrix is installed...
+    // if glMatrix is installed...
     if (global.glMatrix) {
         function Math3DQuaternion() {
             this.addOutput("quat", "quat");
@@ -334,7 +329,7 @@
                 ["x", "number"],
                 ["y", "number"],
                 ["z", "number"],
-                ["w", "number"]
+                ["w", "number"],
             ];
         };
 
@@ -371,8 +366,8 @@
         function MathEulerToQuat() {
             this.addInput("euler", "vec3");
             this.addOutput("quat", "quat");
-            this.properties = { euler:[0,0,0], use_yaw_pitch_roll: false };
-			this._degs = vec3.create();
+            this.properties = { euler: [0,0,0], use_yaw_pitch_roll: false };
+            this._degs = vec3.create();
             this._value = quat.create();
         }
 
@@ -384,9 +379,9 @@
             if (euler == null) {
                 euler = this.properties.euler;
             }
-			vec3.scale( this._degs, euler, DEG2RAD );
-			if(this.properties.use_yaw_pitch_roll)
-				this._degs = [this._degs[2],this._degs[0],this._degs[1]];
+            vec3.scale( this._degs, euler, DEG2RAD );
+            if(this.properties.use_yaw_pitch_roll)
+                this._degs = [this._degs[2],this._degs[0],this._degs[1]];
             var R = quat.fromEuler(this._value, this._degs);
             this.setOutputData(0, R);
         };
@@ -396,7 +391,7 @@
         function MathQuatToEuler() {
             this.addInput(["quat", "quat"]);
             this.addOutput("euler", "vec3");
-			this._value = vec3.create();
+            this._value = vec3.create();
         }
 
         MathQuatToEuler.title = "Euler->Quat";
@@ -404,17 +399,17 @@
 
         MathQuatToEuler.prototype.onExecute = function() {
             var q = this.getInputData(0);
-			if(!q)
-				return;
+            if(!q)
+                return;
             var R = quat.toEuler(this._value, q);
-			vec3.scale( this._value, this._value, DEG2RAD );
+            vec3.scale( this._value, this._value, DEG2RAD );
             this.setOutputData(0, this._value);
         };
 
         LiteGraph.registerNodeType("math3d/quat_to_euler", MathQuatToEuler);
 
 
-        //Math3D rotate vec3
+        // Math3D rotate vec3
         function Math3DRotateVec3() {
             this.addInputs([["vec3", "vec3"], ["quat", "quat"]]);
             this.addOutput("result", "vec3");
@@ -435,7 +430,7 @@
             } else {
                 this.setOutputData(
                     0,
-                    vec3.transformQuat(vec3.create(), vec, quat)
+                    vec3.transformQuat(vec3.create(), vec, quat),
                 );
             }
         };
@@ -472,7 +467,7 @@
             this.addInputs([
                 ["A", "quat"],
                 ["B", "quat"],
-                ["factor", "number"]
+                ["factor", "number"],
             ]);
             this.addOutput("slerp", "quat");
             this.addProperty("factor", 0.5);
@@ -504,14 +499,14 @@
         LiteGraph.registerNodeType("math3d/quat-slerp", Math3DQuatSlerp);
 
 
-        //Math3D rotate vec3
+        // Math3D rotate vec3
         function Math3DRemapRange() {
             this.addInput("vec3", "vec3");
             this.addOutput("remap", "vec3");
-			this.addOutput("clamped", "vec3");
-            this.properties = { clamp: true, range_min: [-1, -1, 0], range_max: [1, 1, 0], target_min: [-1,-1,0], target_max:[1,1,0] };
-			this._value = vec3.create();
-			this._clamped = vec3.create();
+            this.addOutput("clamped", "vec3");
+            this.properties = { clamp: true, range_min: [-1, -1, 0], range_max: [1, 1, 0], target_min: [-1,-1,0], target_max: [1,1,0] };
+            this._value = vec3.create();
+            this._clamped = vec3.create();
         }
 
         Math3DRemapRange.title = "Remap Range";
@@ -519,15 +514,15 @@
 
         Math3DRemapRange.prototype.onExecute = function() {
             var vec = this.getInputData(0);
-			if(vec)
-				this._value.set(vec);
-			var range_min = this.properties.range_min;
-			var range_max = this.properties.range_max;
-			var target_min = this.properties.target_min;
-			var target_max = this.properties.target_max;
+            if(vec)
+                this._value.set(vec);
+            var range_min = this.properties.range_min;
+            var range_max = this.properties.range_max;
+            var target_min = this.properties.target_min;
+            var target_max = this.properties.target_max;
 
-			//swap to avoid errors
-			/*
+            // swap to avoid errors
+            /*
 			if(range_min > range_max)
 			{
 				range_min = range_max;
@@ -541,33 +536,30 @@
 			}
 			*/
 
-			for(var i = 0; i < 3; ++i)
-			{
-				var r = range_max[i] - range_min[i];
-				this._clamped[i] = clamp( this._value[i], range_min[i], range_max[i] );
-				if(r == 0)
-				{
-					this._value[i] = (target_min[i] + target_max[i]) * 0.5;
-					continue;
-				}
+            for(var i = 0; i < 3; ++i) {
+                var r = range_max[i] - range_min[i];
+                this._clamped[i] = clamp( this._value[i], range_min[i], range_max[i] );
+                if(r == 0) {
+                    this._value[i] = (target_min[i] + target_max[i]) * 0.5;
+                    continue;
+                }
 
-				var n = (this._value[i] - range_min[i]) / r;
-				if(this.properties.clamp)
-					n = clamp(n,0,1);
-				var t = target_max[i] - target_min[i];
-				this._value[i] = target_min[i] + n * t;
-			}
+                var n = (this._value[i] - range_min[i]) / r;
+                if(this.properties.clamp)
+                    n = clamp(n,0,1);
+                var t = target_max[i] - target_min[i];
+                this._value[i] = target_min[i] + n * t;
+            }
 
-			this.setOutputData(0,this._value);
-			this.setOutputData(1,this._clamped);
+            this.setOutputData(0,this._value);
+            this.setOutputData(1,this._clamped);
         };
 
         LiteGraph.registerNodeType("math3d/remap_range", Math3DRemapRange);
 
 
 
-    } //glMatrix
-	else if (LiteGraph.debug)
-		console.warn("No glmatrix found, some Math3D nodes may not work");
+    } else if (LiteGraph.debug)
+        console.warn("No glmatrix found, some Math3D nodes may not work");
 
 })(this);

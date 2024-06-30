@@ -37,11 +37,11 @@
         "start",
         "ls",
         "rs",
-        "home"
+        "home",
     ];
 
     GamepadInput.prototype.onExecute = function() {
-        //get gamepad
+        // get gamepad
         var gamepad = this.getGamepad();
         var threshold = this.properties.threshold || 0.0;
 
@@ -163,7 +163,7 @@
                                 ) {
                                     this.triggerSlot(
                                         i,
-                                        GamepadInput.buttons[j]
+                                        GamepadInput.buttons[j],
                                     );
                                 }
                             }
@@ -172,7 +172,7 @@
                             break;
                     }
                 } else {
-                    //if no gamepad is connected, output 0
+                    // if no gamepad is connected, output 0
                     switch (output.name) {
                         case "button_pressed":
                             break;
@@ -189,8 +189,8 @@
         }
     };
 
-	GamepadInput.mapping = {a:0,b:1,x:2,y:3,lb:4,rb:5,lt:6,rt:7,back:8,start:9,ls:10,rs:11 };
-	GamepadInput.mapping_array = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs"];
+    GamepadInput.mapping = {a: 0,b: 1,x: 2,y: 3,lb: 4,rb: 5,lt: 6,rt: 7,back: 8,start: 9,ls: 10,rs: 11 };
+    GamepadInput.mapping_array = ["a","b","x","y","lb","rb","lt","rt","back","start","ls","rs"];
 
     GamepadInput.prototype.getGamepad = function() {
         var getGamepads =
@@ -205,21 +205,21 @@
 
         this._previous_buttons.set(this._current_buttons);
 
-        //pick the first connected
+        // pick the first connected
         for (var i = this.properties.gamepad_index; i < 4; i++) {
             if (!gamepads[i]) {
                 continue;
             }
             gamepad = gamepads[i];
 
-            //xbox controller mapping
+            // xbox controller mapping
             var xbox = this.xbox_mapping;
             if (!xbox) {
                 xbox = this.xbox_mapping = {
                     axes: [],
                     buttons: {},
                     hat: "",
-                    hatmap: GamepadInput.CENTER
+                    hatmap: GamepadInput.CENTER,
                 };
             }
 
@@ -235,44 +235,41 @@
             for (var j = 0; j < gamepad.buttons.length; j++) {
                 this._current_buttons[j] = gamepad.buttons[j].pressed;
 
-				if(j < 12)
-				{
-					xbox.buttons[ GamepadInput.mapping_array[j] ] = gamepad.buttons[j].pressed;
-					if(gamepad.buttons[j].was_pressed)
-						this.trigger( GamepadInput.mapping_array[j] + "_button_event" );
-				}
-				else //mapping of XBOX
-					switch ( j ) //I use a switch to ensure that a player with another gamepad could play
-					{
-						case 12:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "up";
-								xbox.hatmap |= GamepadInput.UP;
-							}
-							break;
-						case 13:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "down";
-								xbox.hatmap |= GamepadInput.DOWN;
-							}
-							break;
-						case 14:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "left";
-								xbox.hatmap |= GamepadInput.LEFT;
-							}
-							break;
-						case 15:
-							if (gamepad.buttons[j].pressed) {
-								xbox.hat += "right";
-								xbox.hatmap |= GamepadInput.RIGHT;
-							}
-							break;
-						case 16:
-							xbox.buttons["home"] = gamepad.buttons[j].pressed;
-							break;
-						default:
-					}
+                if(j < 12) {
+                    xbox.buttons[GamepadInput.mapping_array[j]] = gamepad.buttons[j].pressed;
+                    if(gamepad.buttons[j].was_pressed)
+                        this.trigger( GamepadInput.mapping_array[j] + "_button_event" );
+                } else // mapping of XBOX
+                    switch ( j ) { // I use a switch to ensure that a player with another gamepad could play
+                        case 12:
+                            if (gamepad.buttons[j].pressed) {
+                                xbox.hat += "up";
+                                xbox.hatmap |= GamepadInput.UP;
+                            }
+                            break;
+                        case 13:
+                            if (gamepad.buttons[j].pressed) {
+                                xbox.hat += "down";
+                                xbox.hatmap |= GamepadInput.DOWN;
+                            }
+                            break;
+                        case 14:
+                            if (gamepad.buttons[j].pressed) {
+                                xbox.hat += "left";
+                                xbox.hatmap |= GamepadInput.LEFT;
+                            }
+                            break;
+                        case 15:
+                            if (gamepad.buttons[j].pressed) {
+                                xbox.hat += "right";
+                                xbox.hatmap |= GamepadInput.RIGHT;
+                            }
+                            break;
+                        case 16:
+                            xbox.buttons["home"] = gamepad.buttons[j].pressed;
+                            break;
+                        default:
+                    }
             }
             gamepad.xbox = xbox;
             return gamepad;
@@ -284,7 +281,7 @@
             return;
         }
 
-        //render gamepad state?
+        // render gamepad state?
         var la = this._left_axis;
         var ra = this._right_axis;
         ctx.strokeStyle = "#88A";
@@ -292,14 +289,14 @@
             (la[0] + 1) * 0.5 * this.size[0] - 4,
             (la[1] + 1) * 0.5 * this.size[1] - 4,
             8,
-            8
+            8,
         );
         ctx.strokeStyle = "#8A8";
         ctx.strokeRect(
             (ra[0] + 1) * 0.5 * this.size[0] - 4,
             (ra[1] + 1) * 0.5 * this.size[1] - 4,
             8,
-            8
+            8,
         );
         var h = this.size[1] / this._current_buttons.length;
         ctx.fillStyle = "#AEB";
@@ -345,7 +342,7 @@
             ["hat_up", "number"],
             ["hat_down", "number"],
             ["hat", "number"],
-            ["button_pressed", LiteGraph.EVENT]
+            ["button_pressed", LiteGraph.EVENT],
         ];
     };
 

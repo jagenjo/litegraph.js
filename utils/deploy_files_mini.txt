@@ -1,8 +1,0 @@
-../src/litegraph.js
-../src/nodes/base.js
-../src/nodes/events.js
-../src/nodes/input.js
-../src/nodes/math.js
-../src/nodes/strings.js
-../src/nodes/logic.js
-../src/nodes/network.js

@@ -1,4 +1,4 @@
-//event related nodes
+// event related nodes
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
@@ -10,8 +10,8 @@
         this.addOutput("out", 0);
         this.properties = {
             url: "",
-            room: "lgraph", //allows to filter messages,
-            only_send_changes: true
+            room: "lgraph", // allows to filter messages,
+            only_send_changes: true,
         };
         this._ws = null;
         this._last_sent_data = [];
@@ -50,7 +50,7 @@
                     type: 0,
                     room: room,
                     channel: i,
-                    data: data
+                    data: data,
                 });
             } catch (err) {
                 continue;
@@ -133,7 +133,7 @@
             type: 1,
             room: this.properties.room,
             action: action,
-            data: param
+            data: param,
         });
     };
 
@@ -147,22 +147,22 @@
 
     LiteGraph.registerNodeType("network/websocket", LGWebSocket);
 
-    //It is like a websocket but using the SillyServer.js server that bounces packets back to all clients connected:
-    //For more information: https://github.com/jagenjo/SillyServer.js
+    // It is like a websocket but using the SillyServer.js server that bounces packets back to all clients connected:
+    // For more information: https://github.com/jagenjo/SillyServer.js
 
     function LGSillyClient() {
-        //this.size = [60,20];
+        // this.size = [60,20];
         this.room_widget = this.addWidget(
             "text",
             "Room",
             "lgraph",
-            this.setRoom.bind(this)
+            this.setRoom.bind(this),
         );
         this.addWidget(
             "button",
             "Reconnect",
             null,
-            this.connectSocket.bind(this)
+            this.connectSocket.bind(this),
         );
 
         this.addInput("send", LiteGraph.ACTION);
@@ -172,7 +172,7 @@
         this.properties = {
             url: "tamats.com:55000",
             room: "lgraph",
-            only_send_changes: true
+            only_send_changes: true,
         };
 
         this._server = null;
@@ -180,8 +180,8 @@
         this._last_sent_data = [];
         this._last_received_data = [];
 
-		if(typeof(SillyClient) == "undefined")
-			console.warn("remember to add SillyClient.js to your project: https://tamats.com/projects/sillyserver/src/sillyclient.js");
+        if(typeof(SillyClient) == "undefined")
+            console.warn("remember to add SillyClient.js to your project: https://tamats.com/projects/sillyserver/src/sillyclient.js");
     }
 
     LGSillyClient.title = "SillyClient";
@@ -200,7 +200,7 @@
         this.connectSocket();
     };
 
-    //force label names
+    // force label names
     LGSillyClient.prototype.onDrawForeground = function() {
         for (var i = 1; i < this.inputs.length; ++i) {
             var slot = this.inputs[i];
@@ -221,44 +221,35 @@
 
         for (var i = 1; i < this.inputs.length; ++i) {
             var data = this.getInputData(i);
-			var prev_data = this._last_sent_data[i];
+            var prev_data = this._last_sent_data[i];
             if (data != null) {
-                if (only_send_changes)
-				{	
-					var is_equal = true;
-					if( data && data.length && prev_data && prev_data.length == data.length && data.constructor !== String)
-					{
-						for(var j = 0; j < data.length; ++j)
-							if( prev_data[j] != data[j] )
-							{
-								is_equal = false;
-								break;
-							}
-					}
-					else if(this._last_sent_data[i] != data)
-						is_equal = false;
-					if(is_equal)
-							continue;
+                if (only_send_changes) {
+                    var is_equal = true;
+                    if( data && data.length && prev_data && prev_data.length == data.length && data.constructor !== String) {
+                        for(var j = 0; j < data.length; ++j)
+                            if( prev_data[j] != data[j] ) {
+                                is_equal = false;
+                                break;
+                            }
+                    } else if(this._last_sent_data[i] != data)
+                        is_equal = false;
+                    if(is_equal)
+                        continue;
                 }
                 this._server.sendMessage({ type: 0, channel: i, data: data });
-				if( data.length && data.constructor !== String )
-				{
-					if( this._last_sent_data[i] )
-					{
-						this._last_sent_data[i].length = data.length;
-						for(var j = 0; j < data.length; ++j)
-							this._last_sent_data[i][j] = data[j];
-					}
-					else //create
-					{
-						if(data.constructor === Array)
-							this._last_sent_data[i] = data.concat();
-						else
-							this._last_sent_data[i] = new data.constructor( data );
-					}
-				}
-				else
-	                this._last_sent_data[i] = data; //should be cloned
+                if( data.length && data.constructor !== String ) {
+                    if( this._last_sent_data[i] ) {
+                        this._last_sent_data[i].length = data.length;
+                        for(var j = 0; j < data.length; ++j)
+                            this._last_sent_data[i][j] = data[j];
+                    } else { // create
+                        if(data.constructor === Array)
+                            this._last_sent_data[i] = data.concat();
+                        else
+                            this._last_sent_data[i] = new data.constructor( data );
+                    }
+                } else
+                    this._last_sent_data[i] = data; // should be cloned
             }
         }
 
@@ -275,9 +266,7 @@
         var that = this;
         if (typeof SillyClient == "undefined") {
             if (!this._error) {
-                console.error(
-                    "SillyClient node cannot be used, you must include SillyServer.js"
-                );
+                console.error("SillyClient node cannot be used, you must include SillyServer.js");
             }
             this._error = true;
             return;
@@ -297,7 +286,7 @@
             }
 
             if (data.type == 1) {
-                //EVENT slot
+                // EVENT slot
                 if (
                     data.data.object_class &&
                     LiteGraph[data.data.object_class]
@@ -312,8 +301,7 @@
                 } else {
                     that.triggerSlot(0, data.data);
                 }
-            } //for FLOW slots
-            else {
+            } else {
                 that._last_received_data[data.channel || 0] = data.data;
             }
             that.boxcolor = "#AFA";
@@ -363,66 +351,60 @@
 
     LiteGraph.registerNodeType("network/sillyclient", LGSillyClient);
 
-//HTTP Request
-function HTTPRequestNode() {
-	var that = this;
-	this.addInput("request", LiteGraph.ACTION);
-	this.addInput("url", "string");
-	this.addProperty("url", "");
-	this.addOutput("ready", LiteGraph.EVENT);
-    this.addOutput("data", "string");
-	this.addWidget("button", "Fetch", null, this.fetch.bind(this));
-	this._data = null;
-	this._fetching = null;
-}
+    // HTTP Request
+    function HTTPRequestNode() {
+        this.addInput("request", LiteGraph.ACTION);
+        this.addInput("url", "string");
+        this.addProperty("url", "");
+        this.addOutput("ready", LiteGraph.EVENT);
+        this.addOutput("data", "string");
+        this.addWidget("button", "Fetch", null, this.fetch.bind(this));
+        this._data = null;
+        this._fetching = null;
+    }
 
-HTTPRequestNode.title = "HTTP Request";
-HTTPRequestNode.desc = "Fetch data through HTTP";
+    HTTPRequestNode.title = "HTTP Request";
+    HTTPRequestNode.desc = "Fetch data through HTTP";
 
-HTTPRequestNode.prototype.fetch = function()
-{
-	var url = this.properties.url;
-	if(!url)
-		return;
+    HTTPRequestNode.prototype.fetch = function() {
+        var url = this.getInputData(1) || this.properties.url;
+        if(!url)
+            return;
 
-	this.boxcolor = "#FF0";
-	var that = this;
-	this._fetching = fetch(url)
-	.then(resp=>{
-		if(!resp.ok)
-		{
-			this.boxcolor = "#F00";
-			that.trigger("error");
-		}
-		else
-		{
-			this.boxcolor = "#0F0";
-			return resp.text();
-		}
-	})
-	.then(data=>{
-		that._data = data;
-		that._fetching = null;
-		that.trigger("ready");
-	});
-}
+        this.boxcolor = "#FF0";
+        var that = this;
+        this._fetching = fetch(url)
+            .then((resp) => {
+                if(!resp.ok) {
+                    this.boxcolor = "#F00";
+                    that.trigger("error");
+                } else {
+                    this.boxcolor = "#0F0";
+                    return resp.text();
+                }
+            })
+            .then((data) => {
+                that._data = data;
+                that._fetching = null;
+                that.trigger("ready");
+            });
+    }
 
-HTTPRequestNode.prototype.onAction = function(evt)
-{
-	if(evt == "request")
-		this.fetch();
-}
+    HTTPRequestNode.prototype.onAction = function(evt) {
+        if(evt == "request")
+            this.fetch();
+    }
 
-HTTPRequestNode.prototype.onExecute = function() {
-	this.setOutputData(1, this._data);
-};
+    HTTPRequestNode.prototype.onExecute = function() {
+        this.setOutputData(1, this._data);
+    };
 
-HTTPRequestNode.prototype.onGetOutputs = function() {
-	return [["error",LiteGraph.EVENT]];
-}
+    HTTPRequestNode.prototype.onGetOutputs = function() {
+        return [["error",LiteGraph.EVENT]];
+    }
 
-LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
+    LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
 
 
-	
+
 })(this);

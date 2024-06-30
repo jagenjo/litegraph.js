@@ -27,9 +27,7 @@ describe("register node types", () => {
         expect(node.type).toBe("math/sum");
         expect(node.title).toBe("Sum");
         expect(node.category).toBe("math");
-        expect(node.prototype.configure).toBe(
-            lg.LGraphNode.prototype.configure
-        );
+        expect(node.prototype.configure).toBe(lg.LGraphNode.prototype.configure);
     });
 
     test("callback triggers", () => {
@@ -44,12 +42,8 @@ describe("register node types", () => {
         expect(lg.LiteGraph.onNodeTypeReplaced).not.toHaveBeenCalled();
         lg.LiteGraph.registerNodeType("math/sum", Sum);
         expect(lg.LiteGraph.onNodeTypeReplaced).toHaveBeenCalled();
-        expect(consoleSpy).toHaveBeenCalledWith(
-            expect.stringMatching("replacing node type")
-        );
-        expect(consoleSpy).toHaveBeenCalledWith(
-            expect.stringMatching("math/sum")
-        );
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringMatching("replacing node type"));
+        expect(consoleSpy).toHaveBeenCalledWith(expect.stringMatching("math/sum"));
     });
 
     test("node with title", () => {
@@ -61,9 +55,7 @@ describe("register node types", () => {
     });
 
     test("handle error simple object", () => {
-        expect(() =>
-            lg.LiteGraph.registerNodeType("math/sum", { simple: "type" })
-        ).toThrow("Cannot register a simple object");
+        expect(() => lg.LiteGraph.registerNodeType("math/sum", { simple: "type" })).toThrow("Cannot register a simple object");
     });
 
     test("check shape mapping", () => {
@@ -103,9 +95,7 @@ describe("register node types", () => {
         Sum.prototype.onPropertyChange = true;
         lg.LiteGraph.registerNodeType("math/sum", Sum);
         expect(consoleSpy).toBeCalledTimes(1);
-        expect(consoleSpy).toBeCalledWith(
-            expect.stringContaining("has onPropertyChange method")
-        );
+        expect(consoleSpy).toBeCalledWith(expect.stringContaining("has onPropertyChange method"));
         expect(consoleSpy).toBeCalledWith(expect.stringContaining("math/sum"));
     });
 
@@ -126,9 +116,7 @@ describe("register node types", () => {
         lg.LiteGraph.registerNodeType("math/sum", Sum);
         lg.LiteGraph.registerNodeType("math/times", Times);
 
-        expect(
-            Object.keys(lg.LiteGraph.node_types_by_file_extension).length
-        ).toBe(3);
+        expect(Object.keys(lg.LiteGraph.node_types_by_file_extension).length).toBe(3);
         expect(lg.LiteGraph.node_types_by_file_extension).toHaveProperty("pdf");
         expect(lg.LiteGraph.node_types_by_file_extension).toHaveProperty("exe");
         expect(lg.LiteGraph.node_types_by_file_extension).toHaveProperty("jpg");
@@ -145,18 +133,14 @@ describe("register node types", () => {
         // Test slot type registration with first type
         lg.LiteGraph.auto_load_slot_types = true;
         lg.LiteGraph.registerNodeType("math/sum", Sum);
-        expect(lg.LiteGraph.registered_slot_in_types).toEqual({
-            number: { nodes: ["math/sum"] },
-        });
-        expect(lg.LiteGraph.registered_slot_out_types).toEqual({
-            number: { nodes: ["math/sum"] },
-        });
+        expect(lg.LiteGraph.registered_slot_in_types).toEqual({number: { nodes: ["math/sum"] }});
+        expect(lg.LiteGraph.registered_slot_out_types).toEqual({number: { nodes: ["math/sum"] }});
 
         // Test slot type registration with second type
         function ToInt() {
             this.addInput("string", "string");
             this.addOutput("number", "number");
-        };
+        }
         ToInt.prototype.onExecute = function (str) {
             this.setOutputData(0, Number(str));
         };
@@ -165,9 +149,7 @@ describe("register node types", () => {
             number: { nodes: ["math/sum"] },
             string: { nodes: ["basic/to_int"] },
         });
-        expect(lg.LiteGraph.registered_slot_out_types).toEqual({
-            number: { nodes: ["math/sum", "basic/to_int"] },
-        });
+        expect(lg.LiteGraph.registered_slot_out_types).toEqual({number: { nodes: ["math/sum", "basic/to_int"] }});
     });
 });
 
@@ -209,9 +191,7 @@ describe("unregister node types", () => {
     });
 
     test("try removing with wrong name", () => {
-        expect(() => lg.LiteGraph.unregisterNodeType("missing/type")).toThrow(
-            "node type not found: missing/type"
-        );
+        expect(() => lg.LiteGraph.unregisterNodeType("missing/type")).toThrow("node type not found: missing/type");
     });
 
     test("no constructor name", () => {

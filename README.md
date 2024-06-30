@@ -1,10 +1,11 @@
+
 # litegraph.js
 
 A library in Javascript to create graphs in the browser similar to Unreal Blueprints. Nodes can be programmed easily and it includes an editor to construct and tests the graphs.
 
 It can be integrated easily in any existing web applications and graphs can be run without the need of the editor.
 
-Try it in the [demo site](https://tamats.com/projects/litegraph/editor).
+Try (original) in the [demo site](https://tamats.com/projects/litegraph/editor).
 
 ![Node Graph](imgs/node_graph_example.png "WebGLStudio")
 
@@ -33,7 +34,15 @@ Although it is easy to create new node types, LiteGraph comes with some default 
 
 You can install it using npm 
 ```
-npm install litegraph.js
+git clone https://github.com/daniel-lewis-ab/litegraph.js.git
+cd litegraph.js
+npm i
+```
+
+or
+
+```
+npm i @mr_pebble/litegraph
 ```
 
 Or downloading the ```build/litegraph.js``` and ```css/litegraph.css``` version from this repository.
@@ -44,7 +53,7 @@ Or downloading the ```build/litegraph.js``` and ```css/litegraph.css``` version 
 <html>
 <head>
 	<link rel="stylesheet" type="text/css" href="litegraph.css">
-	<script type="text/javascript" src="litegraph.js"></script>
+	<script type="module" src="litegraph.js"></script>
 </head>
 <body style='width:100%; height:100%'>
 <canvas id='mycanvas' width='1024' height='720' style='border: 1px solid'></canvas>
@@ -120,9 +129,9 @@ LiteGraph.wrapFunctionAsNode("math/sum",sum, ["Number","Number"],"Number");
 It also works server-side using NodeJS although some nodes do not work in server (audio, graphics, input, etc).
 
 ```js
-var LiteGraph = require("./litegraph.js").LiteGraph;
+import { LiteGraph, LGraph } from "./litegraph.js";
 
-var graph = new LiteGraph.LGraph();
+var graph = new LGraph();
 
 var node_time = LiteGraph.createNode("basic/time");
 graph.add(node_time);
@@ -137,7 +146,7 @@ graph.start()
 ```
 
 
-## Projects using it
+## Projects using original litegraph.js
 
 ### [comfyUI](https://github.com/comfyanonymous/ComfyUI)
 ![screenshot](https://github.com/comfyanonymous/ComfyUI/blob/6efe561c2a7321501b1b27f47039c7616dda1860/comfyui_screenshot.png)
@@ -157,7 +166,19 @@ graph.start()
 ## Utils
 -----
 
-It includes several commands in the utils folder to generate doc, check errors and build minifyed version.
+```
+These all work to some extent right now:
+npm run docs
+npm run prettifier
+npm run build
+npm run test
+npm run lint
+npm run server
+```
+
+I have also run:
+
+`npm audit`
 
 
 ## Demo
@@ -166,19 +187,20 @@ The demo includes some examples of graphs. In order to try them you can visit [d
 ```sh
 $ git clone https://github.com/jagenjo/litegraph.js.git
 $ cd litegraph.js
-$ npm install
-$ node utils/server.js
-Example app listening on port 80!
+$ npm i
+$ npm run server
+Example app listening on port 8000!
 ```
 Open your browser and point it to http://localhost:8000/. You can select a demo from the dropdown at the top of the page.
 
 ## Feedback
 --------
 
-You can write any feedback to javi.agenjo@gmail.com
+You can write any feedback to daniel.lewis.ab@gmail.com
 
 ## Contributors
 
+- Javi (Javengo) is original author
 - atlasan
 - kriffe
 - rappestad

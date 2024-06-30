@@ -1,4 +1,4 @@
-//widgets
+// widgets
 (function(global) {
     var LiteGraph = global.LiteGraph;
 
@@ -28,25 +28,25 @@
             margin + 1,
             margin + 1,
             this.size[0] - margin * 2,
-            this.size[1] - margin * 2
+            this.size[1] - margin * 2,
         );
         ctx.fillStyle = "#AAF";
         ctx.fillRect(
             margin - 1,
             margin - 1,
             this.size[0] - margin * 2,
-            this.size[1] - margin * 2
+            this.size[1] - margin * 2,
         );
         ctx.fillStyle = this.clicked
             ? "white"
             : this.mouseOver
-            ? "#668"
-            : "#334";
+                ? "#668"
+                : "#334";
         ctx.fillRect(
             margin,
             margin,
             this.size[0] - margin * 2,
-            this.size[1] - margin * 2
+            this.size[1] - margin * 2,
         );
 
         if (this.properties.text || this.properties.text === 0) {
@@ -57,7 +57,7 @@
             ctx.fillText(
                 this.properties.text,
                 this.size[0] * 0.5,
-                this.size[1] * 0.5 + font_size * 0.3
+                this.size[1] * 0.5 + font_size * 0.3,
             );
             ctx.textAlign = "left";
         }
@@ -119,7 +119,7 @@
             x + size * margin,
             h - size + size * margin,
             size * (1 - margin * 2),
-            size * (1 - margin * 2)
+            size * (1 - margin * 2),
         );
 
         ctx.textAlign = "left";
@@ -201,7 +201,7 @@
         ctx.fillText(
             this.properties.value.toFixed(this._precision),
             x,
-            h * 0.75
+            h * 0.75,
         );
     };
 
@@ -247,7 +247,7 @@
         var v = clamp(
             this.properties.value + steps * this.properties.step,
             this.properties.min,
-            this.properties.max
+            this.properties.max,
         );
         this.properties.value = v;
         this.graph._version++;
@@ -260,7 +260,7 @@
             this.properties.value = clamp(
                 this.properties.value + steps * this.properties.step,
                 this.properties.min,
-                this.properties.max
+                this.properties.max,
             );
             this.graph._version++;
             this.setDirtyCanvas(true);
@@ -281,16 +281,16 @@
         this.addOutput("", "string");
         this.addOutput("change", LiteGraph.EVENT);
         this.size = [80, 60];
-        this.properties = { value: "A", values:"A;B;C" };
+        this.properties = { value: "A", values: "A;B;C" };
         this.old_y = -1;
         this.mouse_captured = false;
-		this._values = this.properties.values.split(";");
-		var that = this;
+        this._values = this.properties.values.split(";");
+        var that = this;
         this.widgets_up = true;
-		this.widget = this.addWidget("combo","", this.properties.value, function(v){
-			that.properties.value = v;
+        this.widget = this.addWidget("combo","", this.properties.value, function(v) {
+            that.properties.value = v;
             that.triggerSlot(1, v);
-		}, { property: "value", values: this._values } );
+        }, { property: "value", values: this._values } );
     }
 
     WidgetCombo.title = "Combo";
@@ -301,16 +301,13 @@
     };
 
     WidgetCombo.prototype.onPropertyChanged = function(name, value) {
-		if(name == "values")
-		{
-			this._values = value.split(";");
-			this.widget.options.values = this._values;
-		}
-		else if(name == "value")
-		{
-			this.widget.value = value;
-		}
-	};
+        if(name == "values") {
+            this._values = value.split(";");
+            this.widget.options.values = this._values;
+        } else if(name == "value") {
+            this.widget.value = value;
+        }
+    };
 
     LiteGraph.registerNodeType("widget/combo", WidgetCombo);
 
@@ -325,7 +322,7 @@
             max: 1,
             value: 0.5,
             color: "#7AF",
-            precision: 2
+            precision: 2,
         };
         this.value = -1;
     }
@@ -355,14 +352,14 @@
         ctx.translate(center_x, center_y);
         ctx.rotate(Math.PI * 0.75);
 
-        //bg
+        // bg
         ctx.fillStyle = "rgba(0,0,0,0.5)";
         ctx.beginPath();
         ctx.moveTo(0, 0);
         ctx.arc(0, 0, radius, 0, Math.PI * 1.5);
         ctx.fill();
 
-        //value
+        // value
         ctx.strokeStyle = "black";
         ctx.fillStyle = this.properties.color;
         ctx.lineWidth = 2;
@@ -373,22 +370,22 @@
             0,
             radius - 4,
             0,
-            Math.PI * 1.5 * Math.max(0.01, this.value)
+            Math.PI * 1.5 * Math.max(0.01, this.value),
         );
         ctx.closePath();
         ctx.fill();
-        //ctx.stroke();
+        // ctx.stroke();
         ctx.lineWidth = 1;
         ctx.globalAlpha = 1;
         ctx.restore();
 
-        //inner
+        // inner
         ctx.fillStyle = "black";
         ctx.beginPath();
         ctx.arc(center_x, center_y, radius * 0.75, 0, Math.PI * 2, true);
         ctx.fill();
 
-        //miniball
+        // miniball
         ctx.fillStyle = this.mouseOver ? "white" : this.properties.color;
         ctx.beginPath();
         var angle = this.value * Math.PI * 1.5 + Math.PI * 0.75;
@@ -398,18 +395,18 @@
             radius * 0.05,
             0,
             Math.PI * 2,
-            true
+            true,
         );
         ctx.fill();
 
-        //text
+        // text
         ctx.fillStyle = this.mouseOver ? "white" : "#AAA";
         ctx.font = Math.floor(radius * 0.5) + "px Arial";
         ctx.textAlign = "center";
         ctx.fillText(
             this.properties.value.toFixed(this.properties.precision),
             center_x,
-            center_y + radius * 0.15
+            center_y + radius * 0.15,
         );
     };
 
@@ -418,7 +415,7 @@
         this.boxcolor = LiteGraph.colorToString([
             this.value,
             this.value,
-            this.value
+            this.value,
         ]);
     };
 
@@ -429,7 +426,7 @@
             e.canvasY - this.pos[1] < 20 ||
             LiteGraph.distance(
                 [e.canvasX, e.canvasY],
-                [this.pos[0] + this.center[0], this.pos[1] + this.center[1]]
+                [this.pos[0] + this.center[0], this.pos[1] + this.center[1]],
             ) > this.radius
         ) {
             return false;
@@ -471,20 +468,20 @@
     WidgetKnob.prototype.onPropertyChanged = function(name, value) {
         if (name == "min" || name == "max" || name == "value") {
             this.properties[name] = parseFloat(value);
-            return true; //block
+            return true; // block
         }
     };
 
     LiteGraph.registerNodeType("widget/knob", WidgetKnob);
 
-    //Show value inside the debug console
+    // Show value inside the debug console
     function WidgetSliderGUI() {
         this.addOutput("", "number");
         this.properties = {
             value: 0.5,
             min: 0,
             max: 1,
-            text: "V"
+            text: "V",
         };
         var that = this;
         this.size = [140, 40];
@@ -495,7 +492,7 @@
             function(v) {
                 that.properties.value = v;
             },
-            this.properties
+            this.properties,
         );
         this.widgets_up = true;
     }
@@ -514,7 +511,7 @@
 
     LiteGraph.registerNodeType("widget/internal_slider", WidgetSliderGUI);
 
-    //Widget H SLIDER
+    // Widget H SLIDER
     function WidgetHSlider() {
         this.size = [160, 26];
         this.addOutput("", "number");
@@ -532,7 +529,7 @@
                 (this.properties.max - this.properties.min);
         }
 
-        //border
+        // border
         ctx.globalAlpha = 1;
         ctx.lineWidth = 1;
         ctx.fillStyle = "#000";
@@ -552,7 +549,7 @@
         this.boxcolor = LiteGraph.colorToString([
             this.value,
             this.value,
-            this.value
+            this.value,
         ]);
     };
 
@@ -594,7 +591,7 @@
     };
 
     WidgetHSlider.prototype.onMouseLeave = function(e) {
-        //this.oldmouse = null;
+        // this.oldmouse = null;
     };
 
     LiteGraph.registerNodeType("widget/hslider", WidgetHSlider);
@@ -616,7 +613,7 @@
     };
 
     WidgetProgress.prototype.onDrawForeground = function(ctx) {
-        //border
+        // border
         ctx.lineWidth = 1;
         ctx.fillStyle = this.properties.color;
         var v =
@@ -638,7 +635,7 @@
             color: "#AAA",
             align: "left",
             glowSize: 0,
-            decimals: 1
+            decimals: 1,
         };
     }
 
@@ -647,12 +644,12 @@
     WidgetText.widgets = [
         { name: "resize", text: "Resize box", type: "button" },
         { name: "led_text", text: "LED", type: "minibutton" },
-        { name: "normal_text", text: "Normal", type: "minibutton" }
+        { name: "normal_text", text: "Normal", type: "minibutton" },
     ];
 
     WidgetText.prototype.onDrawForeground = function(ctx) {
-        //ctx.fillStyle="#000";
-        //ctx.fillRect(0,0,100,60);
+        // ctx.fillStyle="#000";
+        // ctx.fillRect(0,0,100,60);
         ctx.fillStyle = this.properties["color"];
         var v = this.properties["value"];
 
@@ -678,7 +675,7 @@
                 ctx.fillText(
                     lines[i],
                     this.properties["align"] == "left" ? 15 : this.size[0] - 15,
-                    fontsize * -0.15 + fontsize * (parseInt(i) + 1)
+                    fontsize * -0.15 + fontsize * (parseInt(i) + 1),
                 );
             }
         }
@@ -693,7 +690,7 @@
         if (v != null) {
             this.properties["value"] = v;
         }
-        //this.setDirtyCanvas(true);
+        // this.setDirtyCanvas(true);
     };
 
     WidgetText.prototype.resize = function() {
@@ -720,7 +717,7 @@
     WidgetText.prototype.onPropertyChanged = function(name, value) {
         this.properties[name] = value;
         this.str = typeof value == "number" ? value.toFixed(3) : value;
-        //this.resize();
+        // this.resize();
         return true;
     };
 
@@ -733,7 +730,7 @@
             bgcolorTop: "#f0f0f0",
             bgcolorBottom: "#e0e0e0",
             shadowSize: 2,
-            borderRadius: 3
+            borderRadius: 3,
         };
     }
 
@@ -770,7 +767,7 @@
 
         ctx.lineWidth = 1;
         ctx.strokeStyle = this.properties["borderColor"];
-        //ctx.fillStyle = "#ebebeb";
+        // ctx.fillStyle = "#ebebeb";
         ctx.fillStyle = this.lineargradient;
 
         if (this.properties["shadowSize"]) {
@@ -787,7 +784,7 @@
             0,
             this.size[0] - 1,
             this.size[1] - 1,
-            this.properties["shadowSize"]
+            this.properties["shadowSize"],
         );
         ctx.fill();
         ctx.shadowColor = "transparent";

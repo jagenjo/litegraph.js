@@ -2,7 +2,7 @@
     var LiteGraph = global.LiteGraph;
     var LGraphTexture = global.LGraphTexture;
 
-    //Works with Litegl.js to create WebGL nodes
+    // Works with Litegl.js to create WebGL nodes
     if (typeof GL != "undefined") {
         // Texture Lens *****************************************
         function LGraphFXLens() {
@@ -15,29 +15,27 @@
                 aberration: 1.0,
                 distortion: 1.0,
                 blur: 1.0,
-                precision: LGraphTexture.DEFAULT
+                precision: LGraphTexture.DEFAULT,
             };
 
             if (!LGraphFXLens._shader) {
                 LGraphFXLens._shader = new GL.Shader(
                     GL.Shader.SCREEN_VERTEX_SHADER,
-                    LGraphFXLens.pixel_shader
+                    LGraphFXLens.pixel_shader,
                 );
                 LGraphFXLens._texture = new GL.Texture(3, 1, {
                     format: gl.RGB,
                     wrap: gl.CLAMP_TO_EDGE,
                     magFilter: gl.LINEAR,
                     minFilter: gl.LINEAR,
-                    pixel_data: [255, 0, 0, 0, 255, 0, 0, 0, 255]
+                    pixel_data: [255, 0, 0, 0, 255, 0, 0, 0, 255],
                 });
             }
         }
 
         LGraphFXLens.title = "Lens";
         LGraphFXLens.desc = "Camera Lens distortion";
-        LGraphFXLens.widgets_info = {
-            precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
-        };
+        LGraphFXLens.widgets_info = {precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }};
 
         LGraphFXLens.prototype.onExecute = function() {
             var tex = this.getInputData(0);
@@ -53,7 +51,7 @@
             this._tex = LGraphTexture.getTargetTexture(
                 tex,
                 this._tex,
-                this.properties.precision
+                this.properties.precision,
             );
 
             var aberration = this.properties.aberration;
@@ -78,7 +76,7 @@
             gl.disable(gl.DEPTH_TEST);
             var mesh = Mesh.getScreenQuad();
             var shader = LGraphFXLens._shader;
-            //var camera = LS.Renderer._current_camera;
+            // var camera = LS.Renderer._current_camera;
 
             this._tex.drawTo(function() {
                 tex.bind(0);
@@ -87,7 +85,7 @@
                         u_texture: 0,
                         u_aberration: aberration,
                         u_distortion: distortion,
-                        u_blur: blur
+                        u_blur: blur,
                     })
                     .draw(mesh);
             });
@@ -150,7 +148,7 @@
 		var depth = this.getInputData(1);
 		var camera = this.getInputData(2);
 
-		if(!tex || !depth || !camera) 
+		if(!tex || !depth || !camera)
 		{
 			this.setOutputData(0, tex);
 			return;
@@ -158,7 +156,7 @@
 
 		var precision = gl.UNSIGNED_BYTE;
 		if(this.properties.high_precision)
-			precision = gl.half_float_ext ? gl.HALF_FLOAT_OES : gl.FLOAT;			
+			precision = gl.half_float_ext ? gl.HALF_FLOAT_OES : gl.FLOAT;
 		if(!this._temp_texture || this._temp_texture.type != precision ||
 			this._temp_texture.width != tex.width || this._temp_texture.height != tex.height)
 			this._temp_texture = new GL.Texture( tex.width, tex.height, { type: precision, format: gl.RGBA, filter: gl.LINEAR });
@@ -244,7 +242,7 @@
 	global.LGraphDepthOfField = LGraphDepthOfField;
 	*/
 
-        //*******************************************************
+        //* ******************************************************
 
         function LGraphFXBokeh() {
             this.addInput("Texture", "Texture");
@@ -257,7 +255,7 @@
                 size: 10,
                 alpha: 1.0,
                 threshold: 1.0,
-                high_precision: false
+                high_precision: false,
             };
         }
 
@@ -303,18 +301,18 @@
                 this._temp_texture = new GL.Texture(tex.width, tex.height, {
                     type: precision,
                     format: gl.RGBA,
-                    filter: gl.LINEAR
+                    filter: gl.LINEAR,
                 });
             }
 
-            //iterations
+            // iterations
             var size = this.properties.size;
 
             var first_shader = LGraphFXBokeh._first_shader;
             if (!first_shader) {
                 first_shader = LGraphFXBokeh._first_shader = new GL.Shader(
                     Shader.SCREEN_VERTEX_SHADER,
-                    LGraphFXBokeh._first_pixel_shader
+                    LGraphFXBokeh._first_pixel_shader,
                 );
             }
 
@@ -322,7 +320,7 @@
             if (!second_shader) {
                 second_shader = LGraphFXBokeh._second_shader = new GL.Shader(
                     LGraphFXBokeh._second_vertex_shader,
-                    LGraphFXBokeh._second_pixel_shader
+                    LGraphFXBokeh._second_pixel_shader,
                 );
             }
 
@@ -354,15 +352,15 @@
                         u_texture: 0,
                         u_texture_blur: 1,
                         u_mask: 2,
-                        u_texsize: [tex.width, tex.height]
+                        u_texsize: [tex.width, tex.height],
                     })
                     .draw(screen_mesh);
             });
 
             this._temp_texture.drawTo(function() {
-                //clear because we use blending
-                //gl.clearColor(0.0,0.0,0.0,1.0);
-                //gl.clear( gl.COLOR_BUFFER_BIT );
+                // clear because we use blending
+                // gl.clearColor(0.0,0.0,0.0,1.0);
+                // gl.clear( gl.COLOR_BUFFER_BIT );
                 gl.enable(gl.BLEND);
                 gl.blendFunc(gl.ONE, gl.ONE);
 
@@ -376,7 +374,7 @@
                         u_alpha: alpha,
                         u_threshold: threshold,
                         u_pointSize: point_size,
-                        u_itexsize: [1.0 / tex.width, 1.0 / tex.height]
+                        u_itexsize: [1.0 / tex.width, 1.0 / tex.height],
                     })
                     .draw(points_mesh, gl.POINTS);
             });
@@ -387,7 +385,7 @@
         LGraphFXBokeh.prototype.createPointsMesh = function(
             width,
             height,
-            spacing
+            spacing,
         ) {
             var nwidth = Math.round(width / spacing);
             var nheight = Math.round(height / spacing);
@@ -490,7 +488,7 @@
         LiteGraph.registerNodeType("fx/bokeh", LGraphFXBokeh);
         global.LGraphFXBokeh = LGraphFXBokeh;
 
-        //************************************************
+        //* ***********************************************
 
         function LGraphFXGeneric() {
             this.addInput("Texture", "Texture");
@@ -501,7 +499,7 @@
                 fx: "halftone",
                 value1: 1,
                 value2: 1,
-                precision: LGraphTexture.DEFAULT
+                precision: LGraphTexture.DEFAULT,
             };
         }
 
@@ -511,16 +509,16 @@
         LGraphFXGeneric.widgets_info = {
             fx: {
                 widget: "combo",
-                values: ["halftone", "pixelate", "lowpalette", "noise", "gamma"]
+                values: ["halftone", "pixelate", "lowpalette", "noise", "gamma"],
             },
-            precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
+            precision: { widget: "combo", values: LGraphTexture.MODE_VALUES },
         };
         LGraphFXGeneric.shaders = {};
 
         LGraphFXGeneric.prototype.onExecute = function() {
             if (!this.isOutputConnected(0)) {
                 return;
-            } //saves work
+            } // saves work
 
             var tex = this.getInputData(0);
             if (this.properties.precision === LGraphTexture.PASS_THROUGH) {
@@ -535,10 +533,10 @@
             this._tex = LGraphTexture.getTargetTexture(
                 tex,
                 this._tex,
-                this.properties.precision
+                this.properties.precision,
             );
 
-            //iterations
+            // iterations
             var value1 = this.properties.value1;
             if (this.isInputConnected(1)) {
                 value1 = this.getInputData(1);
@@ -561,7 +559,7 @@
 
                 shader = LGraphFXGeneric.shaders[fx] = new GL.Shader(
                     Shader.SCREEN_VERTEX_SHADER,
-                    pixel_shader_code
+                    pixel_shader_code,
                 );
             }
 
@@ -573,7 +571,7 @@
             if (camera) {
                 camera_planes = [
                     LS.Renderer._current_camera.near,
-                    LS.Renderer._current_camera.far
+                    LS.Renderer._current_camera.far,
                 ];
             } else {
                 camera_planes = [1, 100];
@@ -598,7 +596,7 @@
                         u_rand: [Math.random(), Math.random()],
                         u_value1: value1,
                         u_value2: value2,
-                        u_camera_planes: camera_planes
+                        u_camera_planes: camera_planes,
                     })
                     .draw(mesh);
             });
@@ -700,13 +698,13 @@
             this.properties = {
                 intensity: 1,
                 invert: false,
-                precision: LGraphTexture.DEFAULT
+                precision: LGraphTexture.DEFAULT,
             };
 
             if (!LGraphFXVigneting._shader) {
                 LGraphFXVigneting._shader = new GL.Shader(
                     Shader.SCREEN_VERTEX_SHADER,
-                    LGraphFXVigneting.pixel_shader
+                    LGraphFXVigneting.pixel_shader,
                 );
             }
         }
@@ -714,9 +712,7 @@
         LGraphFXVigneting.title = "Vigneting";
         LGraphFXVigneting.desc = "Vigneting";
 
-        LGraphFXVigneting.widgets_info = {
-            precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }
-        };
+        LGraphFXVigneting.widgets_info = {precision: { widget: "combo", values: LGraphTexture.MODE_VALUES }};
 
         LGraphFXVigneting.prototype.onExecute = function() {
             var tex = this.getInputData(0);
@@ -733,7 +729,7 @@
             this._tex = LGraphTexture.getTargetTexture(
                 tex,
                 this._tex,
-                this.properties.precision
+                this.properties.precision,
             );
 
             var intensity = this.properties.intensity;
@@ -756,7 +752,7 @@
                         u_texture: 0,
                         u_intensity: intensity,
                         u_isize: [1 / tex.width, 1 / tex.height],
-                        u_invert: invert ? 1 : 0
+                        u_invert: invert ? 1 : 0,
                     })
                     .draw(mesh);
             });

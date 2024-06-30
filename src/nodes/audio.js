@@ -24,8 +24,8 @@
             };
         }
 
-        //in case it crashes
-        //if(this._audio_context.state == "suspended")
+        // in case it crashes
+        // if(this._audio_context.state == "suspended")
         //	this._audio_context.resume();
         return this._audio_context;
     };
@@ -58,9 +58,7 @@
                 var origin_node = node.graph.getNodeById(link_info.origin_id);
                 var origin_audionode = null;
                 if (origin_node.getAudioNodeInOutputSlot) {
-                    origin_audionode = origin_node.getAudioNodeInOutputSlot(
-                        link_info.origin_slot
-                    );
+                    origin_audionode = origin_node.getAudioNodeInOutputSlot(link_info.origin_slot);
                 } else {
                     origin_audionode = origin_node.audionode;
                 }
@@ -96,14 +94,10 @@
                         origin_audionode = node.audionode;
                     }
 
-                    var target_node = node.graph.getNodeById(
-                        link_info.target_id
-                    );
+                    var target_node = node.graph.getNodeById(link_info.target_id);
                     var target_audionode = null;
                     if (target_node.getAudioNodeInInputSlot) {
-                        target_audionode = target_node.getAudioNodeInInputSlot(
-                            link_info.target_slot
-                        );
+                        target_audionode = target_node.getAudioNodeInInputSlot(link_info.target_slot);
                     } else {
                         target_audionode = target_node.audionode;
                     }
@@ -118,14 +112,14 @@
         }
     };
 
-    //used by many nodes
+    // used by many nodes
     LGAudio.onConnectionsChange = function(
         connection,
         slot,
         connected,
-        link_info
+        link_info,
     ) {
-        //only process the outputs events
+        // only process the outputs events
         if (connection != LiteGraph.OUTPUT) {
             return;
         }
@@ -139,7 +133,7 @@
             return;
         }
 
-        //get origin audionode
+        // get origin audionode
         var local_audionode = null;
         if (this.getAudioNodeInOutputSlot) {
             local_audionode = this.getAudioNodeInOutputSlot(slot);
@@ -147,17 +141,15 @@
             local_audionode = this.audionode;
         }
 
-        //get target audionode
+        // get target audionode
         var target_audionode = null;
         if (target_node.getAudioNodeInInputSlot) {
-            target_audionode = target_node.getAudioNodeInInputSlot(
-                link_info.target_slot
-            );
+            target_audionode = target_node.getAudioNodeInInputSlot(link_info.target_slot);
         } else {
             target_audionode = target_node.audionode;
         }
 
-        //do the connection/disconnection
+        // do the connection/disconnection
         if (connected) {
             LGAudio.connect(local_audionode, target_audionode);
         } else {
@@ -165,7 +157,7 @@
         }
     };
 
-    //this function helps creating wrappers to existing classes
+    // this function helps creating wrappers to existing classes
     LGAudio.createAudioNodeWrapper = function(class_object) {
         var old_func = class_object.prototype.onPropertyChanged;
 
@@ -193,7 +185,7 @@
             LGAudio.onConnectionsChange;
     };
 
-    //contains the samples decoded of the loaded audios in AudioBuffer format
+    // contains the samples decoded of the loaded audios in AudioBuffer format
     LGAudio.cached_audios = {};
 
     LGAudio.loadSound = function(url, on_complete, on_error) {
@@ -208,7 +200,7 @@
             url = LGAudio.onProcessAudioURL(url);
         }
 
-        //load new sample
+        // load new sample
         var request = new XMLHttpRequest();
         request.open("GET", url, true);
         request.responseType = "arraybuffer";
@@ -227,7 +219,7 @@
                         on_complete(buffer);
                     }
                 },
-                onError
+                onError,
             );
         };
         request.send();
@@ -242,7 +234,7 @@
         return request;
     };
 
-    //****************************************************
+    //* ***************************************************
 
     function LGAudioSource() {
         this.properties = {
@@ -250,32 +242,32 @@
             gain: 0.5,
             loop: true,
             autoplay: true,
-            playbackRate: 1
+            playbackRate: 1,
         };
 
         this._loading_audio = false;
-        this._audiobuffer = null; //points to AudioBuffer with the audio samples decoded
+        this._audiobuffer = null; // points to AudioBuffer with the audio samples decoded
         this._audionodes = [];
-        this._last_sourcenode = null; //the last AudioBufferSourceNode (there could be more if there are several sounds playing)
+        this._last_sourcenode = null; // the last AudioBufferSourceNode (there could be more if there are several sounds playing)
 
         this.addOutput("out", "audio");
         this.addInput("gain", "number");
 
-        //init context
+        // init context
         var context = LGAudio.getAudioContext();
 
-        //create gain node to control volume
+        // create gain node to control volume
         this.audionode = context.createGain();
         this.audionode.graphnode = this;
         this.audionode.gain.value = this.properties.gain;
 
-        //debug
+        // debug
         if (this.properties.src) {
             this.loadSound(this.properties.src);
         }
     }
 
-	LGAudioSource.desc = "Plays an audio file";
+    LGAudioSource.desc = "Plays an audio file";
     LGAudioSource["@src"] = { widget: "resource" };
     LGAudioSource.supported_extensions = ["wav", "ogg", "mp3"];
 
@@ -291,7 +283,7 @@
         }
 
         if (this.properties.autoplay) {
-			this.playBuffer(this._audiobuffer);
+            this.playBuffer(this._audiobuffer);
         }
     };
 
@@ -305,7 +297,7 @@
 
     LGAudioSource.prototype.onUnpause = function() {
         this.unpauseAllSounds();
-        //this.onStart();
+        // this.onStart();
     };
 
     LGAudioSource.prototype.onRemoved = function() {
@@ -316,13 +308,13 @@
     };
 
     LGAudioSource.prototype.stopAllSounds = function() {
-        //iterate and stop
+        // iterate and stop
         for (var i = 0; i < this._audionodes.length; ++i) {
             if (this._audionodes[i].started) {
                 this._audionodes[i].started = false;
                 this._audionodes[i].stop();
             }
-            //this._audionodes[i].disconnect( this.audionode );
+            // this._audionodes[i].disconnect( this.audionode );
         }
         this._audionodes.length = 0;
     };
@@ -395,24 +387,24 @@
         var that = this;
         var context = LGAudio.getAudioContext();
 
-        //create a new audionode (this is mandatory, AudioAPI doesnt like to reuse old ones)
-        var audionode = context.createBufferSource(); //create a AudioBufferSourceNode
+        // create a new audionode (this is mandatory, AudioAPI doesnt like to reuse old ones)
+        var audionode = context.createBufferSource(); // create a AudioBufferSourceNode
         this._last_sourcenode = audionode;
         audionode.graphnode = this;
         audionode.buffer = buffer;
         audionode.loop = this.properties.loop;
         audionode.playbackRate.value = this.properties.playbackRate;
         this._audionodes.push(audionode);
-        audionode.connect(this.audionode); //connect to gain
+        audionode.connect(this.audionode); // connect to gain
 
-		this._audionodes.push(audionode);
+        this._audionodes.push(audionode);
 
-		this.trigger("start");
+        this.trigger("start");
 
         audionode.onended = function() {
-            //console.log("ended!");
+            // console.log("ended!");
             that.trigger("ended");
-            //remove
+            // remove
             var index = that._audionodes.indexOf(audionode);
             if (index != -1) {
                 that._audionodes.splice(index, 1);
@@ -429,13 +421,13 @@
     LGAudioSource.prototype.loadSound = function(url) {
         var that = this;
 
-        //kill previous load
+        // kill previous load
         if (this._request) {
             this._request.abort();
             this._request = null;
         }
 
-        this._audiobuffer = null; //points to the audiobuffer once the audio is loaded
+        this._audiobuffer = null; // points to the audiobuffer once the audio is loaded
         this._loading_audio = false;
 
         if (!url) {
@@ -451,22 +443,22 @@
             this.boxcolor = LiteGraph.NODE_DEFAULT_BOXCOLOR;
             that._audiobuffer = buffer;
             that._loading_audio = false;
-            //if is playing, then play it
+            // if is playing, then play it
             if (that.graph && that.graph.status === LGraph.STATUS_RUNNING) {
                 that.onStart();
-            } //this controls the autoplay already
+            } // this controls the autoplay already
         }
     };
 
-    //Helps connect/disconnect AudioNodes when new connections are made in the node
+    // Helps connect/disconnect AudioNodes when new connections are made in the node
     LGAudioSource.prototype.onConnectionsChange = LGAudio.onConnectionsChange;
 
     LGAudioSource.prototype.onGetInputs = function() {
         return [
             ["playbackRate", "number"],
-			["src","string"],
+            ["src","string"],
             ["Play", LiteGraph.ACTION],
-            ["Stop", LiteGraph.ACTION]
+            ["Stop", LiteGraph.ACTION],
         ];
     };
 
@@ -488,12 +480,10 @@
     LGAudioSource.desc = "Plays audio";
     LiteGraph.registerNodeType("audio/source", LGAudioSource);
 
-    //****************************************************
+    //* ***************************************************
 
     function LGAudioMediaSource() {
-        this.properties = {
-            gain: 0.5
-        };
+        this.properties = {gain: 0.5};
 
         this._audionodes = [];
         this._media_stream = null;
@@ -501,7 +491,7 @@
         this.addOutput("out", "audio");
         this.addInput("gain", "number");
 
-        //create gain node to control volume
+        // create gain node to control volume
         var context = LGAudio.getAudioContext();
         this.audionode = context.createGain();
         this.audionode.graphnode = this;
@@ -548,9 +538,7 @@
 
     LGAudioMediaSource.prototype.openStream = function() {
         if (!navigator.mediaDevices) {
-            console.log(
-                "getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags"
-            );
+            console.log("getUserMedia() is not supported in your browser, use chrome and enable WebRTC from about://flags");
             return;
         }
 
@@ -572,16 +560,14 @@
 
     LGAudioMediaSource.prototype.streamReady = function(localMediaStream) {
         this._media_stream = localMediaStream;
-        //this._waiting_confirmation = false;
+        // this._waiting_confirmation = false;
 
-        //init context
+        // init context
         if (this.audiosource_node) {
             this.audiosource_node.disconnect(this.audionode);
         }
         var context = LGAudio.getAudioContext();
-        this.audiosource_node = context.createMediaStreamSource(
-            localMediaStream
-        );
+        this.audiosource_node = context.createMediaStreamSource(localMediaStream);
         this.audiosource_node.graphnode = this;
         this.audiosource_node.connect(this.audionode);
         this.boxcolor = "white";
@@ -623,7 +609,7 @@
         }
     };
 
-    //Helps connect/disconnect AudioNodes when new connections are made in the node
+    // Helps connect/disconnect AudioNodes when new connections are made in the node
     LGAudioMediaSource.prototype.onConnectionsChange =
         LGAudio.onConnectionsChange;
 
@@ -631,7 +617,7 @@
         return [
             ["playbackRate", "number"],
             ["Play", LiteGraph.ACTION],
-            ["Stop", LiteGraph.ACTION]
+            ["Stop", LiteGraph.ACTION],
         ];
     };
 
@@ -639,14 +625,14 @@
     LGAudioMediaSource.desc = "Plays microphone";
     LiteGraph.registerNodeType("audio/media_source", LGAudioMediaSource);
 
-    //*****************************************************
+    //* ****************************************************
 
     function LGAudioAnalyser() {
         this.properties = {
             fftSize: 2048,
             minDecibels: -100,
             maxDecibels: -10,
-            smoothingTimeConstant: 0.5
+            smoothingTimeConstant: 0.5,
         };
 
         var context = LGAudio.getAudioContext();
@@ -672,7 +658,7 @@
 
     LGAudioAnalyser.prototype.onExecute = function() {
         if (this.isOutputConnected(0)) {
-            //send FFT
+            // send FFT
             var bufferLength = this.audionode.frequencyBinCount;
             if (!this._freq_bin || this._freq_bin.length != bufferLength) {
                 this._freq_bin = new Uint8Array(bufferLength);
@@ -681,9 +667,9 @@
             this.setOutputData(0, this._freq_bin);
         }
 
-        //send analyzer
+        // send analyzer
         if (this.isOutputConnected(1)) {
-            //send Samples
+            // send Samples
             var bufferLength = this.audionode.frequencyBinCount;
             if (!this._time_bin || this._time_bin.length != bufferLength) {
                 this._time_bin = new Uint8Array(bufferLength);
@@ -692,7 +678,7 @@
             this.setOutputData(1, this._time_bin);
         }
 
-        //properties
+        // properties
         for (var i = 1; i < this.inputs.length; ++i) {
             var input = this.inputs[i];
             if (input.link == null) {
@@ -704,15 +690,15 @@
             }
         }
 
-        //time domain
-        //this.audionode.getFloatTimeDomainData( dataArray );
+        // time domain
+        // this.audionode.getFloatTimeDomainData( dataArray );
     };
 
     LGAudioAnalyser.prototype.onGetInputs = function() {
         return [
             ["minDecibels", "number"],
             ["maxDecibels", "number"],
-            ["smoothingTimeConstant", "number"]
+            ["smoothingTimeConstant", "number"],
         ];
     };
 
@@ -724,13 +710,11 @@
     LGAudioAnalyser.desc = "Audio Analyser";
     LiteGraph.registerNodeType("audio/analyser", LGAudioAnalyser);
 
-    //*****************************************************
+    //* ****************************************************
 
     function LGAudioGain() {
-        //default
-        this.properties = {
-            gain: 1
-        };
+        // default
+        this.properties = {gain: 1};
 
         this.audionode = LGAudio.getAudioContext().createGain();
         this.addInput("in", "audio");
@@ -759,10 +743,10 @@
     LiteGraph.registerNodeType("audio/gain", LGAudioGain);
 
     function LGAudioConvolver() {
-        //default
+        // default
         this.properties = {
             impulse_src: "",
-            normalize: true
+            normalize: true,
         };
 
         this.audionode = LGAudio.getAudioContext().createConvolver();
@@ -798,7 +782,7 @@
     LGAudioConvolver.prototype.loadImpulse = function(url) {
         var that = this;
 
-        //kill previous load
+        // kill previous load
         if (this._request) {
             this._request.abort();
             this._request = null;
@@ -811,7 +795,7 @@
             return;
         }
 
-        //load new sample
+        // load new sample
         this._request = LGAudio.loadSound(url, inner);
         this._loading_impulse = true;
 
@@ -829,14 +813,14 @@
     LiteGraph.registerNodeType("audio/convolver", LGAudioConvolver);
 
     function LGAudioDynamicsCompressor() {
-        //default
+        // default
         this.properties = {
             threshold: -50,
             knee: 40,
             ratio: 12,
             reduction: -20,
             attack: 0,
-            release: 0.25
+            release: 0.25,
         };
 
         this.audionode = LGAudio.getAudioContext().createDynamicsCompressor();
@@ -869,7 +853,7 @@
             ["ratio", "number"],
             ["reduction", "number"],
             ["attack", "number"],
-            ["release", "number"]
+            ["release", "number"],
         ];
     };
 
@@ -877,11 +861,11 @@
     LGAudioDynamicsCompressor.desc = "Dynamics Compressor";
     LiteGraph.registerNodeType(
         "audio/dynamicsCompressor",
-        LGAudioDynamicsCompressor
+        LGAudioDynamicsCompressor,
     );
 
     function LGAudioWaveShaper() {
-        //default
+        // default
         this.properties = {};
 
         this.audionode = LGAudio.getAudioContext().createWaveShaper();
@@ -914,10 +898,10 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
 */
 
     function LGAudioMixer() {
-        //default
+        // default
         this.properties = {
             gain1: 0.5,
-            gain2: 0.5
+            gain2: 0.5,
         };
 
         this.audionode = LGAudio.getAudioContext().createGain();
@@ -986,12 +970,12 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     LiteGraph.registerNodeType("audio/mixer", LGAudioMixer);
 
     function LGAudioADSR() {
-        //default
+        // default
         this.properties = {
             A: 0.1,
             D: 0.1,
             S: 0.1,
-            R: 0.1
+            R: 0.1,
         };
 
         this.audionode = LGAudio.getAudioContext().createGain();
@@ -1033,7 +1017,7 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
             ["A", "number"],
             ["D", "number"],
             ["S", "number"],
-            ["R", "number"]
+            ["R", "number"],
         ];
     };
 
@@ -1044,10 +1028,8 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     LiteGraph.registerNodeType("audio/adsr", LGAudioADSR);
 
     function LGAudioDelay() {
-        //default
-        this.properties = {
-            delayTime: 0.5
-        };
+        // default
+        this.properties = {delayTime: 0.5};
 
         this.audionode = LGAudio.getAudioContext().createDelay(10);
         this.audionode.delayTime.value = this.properties.delayTime;
@@ -1070,11 +1052,11 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     LiteGraph.registerNodeType("audio/delay", LGAudioDelay);
 
     function LGAudioBiquadFilter() {
-        //default
+        // default
         this.properties = {
             frequency: 350,
             detune: 0,
-            Q: 1
+            Q: 1,
         };
         this.addProperty("type", "lowpass", "enum", {
             values: [
@@ -1085,14 +1067,14 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
                 "highshelf",
                 "peaking",
                 "notch",
-                "allpass"
-            ]
+                "allpass",
+            ],
         });
 
-        //create node
+        // create node
         this.audionode = LGAudio.getAudioContext().createBiquadFilter();
 
-        //slots
+        // slots
         this.addInput("in", "audio");
         this.addOutput("out", "audio");
     }
@@ -1125,20 +1107,18 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     LiteGraph.registerNodeType("audio/biquadfilter", LGAudioBiquadFilter);
 
     function LGAudioOscillatorNode() {
-        //default
+        // default
         this.properties = {
             frequency: 440,
             detune: 0,
-            type: "sine"
+            type: "sine",
         };
-        this.addProperty("type", "sine", "enum", {
-            values: ["sine", "square", "sawtooth", "triangle", "custom"]
-        });
+        this.addProperty("type", "sine", "enum", {values: ["sine", "square", "sawtooth", "triangle", "custom"]});
 
-        //create node
+        // create node
         this.audionode = LGAudio.getAudioContext().createOscillator();
 
-        //slots
+        // slots
         this.addOutput("out", "audio");
     }
 
@@ -1147,7 +1127,9 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
             this.audionode.started = true;
             try {
                 this.audionode.start();
-            } catch (err) {}
+            } catch (err) {
+                console.error(err);
+            }
         }
     };
 
@@ -1187,7 +1169,7 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
         return [
             ["frequency", "number"],
             ["detune", "number"],
-            ["type", "string"]
+            ["type", "string"],
         ];
     };
 
@@ -1197,14 +1179,14 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     LGAudioOscillatorNode.desc = "Oscillator";
     LiteGraph.registerNodeType("audio/oscillator", LGAudioOscillatorNode);
 
-    //*****************************************************
+    //* ****************************************************
 
-    //EXTRA
+    // EXTRA
 
     function LGAudioVisualization() {
         this.properties = {
             continuous: true,
-            mark: -1
+            mark: -1,
         };
 
         this.addInput("data", "array");
@@ -1229,7 +1211,7 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
 
         var buffer = this._last_buffer;
 
-        //delta represents how many samples we advance per pixel
+        // delta represents how many samples we advance per pixel
         var delta = buffer.length / this.size[0];
         var h = this.size[1];
 
@@ -1274,10 +1256,10 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     LiteGraph.registerNodeType("audio/visualization", LGAudioVisualization);
 
     function LGAudioBandSignal() {
-        //default
+        // default
         this.properties = {
             band: 440,
-            amplitude: 1
+            amplitude: 1,
         };
 
         this.addInput("freqs", "array");
@@ -1332,20 +1314,16 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
             LGAudioScript.default_code = code.substr(index, index2 - index);
         }
 
-        //default
-        this.properties = {
-            code: LGAudioScript.default_code
-        };
+        // default
+        this.properties = {code: LGAudioScript.default_code};
 
-        //create node
+        // create node
         var ctx = LGAudio.getAudioContext();
         if (ctx.createScriptProcessor) {
             this.audionode = ctx.createScriptProcessor(4096, 1, 1);
-        }
-        //buffer size, input channels, output channels
-        else {
+        } else { // buffer size, input channels, output channels
             console.warn("ScriptProcessorNode deprecated");
-            this.audionode = ctx.createGain(); //bypass audio
+            this.audionode = ctx.createGain(); // bypass audio
         }
 
         this.processCode();
@@ -1353,7 +1331,7 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
             LGAudioScript._bypass_function = this.audionode.onaudioprocess;
         }
 
-        //slots
+        // slots
         this.addInput("in", "audio");
         this.addOutput("out", "audio");
     }
@@ -1383,7 +1361,7 @@ LiteGraph.registerNodeType("audio/waveShaper", LGAudioWaveShaper);
     };
 
     LGAudioScript.prototype.onExecute = function() {
-        //nothing! because we need an onExecute to receive onStart... fix that
+        // nothing! because we need an onExecute to receive onStart... fix that
     };
 
     LGAudioScript.prototype.onRemoved = function() {
