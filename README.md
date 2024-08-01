@@ -162,7 +162,7 @@ It includes several commands in the utils folder to generate doc, check errors a
 
 ## Demo
 -----
-The demo includes some examples of graphs. In order to try them you can visit [demo site](http://tamats.com/projects/litegraph/editor) or install it on your local computer, to do so you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
+The demo includes some examples of graphs. In order to try them you can visit [demo site](https://tamats.com/projects/litegraph/editor) or install it on your local computer, to do so you need `git`, `node` and `npm`. Given those dependencies are installed, run the following commands to try it out:
 ```sh
 $ git clone https://github.com/jagenjo/litegraph.js.git
 $ cd litegraph.js
