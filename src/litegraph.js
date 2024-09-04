@@ -7889,7 +7889,7 @@ LGraphNode.prototype.executeAction = function(action)
         if (this.bgcanvas == this.canvas) {
             this.drawBackCanvas();
         } else {
-            ctx.drawImage( this.bgcanvas, 0, 0 );
+            ctx.drawImage( this.bgcanvas, 0, 0, this.bgcanvas.width / window.devicePixelRatio, this.bgcanvas.height / window.devicePixelRatio );
         }
 
         //rendering
@@ -8407,7 +8407,7 @@ LGraphNode.prototype.executeAction = function(action)
         if ( !this.viewport )
 		{
 	        ctx.restore();
-		    ctx.setTransform(1, 0, 0, 1, 0, 0);
+		    ctx.setTransform(window.devicePixelRatio, 0, 0, window.devicePixelRatio, 0, 0);
 		}
         this.visible_links.length = 0;
 
