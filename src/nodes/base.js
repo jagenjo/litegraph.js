@@ -1361,12 +1361,6 @@ LiteGraph.registerNodeType("basic/jsonparse", JSONParse);
 
     LiteGraph.registerNodeType("basic/variable", Variable);
 
-    function length(v) {
-        if(v && v.length != null)
-			return Number(v.length);
-		return 0;
-    }
-
     LiteGraph.wrapFunctionAsNode(
         "basic/length",
         length,
