@@ -10181,12 +10181,12 @@ LGraphNode.prototype.executeAction = function(action)
 								index = values_list.indexOf( String( w.value ) ) + delta;
 							else
 								index = values_list.indexOf( w.value ) + delta;
-							if (index >= values_list.length) {
-								index = values_list.length - 1;
-							}
-							if (index < 0) {
-								index = 0;
-							}
+                            if(index >= values_list.length) {
+                                index = 0;
+                            }
+                            if(index < 0) {
+                                index = values_list.length - 1;
+                            }
 							if( values.constructor === Array )
 								w.value = values[index];
 							else
@@ -10276,9 +10276,21 @@ LGraphNode.prototype.executeAction = function(action)
             if(widget.type == "number"){
                 value = Number(value);
             }
-            widget.value = value;
-            if ( widget.options && widget.options.property && node.properties[widget.options.property] !== undefined ) {
-                node.setProperty( widget.options.property, value );
+             widget.value = widget?.options?.dataProcess ? widget.options.dataProcess(value) : value;
+            if (widget.options && widget.options.property && node.properties[widget.options.property] !== undefined) {
+                const propertyName = widget.options.property;
+                if (!node.properties) {
+                    node.properties = {};
+                }
+                if (value !== node.properties[propertyName]) {
+                    var prev_value = node.properties[propertyName];
+                    node.properties[propertyName] = value;
+                    if(node.onPropertyChanged) {
+                        if(node.onPropertyChanged(propertyName, value, prev_value) === false)
+                            node.properties[propertyName] = prev_value;
+                    }
+                }
+
             }
             if (widget.callback) {
                 widget.callback(widget.value, that, node, pos, event);
