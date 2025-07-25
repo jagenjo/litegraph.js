@@ -1,47 +1,75 @@
 module.exports = function (grunt) {
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
-    projectFiles: ['src/litegraph.js',
+    
+    // File lists for different builds
+    fullFiles: ['src/litegraph.js',
       'src/nodes/base.js',
       'src/nodes/events.js',
       'src/nodes/interface.js',
       'src/nodes/input.js',
       'src/nodes/math.js',
+      'src/nodes/math3d.js',
+      'src/nodes/strings.js',
       'src/nodes/logic.js',
-      'src/nodes/image.js',
+      'src/nodes/graphics.js',
       'src/nodes/gltextures.js',
+      'src/nodes/glshaders.js',
+      'src/nodes/geometry.js',
       'src/nodes/glfx.js',
       'src/nodes/midi.js',
       'src/nodes/audio.js',
       'src/nodes/network.js'
     ],
+    
+    miniFiles: ['src/litegraph.js',
+      'src/nodes/base.js',
+      'src/nodes/events.js',
+      'src/nodes/input.js',
+      'src/nodes/math.js',
+      'src/nodes/strings.js',
+      'src/nodes/logic.js',
+      'src/nodes/network.js'
+    ],
+    
+    coreFiles: ['src/litegraph.js'],
+    
     concat: {
-      build: {
-        src: '<%= projectFiles %>',
+      full: {
+        src: '<%= fullFiles %>',
         dest: 'build/litegraph.js'
+      },
+      mini: {
+        src: '<%= miniFiles %>',
+        dest: 'build/litegraph_mini.js'
+      },
+      core: {
+        src: '<%= coreFiles %>',
+        dest: 'build/litegraph.core.js'
       }
     },
-    closureCompiler: {
-
-      options: {
-        compilerFile: 'node_modules/google-closure-compiler/compiler.jar',
-        compilerOpts: {
-          formatting: 'pretty_print',
-          warning_level: 'default'
-        },
-        d32: false, // will use 'java -client -d32 -jar compiler.jar'
-        TieredCompilation: false// will use 'java -server -XX:+TieredCompilation -jar compiler.jar',
-        // ,output_wrapper: '"var LiteGraph = (function(){%output% return LiteGraph;}).call(this);"'      //* Make container for all
-      },
-      targetName: {
-        src: '<%= projectFiles %>',
+    
+    uglify: {
+      full: {
+        src: 'build/litegraph.js',
         dest: 'build/litegraph.min.js'
+      },
+      mini: {
+        src: 'build/litegraph_mini.js',
+        dest: 'build/litegraph_mini.min.js'
+      },
+      core: {
+        src: 'build/litegraph.core.js',
+        dest: 'build/litegraph.core.min.js'
       }
     }
   })
 
   grunt.loadNpmTasks('grunt-contrib-concat')
-  grunt.loadNpmTasks('grunt-closure-tools')
+  grunt.loadNpmTasks('grunt-contrib-uglify')
 
-  grunt.registerTask('build', ['concat:build', 'closureCompiler'])
+  grunt.registerTask('build', ['concat', 'uglify'])
+  grunt.registerTask('build-full', ['concat:full', 'uglify:full'])
+  grunt.registerTask('build-mini', ['concat:mini', 'uglify:mini']) 
+  grunt.registerTask('build-core', ['concat:core', 'uglify:core'])
 }

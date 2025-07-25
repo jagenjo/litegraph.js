@@ -1,5 +1,3 @@
-//packer version
-
 
 (function(global) {
     // *************************************************************
@@ -2435,7 +2433,9 @@
 		+ unsafe_execution: not allowed for safe execution
 		+ skip_repeated_outputs: when adding new outputs, it wont show if there is one already connected
 		+ resizable: if set to false it wont be resizable with the mouse
-		+ horizontal: slots are distributed horizontally
+		+ horizontal: slots are distributed horizontally (applies to both inputs and outputs)
+		+ inputs_horizontal: input slots are distributed horizontally (overrides horizontal for inputs)
+		+ outputs_horizontal: output slots are distributed horizontally (overrides horizontal for outputs)
 		+ widgets_start_y: widgets start at y distance from the top of the node
 	
 	flags object:
@@ -4769,9 +4769,17 @@
 
         var offset = LiteGraph.NODE_SLOT_HEIGHT * 0.5;
 
+        // Check for separate input/output orientation, fallback to general horizontal property
+        var is_horizontal = false;
+        if (is_input) {
+            is_horizontal = this.inputs_horizontal !== undefined && this.inputs_horizontal !== null ? this.inputs_horizontal : this.horizontal;
+        } else {
+            is_horizontal = this.outputs_horizontal !== undefined && this.outputs_horizontal !== null ? this.outputs_horizontal : this.horizontal;
+        }
+
         if (this.flags.collapsed) {
             var w = this._collapsed_width || LiteGraph.NODE_COLLAPSED_WIDTH;
-            if (this.horizontal) {
+            if (is_horizontal) {
                 out[0] = this.pos[0] + w * 0.5;
                 if (is_input) {
                     out[1] = this.pos[1] - LiteGraph.NODE_TITLE_HEIGHT;
@@ -4816,7 +4824,7 @@
         }
 
         //horizontal distributed slots
-        if (this.horizontal) {
+        if (is_horizontal) {
             out[0] =
                 this.pos[0] + (slot_number + 0.5) * (this.size[0] / num_slots);
             if (is_input) {
@@ -7059,7 +7067,8 @@ LGraphNode.prototype.executeAction = function(action)
                 var input = node.inputs[i];
                 var link_pos = node.getConnectionPos(true, i);
                 var is_inside = false;
-                if (node.horizontal) {
+                var inputs_horizontal = node.inputs_horizontal !== undefined && node.inputs_horizontal !== null ? node.inputs_horizontal : node.horizontal;
+                if (inputs_horizontal) {
                     is_inside = isInsideRectangle(
                         canvasx,
                         canvasy,
@@ -7105,7 +7114,8 @@ LGraphNode.prototype.executeAction = function(action)
                 var output = node.outputs[i];
                 var link_pos = node.getConnectionPos(false, i);
                 var is_inside = false;
-                if (node.horizontal) {
+                var outputs_horizontal = node.outputs_horizontal !== undefined && node.outputs_horizontal !== null ? node.outputs_horizontal : node.horizontal;
+                if (outputs_horizontal) {
                     is_inside = isInsideRectangle(
                         canvasx,
                         canvasy,
@@ -7954,10 +7964,15 @@ LGraphNode.prototype.executeAction = function(action)
                 var connDir = connInOrOut.dir;
 				if(connDir == null)
 				{
-					if (this.connecting_output)
-						connDir = this.connecting_node.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT;
-					else
-						connDir = this.connecting_node.horizontal ? LiteGraph.UP : LiteGraph.LEFT;
+					if (this.connecting_output) {
+						var outputs_horizontal = this.connecting_node.outputs_horizontal !== undefined && this.connecting_node.outputs_horizontal !== null ? 
+							this.connecting_node.outputs_horizontal : this.connecting_node.horizontal;
+						connDir = outputs_horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT;
+					} else {
+						var inputs_horizontal = this.connecting_node.inputs_horizontal !== undefined && this.connecting_node.inputs_horizontal !== null ? 
+							this.connecting_node.inputs_horizontal : this.connecting_node.horizontal;
+						connDir = inputs_horizontal ? LiteGraph.UP : LiteGraph.LEFT;
+					}
 				}
                 var connShape = connInOrOut.shape;
                 
@@ -8589,6 +8604,8 @@ LGraphNode.prototype.executeAction = function(action)
         var size = temp_vec2;
         temp_vec2.set(node.size);
         var horizontal = node.horizontal; // || node.flags.horizontal;
+        var inputs_horizontal = node.inputs_horizontal !== undefined && node.inputs_horizontal !== null ? node.inputs_horizontal : horizontal;
+        var outputs_horizontal = node.outputs_horizontal !== undefined && node.outputs_horizontal !== null ? node.outputs_horizontal : horizontal;
 
         if (node.flags.collapsed) {
             ctx.font = this.inner_text_font;
@@ -8645,7 +8662,7 @@ LGraphNode.prototype.executeAction = function(action)
         }
 
         //connection slots
-        ctx.textAlign = horizontal ? "center" : "left";
+        ctx.textAlign = inputs_horizontal ? "center" : "left";
         ctx.font = this.inner_text_font;
 
         var render_text = !low_quality;
@@ -8702,7 +8719,7 @@ LGraphNode.prototype.executeAction = function(action)
                         slot.type === LiteGraph.EVENT ||
                         slot.shape === LiteGraph.BOX_SHAPE
                     ) {
-                        if (horizontal) {
+                        if (inputs_horizontal) {
                             ctx.rect(
                                 pos[0] - 5 + 0.5,
                                 pos[1] - 8 + 0.5,
@@ -8746,7 +8763,7 @@ LGraphNode.prototype.executeAction = function(action)
                         var text = slot.label != null ? slot.label : slot.name;
                         if (text) {
                             ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
-                            if (horizontal || slot.dir == LiteGraph.UP) {
+                            if (inputs_horizontal || slot.dir == LiteGraph.UP) {
                                 ctx.fillText(text, pos[0], pos[1] - 10);
                             } else {
                                 ctx.fillText(text, pos[0] + 10, pos[1] + 5);
@@ -8758,7 +8775,7 @@ LGraphNode.prototype.executeAction = function(action)
 
             //output connection slots
 
-            ctx.textAlign = horizontal ? "center" : "right";
+            ctx.textAlign = outputs_horizontal ? "center" : "right";
             ctx.strokeStyle = "black";
             if (node.outputs) {
                 for (var i = 0; i < node.outputs.length; i++) {
@@ -8801,7 +8818,7 @@ LGraphNode.prototype.executeAction = function(action)
                         slot_type === LiteGraph.EVENT ||
                         slot_shape === LiteGraph.BOX_SHAPE
                     ) {
-                        if (horizontal) {
+                        if (outputs_horizontal) {
                             ctx.rect(
                                 pos[0] - 5 + 0.5,
                                 pos[1] - 8 + 0.5,
@@ -8853,7 +8870,7 @@ LGraphNode.prototype.executeAction = function(action)
                         var text = slot.label != null ? slot.label : slot.name;
                         if (text) {
                             ctx.fillStyle = LiteGraph.NODE_TEXT_COLOR;
-                            if (horizontal || slot.dir == LiteGraph.DOWN) {
+                            if (outputs_horizontal || slot.dir == LiteGraph.DOWN) {
                                 ctx.fillText(text, pos[0], pos[1] - 8);
                             } else {
                                 ctx.fillText(text, pos[0] - 10, pos[1] + 5);
@@ -8868,7 +8885,7 @@ LGraphNode.prototype.executeAction = function(action)
 
             if (node.widgets) {
 				var widgets_y = max_y;
-                if (horizontal || node.widgets_up) {
+                if (inputs_horizontal || outputs_horizontal || node.widgets_up) {
                     widgets_y = 2;
                 }
 				if( node.widgets_start_y != null )
@@ -8911,7 +8928,9 @@ LGraphNode.prototype.executeAction = function(action)
             if (input_slot) {
                 var x = 0;
                 var y = LiteGraph.NODE_TITLE_HEIGHT * -0.5; //center
-                if (horizontal) {
+                // For collapsed nodes, use inputs_horizontal if available, otherwise fall back to general horizontal
+                var input_is_horizontal = node.inputs_horizontal !== undefined && node.inputs_horizontal !== null ? node.inputs_horizontal : horizontal;
+                if (input_is_horizontal) {
                     x = node._collapsed_width * 0.5;
                     y = -LiteGraph.NODE_TITLE_HEIGHT;
                 }
@@ -8936,7 +8955,9 @@ LGraphNode.prototype.executeAction = function(action)
             if (output_slot) {
                 var x = node._collapsed_width;
                 var y = LiteGraph.NODE_TITLE_HEIGHT * -0.5; //center
-                if (horizontal) {
+                // For collapsed nodes, use outputs_horizontal if available, otherwise fall back to general horizontal
+                var output_is_horizontal = node.outputs_horizontal !== undefined && node.outputs_horizontal !== null ? node.outputs_horizontal : horizontal;
+                if (output_is_horizontal) {
                     x = node._collapsed_width * 0.5;
                     y = 0;
                 }
@@ -9440,10 +9461,14 @@ LGraphNode.prototype.executeAction = function(action)
                 }
                 var start_dir =
                     start_slot.dir ||
-                    (start_node.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT);
+                    (start_node.outputs_horizontal !== undefined && start_node.outputs_horizontal !== null ? 
+                        (start_node.outputs_horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT) :
+                        (start_node.horizontal ? LiteGraph.DOWN : LiteGraph.RIGHT));
                 var end_dir =
                     end_slot.dir ||
-                    (node.horizontal ? LiteGraph.UP : LiteGraph.LEFT);
+                    (node.inputs_horizontal !== undefined && node.inputs_horizontal !== null ?
+                        (node.inputs_horizontal ? LiteGraph.UP : LiteGraph.LEFT) :
+                        (node.horizontal ? LiteGraph.UP : LiteGraph.LEFT));
 
                 this.renderLink(
                     ctx,
@@ -9525,6 +9550,31 @@ LGraphNode.prototype.executeAction = function(action)
 
         var dist = distance(a, b);
 
+        // Auto-detect when to use straight lines for better visual appearance
+        var should_use_straight = false;
+        var dx = Math.abs(a[0] - b[0]);
+        var dy = Math.abs(a[1] - b[1]);
+        
+        // Use straight lines when connecting opposite directions and nodes are reasonably aligned
+        if (this.links_render_mode == LiteGraph.SPLINE_LINK) {
+            // Vertical to vertical connections (like mixed nodes with vertical outputs to vertical inputs)
+            if ((start_dir == LiteGraph.RIGHT && end_dir == LiteGraph.LEFT) ||
+                (start_dir == LiteGraph.LEFT && end_dir == LiteGraph.RIGHT)) {
+                // If nodes are roughly vertically aligned (small horizontal distance relative to vertical)
+                if (dx < 50 && dy > 20) {
+                    should_use_straight = true;
+                }
+            }
+            // Horizontal to horizontal connections  
+            else if ((start_dir == LiteGraph.DOWN && end_dir == LiteGraph.UP) ||
+                     (start_dir == LiteGraph.UP && end_dir == LiteGraph.DOWN)) {
+                // If nodes are roughly horizontally aligned (small vertical distance relative to horizontal)
+                if (dy < 50 && dx > 20) {
+                    should_use_straight = true;
+                }
+            }
+        }
+
         if (this.render_connections_border && this.ds.scale > 0.6) {
             ctx.lineWidth = this.connections_width + 4;
         }
@@ -9541,46 +9591,82 @@ LGraphNode.prototype.executeAction = function(action)
 
             if (this.links_render_mode == LiteGraph.SPLINE_LINK) {
                 ctx.moveTo(a[0], a[1] + offsety);
-                var start_offset_x = 0;
-                var start_offset_y = 0;
-                var end_offset_x = 0;
-                var end_offset_y = 0;
-                switch (start_dir) {
-                    case LiteGraph.LEFT:
-                        start_offset_x = dist * -0.25;
-                        break;
-                    case LiteGraph.RIGHT:
-                        start_offset_x = dist * 0.25;
-                        break;
-                    case LiteGraph.UP:
-                        start_offset_y = dist * -0.25;
-                        break;
-                    case LiteGraph.DOWN:
-                        start_offset_y = dist * 0.25;
-                        break;
+                
+                if (should_use_straight) {
+                    // Use straight line logic for better visual alignment
+                    var start_x = a[0];
+                    var start_y = a[1] + offsety;
+                    var end_x = b[0];
+                    var end_y = b[1] + offsety;
+                    
+                    if (start_dir == LiteGraph.RIGHT) {
+                        start_x += 10;
+                    } else if (start_dir == LiteGraph.LEFT) {
+                        start_x -= 10;
+                    } else if (start_dir == LiteGraph.DOWN) {
+                        start_y += 10;
+                    } else if (start_dir == LiteGraph.UP) {
+                        start_y -= 10;
+                    }
+                    
+                    if (end_dir == LiteGraph.LEFT) {
+                        end_x -= 10;
+                    } else if (end_dir == LiteGraph.RIGHT) {
+                        end_x += 10;
+                    } else if (end_dir == LiteGraph.UP) {
+                        end_y -= 10;
+                    } else if (end_dir == LiteGraph.DOWN) {
+                        end_y += 10;
+                    }
+                    
+                    ctx.lineTo(start_x, start_y);
+                    ctx.lineTo((start_x + end_x) * 0.5, start_y);
+                    ctx.lineTo((start_x + end_x) * 0.5, end_y);
+                    ctx.lineTo(end_x, end_y);
+                    ctx.lineTo(b[0], b[1] + offsety);
+                } else {
+                    // Original spline logic
+                    var start_offset_x = 0;
+                    var start_offset_y = 0;
+                    var end_offset_x = 0;
+                    var end_offset_y = 0;
+                    switch (start_dir) {
+                        case LiteGraph.LEFT:
+                            start_offset_x = dist * -0.25;
+                            break;
+                        case LiteGraph.RIGHT:
+                            start_offset_x = dist * 0.25;
+                            break;
+                        case LiteGraph.UP:
+                            start_offset_y = dist * -0.25;
+                            break;
+                        case LiteGraph.DOWN:
+                            start_offset_y = dist * 0.25;
+                            break;
+                    }
+                    switch (end_dir) {
+                        case LiteGraph.LEFT:
+                            end_offset_x = dist * -0.25;
+                            break;
+                        case LiteGraph.RIGHT:
+                            end_offset_x = dist * 0.25;
+                            break;
+                        case LiteGraph.UP:
+                            end_offset_y = dist * -0.25;
+                            break;
+                        case LiteGraph.DOWN:
+                            end_offset_y = dist * 0.25;
+                            break;
+                    }
+                    ctx.bezierCurveTo(
+                        a[0] + start_offset_x,
+                        a[1] + start_offset_y + offsety,
+                        b[0] + end_offset_x,
+                        b[1] + end_offset_y + offsety,
+                        b[0],
+                        b[1] + offsety
+                    );
                 }
-                switch (end_dir) {
-                    case LiteGraph.LEFT:
-                        end_offset_x = dist * -0.25;
-                        break;
-                    case LiteGraph.RIGHT:
-                        end_offset_x = dist * 0.25;
-                        break;
-                    case LiteGraph.UP:
-                        end_offset_y = dist * -0.25;
-                        break;
-                    case LiteGraph.DOWN:
-                        end_offset_y = dist * 0.25;
-                        break;
-                }
-                ctx.bezierCurveTo(
-                    a[0] + start_offset_x,
-                    a[1] + start_offset_y + offsety,
-                    b[0] + end_offset_x,
-                    b[1] + end_offset_y + offsety,
-                    b[0],
-                    b[1] + offsety
-                );
             } else if (this.links_render_mode == LiteGraph.LINEAR_LINK) {
                 ctx.moveTo(a[0], a[1] + offsety);
                 var start_offset_x = 0;
@@ -34570,4 +34656,3 @@ LiteGraph.registerNodeType("network/httprequest", HTTPRequestNode);
 
 	
 })(this);
-
