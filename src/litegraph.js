@@ -14409,7 +14409,7 @@ LGraphNode.prototype.executeAction = function(action)
                 window.setTimeout(callback, 1000 / 60);
             };
     }
-})(this);
+})(typeof globalThis !== "undefined" ? globalThis : this);
 
 if (typeof exports != "undefined") {
     exports.LiteGraph = this.LiteGraph;
